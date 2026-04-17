@@ -1,4 +1,10 @@
-export const pulsechain = {
+import { defineChain } from "viem";
+
+/**
+ * PulseChain mainnet (chainId 369).
+ * RPC is overridable via NEXT_PUBLIC_PULSECHAIN_RPC_URL for Vercel deployments.
+ */
+export const pulsechain = defineChain({
   id: 369,
   name: "PulseChain",
   nativeCurrency: {
@@ -8,7 +14,10 @@ export const pulsechain = {
   },
   rpcUrls: {
     default: {
-      http: [process.env.NEXT_PUBLIC_PULSECHAIN_RPC_URL || "https://rpc.pulsechain.com"],
+      http: [
+        process.env.NEXT_PUBLIC_PULSECHAIN_RPC_URL ??
+          "https://rpc.pulsechain.com",
+      ],
     },
   },
   blockExplorers: {
@@ -17,4 +26,7 @@ export const pulsechain = {
       url: "https://scan.pulsechain.com",
     },
   },
-} as const;
+  testnet: false,
+});
+
+export const supportedChains = [pulsechain] as const;

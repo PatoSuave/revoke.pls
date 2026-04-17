@@ -1,0 +1,53 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: dark;
+}
+
+html,
+body {
+  background-color: #07070b;
+  color: #e8e9ff;
+}
+
+body {
+  min-height: 100dvh;
+  font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+@layer utilities {
+  .text-gradient-pulse {
+    background-image: linear-gradient(
+      90deg,
+      #22d3ee 0%,
+      #7c3aed 50%,
+      #ff2fb5 100%
+    );
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+
+  .border-gradient-pulse {
+    position: relative;
+  }
+
+  .border-gradient-pulse::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    padding: 1px;
+    background: linear-gradient(135deg, #7c3aed, #ff2fb5, #22d3ee);
+    -webkit-mask:
+      linear-gradient(#000 0 0) content-box,
+      linear-gradient(#000 0 0);
+    -webkit-mask-composite: xor;
+    mask-composite: exclude;
+    pointer-events: none;
+  }
+}
