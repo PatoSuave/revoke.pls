@@ -64,14 +64,62 @@ Future scope may include:
 
 ## Development
 
+Requires Node.js 18.18+ (Node 20 recommended).
+
 ```bash
-pnpm install
-pnpm dev
+npm install
+npm run dev
 ```
+
+Then open http://localhost:3000.
+
+Other scripts:
+
+```bash
+npm run build      # production build
+npm run start      # run the production build
+npm run lint       # next lint
+npm run typecheck  # tsc --noEmit
+```
+
+## Deployment
+
+This project is Vercel-ready. Import the repo at
+https://vercel.com/new and Vercel will auto-detect Next.js and use
+`npm run build`. No additional environment variables are required for
+the default public RPC.
 
 ## Environment
 
-Copy `.env.example` to `.env.local` and fill in required values.
+Copy `.env.example` to `.env.local` if you want to override defaults.
+
+| Variable | Required | Purpose |
+| --- | --- | --- |
+| `NEXT_PUBLIC_PULSECHAIN_RPC_URL` | No | Override the default PulseChain RPC (`https://rpc.pulsechain.com`) for both viem reads and the wagmi transport. |
+
+## Project Structure
+
+```
+src/
+  app/
+    layout.tsx            # root layout, metadata, providers mount point
+    page.tsx              # homepage composed of sections
+    globals.css           # Tailwind layers + pulse utilities
+  components/
+    providers.tsx         # wagmi + react-query providers
+    connect-wallet-button.tsx
+    pulse-mark.tsx
+    sections/
+      site-header.tsx
+      hero.tsx
+      approval-scanner.tsx  # placeholder scanner UI
+      trust-safety.tsx
+      site-footer.tsx
+  lib/
+    chains.ts             # PulseChain viem chain definition
+    wagmi.ts              # wagmi config (PulseChain + injected)
+    format.ts             # small formatting helpers
+```
 
 ## License
 
