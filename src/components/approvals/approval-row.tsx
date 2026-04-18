@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 
+import type { BatchItemResult } from "@/hooks/use-batch-revoke";
 import { useRevokeApproval } from "@/hooks/use-revoke-approval";
 import { explorerAddressUrl, explorerTxUrl } from "@/lib/explorer";
 import { shortenAddress } from "@/lib/format";
@@ -10,9 +11,19 @@ import type { RiskLevel, ScoredApproval } from "@/lib/risk";
 export function ApprovalRow({
   approval,
   onRevoked,
+  selected = false,
+  onToggleSelect,
+  selectionDisabled = false,
+  batchActive = false,
+  batchResult,
 }: {
   approval: ScoredApproval;
   onRevoked?: (hash: `0x${string}`) => void;
+  selected?: boolean;
+  onToggleSelect?: (key: string) => void;
+  selectionDisabled?: boolean;
+  batchActive?: boolean;
+  batchResult?: BatchItemResult;
 }) {
   const [confirming, setConfirming] = useState(false);
 
@@ -34,12 +45,22 @@ export function ApprovalRow({
     },
   });
 
-  const showConfirm = confirming && status === "idle";
-  const showStatus = status !== "idle";
+  const showConfirm = confirming && status === "idle" && !batchActive;
+  const showStatus = status !== "idle" && !batchActive;
 
   return (
     <li className="border-b border-pulse-border/60 last:border-b-0">
-      <div className="grid grid-cols-1 gap-3 px-4 py-4 sm:grid-cols-[1.2fr_1.5fr_1fr_auto] sm:items-center sm:gap-4">
+      <div className="grid grid-cols-1 gap-3 px-4 py-4 sm:grid-cols-[auto_1.2fr_1.5fr_1fr_auto] sm:items-center sm:gap-4">
+        <div className="flex items-center">
+          <input
+            type="checkbox"
+            checked={selected}
+            onChange={() => onToggleSelect?.(approval.key)}
+            disabled={selectionDisabled || !onToggleSelect}
+            aria-label={`Select ${approval.tokenSymbol} approval for ${approval.spenderLabel}`}
+            className="h-4 w-4 cursor-pointer accent-pulse-purple disabled:cursor-not-allowed disabled:opacity-50"
+          />
+        </div>
         <div className="flex min-w-0 items-center gap-3">
           <RiskDot level={approval.risk.level} />
           <TokenAvatar symbol={approval.tokenSymbol} />
@@ -90,18 +111,22 @@ export function ApprovalRow({
         </div>
 
         <div className="flex justify-start sm:justify-end">
-          <RowAction
-            status={status}
-            hash={hash}
-            isBusy={isBusy}
-            confirming={confirming}
-            onConfirmClick={() => setConfirming(true)}
-            onCancel={() => setConfirming(false)}
-            onRetry={() => {
-              reset();
-              setConfirming(true);
-            }}
-          />
+          {batchActive && batchResult ? (
+            <BatchStatusPill result={batchResult} />
+          ) : (
+            <RowAction
+              status={status}
+              hash={hash}
+              isBusy={isBusy || batchActive}
+              confirming={confirming}
+              onConfirmClick={() => setConfirming(true)}
+              onCancel={() => setConfirming(false)}
+              onRetry={() => {
+                reset();
+                setConfirming(true);
+              }}
+            />
+          )}
         </div>
       </div>
 
@@ -459,6 +484,82 @@ function StatusRow({
         </button>
       ) : null}
     </div>
+  );
+}
+
+function BatchStatusPill({ result }: { result: BatchItemResult }) {
+  const base =
+    "inline-flex items-center justify-center gap-2 rounded-xl px-3 py-2 text-xs font-semibold";
+
+  if (result.status === "queued") {
+    return (
+      <span
+        className={`${base} border border-pulse-border bg-white/5 text-pulse-muted`}
+      >
+        Queued
+      </span>
+    );
+  }
+
+  if (result.status === "wallet") {
+    return (
+      <span
+        className={`${base} border border-pulse-cyan/40 bg-pulse-cyan/10 text-pulse-cyan`}
+      >
+        <Spinner /> Confirm in wallet…
+      </span>
+    );
+  }
+
+  if (result.status === "submitted") {
+    return (
+      <span
+        className={`${base} border border-pulse-cyan/40 bg-pulse-cyan/10 text-pulse-cyan`}
+      >
+        <Spinner /> Confirming…
+        {result.hash ? <TxLink hash={result.hash} /> : null}
+      </span>
+    );
+  }
+
+  if (result.status === "success") {
+    return (
+      <span
+        className={`${base} border border-pulse-green/40 bg-pulse-green/10 text-pulse-green`}
+      >
+        Revoked
+        {result.hash ? <TxLink hash={result.hash} tone="success" /> : null}
+      </span>
+    );
+  }
+
+  if (result.status === "rejected") {
+    return (
+      <span
+        className={`${base} border border-pulse-border bg-white/5 text-pulse-muted`}
+      >
+        Rejected
+      </span>
+    );
+  }
+
+  if (result.status === "skipped") {
+    return (
+      <span
+        className={`${base} border border-pulse-border bg-white/5 text-pulse-muted`}
+      >
+        Skipped
+      </span>
+    );
+  }
+
+  return (
+    <span
+      className={`${base} border border-pulse-red/40 bg-pulse-red/10 text-pulse-red`}
+      title={result.error}
+    >
+      Failed
+    </span>
   );
 }
 
