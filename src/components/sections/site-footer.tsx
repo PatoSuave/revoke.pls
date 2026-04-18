@@ -16,8 +16,8 @@ export function SiteFooter() {
             <p className="text-xs text-pulse-muted">
               {siteConfig.tagline}.
             </p>
-            <p className="mt-1 text-[11px] text-pulse-muted/80">
-              {siteConfig.attribution}
+            <p className="mt-1 font-mono text-[11px] text-pulse-muted/80">
+              {siteConfig.domain}
             </p>
           </div>
         </div>
@@ -67,7 +67,9 @@ export function SiteFooter() {
             </a>{" "}
             before signing.
           </p>
-          <p className="mt-1">© {year} {siteConfig.name}</p>
+          <p className="mt-1">
+            © {year} {siteConfig.name} · {siteConfig.attribution}
+          </p>
         </div>
       </div>
     </footer>
