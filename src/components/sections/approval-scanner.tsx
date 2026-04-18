@@ -7,9 +7,15 @@ import { ApprovalFilters } from "@/components/approvals/approval-filters";
 import { ApprovalRow } from "@/components/approvals/approval-row";
 import { ConnectWalletButton } from "@/components/connect-wallet-button";
 import { useApprovalScan } from "@/hooks/use-approval-scan";
-import { filterAndSortApprovals, type ApprovalSort } from "@/lib/approvals";
 import { pulsechain } from "@/lib/chains";
 import { shortenAddress } from "@/lib/format";
+import {
+  filterAndSortScoredApprovals,
+  scoreApprovals,
+  type ApprovalFilter,
+  type ApprovalSort,
+  type ScoredApproval,
+} from "@/lib/risk";
 
 /**
  * Connected-wallet approval scanner for PulseChain.
@@ -110,10 +116,21 @@ function ConnectedScanner({ owner }: { owner: `0x${string}` }) {
 
   const [query, setQuery] = useState("");
   const [sort, setSort] = useState<ApprovalSort>("risk");
+  const [filter, setFilter] = useState<ApprovalFilter>("all");
+
+  const scored = useMemo(
+    () => scoreApprovals(scan.approvals),
+    [scan.approvals],
+  );
 
   const visibleApprovals = useMemo(
-    () => filterAndSortApprovals(scan.approvals, { query, sort }),
-    [scan.approvals, query, sort],
+    () => filterAndSortScoredApprovals(scored, { query, sort, filter }),
+    [scored, query, sort, filter],
+  );
+
+  const highRiskCount = useMemo(
+    () => scored.filter((a) => a.risk.level === "high").length,
+    [scored],
   );
 
   return (
@@ -131,6 +148,15 @@ function ConnectedScanner({ owner }: { owner: `0x${string}` }) {
             Scanning {scan.tokensScanned} tokens × {scan.spendersScanned}{" "}
             spenders
           </span>
+          {highRiskCount > 0 ? (
+            <span className="inline-flex items-center gap-1.5 rounded-full border border-pulse-red/40 bg-pulse-red/10 px-3 py-1 text-xs font-semibold text-pulse-red">
+              <span
+                className="h-1.5 w-1.5 rounded-full bg-pulse-red"
+                aria-hidden
+              />
+              {highRiskCount} high-risk
+            </span>
+          ) : null}
         </div>
 
         <button
@@ -145,11 +171,14 @@ function ConnectedScanner({ owner }: { owner: `0x${string}` }) {
 
       <ScanContent
         scan={scan}
+        scored={scored}
         visibleApprovals={visibleApprovals}
         query={query}
         sort={sort}
+        filter={filter}
         onQueryChange={setQuery}
         onSortChange={setSort}
+        onFilterChange={setFilter}
       />
 
       <p className="text-xs text-pulse-muted">
@@ -163,18 +192,24 @@ function ConnectedScanner({ owner }: { owner: `0x${string}` }) {
 
 function ScanContent({
   scan,
+  scored,
   visibleApprovals,
   query,
   sort,
+  filter,
   onQueryChange,
   onSortChange,
+  onFilterChange,
 }: {
   scan: ReturnType<typeof useApprovalScan>;
-  visibleApprovals: ReturnType<typeof filterAndSortApprovals>;
+  scored: readonly ScoredApproval[];
+  visibleApprovals: readonly ScoredApproval[];
   query: string;
   sort: ApprovalSort;
+  filter: ApprovalFilter;
   onQueryChange: (v: string) => void;
   onSortChange: (v: ApprovalSort) => void;
+  onFilterChange: (v: ApprovalFilter) => void;
 }) {
   if (scan.status === "pending") {
     return <ScannerSkeleton totalChecks={scan.totalChecks} />;
@@ -199,7 +234,7 @@ function ScanContent({
     );
   }
 
-  if (scan.approvals.length === 0) {
+  if (scored.length === 0) {
     return (
       <div className="rounded-2xl border border-dashed border-pulse-border/80 bg-pulse-bg/40 p-6 text-sm">
         <p className="font-semibold text-pulse-text">No active approvals found</p>
@@ -213,11 +248,15 @@ function ScanContent({
 
   return (
     <div className="space-y-4">
+      <GuidancePanel />
+
       <ApprovalFilters
         query={query}
         onQueryChange={onQueryChange}
         sort={sort}
         onSortChange={onSortChange}
+        filter={filter}
+        onFilterChange={onFilterChange}
         count={visibleApprovals.length}
         totalChecks={scan.totalChecks}
         disabled={scan.isFetching}
@@ -232,7 +271,7 @@ function ScanContent({
           <div className="hidden grid-cols-[1.2fr_1.5fr_1fr_auto] gap-4 border-b border-pulse-border bg-pulse-bg/60 px-4 py-3 text-xs font-semibold uppercase tracking-wider text-pulse-muted sm:grid">
             <div>Token</div>
             <div>Spender</div>
-            <div>Allowance</div>
+            <div>Allowance · Risk</div>
             <div className="text-right">Action</div>
           </div>
           <ul>
@@ -246,6 +285,33 @@ function ScanContent({
           </ul>
         </div>
       )}
+    </div>
+  );
+}
+
+function GuidancePanel() {
+  return (
+    <div className="rounded-2xl border border-pulse-border/70 bg-pulse-bg/50 p-4 text-xs text-pulse-muted">
+      <p className="mb-2 text-[11px] font-semibold uppercase tracking-[0.16em] text-pulse-text">
+        A quick read on risk
+      </p>
+      <ul className="grid gap-2 sm:grid-cols-3">
+        <li>
+          <span className="font-semibold text-pulse-text">Unlimited first.</span>{" "}
+          Unlimited allowances expose your full token balance if the spender is
+          ever compromised. Revoke or reduce when not actively used.
+        </li>
+        <li>
+          <span className="font-semibold text-pulse-text">Unknown spenders.</span>{" "}
+          Spenders outside the verified registry deserve extra caution. Confirm
+          the address on PulseScan before leaving an approval in place.
+        </li>
+        <li>
+          <span className="font-semibold text-pulse-text">Trusted + finite.</span>{" "}
+          Lower priority but still worth reviewing periodically — especially if
+          the position is no longer active.
+        </li>
+      </ul>
     </div>
   );
 }

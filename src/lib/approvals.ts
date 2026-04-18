@@ -4,7 +4,9 @@ import { erc20Abi, formatAllowance, isUnlimitedAllowance } from "@/lib/erc20";
 import type { SpenderEntry, TokenEntry } from "@/lib/registry";
 
 /**
- * Flat, UI-ready representation of a single positive ERC-20 approval.
+ * Flat representation of a single positive ERC-20 approval. This is the
+ * base scan-result model — presentation enrichment (risk classification,
+ * etc.) lives in `@/lib/risk`.
  */
 export interface Approval {
   key: string;
@@ -15,7 +17,11 @@ export interface Approval {
   spenderAddress: Address;
   spenderLabel: string;
   protocol: string;
+  /** Mirrors `SpenderEntry.isTrusted` — carried here so downstream code
+   * doesn't have to re-resolve the spender via the registry. */
+  trusted: boolean;
   spenderUrl?: string;
+  spenderNotes?: string;
   rawAllowance: bigint;
   formattedAllowance: string;
   unlimited: boolean;
@@ -130,7 +136,9 @@ export function parseScanResults(
         spenderAddress: spender.address,
         spenderLabel: spender.label,
         protocol: spender.protocol,
+        trusted: spender.isTrusted,
         spenderUrl: spender.url,
+        spenderNotes: spender.notes,
         rawAllowance: raw,
         formattedAllowance: unlimited
           ? "Unlimited"
@@ -141,57 +149,4 @@ export function parseScanResults(
   });
 
   return approvals;
-}
-
-export type ApprovalSort = "risk" | "token" | "spender";
-
-/**
- * Filter + sort approvals for the scanner table. Pure so the hook can stay
- * small and so this is trivially testable in isolation.
- */
-export function filterAndSortApprovals(
-  approvals: readonly Approval[],
-  {
-    query,
-    sort,
-  }: {
-    query: string;
-    sort: ApprovalSort;
-  },
-): Approval[] {
-  const needle = query.trim().toLowerCase();
-  const filtered = needle
-    ? approvals.filter((a) => {
-        const haystack = [
-          a.tokenSymbol,
-          a.tokenName ?? "",
-          a.spenderLabel,
-          a.protocol,
-          a.tokenAddress,
-          a.spenderAddress,
-        ]
-          .join(" ")
-          .toLowerCase();
-        return haystack.includes(needle);
-      })
-    : [...approvals];
-
-  filtered.sort((a, b) => {
-    if (sort === "risk") {
-      if (a.unlimited !== b.unlimited) return a.unlimited ? -1 : 1;
-      const labelCmp = a.spenderLabel.localeCompare(b.spenderLabel);
-      if (labelCmp !== 0) return labelCmp;
-      return a.tokenSymbol.localeCompare(b.tokenSymbol);
-    }
-    if (sort === "token") {
-      const tokenCmp = a.tokenSymbol.localeCompare(b.tokenSymbol);
-      if (tokenCmp !== 0) return tokenCmp;
-      return a.spenderLabel.localeCompare(b.spenderLabel);
-    }
-    const spenderCmp = a.spenderLabel.localeCompare(b.spenderLabel);
-    if (spenderCmp !== 0) return spenderCmp;
-    return a.tokenSymbol.localeCompare(b.tokenSymbol);
-  });
-
-  return filtered;
 }
