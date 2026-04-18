@@ -96,6 +96,7 @@ Copy `.env.example` to `.env.local` if you want to override defaults.
 | Variable | Required | Purpose |
 | --- | --- | --- |
 | `NEXT_PUBLIC_PULSECHAIN_RPC_URL` | No | Override the default PulseChain RPC (`https://rpc.pulsechain.com`) for both viem reads and the wagmi transport. |
+| `NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID` | No | Enables the WalletConnect option in the connect menu (QR pairing for mobile wallets). Obtain a free project ID at [cloud.reown.com](https://cloud.reown.com). When unset, only the injected wallet option is shown — the app still runs. |
 
 ## Project Structure
 
@@ -107,7 +108,7 @@ src/
     globals.css           # Tailwind layers + pulse utilities
   components/
     providers.tsx         # wagmi + react-query providers
-    connect-wallet-button.tsx
+    connect-wallet-button.tsx  # connect menu (injected + optional WalletConnect)
     pulse-mark.tsx
     sections/
       site-header.tsx
