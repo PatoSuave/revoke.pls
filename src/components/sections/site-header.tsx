@@ -2,6 +2,7 @@ import Link from "next/link";
 
 import { ConnectWalletButton } from "@/components/connect-wallet-button";
 import { PulseMark } from "@/components/pulse-mark";
+import { siteConfig } from "@/lib/site";
 
 export function SiteHeader() {
   return (
@@ -10,7 +11,7 @@ export function SiteHeader() {
         <Link
           href="/"
           className="flex items-center gap-2.5 text-pulse-text"
-          aria-label="Pulse Revoke home"
+          aria-label={`${siteConfig.name} home`}
         >
           <PulseMark className="h-8 w-8" />
           <span className="text-base font-semibold tracking-tight sm:text-lg">
@@ -19,15 +20,15 @@ export function SiteHeader() {
         </Link>
 
         <nav className="hidden items-center gap-6 text-sm text-pulse-muted md:flex">
-          <a href="#scanner" className="hover:text-pulse-text transition">
-            Scanner
-          </a>
-          <a href="#safety" className="hover:text-pulse-text transition">
-            Safety
-          </a>
-          <a href="#faq" className="hover:text-pulse-text transition">
-            FAQ
-          </a>
+          {siteConfig.nav.map((item) => (
+            <a
+              key={item.href}
+              href={item.href}
+              className="transition hover:text-pulse-text"
+            >
+              {item.label}
+            </a>
+          ))}
         </nav>
 
         <ConnectWalletButton />
