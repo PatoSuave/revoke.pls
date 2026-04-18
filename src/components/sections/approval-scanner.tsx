@@ -1,12 +1,17 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useAccount, useChainId } from "wagmi";
 
 import { ApprovalFilters } from "@/components/approvals/approval-filters";
 import { ApprovalRow } from "@/components/approvals/approval-row";
+import {
+  BatchActionBar,
+  BatchRevokePanel,
+} from "@/components/approvals/batch-revoke-panel";
 import { ConnectWalletButton } from "@/components/connect-wallet-button";
 import { useApprovalScan } from "@/hooks/use-approval-scan";
+import { useBatchRevoke } from "@/hooks/use-batch-revoke";
 import { pulsechain } from "@/lib/chains";
 import { shortenAddress } from "@/lib/format";
 import {
@@ -117,6 +122,7 @@ function ConnectedScanner({ owner }: { owner: `0x${string}` }) {
   const [query, setQuery] = useState("");
   const [sort, setSort] = useState<ApprovalSort>("risk");
   const [filter, setFilter] = useState<ApprovalFilter>("all");
+  const [selected, setSelected] = useState<Set<string>>(() => new Set());
 
   const scored = useMemo(
     () => scoreApprovals(scan.approvals),
@@ -132,6 +138,72 @@ function ConnectedScanner({ owner }: { owner: `0x${string}` }) {
     () => scored.filter((a) => a.risk.level === "high").length,
     [scored],
   );
+
+  // Prune selections when the underlying scan loses an approval (e.g. after
+  // a successful revoke triggers a rescan).
+  useEffect(() => {
+    setSelected((prev) => {
+      if (prev.size === 0) return prev;
+      const keys = new Set(scored.map((a) => a.key));
+      let changed = false;
+      const next = new Set<string>();
+      for (const k of prev) {
+        if (keys.has(k)) next.add(k);
+        else changed = true;
+      }
+      return changed ? next : prev;
+    });
+  }, [scored]);
+
+  const toggleSelect = useCallback((key: string) => {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
+      return next;
+    });
+  }, []);
+
+  const clearSelection = useCallback(() => setSelected(new Set()), []);
+
+  const allVisibleSelected =
+    visibleApprovals.length > 0 &&
+    visibleApprovals.every((a) => selected.has(a.key));
+
+  const toggleSelectAllVisible = useCallback(() => {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      const all = visibleApprovals.every((a) => next.has(a.key));
+      if (all) {
+        for (const a of visibleApprovals) next.delete(a.key);
+      } else {
+        for (const a of visibleApprovals) next.add(a.key);
+      }
+      return next;
+    });
+  }, [visibleApprovals]);
+
+  const batch = useBatchRevoke({ onComplete: scan.refetch });
+  const batchActive =
+    batch.state === "running" || batch.state === "stopping";
+
+  const selectedApprovals = useMemo(
+    () => scored.filter((a) => selected.has(a.key)),
+    [scored, selected],
+  );
+
+  const selectedHighRisk = useMemo(
+    () => selectedApprovals.filter((a) => a.risk.level === "high").length,
+    [selectedApprovals],
+  );
+  const selectedUnlimited = useMemo(
+    () => selectedApprovals.filter((a) => a.unlimited).length,
+    [selectedApprovals],
+  );
+
+  const onReviewBatch = useCallback(() => {
+    batch.beginConfirm(selectedApprovals);
+  }, [batch, selectedApprovals]);
 
   return (
     <div className="space-y-6">
@@ -162,7 +234,7 @@ function ConnectedScanner({ owner }: { owner: `0x${string}` }) {
         <button
           type="button"
           onClick={scan.refetch}
-          disabled={scan.isFetching}
+          disabled={scan.isFetching || batchActive}
           className="inline-flex items-center gap-2 rounded-xl border border-pulse-border bg-white/5 px-3 py-2 text-xs font-semibold text-pulse-text transition hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-60"
         >
           {scan.isFetching ? "Scanning…" : "Rescan"}
@@ -179,6 +251,15 @@ function ConnectedScanner({ owner }: { owner: `0x${string}` }) {
         onQueryChange={setQuery}
         onSortChange={setSort}
         onFilterChange={setFilter}
+        selected={selected}
+        onToggleSelect={toggleSelect}
+        onClearSelection={clearSelection}
+        onToggleSelectAllVisible={toggleSelectAllVisible}
+        allVisibleSelected={allVisibleSelected}
+        selectedHighRisk={selectedHighRisk}
+        selectedUnlimited={selectedUnlimited}
+        onReviewBatch={onReviewBatch}
+        batch={batch}
       />
 
       <p className="text-xs text-pulse-muted">
@@ -200,6 +281,15 @@ function ScanContent({
   onQueryChange,
   onSortChange,
   onFilterChange,
+  selected,
+  onToggleSelect,
+  onClearSelection,
+  onToggleSelectAllVisible,
+  allVisibleSelected,
+  selectedHighRisk,
+  selectedUnlimited,
+  onReviewBatch,
+  batch,
 }: {
   scan: ReturnType<typeof useApprovalScan>;
   scored: readonly ScoredApproval[];
@@ -210,7 +300,18 @@ function ScanContent({
   onQueryChange: (v: string) => void;
   onSortChange: (v: ApprovalSort) => void;
   onFilterChange: (v: ApprovalFilter) => void;
+  selected: Set<string>;
+  onToggleSelect: (key: string) => void;
+  onClearSelection: () => void;
+  onToggleSelectAllVisible: () => void;
+  allVisibleSelected: boolean;
+  selectedHighRisk: number;
+  selectedUnlimited: number;
+  onReviewBatch: () => void;
+  batch: ReturnType<typeof useBatchRevoke>;
 }) {
+  const batchActive = batch.state === "running" || batch.state === "stopping";
+  const batchInteracting = batch.state !== "idle";
   if (scan.status === "pending") {
     return <ScannerSkeleton totalChecks={scan.totalChecks} />;
   }
@@ -259,8 +360,22 @@ function ScanContent({
         onFilterChange={onFilterChange}
         count={visibleApprovals.length}
         totalChecks={scan.totalChecks}
-        disabled={scan.isFetching}
+        disabled={scan.isFetching || batchInteracting}
       />
+
+      <BatchActionBar
+        selectedCount={selected.size}
+        visibleCount={visibleApprovals.length}
+        allVisibleSelected={allVisibleSelected}
+        highRiskSelected={selectedHighRisk}
+        unlimitedSelected={selectedUnlimited}
+        onSelectAllVisible={onToggleSelectAllVisible}
+        onClear={onClearSelection}
+        onReview={onReviewBatch}
+        disabled={batchInteracting}
+      />
+
+      <BatchRevokePanel batch={batch} />
 
       {visibleApprovals.length === 0 ? (
         <div className="rounded-2xl border border-pulse-border bg-pulse-bg/40 p-6 text-sm text-pulse-muted">
@@ -268,7 +383,8 @@ function ScanContent({
         </div>
       ) : (
         <div className="overflow-hidden rounded-2xl border border-pulse-border bg-pulse-bg/40">
-          <div className="hidden grid-cols-[1.2fr_1.5fr_1fr_auto] gap-4 border-b border-pulse-border bg-pulse-bg/60 px-4 py-3 text-xs font-semibold uppercase tracking-wider text-pulse-muted sm:grid">
+          <div className="hidden grid-cols-[auto_1.2fr_1.5fr_1fr_auto] gap-4 border-b border-pulse-border bg-pulse-bg/60 px-4 py-3 text-xs font-semibold uppercase tracking-wider text-pulse-muted sm:grid">
+            <div aria-hidden />
             <div>Token</div>
             <div>Spender</div>
             <div>Allowance · Risk</div>
@@ -280,6 +396,11 @@ function ScanContent({
                 key={approval.key}
                 approval={approval}
                 onRevoked={scan.refetch}
+                selected={selected.has(approval.key)}
+                onToggleSelect={onToggleSelect}
+                selectionDisabled={batchInteracting}
+                batchActive={batchActive}
+                batchResult={batch.results[approval.key]}
               />
             ))}
           </ul>
