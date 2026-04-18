@@ -89,6 +89,28 @@ https://vercel.com/new and Vercel will auto-detect Next.js and use
 `npm run build`. No additional environment variables are required for
 the default public RPC.
 
+For the production domain `revoke.pls`, set `NEXT_PUBLIC_SITE_URL=https://revoke.pls`
+in your Vercel project environment so canonical URLs, Open Graph, and Twitter
+cards resolve against the real origin. Preview/staging deploys should set it
+to the preview origin to avoid advertising the production canonical.
+
+### Favicon, app icon, and Open Graph image
+
+The favicon, Apple touch icon, and Open Graph image are generated at runtime
+via Next.js file-based metadata routes, backed by `next/og` `ImageResponse`:
+
+- `src/app/icon.tsx` → `/icon` (32×32 favicon)
+- `src/app/apple-icon.tsx` → `/apple-icon` (180×180 touch icon)
+- `src/app/opengraph-image.tsx` → `/opengraph-image` (1200×630 social card)
+
+All three read brand colors from `siteConfig.brandColors` in `src/lib/site.ts`,
+so brand updates happen in one place. No static assets need to be placed in
+`public/` for these to work.
+
+If you'd rather override with a static PNG, drop files at `public/icon.png`,
+`public/apple-icon.png`, and `public/opengraph-image.png` — Next.js will prefer
+the static file over the route when both exist.
+
 ## Environment
 
 Copy `.env.example` to `.env.local` if you want to override defaults.
@@ -97,7 +119,7 @@ Copy `.env.example` to `.env.local` if you want to override defaults.
 | --- | --- | --- |
 | `NEXT_PUBLIC_PULSECHAIN_RPC_URL` | No | Override the default PulseChain RPC (`https://rpc.pulsechain.com`) for both viem reads and the wagmi transport. |
 | `NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID` | No | Enables the WalletConnect option in the connect menu (QR pairing for mobile wallets). Obtain a free project ID at [cloud.reown.com](https://cloud.reown.com). When unset, only the injected wallet option is shown — the app still runs. |
-| `NEXT_PUBLIC_SITE_URL` | No | Canonical public URL used by SEO metadata, Open Graph, and Twitter cards (e.g. `https://pulse-revoke.app`). Defaults to the placeholder in `src/lib/site.ts`. Set this in production so social previews and `rel="canonical"` resolve correctly. |
+| `NEXT_PUBLIC_SITE_URL` | No | Canonical public URL used by SEO metadata, Open Graph, and Twitter cards. Defaults to `https://revoke.pls`. Set to your own origin for preview/staging deploys so previews do not advertise the production canonical. |
 
 ## Project Structure
 
