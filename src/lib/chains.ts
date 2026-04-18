@@ -26,6 +26,14 @@ export const pulsechain = defineChain({
       url: "https://scan.pulsechain.com",
     },
   },
+  contracts: {
+    // Canonical Multicall3 is deployed at the same deterministic address
+    // on PulseChain as on other EVM chains, which lets wagmi/viem batch
+    // the scanner's allowance + metadata reads into a single RPC call.
+    multicall3: {
+      address: "0xcA11bde05977b3631167028862bE2a173976CA11",
+    },
+  },
   testnet: false,
 });
 
