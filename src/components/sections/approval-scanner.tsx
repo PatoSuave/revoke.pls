@@ -237,7 +237,11 @@ function ScanContent({
           </div>
           <ul>
             {visibleApprovals.map((approval) => (
-              <ApprovalRow key={approval.key} approval={approval} />
+              <ApprovalRow
+                key={approval.key}
+                approval={approval}
+                onRevoked={scan.refetch}
+              />
             ))}
           </ul>
         </div>
