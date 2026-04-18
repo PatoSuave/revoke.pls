@@ -1,63 +1,405 @@
 "use client";
 
+import { useState } from "react";
+
+import { useRevokeApproval } from "@/hooks/use-revoke-approval";
 import type { Approval } from "@/lib/approvals";
-import { explorerAddressUrl } from "@/lib/explorer";
+import { explorerAddressUrl, explorerTxUrl } from "@/lib/explorer";
 import { shortenAddress } from "@/lib/format";
 
-export function ApprovalRow({ approval }: { approval: Approval }) {
+export function ApprovalRow({
+  approval,
+  onRevoked,
+}: {
+  approval: Approval;
+  onRevoked?: (hash: `0x${string}`) => void;
+}) {
+  const [confirming, setConfirming] = useState(false);
+
+  const {
+    status,
+    hash,
+    errorMessage,
+    isBusy,
+    revoke,
+    reset,
+  } = useRevokeApproval({
+    target: {
+      tokenAddress: approval.tokenAddress,
+      spenderAddress: approval.spenderAddress,
+    },
+    onSuccess: (h) => {
+      setConfirming(false);
+      onRevoked?.(h);
+    },
+  });
+
+  const showConfirm = confirming && status === "idle";
+  const showStatus = status !== "idle";
+
   return (
-    <li className="grid grid-cols-1 gap-3 border-b border-pulse-border/60 px-4 py-4 last:border-b-0 sm:grid-cols-[1.2fr_1.5fr_1fr_auto] sm:items-center sm:gap-4">
-      <div className="flex min-w-0 items-center gap-3">
-        <TokenAvatar symbol={approval.tokenSymbol} />
+    <li className="border-b border-pulse-border/60 last:border-b-0">
+      <div className="grid grid-cols-1 gap-3 px-4 py-4 sm:grid-cols-[1.2fr_1.5fr_1fr_auto] sm:items-center sm:gap-4">
+        <div className="flex min-w-0 items-center gap-3">
+          <TokenAvatar symbol={approval.tokenSymbol} />
+          <div className="min-w-0">
+            <p className="truncate text-sm font-semibold text-pulse-text">
+              {approval.tokenSymbol}
+            </p>
+            <ExplorerLink
+              address={approval.tokenAddress}
+              label={approval.tokenName}
+            />
+          </div>
+        </div>
+
         <div className="min-w-0">
-          <p className="truncate text-sm font-semibold text-pulse-text">
-            {approval.tokenSymbol}
+          <p className="truncate text-sm font-medium text-pulse-text">
+            {approval.spenderLabel}
           </p>
-          <ExplorerLink
-            address={approval.tokenAddress}
-            label={approval.tokenName}
+          <p className="truncate text-xs text-pulse-muted">
+            {approval.protocol}
+            {" · "}
+            <ExplorerLink address={approval.spenderAddress} inline />
+          </p>
+        </div>
+
+        <div className="flex flex-wrap items-center gap-2">
+          {approval.unlimited ? (
+            <span className="inline-flex items-center gap-1.5 rounded-full border border-pulse-red/40 bg-pulse-red/10 px-2.5 py-1 text-xs font-semibold text-pulse-red">
+              <span
+                className="h-1.5 w-1.5 rounded-full bg-pulse-red"
+                aria-hidden
+              />
+              Unlimited
+            </span>
+          ) : (
+            <span className="font-mono text-sm text-pulse-text">
+              {approval.formattedAllowance}
+            </span>
+          )}
+          {approval.unlimited ? (
+            <span className="font-mono text-[11px] text-pulse-muted">
+              max uint256
+            </span>
+          ) : null}
+        </div>
+
+        <div className="flex justify-start sm:justify-end">
+          <RowAction
+            status={status}
+            hash={hash}
+            isBusy={isBusy}
+            confirming={confirming}
+            onConfirmClick={() => setConfirming(true)}
+            onCancel={() => setConfirming(false)}
+            onRetry={() => {
+              reset();
+              setConfirming(true);
+            }}
           />
         </div>
       </div>
 
-      <div className="min-w-0">
-        <p className="truncate text-sm font-medium text-pulse-text">
-          {approval.spenderLabel}
-        </p>
-        <p className="truncate text-xs text-pulse-muted">
-          {approval.protocol}
-          {" · "}
-          <ExplorerLink address={approval.spenderAddress} inline />
-        </p>
-      </div>
+      {showConfirm ? (
+        <ConfirmPanel
+          approval={approval}
+          onCancel={() => setConfirming(false)}
+          onConfirm={() => {
+            revoke();
+          }}
+        />
+      ) : null}
 
-      <div className="flex flex-wrap items-center gap-2">
-        {approval.unlimited ? (
-          <span className="inline-flex items-center gap-1.5 rounded-full border border-pulse-red/40 bg-pulse-red/10 px-2.5 py-1 text-xs font-semibold text-pulse-red">
-            <span className="h-1.5 w-1.5 rounded-full bg-pulse-red" aria-hidden />
-            Unlimited
-          </span>
-        ) : (
-          <span className="font-mono text-sm text-pulse-text">
-            {approval.formattedAllowance}
-          </span>
-        )}
-        {approval.unlimited ? (
-          <span className="font-mono text-[11px] text-pulse-muted">
-            max uint256
-          </span>
-        ) : null}
-      </div>
+      {showStatus ? (
+        <StatusPanel
+          status={status}
+          hash={hash}
+          errorMessage={errorMessage}
+          onDismiss={reset}
+        />
+      ) : null}
+    </li>
+  );
+}
 
+function RowAction({
+  status,
+  hash,
+  isBusy,
+  confirming,
+  onConfirmClick,
+  onCancel,
+  onRetry,
+}: {
+  status: ReturnType<typeof useRevokeApproval>["status"];
+  hash?: `0x${string}`;
+  isBusy: boolean;
+  confirming: boolean;
+  onConfirmClick: () => void;
+  onCancel: () => void;
+  onRetry: () => void;
+}) {
+  const base =
+    "inline-flex items-center justify-center gap-2 rounded-xl px-3 py-2 text-xs font-semibold transition disabled:cursor-not-allowed";
+
+  if (status === "wallet") {
+    return (
+      <span
+        className={`${base} border border-pulse-border bg-white/5 text-pulse-muted`}
+      >
+        <Spinner /> Confirm in wallet…
+      </span>
+    );
+  }
+
+  if (status === "pending") {
+    return (
+      <span
+        className={`${base} border border-pulse-border bg-white/5 text-pulse-muted`}
+      >
+        <Spinner /> Confirming…
+        {hash ? <TxLink hash={hash} /> : null}
+      </span>
+    );
+  }
+
+  if (status === "success") {
+    return (
+      <span
+        className={`${base} border border-pulse-green/40 bg-pulse-green/10 text-pulse-green`}
+      >
+        Revoked
+        {hash ? <TxLink hash={hash} tone="success" /> : null}
+      </span>
+    );
+  }
+
+  if (status === "error") {
+    return (
       <button
         type="button"
-        disabled
-        title="Revoke transactions land in the next step"
-        className="inline-flex items-center justify-center rounded-xl border border-pulse-border bg-white/5 px-3 py-2 text-xs font-semibold text-pulse-muted transition disabled:cursor-not-allowed"
+        onClick={onRetry}
+        className={`${base} border border-pulse-red/40 bg-pulse-red/10 text-pulse-red hover:bg-pulse-red/20`}
       >
-        Revoke
+        Retry
       </button>
-    </li>
+    );
+  }
+
+  if (status === "rejected") {
+    return (
+      <button
+        type="button"
+        onClick={onRetry}
+        className={`${base} border border-pulse-border bg-white/5 text-pulse-text hover:bg-white/10`}
+      >
+        Try again
+      </button>
+    );
+  }
+
+  if (confirming) {
+    return (
+      <button
+        type="button"
+        onClick={onCancel}
+        className={`${base} border border-pulse-border bg-white/5 text-pulse-muted hover:bg-white/10`}
+      >
+        Cancel
+      </button>
+    );
+  }
+
+  return (
+    <button
+      type="button"
+      onClick={onConfirmClick}
+      disabled={isBusy}
+      className={`${base} bg-pulse-gradient text-pulse-bg shadow-glow hover:brightness-110 active:brightness-95`}
+    >
+      Revoke
+    </button>
+  );
+}
+
+function ConfirmPanel({
+  approval,
+  onCancel,
+  onConfirm,
+}: {
+  approval: Approval;
+  onCancel: () => void;
+  onConfirm: () => void;
+}) {
+  return (
+    <div className="border-t border-pulse-border/60 bg-pulse-bg/50 px-4 py-4 sm:px-6">
+      <div className="flex flex-col items-start gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div className="text-sm">
+          <p className="font-medium text-pulse-text">
+            Revoke{" "}
+            <span className="font-semibold">{approval.tokenSymbol}</span>{" "}
+            approval for{" "}
+            <span className="font-semibold">{approval.spenderLabel}</span>?
+          </p>
+          <p className="mt-1 text-xs text-pulse-muted">
+            Sends{" "}
+            <span className="font-mono text-pulse-text">
+              approve({shortenAddress(approval.spenderAddress)}, 0)
+            </span>{" "}
+            on-chain. Gas fees apply.
+          </p>
+        </div>
+        <div className="flex items-center gap-2 self-stretch sm:self-auto">
+          <button
+            type="button"
+            onClick={onCancel}
+            className="flex-1 rounded-xl border border-pulse-border bg-white/5 px-3 py-2 text-xs font-semibold text-pulse-text transition hover:bg-white/10 sm:flex-none"
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            onClick={onConfirm}
+            className="flex-1 rounded-xl bg-pulse-gradient px-3 py-2 text-xs font-semibold text-pulse-bg shadow-glow transition hover:brightness-110 sm:flex-none"
+          >
+            Confirm revoke
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function StatusPanel({
+  status,
+  hash,
+  errorMessage,
+  onDismiss,
+}: {
+  status: ReturnType<typeof useRevokeApproval>["status"];
+  hash?: `0x${string}`;
+  errorMessage?: string;
+  onDismiss: () => void;
+}) {
+  if (status === "wallet") {
+    return (
+      <StatusRow tone="info">
+        Open your wallet to approve the revoke transaction.
+      </StatusRow>
+    );
+  }
+
+  if (status === "pending") {
+    return (
+      <StatusRow tone="info">
+        Waiting for PulseChain to confirm the revoke transaction.
+        {hash ? (
+          <>
+            {" "}
+            <TxLink hash={hash} />
+          </>
+        ) : null}
+      </StatusRow>
+    );
+  }
+
+  if (status === "success") {
+    return (
+      <StatusRow tone="success">
+        Approval revoked on-chain.
+        {hash ? (
+          <>
+            {" "}
+            <TxLink hash={hash} tone="success" />
+          </>
+        ) : null}
+      </StatusRow>
+    );
+  }
+
+  if (status === "rejected") {
+    return (
+      <StatusRow tone="muted" onDismiss={onDismiss}>
+        {errorMessage ?? "Transaction rejected in wallet."}
+      </StatusRow>
+    );
+  }
+
+  if (status === "error") {
+    return (
+      <StatusRow tone="error" onDismiss={onDismiss}>
+        {errorMessage ?? "Revoke failed."}
+      </StatusRow>
+    );
+  }
+
+  return null;
+}
+
+function StatusRow({
+  children,
+  tone,
+  onDismiss,
+}: {
+  children: React.ReactNode;
+  tone: "info" | "success" | "error" | "muted";
+  onDismiss?: () => void;
+}) {
+  const toneClass = {
+    info: "border-pulse-border/70 bg-pulse-bg/50 text-pulse-muted",
+    success: "border-pulse-green/40 bg-pulse-green/10 text-pulse-green",
+    error: "border-pulse-red/40 bg-pulse-red/10 text-pulse-red",
+    muted: "border-pulse-border/70 bg-pulse-bg/50 text-pulse-muted",
+  }[tone];
+
+  return (
+    <div
+      className={`flex items-start justify-between gap-3 border-t px-4 py-3 text-xs sm:px-6 ${toneClass}`}
+    >
+      <p className="flex-1">{children}</p>
+      {onDismiss ? (
+        <button
+          type="button"
+          onClick={onDismiss}
+          className="rounded-md px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wide hover:bg-white/5"
+        >
+          Dismiss
+        </button>
+      ) : null}
+    </div>
+  );
+}
+
+function Spinner() {
+  return (
+    <span
+      aria-hidden
+      className="inline-block h-3 w-3 animate-spin rounded-full border-2 border-current border-t-transparent"
+    />
+  );
+}
+
+function TxLink({
+  hash,
+  tone = "muted",
+}: {
+  hash: `0x${string}`;
+  tone?: "muted" | "success";
+}) {
+  const cls =
+    tone === "success"
+      ? "underline underline-offset-2 hover:text-pulse-green"
+      : "underline underline-offset-2 hover:text-pulse-cyan";
+  return (
+    <a
+      href={explorerTxUrl(hash)}
+      target="_blank"
+      rel="noreferrer"
+      className={`text-[11px] font-semibold ${cls}`}
+    >
+      view tx ↗
+    </a>
   );
 }
 
