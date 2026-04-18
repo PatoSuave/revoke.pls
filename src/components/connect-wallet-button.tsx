@@ -1,7 +1,14 @@
 "use client";
 
-import { useMemo } from "react";
-import { useAccount, useChainId, useConnect, useDisconnect, useSwitchChain } from "wagmi";
+import { useEffect, useMemo, useRef, useState } from "react";
+import {
+  useAccount,
+  useChainId,
+  useConnect,
+  useDisconnect,
+  useSwitchChain,
+  type Connector,
+} from "wagmi";
 
 import { pulsechain } from "@/lib/chains";
 import { shortenAddress } from "@/lib/format";
@@ -20,6 +27,28 @@ const variantStyles: Record<Variant, string> = {
     "bg-white/5 text-pulse-text border border-pulse-border hover:bg-white/10",
 };
 
+/**
+ * Connector types we surface in the connect menu. Everything else wagmi might
+ * register (mock, etc.) is filtered out. Ordering here matches display order.
+ */
+const SUPPORTED_CONNECTOR_TYPES = ["injected", "walletConnect"] as const;
+
+function describeConnector(c: Connector): { label: string; sub: string } {
+  if (c.type === "walletConnect") {
+    return {
+      label: "WalletConnect",
+      sub: "Scan a QR code with a mobile wallet",
+    };
+  }
+  if (c.type === "injected") {
+    return {
+      label: "Browser wallet",
+      sub: "MetaMask, Rabby, Brave, and similar",
+    };
+  }
+  return { label: c.name, sub: c.type };
+}
+
 export function ConnectWalletButton({
   variant = "primary",
   className = "",
@@ -30,10 +59,48 @@ export function ConnectWalletButton({
   const { switchChain, isPending: isSwitching } = useSwitchChain();
   const chainId = useChainId();
 
-  const injectedConnector = useMemo(
-    () => connectors.find((c) => c.type === "injected") ?? connectors[0],
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [pendingId, setPendingId] = useState<string | null>(null);
+  const wrapperRef = useRef<HTMLDivElement>(null);
+
+  const availableConnectors = useMemo(
+    () =>
+      SUPPORTED_CONNECTOR_TYPES.flatMap((t) =>
+        connectors.filter((c) => c.type === t),
+      ),
     [connectors],
   );
+
+  // Close the menu on outside click or Escape.
+  useEffect(() => {
+    if (!menuOpen) return;
+    function onPointerDown(e: MouseEvent) {
+      if (
+        wrapperRef.current &&
+        !wrapperRef.current.contains(e.target as Node)
+      ) {
+        setMenuOpen(false);
+      }
+    }
+    function onKey(e: KeyboardEvent) {
+      if (e.key === "Escape") setMenuOpen(false);
+    }
+    document.addEventListener("mousedown", onPointerDown);
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("mousedown", onPointerDown);
+      document.removeEventListener("keydown", onKey);
+    };
+  }, [menuOpen]);
+
+  // Dismiss the menu once a connection lands, and clear the per-row pending
+  // marker once wagmi is no longer pending.
+  useEffect(() => {
+    if (isConnected) setMenuOpen(false);
+  }, [isConnected]);
+  useEffect(() => {
+    if (!isConnecting) setPendingId(null);
+  }, [isConnecting]);
 
   const base =
     "inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold transition disabled:cursor-not-allowed disabled:opacity-60";
@@ -86,24 +153,99 @@ export function ConnectWalletButton({
     );
   }
 
-  const canConnect = Boolean(injectedConnector);
+  if (availableConnectors.length === 0) {
+    return (
+      <div className={`inline-flex flex-col items-end gap-1 ${className}`}>
+        <button
+          type="button"
+          disabled
+          className={`${base} ${variantStyles[variant]}`}
+        >
+          Connect Wallet
+        </button>
+        <span className="text-xs text-pulse-muted">
+          No wallet connectors available
+        </span>
+      </div>
+    );
+  }
 
+  // Single-connector fallback: preserve the original one-click UX.
+  if (availableConnectors.length === 1) {
+    const only = availableConnectors[0];
+    return (
+      <div className={`inline-flex flex-col items-end gap-1 ${className}`}>
+        <button
+          type="button"
+          disabled={isConnecting}
+          onClick={() => {
+            setPendingId(only.uid);
+            connect({ connector: only });
+          }}
+          className={`${base} ${variantStyles[variant]}`}
+        >
+          {isConnecting ? "Confirm in wallet…" : "Connect Wallet"}
+        </button>
+        {error ? (
+          <span className="max-w-xs truncate text-xs text-pulse-red">
+            {error.message}
+          </span>
+        ) : null}
+      </div>
+    );
+  }
+
+  // Multi-connector menu.
   return (
-    <div className={`inline-flex flex-col items-end gap-1 ${className}`}>
+    <div ref={wrapperRef} className={`relative inline-block ${className}`}>
       <button
         type="button"
-        disabled={!canConnect || isConnecting}
-        onClick={() => injectedConnector && connect({ connector: injectedConnector })}
+        onClick={() => setMenuOpen((v) => !v)}
+        disabled={isConnecting}
+        aria-haspopup="menu"
+        aria-expanded={menuOpen}
         className={`${base} ${variantStyles[variant]}`}
       >
         {isConnecting ? "Confirm in wallet…" : "Connect Wallet"}
       </button>
-      {error ? (
-        <span className="text-xs text-pulse-red">{error.message}</span>
-      ) : !canConnect ? (
-        <span className="text-xs text-pulse-muted">
-          No injected wallet detected
-        </span>
+
+      {menuOpen ? (
+        <div
+          role="menu"
+          aria-label="Choose a wallet connection method"
+          className="absolute right-0 top-[calc(100%+8px)] z-50 w-72 overflow-hidden rounded-2xl border border-pulse-border bg-pulse-panel/95 p-1 shadow-xl backdrop-blur"
+        >
+          {availableConnectors.map((c) => {
+            const d = describeConnector(c);
+            const isThisPending = isConnecting && pendingId === c.uid;
+            return (
+              <button
+                key={c.uid}
+                role="menuitem"
+                type="button"
+                disabled={isConnecting}
+                onClick={() => {
+                  setPendingId(c.uid);
+                  connect({ connector: c });
+                }}
+                className="flex w-full items-start justify-between gap-3 rounded-xl px-3 py-2.5 text-left text-sm text-pulse-text transition hover:bg-white/5 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                <span className="flex flex-col">
+                  <span className="font-semibold">{d.label}</span>
+                  <span className="text-xs text-pulse-muted">{d.sub}</span>
+                </span>
+                <span className="text-xs text-pulse-muted">
+                  {isThisPending ? "…" : ""}
+                </span>
+              </button>
+            );
+          })}
+          {error ? (
+            <p className="mt-1 rounded-xl bg-pulse-red/10 px-3 py-2 text-xs text-pulse-red">
+              {error.message}
+            </p>
+          ) : null}
+        </div>
       ) : null}
     </div>
   );
