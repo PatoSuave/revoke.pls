@@ -3,15 +3,15 @@
 import { useState } from "react";
 
 import { useRevokeApproval } from "@/hooks/use-revoke-approval";
-import type { Approval } from "@/lib/approvals";
 import { explorerAddressUrl, explorerTxUrl } from "@/lib/explorer";
 import { shortenAddress } from "@/lib/format";
+import type { RiskLevel, ScoredApproval } from "@/lib/risk";
 
 export function ApprovalRow({
   approval,
   onRevoked,
 }: {
-  approval: Approval;
+  approval: ScoredApproval;
   onRevoked?: (hash: `0x${string}`) => void;
 }) {
   const [confirming, setConfirming] = useState(false);
@@ -41,6 +41,7 @@ export function ApprovalRow({
     <li className="border-b border-pulse-border/60 last:border-b-0">
       <div className="grid grid-cols-1 gap-3 px-4 py-4 sm:grid-cols-[1.2fr_1.5fr_1fr_auto] sm:items-center sm:gap-4">
         <div className="flex min-w-0 items-center gap-3">
+          <RiskDot level={approval.risk.level} />
           <TokenAvatar symbol={approval.tokenSymbol} />
           <div className="min-w-0">
             <p className="truncate text-sm font-semibold text-pulse-text">
@@ -58,13 +59,16 @@ export function ApprovalRow({
             {approval.spenderLabel}
           </p>
           <p className="truncate text-xs text-pulse-muted">
-            {approval.protocol}
-            {" · "}
             <ExplorerLink address={approval.spenderAddress} inline />
           </p>
+          <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
+            <ProtocolBadge protocol={approval.protocol} />
+            {approval.trusted ? <TrustedBadge /> : <UnverifiedBadge />}
+          </div>
         </div>
 
-        <div className="flex flex-wrap items-center gap-2">
+        <div className="flex flex-col items-start gap-1.5">
+          <RiskBadge risk={approval.risk} />
           {approval.unlimited ? (
             <span className="inline-flex items-center gap-1.5 rounded-full border border-pulse-red/40 bg-pulse-red/10 px-2.5 py-1 text-xs font-semibold text-pulse-red">
               <span
@@ -120,6 +124,92 @@ export function ApprovalRow({
         />
       ) : null}
     </li>
+  );
+}
+
+const RISK_STYLES: Record<
+  RiskLevel,
+  { pill: string; dot: string; label: string }
+> = {
+  low: {
+    pill: "border-pulse-green/40 bg-pulse-green/10 text-pulse-green",
+    dot: "bg-pulse-green",
+    label: "Low risk",
+  },
+  medium: {
+    pill: "border-amber-400/40 bg-amber-400/10 text-amber-300",
+    dot: "bg-amber-300",
+    label: "Medium risk",
+  },
+  high: {
+    pill: "border-pulse-red/50 bg-pulse-red/15 text-pulse-red",
+    dot: "bg-pulse-red",
+    label: "High risk",
+  },
+};
+
+function RiskBadge({ risk }: { risk: ScoredApproval["risk"] }) {
+  const style = RISK_STYLES[risk.level];
+  return (
+    <span
+      className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide ${style.pill}`}
+      title={risk.reason}
+    >
+      <span className={`h-1.5 w-1.5 rounded-full ${style.dot}`} aria-hidden />
+      {style.label}
+    </span>
+  );
+}
+
+function RiskDot({ level }: { level: RiskLevel }) {
+  const style = RISK_STYLES[level];
+  return (
+    <span
+      aria-hidden
+      className={`h-2 w-2 shrink-0 rounded-full ${style.dot}`}
+    />
+  );
+}
+
+function ProtocolBadge({ protocol }: { protocol: string }) {
+  return (
+    <span className="inline-flex items-center rounded-full border border-pulse-border bg-pulse-bg/60 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-pulse-muted">
+      {protocol}
+    </span>
+  );
+}
+
+function TrustedBadge() {
+  return (
+    <span
+      className="inline-flex items-center gap-1 rounded-full border border-pulse-cyan/40 bg-pulse-cyan/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-pulse-cyan"
+      title="Spender address matches a manually verified entry in the Pulse Revoke registry. This is not an absolute safety claim."
+    >
+      <svg
+        aria-hidden
+        viewBox="0 0 12 12"
+        className="h-2.5 w-2.5"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      >
+        <path d="M2.5 6.5 L5 9 L9.5 3.5" />
+      </svg>
+      Known
+    </span>
+  );
+}
+
+function UnverifiedBadge() {
+  return (
+    <span
+      className="inline-flex items-center rounded-full border border-pulse-border bg-pulse-bg/60 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-pulse-muted"
+      title="This spender is not in the verified registry. Verify the contract before leaving an allowance in place."
+    >
+      Unverified
+    </span>
   );
 }
 
@@ -228,7 +318,7 @@ function ConfirmPanel({
   onCancel,
   onConfirm,
 }: {
-  approval: Approval;
+  approval: ScoredApproval;
   onCancel: () => void;
   onConfirm: () => void;
 }) {
@@ -249,6 +339,7 @@ function ConfirmPanel({
             </span>{" "}
             on-chain. Gas fees apply.
           </p>
+          <p className="mt-1 text-xs text-pulse-muted">{approval.risk.reason}</p>
         </div>
         <div className="flex items-center gap-2 self-stretch sm:self-auto">
           <button
