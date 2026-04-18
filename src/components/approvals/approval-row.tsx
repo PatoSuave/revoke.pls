@@ -83,8 +83,17 @@ export function ApprovalRow({
             <ExplorerLink address={approval.spenderAddress} inline />
           </p>
           <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
-            <ProtocolBadge protocol={approval.protocol} />
-            {approval.trusted ? <TrustedBadge /> : <UnverifiedBadge />}
+            <ProtocolBadge
+              protocol={approval.protocol}
+              category={approval.spenderCategory}
+            />
+            {approval.trusted ? (
+              <TrustedBadge
+                verificationMethod={approval.spenderVerificationMethod}
+              />
+            ) : (
+              <UnverifiedBadge />
+            )}
           </div>
         </div>
 
@@ -196,19 +205,51 @@ function RiskDot({ level }: { level: RiskLevel }) {
   );
 }
 
-function ProtocolBadge({ protocol }: { protocol: string }) {
+const SPENDER_CATEGORY_LABEL: Record<string, string> = {
+  router: "Router",
+  dex: "DEX",
+  bridge: "Bridge",
+  staking: "Staking",
+  farm: "Farm",
+  unknown: "",
+};
+
+function ProtocolBadge({
+  protocol,
+  category,
+}: {
+  protocol: string;
+  category?: string;
+}) {
+  const categoryLabel = category ? SPENDER_CATEGORY_LABEL[category] ?? "" : "";
+  const title = categoryLabel
+    ? `${protocol} · ${categoryLabel}`
+    : protocol;
   return (
-    <span className="inline-flex items-center rounded-full border border-pulse-border bg-pulse-bg/60 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-pulse-muted">
+    <span
+      className="inline-flex items-center gap-1 rounded-full border border-pulse-border bg-pulse-bg/60 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-pulse-muted"
+      title={title}
+    >
       {protocol}
+      {categoryLabel ? (
+        <span className="text-pulse-muted/70">· {categoryLabel}</span>
+      ) : null}
     </span>
   );
 }
 
-function TrustedBadge() {
+function TrustedBadge({
+  verificationMethod,
+}: {
+  verificationMethod?: string;
+}) {
+  const title = verificationMethod
+    ? `Known spender — ${verificationMethod} This is not an absolute safety claim.`
+    : "Spender address matches a manually verified entry in the Pulse Revoke registry. This is not an absolute safety claim.";
   return (
     <span
       className="inline-flex items-center gap-1 rounded-full border border-pulse-cyan/40 bg-pulse-cyan/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-pulse-cyan"
-      title="Spender address matches a manually verified entry in the Pulse Revoke registry. This is not an absolute safety claim."
+      title={title}
     >
       <svg
         aria-hidden

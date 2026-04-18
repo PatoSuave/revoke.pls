@@ -1,7 +1,12 @@
 import type { Address } from "viem";
 
 import { erc20Abi, formatAllowance, isUnlimitedAllowance } from "@/lib/erc20";
-import type { SpenderEntry, TokenEntry } from "@/lib/registry";
+import type {
+  SpenderCategory,
+  SpenderEntry,
+  TokenCategory,
+  TokenEntry,
+} from "@/lib/registry";
 
 /**
  * Flat representation of a single positive ERC-20 approval. This is the
@@ -14,14 +19,19 @@ export interface Approval {
   tokenSymbol: string;
   tokenName?: string;
   tokenDecimals: number;
+  tokenCategory: TokenCategory;
   spenderAddress: Address;
   spenderLabel: string;
   protocol: string;
+  spenderCategory: SpenderCategory;
   /** Mirrors `SpenderEntry.isTrusted` — carried here so downstream code
    * doesn't have to re-resolve the spender via the registry. */
   trusted: boolean;
   spenderUrl?: string;
   spenderNotes?: string;
+  /** Mirrors `SpenderEntry.verificationMethod`. Surfaced in UI tooltips
+   * as the source of any "known / trusted" claim. */
+  spenderVerificationMethod?: string;
   rawAllowance: bigint;
   formattedAllowance: string;
   unlimited: boolean;
@@ -133,12 +143,15 @@ export function parseScanResults(
         tokenSymbol: symbol,
         tokenName: name,
         tokenDecimals: decimals,
+        tokenCategory: token.category,
         spenderAddress: spender.address,
         spenderLabel: spender.label,
         protocol: spender.protocol,
+        spenderCategory: spender.category,
         trusted: spender.isTrusted,
         spenderUrl: spender.url,
         spenderNotes: spender.notes,
+        spenderVerificationMethod: spender.verificationMethod,
         rawAllowance: raw,
         formattedAllowance: unlimited
           ? "Unlimited"
