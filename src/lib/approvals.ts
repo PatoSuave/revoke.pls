@@ -1,0 +1,165 @@
+import type { Address } from "viem";
+
+import { erc20Abi, formatAllowance, isUnlimitedAllowance } from "@/lib/erc20";
+import type {
+  SpenderCategory,
+  SpenderEntry,
+  TokenCategory,
+  TokenEntry,
+} from "@/lib/registry";
+
+/**
+ * Flat representation of a single positive ERC-20 approval. This is the
+ * base scan-result model — presentation enrichment (risk classification,
+ * etc.) lives in `@/lib/risk`.
+ */
+export interface Approval {
+  key: string;
+  tokenAddress: Address;
+  tokenSymbol: string;
+  tokenName?: string;
+  tokenDecimals: number;
+  tokenCategory: TokenCategory;
+  spenderAddress: Address;
+  spenderLabel: string;
+  protocol: string;
+  spenderCategory: SpenderCategory;
+  /** Mirrors `SpenderEntry.isTrusted` — carried here so downstream code
+   * doesn't have to re-resolve the spender via the registry. */
+  trusted: boolean;
+  spenderUrl?: string;
+  spenderNotes?: string;
+  /** Mirrors `SpenderEntry.verificationMethod`. Surfaced in UI tooltips
+   * as the source of any "known / trusted" claim. */
+  spenderVerificationMethod?: string;
+  rawAllowance: bigint;
+  formattedAllowance: string;
+  unlimited: boolean;
+}
+
+const METADATA_CALLS_PER_TOKEN = 3; // symbol, decimals, name
+
+/**
+ * Number of wagmi `useReadContracts` entries produced per token in the
+ * registry: 3 metadata calls plus one allowance read per registered spender.
+ */
+export function readsPerToken(spenderCount: number): number {
+  return METADATA_CALLS_PER_TOKEN + spenderCount;
+}
+
+/**
+ * Build the flat array of contract read configs passed to
+ * `useReadContracts`. Layout per token (stride = readsPerToken):
+ *   [symbol, decimals, name, allowance(spender_0), …, allowance(spender_N)]
+ */
+export function buildScanContracts(
+  owner: Address,
+  tokens: readonly TokenEntry[],
+  spenders: readonly SpenderEntry[],
+) {
+  return tokens.flatMap((token) => [
+    {
+      address: token.address,
+      abi: erc20Abi,
+      functionName: "symbol" as const,
+    },
+    {
+      address: token.address,
+      abi: erc20Abi,
+      functionName: "decimals" as const,
+    },
+    {
+      address: token.address,
+      abi: erc20Abi,
+      functionName: "name" as const,
+    },
+    ...spenders.map((spender) => ({
+      address: token.address,
+      abi: erc20Abi,
+      functionName: "allowance" as const,
+      args: [owner, spender.address] as const,
+    })),
+  ]);
+}
+
+/**
+ * One entry of a wagmi `useReadContracts` result with `allowFailure: true`.
+ */
+type ReadResult =
+  | { status: "success"; result: unknown; error?: undefined }
+  | { status: "failure"; error: Error; result?: undefined };
+
+/**
+ * Parse a wagmi `useReadContracts` result (with `allowFailure: true`) back
+ * into a list of positive approvals. Tokens whose metadata fails degrade
+ * gracefully to the registry fallback; tokens with no decimals info at all
+ * are skipped so we never display a mis-scaled allowance.
+ */
+export function parseScanResults(
+  results: readonly ReadResult[],
+  tokens: readonly TokenEntry[],
+  spenders: readonly SpenderEntry[],
+): Approval[] {
+  const stride = readsPerToken(spenders.length);
+  const approvals: Approval[] = [];
+
+  tokens.forEach((token, tokenIdx) => {
+    const base = tokenIdx * stride;
+    const symbolRes = results[base];
+    const decimalsRes = results[base + 1];
+    const nameRes = results[base + 2];
+
+    const onChainSymbol =
+      symbolRes?.status === "success" && typeof symbolRes.result === "string"
+        ? symbolRes.result
+        : undefined;
+    const onChainName =
+      nameRes?.status === "success" && typeof nameRes.result === "string"
+        ? nameRes.result
+        : undefined;
+    const onChainDecimals =
+      decimalsRes?.status === "success" && typeof decimalsRes.result === "number"
+        ? decimalsRes.result
+        : undefined;
+
+    const decimals = onChainDecimals ?? token.decimals;
+    if (typeof decimals !== "number") return; // can't safely format without decimals
+
+    const symbol = onChainSymbol ?? token.symbol;
+    const name = onChainName ?? token.name;
+
+    spenders.forEach((spender, spenderIdx) => {
+      const allowanceRes = results[base + METADATA_CALLS_PER_TOKEN + spenderIdx];
+      if (!allowanceRes || allowanceRes.status !== "success") return;
+
+      const raw = allowanceRes.result;
+      if (typeof raw !== "bigint" || raw === 0n) return;
+
+      const unlimited = isUnlimitedAllowance(raw);
+
+      approvals.push({
+        key: `${token.address}-${spender.address}`,
+        tokenAddress: token.address,
+        tokenSymbol: symbol,
+        tokenName: name,
+        tokenDecimals: decimals,
+        tokenCategory: token.category,
+        spenderAddress: spender.address,
+        spenderLabel: spender.label,
+        protocol: spender.protocol,
+        spenderCategory: spender.category,
+        trusted: spender.isTrusted,
+        spenderUrl: spender.url,
+        spenderNotes: spender.notes,
+        spenderVerificationMethod: spender.verificationMethod,
+        rawAllowance: raw,
+        formattedAllowance: unlimited
+          ? "Unlimited"
+          : `${formatAllowance(raw, decimals)} ${symbol}`,
+        unlimited,
+      });
+    });
+  });
+
+  return approvals;
+}
