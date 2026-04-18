@@ -2,29 +2,51 @@ import type { Metadata, Viewport } from "next";
 
 import "@/app/globals.css";
 import { Providers } from "@/components/providers";
+import { absoluteUrl, siteConfig } from "@/lib/site";
+
+const pageTitle = `${siteConfig.name} — ${siteConfig.tagline}`;
 
 export const metadata: Metadata = {
+  metadataBase: new URL(siteConfig.url),
   title: {
-    default: "Pulse Revoke — Manage PulseChain token approvals",
-    template: "%s · Pulse Revoke",
+    default: pageTitle,
+    template: `%s · ${siteConfig.shortName}`,
   },
-  description:
-    "Pulse Revoke helps you review and revoke ERC-20 token approvals on PulseChain. Non-custodial, open source, and built for safety.",
-  applicationName: "Pulse Revoke",
-  keywords: [
-    "PulseChain",
-    "revoke approvals",
-    "token allowance",
-    "ERC-20",
-    "wallet security",
-    "revoke.cash alternative",
-  ],
-  authors: [{ name: "Pulse Revoke" }],
+  description: siteConfig.description,
+  applicationName: siteConfig.name,
+  keywords: [...siteConfig.keywords],
+  authors: [{ name: siteConfig.name }],
+  creator: siteConfig.name,
+  alternates: {
+    canonical: "/",
+  },
+  robots: {
+    index: true,
+    follow: true,
+  },
   openGraph: {
-    title: "Pulse Revoke — Manage PulseChain token approvals",
-    description:
-      "Review and revoke ERC-20 token approvals on PulseChain. Non-custodial and open source.",
     type: "website",
+    siteName: siteConfig.name,
+    title: pageTitle,
+    description: siteConfig.description,
+    url: absoluteUrl("/"),
+    images: [
+      {
+        url: siteConfig.ogImage,
+        width: 1200,
+        height: 630,
+        alt: `${siteConfig.name} — ${siteConfig.tagline}`,
+      },
+    ],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: pageTitle,
+    description: siteConfig.description,
+    images: [siteConfig.ogImage],
+  },
+  icons: {
+    icon: "/favicon.ico",
   },
 };
 
