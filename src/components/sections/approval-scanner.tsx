@@ -283,10 +283,13 @@ function CoverageNote({
   return (
     <p className="text-xs text-pulse-muted">
       Approvals are discovered from your wallet&rsquo;s historical ERC-20
-      Approval events via {scan.sourceMeta.name} and re-verified live on-chain
-      before display.
+      Approval events via {scan.sourceMeta.name}
+      {scan.stats.windows > 1
+        ? ` (${scan.stats.windows} block-range windows)`
+        : ""}{" "}
+      and re-verified live on-chain before display.
       {scan.truncated
-        ? " The explorer response was capped, so very old approvals may be missing — re-run once PulseScan returns a non-truncated response."
+        ? " A per-wallet fetch cap was reached, so very old approvals may be missing. Verify directly on PulseScan if you suspect a legacy approval."
         : ""}{" "}
       Protocol labels and trust badges come from the curated registry; unknown
       spenders stay unverified.
@@ -310,6 +313,10 @@ function DiscoveryDebug({
       <dl className="mt-2 grid grid-cols-2 gap-x-4 gap-y-1 font-mono">
         <dt>source</dt>
         <dd>{scan.sourceMeta.id}</dd>
+        <dt>windows</dt>
+        <dd>{stats.windows}</dd>
+        <dt>requests</dt>
+        <dd>{stats.requests}</dd>
         <dt>raw logs</dt>
         <dd>{stats.rawCandidateLogs}</dd>
         <dt>candidate pairs</dt>
