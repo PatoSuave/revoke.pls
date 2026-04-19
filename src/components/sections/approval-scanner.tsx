@@ -9,11 +9,14 @@ import {
   BatchActionBar,
   BatchRevokePanel,
 } from "@/components/approvals/batch-revoke-panel";
+import { NftApprovalRow } from "@/components/approvals/nft-approval-row";
 import { ConnectWalletButton } from "@/components/connect-wallet-button";
 import { useApprovalDiscovery } from "@/hooks/use-approval-discovery";
 import { useBatchRevoke } from "@/hooks/use-batch-revoke";
+import { useNftApprovalDiscovery } from "@/hooks/use-nft-approval-discovery";
 import { pulsechain } from "@/lib/chains";
 import { shortenAddress } from "@/lib/format";
+import type { NftApproval } from "@/lib/nft-approvals";
 import {
   filterAndSortScoredApprovals,
   scoreApprovals,
@@ -271,8 +274,158 @@ function ConnectedScanner({ owner }: { owner: `0x${string}` }) {
 
       <CoverageNote scan={scan} />
       <DiscoveryDebug scan={scan} />
+
+      <NftSection owner={owner} />
     </div>
   );
+}
+
+function NftSection({ owner }: { owner: `0x${string}` }) {
+  const nft = useNftApprovalDiscovery({ owner });
+  const sorted = useMemo(() => sortNftApprovals(nft.approvals), [nft.approvals]);
+  const highRisk = sorted.filter((a) => a.risk.level === "high").length;
+
+  return (
+    <section className="space-y-4 border-t border-pulse-border/60 pt-8">
+      <header className="flex flex-wrap items-end justify-between gap-3">
+        <div>
+          <h3 className="text-xl font-semibold tracking-tight text-pulse-text">
+            NFT approvals
+          </h3>
+          <p className="mt-1 max-w-2xl text-xs text-pulse-muted">
+            Operator approvals (ERC-721 / ERC-1155 `setApprovalForAll`) plus
+            per-token ERC-721 approvals, discovered from your wallet history
+            and re-verified live on-chain.
+          </p>
+        </div>
+        <div className="flex items-center gap-3">
+          {highRisk > 0 ? (
+            <span className="inline-flex items-center gap-1.5 rounded-full border border-pulse-red/40 bg-pulse-red/10 px-3 py-1 text-xs font-semibold text-pulse-red">
+              <span
+                className="h-1.5 w-1.5 rounded-full bg-pulse-red"
+                aria-hidden
+              />
+              {highRisk} high-risk
+            </span>
+          ) : null}
+          <button
+            type="button"
+            onClick={nft.refetch}
+            disabled={nft.isFetching}
+            className="inline-flex items-center gap-2 rounded-xl border border-pulse-border bg-white/5 px-3 py-2 text-xs font-semibold text-pulse-text transition hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            {nft.isFetching ? "Scanning…" : "Rescan"}
+          </button>
+        </div>
+      </header>
+
+      <NftSectionBody nft={nft} sorted={sorted} />
+
+      <p className="text-xs text-pulse-muted">
+        Collection-wide operator approvals expose every NFT in the collection.
+        {nft.truncated
+          ? " Fetch caps were reached, so very old NFT approvals may be missing."
+          : ""}{" "}
+        Per-token approvals are ERC-721 only; ERC-1155 exposes the operator
+        pattern exclusively.
+      </p>
+    </section>
+  );
+}
+
+function NftSectionBody({
+  nft,
+  sorted,
+}: {
+  nft: ReturnType<typeof useNftApprovalDiscovery>;
+  sorted: NftApproval[];
+}) {
+  if (nft.status === "pending") {
+    return (
+      <div className="rounded-2xl border border-pulse-border bg-pulse-bg/40 p-4 text-xs text-pulse-muted">
+        <span className="inline-flex h-2 w-2 animate-pulse rounded-full bg-pulse-cyan" />{" "}
+        {nft.stats.candidates > 0
+          ? `Verifying ${nft.stats.candidates} NFT approval candidate${
+              nft.stats.candidates === 1 ? "" : "s"
+            } on-chain…`
+          : "Searching NFT approval history…"}
+      </div>
+    );
+  }
+
+  if (nft.status === "error") {
+    return (
+      <div className="rounded-2xl border border-pulse-red/40 bg-pulse-red/10 p-5 text-sm">
+        <p className="font-semibold text-pulse-red">NFT scan failed</p>
+        <p className="mt-1 text-pulse-muted">
+          {nft.error?.message ??
+            "Something went wrong reading NFT approvals from PulseChain."}
+        </p>
+        <button
+          type="button"
+          onClick={nft.refetch}
+          className="mt-3 inline-flex items-center rounded-lg border border-pulse-red/40 bg-pulse-red/20 px-3 py-1.5 text-xs font-semibold text-pulse-red hover:bg-pulse-red/30"
+        >
+          Retry
+        </button>
+      </div>
+    );
+  }
+
+  if (sorted.length === 0) {
+    return (
+      <div className="rounded-2xl border border-dashed border-pulse-border/80 bg-pulse-bg/40 p-6 text-sm">
+        <p className="font-semibold text-pulse-text">No active NFT approvals</p>
+        <p className="mt-1 text-pulse-muted">
+          {nft.stats.candidates === 0
+            ? `No ApprovalForAll or ERC-721 Approval history was found for this wallet on ${nft.sourceMeta.name}.`
+            : `${nft.stats.candidates} historical NFT approval${
+                nft.stats.candidates === 1 ? "" : "s"
+              } were discovered, but none are still active on-chain.`}
+        </p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="overflow-hidden rounded-2xl border border-pulse-border bg-pulse-bg/40">
+      <div className="hidden grid-cols-[1.2fr_1.5fr_1fr_auto] gap-4 border-b border-pulse-border bg-pulse-bg/60 px-4 py-3 text-xs font-semibold uppercase tracking-wider text-pulse-muted sm:grid">
+        <div>Collection</div>
+        <div>Operator</div>
+        <div>Type · Risk</div>
+        <div className="text-right">Action</div>
+      </div>
+      <ul>
+        {sorted.map((approval) => (
+          <NftApprovalRow
+            key={approval.key}
+            approval={approval}
+            onRevoked={nft.refetch}
+          />
+        ))}
+      </ul>
+    </div>
+  );
+}
+
+function riskRankNft(level: NftApproval["risk"]["level"]): number {
+  if (level === "high") return 3;
+  if (level === "medium") return 2;
+  return 1;
+}
+
+function sortNftApprovals(approvals: readonly NftApproval[]): NftApproval[] {
+  return [...approvals].sort((a, b) => {
+    const rank = riskRankNft(b.risk.level) - riskRankNft(a.risk.level);
+    if (rank !== 0) return rank;
+    if (a.kind !== b.kind) return a.kind === "approvalForAll" ? -1 : 1;
+    const coll =
+      (a.collectionName ?? a.collectionAddress).localeCompare(
+        b.collectionName ?? b.collectionAddress,
+      );
+    if (coll !== 0) return coll;
+    return a.operatorLabel.localeCompare(b.operatorLabel);
+  });
 }
 
 function CoverageNote({

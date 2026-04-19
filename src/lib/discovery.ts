@@ -6,10 +6,19 @@ import { pulsechain } from "@/lib/chains";
  * ERC-20 `Approval(address indexed owner, address indexed spender, uint256 value)`
  * event topic signature. Note that ERC-721's single-token `Approval` has the
  * same ABI signature hash but ships three indexed topics instead of two — we
- * disambiguate by filtering on `topics.length === 3` below.
+ * disambiguate by topic count at extraction time.
  */
 export const ERC20_APPROVAL_TOPIC0 =
   "0x8c5be1e5ebec7d5bd14f71427d1e84f3dd0314c0f7b2291e5b200ac8c7c3b925";
+
+/**
+ * `ApprovalForAll(address indexed owner, address indexed operator, bool approved)`
+ * event topic signature. Shared between ERC-721 and ERC-1155; we only
+ * distinguish the underlying standard at the validation layer via
+ * `supportsInterface`. Both indexed args are addresses, so topic count is 3.
+ */
+export const ERC_APPROVAL_FOR_ALL_TOPIC0 =
+  "0x17307eab39ab6107e8899845ad3d59bd9653f200f220920489ca2b5937696c31";
 
 /**
  * Default Blockscout-compatible API endpoint for PulseChain. Overridable via
@@ -29,6 +38,22 @@ export interface DiscoveredPair {
   spenderAddress: Address;
 }
 
+export type NftApprovalKind = "approvalForAll" | "tokenApproval";
+
+/**
+ * Raw NFT approval candidate discovered from historical logs. As with
+ * `DiscoveredPair` this carries no labels and no guarantee that the approval
+ * is still active — live validation (`isApprovedForAll` / `getApproved`)
+ * happens downstream in `@/lib/nft-approvals`.
+ */
+export interface NftDiscoveredApproval {
+  kind: NftApprovalKind;
+  collectionAddress: Address;
+  operatorAddress: Address;
+  /** Present only for per-token ERC-721 approvals (`kind === "tokenApproval"`). */
+  tokenId?: bigint;
+}
+
 export interface DiscoverySourceMeta {
   /** Short machine-friendly identifier, used in dev/debug views. */
   id: string;
@@ -38,18 +63,24 @@ export interface DiscoverySourceMeta {
   url?: string;
 }
 
-export interface DiscoveryResult {
-  pairs: DiscoveredPair[];
+interface WindowedFetchStats {
   /** Total candidate log entries observed (pre-dedupe, sum across windows). */
   rawCount: number;
-  source: DiscoverySourceMeta;
-  /** True when the source signaled more data than it returned. Consumers
-   *  should surface this honestly rather than imply chain-wide completeness. */
   truncated: boolean;
-  /** Number of block-range windows that were queried to build this result. */
+  /** Number of block-range windows that were queried. */
   windows: number;
   /** Number of HTTP requests issued (windows + any block-tip lookup). */
   requests: number;
+}
+
+export interface DiscoveryResult extends WindowedFetchStats {
+  pairs: DiscoveredPair[];
+  source: DiscoverySourceMeta;
+}
+
+export interface NftDiscoveryResult extends WindowedFetchStats {
+  approvals: NftDiscoveredApproval[];
+  source: DiscoverySourceMeta;
 }
 
 export interface DiscoverySource {
@@ -58,6 +89,10 @@ export interface DiscoverySource {
     owner: Address,
     options?: { signal?: AbortSignal },
   ): Promise<DiscoveryResult>;
+  discoverNftApprovals(
+    owner: Address,
+    options?: { signal?: AbortSignal },
+  ): Promise<NftDiscoveryResult>;
 }
 
 interface BlockscoutLogEntry {
@@ -81,11 +116,10 @@ interface BlockscoutNumberResponse {
 /**
  * Tunables for the windowed logs fetcher. Deliberately small integer caps so
  * that browser memory and round-trip budget stay bounded even for wallets
- * with very long approval histories. See `createBlockscoutDiscoverySource`
- * for the adaptive windowing strategy that uses them.
+ * with very long approval histories.
  */
 export interface DiscoveryLimits {
-  /** Upper bound on HTTP requests issued per `discover()` call. */
+  /** Upper bound on HTTP requests issued per `discover*()` call. */
   maxRequests: number;
   /** Upper bound on total raw log rows accumulated across windows. */
   maxRawLogs: number;
@@ -125,9 +159,27 @@ function topicToAddress(topic: string): Address | null {
   }
 }
 
+function topicToBigInt(topic: string): bigint | null {
+  if (!topic || typeof topic !== "string") return null;
+  try {
+    return BigInt(topic);
+  } catch {
+    return null;
+  }
+}
+
 function safeChecksum(address: string): Address | null {
   try {
     return getAddress(address);
+  } catch {
+    return null;
+  }
+}
+
+function parseHexNumber(value: string | undefined): bigint | null {
+  if (!value || typeof value !== "string") return null;
+  try {
+    return BigInt(value);
   } catch {
     return null;
   }
@@ -145,74 +197,293 @@ function dedupePairs(pairs: DiscoveredPair[]): DiscoveredPair[] {
   return out;
 }
 
-/**
- * Blockscout / Etherscan-compatible logs discovery source.
- *
- * Queries historical ERC-20 `Approval` events where `owner == wallet`, then
- * returns the unique `(token, spender)` pairs. Coverage is bounded by the
- * indexer's logs endpoint (PulseScan currently returns at most ~1000 log
- * rows per call); we surface `truncated` honestly rather than claim chain-
- * wide coverage. Downstream code MUST re-check live `allowance(owner, spender)`
- * on-chain before displaying anything as an active approval.
- */
-function parseHexNumber(value: string | undefined): bigint | null {
-  if (!value || typeof value !== "string") return null;
+function dedupeNftApprovals(
+  items: NftDiscoveredApproval[],
+): NftDiscoveredApproval[] {
+  const seen = new Set<string>();
+  const out: NftDiscoveredApproval[] = [];
+  for (const a of items) {
+    const idPart = a.kind === "tokenApproval" ? a.tokenId?.toString() : "all";
+    const key = `${a.kind}:${a.collectionAddress.toLowerCase()}:${a.operatorAddress.toLowerCase()}:${idPart}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    out.push(a);
+  }
+  return out;
+}
+
+async function fetchLogsPage(
+  apiUrl: string,
+  paddedOwner: string,
+  topic0: string,
+  fromBlock: string,
+  toBlock: string,
+  signal: AbortSignal | undefined,
+): Promise<BlockscoutLogEntry[]> {
+  const params = new URLSearchParams({
+    module: "logs",
+    action: "getLogs",
+    fromBlock,
+    toBlock,
+    topic0,
+    topic1: paddedOwner,
+    topic0_1_opr: "and",
+  });
+  const res = await fetch(`${apiUrl}?${params.toString()}`, {
+    signal,
+    headers: { accept: "application/json" },
+  });
+  if (!res.ok) {
+    throw new Error(
+      `Discovery source returned HTTP ${res.status} ${res.statusText}`,
+    );
+  }
+  const body = (await res.json()) as BlockscoutLogsResponse;
+  return Array.isArray(body.result) ? body.result : [];
+}
+
+async function fetchBlockTip(
+  apiUrl: string,
+  signal: AbortSignal | undefined,
+): Promise<bigint | null> {
+  const params = new URLSearchParams({
+    module: "block",
+    action: "eth_block_number",
+  });
   try {
-    return BigInt(value);
+    const res = await fetch(`${apiUrl}?${params.toString()}`, {
+      signal,
+      headers: { accept: "application/json" },
+    });
+    if (!res.ok) return null;
+    const body = (await res.json()) as BlockscoutNumberResponse;
+    return parseHexNumber(body.result);
   } catch {
     return null;
   }
 }
 
-function extractPairs(logs: readonly BlockscoutLogEntry[]): {
-  pairs: DiscoveredPair[];
-  maxBlock: bigint | null;
-  minBlock: bigint | null;
-} {
-  const pairs: DiscoveredPair[] = [];
-  let maxBlock: bigint | null = null;
-  let minBlock: bigint | null = null;
+function maxBlockFrom(logs: readonly BlockscoutLogEntry[]): bigint | null {
+  let max: bigint | null = null;
   for (const log of logs) {
-    const topics = log.topics;
-    // ERC-20 Approval has exactly 3 topics (sig + 2 indexed args). ERC-721
-    // Approval shares the same topic0 but carries 4 topics (tokenId is also
-    // indexed); drop those here.
-    if (topics && topics.length === 3) {
-      const tokenRaw = log.address;
-      const spenderRaw = topics[2];
-      if (typeof tokenRaw === "string") {
-        const tokenAddress = safeChecksum(tokenRaw);
-        const spenderAddress = spenderRaw ? topicToAddress(spenderRaw) : null;
-        if (tokenAddress && spenderAddress) {
-          pairs.push({ tokenAddress, spenderAddress });
-        }
-      }
-    }
     const block = parseHexNumber(log.blockNumber);
-    if (block !== null) {
-      if (maxBlock === null || block > maxBlock) maxBlock = block;
-      if (minBlock === null || block < minBlock) minBlock = block;
+    if (block === null) continue;
+    if (max === null || block > max) max = block;
+  }
+  return max;
+}
+
+/**
+ * Adaptive block-range windowed fetch of logs filtered by `topic0` and by
+ * `topic1 === paddedOwner`. First tries `[0, latest]`; only splits when the
+ * page cap is hit. Bounded by the supplied `limits`.
+ */
+async function windowedFetchLogs(
+  apiUrl: string,
+  paddedOwner: string,
+  topic0: string,
+  limits: DiscoveryLimits,
+  signal: AbortSignal | undefined,
+): Promise<{
+  logs: BlockscoutLogEntry[];
+  stats: WindowedFetchStats;
+}> {
+  const initial = await fetchLogsPage(
+    apiUrl,
+    paddedOwner,
+    topic0,
+    "0",
+    "latest",
+    signal,
+  );
+  let requests = 1;
+  let windows = 1;
+
+  if (initial.length < limits.pageCap) {
+    return {
+      logs: initial,
+      stats: {
+        rawCount: initial.length,
+        truncated: false,
+        windows,
+        requests,
+      },
+    };
+  }
+
+  // Capped. Get the chain tip once so we can split the range.
+  let tip = await fetchBlockTip(apiUrl, signal);
+  requests += 1;
+  if (tip === null) tip = maxBlockFrom(initial);
+  if (tip === null) {
+    return {
+      logs: initial,
+      stats: {
+        rawCount: initial.length,
+        truncated: true,
+        windows,
+        requests,
+      },
+    };
+  }
+
+  const collected: BlockscoutLogEntry[] = [];
+  let truncated = false;
+  const stack: Array<{ from: bigint; to: bigint }> = [
+    { from: 0n, to: tip },
+  ];
+
+  while (stack.length > 0) {
+    if (requests >= limits.maxRequests) {
+      truncated = true;
+      break;
+    }
+    if (collected.length >= limits.maxRawLogs) {
+      truncated = true;
+      break;
+    }
+
+    const range = stack.pop()!;
+    const logs = await fetchLogsPage(
+      apiUrl,
+      paddedOwner,
+      topic0,
+      range.from.toString(),
+      range.to.toString(),
+      signal,
+    );
+    requests += 1;
+    windows += 1;
+
+    const span = range.to - range.from;
+    if (logs.length >= limits.pageCap && span > BigInt(limits.minSplitSpan)) {
+      const mid = range.from + span / 2n;
+      stack.push({ from: mid + 1n, to: range.to });
+      stack.push({ from: range.from, to: mid });
+      continue;
+    }
+
+    if (logs.length >= limits.pageCap) truncated = true;
+
+    const remaining = limits.maxRawLogs - collected.length;
+    if (logs.length > remaining) {
+      collected.push(...logs.slice(0, remaining));
+      truncated = true;
+    } else {
+      collected.push(...logs);
     }
   }
-  return { pairs, maxBlock, minBlock };
+
+  if (stack.length > 0) truncated = true;
+
+  return {
+    logs: collected,
+    stats: {
+      rawCount: collected.length,
+      truncated,
+      windows,
+      requests,
+    },
+  };
+}
+
+function extractErc20Pairs(
+  logs: readonly BlockscoutLogEntry[],
+): DiscoveredPair[] {
+  const pairs: DiscoveredPair[] = [];
+  for (const log of logs) {
+    const topics = log.topics;
+    // ERC-20 Approval: 3 topics. ERC-721's per-token Approval shares the same
+    // topic0 but ships 4 topics; drop those here — they're picked up by the
+    // NFT pipeline instead.
+    if (!topics || topics.length !== 3) continue;
+    const tokenRaw = log.address;
+    const spenderRaw = topics[2];
+    if (typeof tokenRaw !== "string") continue;
+    const tokenAddress = safeChecksum(tokenRaw);
+    const spenderAddress = spenderRaw ? topicToAddress(spenderRaw) : null;
+    if (!tokenAddress || !spenderAddress) continue;
+    pairs.push({ tokenAddress, spenderAddress });
+  }
+  return pairs;
+}
+
+function extractNftApprovalForAll(
+  logs: readonly BlockscoutLogEntry[],
+): NftDiscoveredApproval[] {
+  const out: NftDiscoveredApproval[] = [];
+  for (const log of logs) {
+    const topics = log.topics;
+    // ApprovalForAll: 3 indexed topics (sig + owner + operator). We don't
+    // distinguish `approved=true` vs `approved=false` here — the live
+    // `isApprovedForAll` check filters inactive ones downstream.
+    if (!topics || topics.length !== 3) continue;
+    const collectionRaw = log.address;
+    const operatorRaw = topics[2];
+    if (typeof collectionRaw !== "string") continue;
+    const collectionAddress = safeChecksum(collectionRaw);
+    const operatorAddress = operatorRaw ? topicToAddress(operatorRaw) : null;
+    if (!collectionAddress || !operatorAddress) continue;
+    out.push({
+      kind: "approvalForAll",
+      collectionAddress,
+      operatorAddress,
+    });
+  }
+  return out;
+}
+
+function extractErc721TokenApprovals(
+  logs: readonly BlockscoutLogEntry[],
+): NftDiscoveredApproval[] {
+  const out: NftDiscoveredApproval[] = [];
+  for (const log of logs) {
+    const topics = log.topics;
+    // ERC-721 per-token Approval: 4 topics (sig + owner + approved + tokenId).
+    if (!topics || topics.length !== 4) continue;
+    const collectionRaw = log.address;
+    const operatorRaw = topics[2];
+    const tokenIdRaw = topics[3];
+    if (typeof collectionRaw !== "string") continue;
+    const collectionAddress = safeChecksum(collectionRaw);
+    const operatorAddress = operatorRaw ? topicToAddress(operatorRaw) : null;
+    const tokenId = tokenIdRaw ? topicToBigInt(tokenIdRaw) : null;
+    if (!collectionAddress || !operatorAddress || tokenId === null) continue;
+    out.push({
+      kind: "tokenApproval",
+      collectionAddress,
+      operatorAddress,
+      tokenId,
+    });
+  }
+  return out;
+}
+
+function mergeStats(
+  a: WindowedFetchStats,
+  b: WindowedFetchStats,
+): WindowedFetchStats {
+  return {
+    rawCount: a.rawCount + b.rawCount,
+    truncated: a.truncated || b.truncated,
+    windows: a.windows + b.windows,
+    requests: a.requests + b.requests,
+  };
 }
 
 /**
  * Blockscout / Etherscan-compatible logs discovery source with adaptive
- * block-range windowing.
+ * block-range windowing. See `windowedFetchLogs` for the recursion
+ * strategy and the `DiscoveryLimits` tunables that bound it.
  *
- * Strategy:
- *   1. Issue a single `getLogs` call over `[0, latest]`.
- *   2. If the response is under `pageCap`, we're done.
- *   3. Otherwise fetch the current block tip once and recursively split the
- *      range in half, re-querying each half. Capped responses are discarded
- *      (so no overlap); uncapped responses have their rows collected.
- *   4. Stop early when `maxRequests`, `maxRawLogs`, or `minSplitSpan` limits
- *      are reached — and mark the result `truncated: true` so the UI can
- *      surface remaining coverage limits honestly.
+ * Two independent entry points:
+ *   - `discover(owner)`         — ERC-20 approval pairs
+ *   - `discoverNftApprovals(owner)` — ERC-721 / ERC-1155 operator approvals
+ *     (collection-wide `ApprovalForAll` + ERC-721 per-token `Approval`)
  *
- * Live `allowance(owner, spender)` validation happens downstream; this layer
- * only returns unique candidate `(token, spender)` pairs.
+ * Downstream code MUST re-check live state on-chain
+ * (`allowance` / `isApprovedForAll` / `getApproved`) before displaying
+ * anything as an active approval.
  */
 export function createBlockscoutDiscoverySource(
   apiUrl: string = DEFAULT_EXPLORER_API,
@@ -224,165 +495,52 @@ export function createBlockscoutDiscoverySource(
     url: pulsechain.blockExplorers.default.url,
   };
 
-  async function fetchLogs(
-    owner: Address,
-    fromBlock: string,
-    toBlock: string,
-    signal: AbortSignal | undefined,
-  ): Promise<BlockscoutLogEntry[]> {
-    const params = new URLSearchParams({
-      module: "logs",
-      action: "getLogs",
-      fromBlock,
-      toBlock,
-      topic0: ERC20_APPROVAL_TOPIC0,
-      topic1: padTopicAddress(owner),
-      topic0_1_opr: "and",
-    });
-    const res = await fetch(`${apiUrl}?${params.toString()}`, {
-      signal,
-      headers: { accept: "application/json" },
-    });
-    if (!res.ok) {
-      throw new Error(
-        `Discovery source returned HTTP ${res.status} ${res.statusText}`,
-      );
-    }
-    const body = (await res.json()) as BlockscoutLogsResponse;
-    return Array.isArray(body.result) ? body.result : [];
-  }
-
-  async function fetchBlockTip(
-    signal: AbortSignal | undefined,
-  ): Promise<bigint | null> {
-    const params = new URLSearchParams({
-      module: "block",
-      action: "eth_block_number",
-    });
-    try {
-      const res = await fetch(`${apiUrl}?${params.toString()}`, {
-        signal,
-        headers: { accept: "application/json" },
-      });
-      if (!res.ok) return null;
-      const body = (await res.json()) as BlockscoutNumberResponse;
-      return parseHexNumber(body.result);
-    } catch {
-      return null;
-    }
-  }
-
   return {
     meta,
     async discover(owner, options) {
-      const signal = options?.signal;
+      const padded = padTopicAddress(owner);
+      const { logs, stats } = await windowedFetchLogs(
+        apiUrl,
+        padded,
+        ERC20_APPROVAL_TOPIC0,
+        limits,
+        options?.signal,
+      );
+      return {
+        pairs: dedupePairs(extractErc20Pairs(logs)),
+        source: meta,
+        ...stats,
+      };
+    },
 
-      // Pass 1: single full-range call. Most wallets resolve here in one RTT.
-      const initial = await fetchLogs(owner, "0", "latest", signal);
-      let requests = 1;
-      let windows = 1;
+    async discoverNftApprovals(owner, options) {
+      const padded = padTopicAddress(owner);
+      const [forAll, perToken] = await Promise.all([
+        windowedFetchLogs(
+          apiUrl,
+          padded,
+          ERC_APPROVAL_FOR_ALL_TOPIC0,
+          limits,
+          options?.signal,
+        ),
+        windowedFetchLogs(
+          apiUrl,
+          padded,
+          ERC20_APPROVAL_TOPIC0,
+          limits,
+          options?.signal,
+        ),
+      ]);
 
-      if (initial.length < limits.pageCap) {
-        const { pairs } = extractPairs(initial);
-        return {
-          pairs: dedupePairs(pairs),
-          rawCount: initial.length,
-          source: meta,
-          truncated: false,
-          windows,
-          requests,
-        };
-      }
-
-      // Pass 2: we hit the page cap — discard the initial batch and split the
-      // range. Fetch the chain tip once to bound the upper half. If the tip
-      // lookup fails, fall back to the max block observed in the initial
-      // response (better than nothing; just shifts the upper edge in).
-      let tip = await fetchBlockTip(signal);
-      requests += 1;
-      if (tip === null) {
-        const { maxBlock } = extractPairs(initial);
-        tip = maxBlock;
-      }
-      if (tip === null) {
-        // No usable upper bound — return the capped initial response rather
-        // than loop forever. Honest `truncated: true` on the way out.
-        const { pairs } = extractPairs(initial);
-        return {
-          pairs: dedupePairs(pairs),
-          rawCount: initial.length,
-          source: meta,
-          truncated: true,
-          windows,
-          requests,
-        };
-      }
-
-      const collected: BlockscoutLogEntry[] = [];
-      let truncated = false;
-
-      const stack: Array<{ from: bigint; to: bigint }> = [
-        { from: 0n, to: tip },
+      const candidates: NftDiscoveredApproval[] = [
+        ...extractNftApprovalForAll(forAll.logs),
+        ...extractErc721TokenApprovals(perToken.logs),
       ];
 
-      while (stack.length > 0) {
-        if (requests >= limits.maxRequests) {
-          truncated = true;
-          break;
-        }
-        if (collected.length >= limits.maxRawLogs) {
-          truncated = true;
-          break;
-        }
-
-        const range = stack.pop()!;
-        const logs = await fetchLogs(
-          owner,
-          range.from.toString(),
-          range.to.toString(),
-          signal,
-        );
-        requests += 1;
-        windows += 1;
-
-        const span = range.to - range.from;
-        if (
-          logs.length >= limits.pageCap &&
-          span > BigInt(limits.minSplitSpan)
-        ) {
-          // Still capped and we have room to narrow — split in half and
-          // discard this batch to avoid overlap when the halves are fetched.
-          const mid = range.from + span / 2n;
-          stack.push({ from: mid + 1n, to: range.to });
-          stack.push({ from: range.from, to: mid });
-          continue;
-        }
-
-        if (logs.length >= limits.pageCap) {
-          // Pathological: a tight range still hits the cap. Accept what we
-          // have but flag truncation.
-          truncated = true;
-        }
-
-        const remaining = limits.maxRawLogs - collected.length;
-        if (logs.length > remaining) {
-          collected.push(...logs.slice(0, remaining));
-          truncated = true;
-        } else {
-          collected.push(...logs);
-        }
-      }
-
-      if (stack.length > 0) truncated = true;
-
-      const { pairs } = extractPairs(collected);
       return {
-        pairs: dedupePairs(pairs),
-        rawCount: collected.length,
+        approvals: dedupeNftApprovals(candidates),
         source: meta,
-        truncated,
-        windows,
-        requests,
+        ...mergeStats(forAll.stats, perToken.stats),
       };
     },
   };
