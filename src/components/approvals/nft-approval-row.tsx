@@ -2,94 +2,70 @@
 
 import { useState } from "react";
 
-import type { BatchItemResult } from "@/hooks/use-batch-revoke";
-import { useRevokeApproval } from "@/hooks/use-revoke-approval";
+import { useRevokeNftApproval } from "@/hooks/use-revoke-nft-approval";
 import { explorerAddressUrl, explorerTxUrl } from "@/lib/explorer";
 import { shortenAddress } from "@/lib/format";
-import type { RiskLevel, ScoredApproval } from "@/lib/risk";
+import type { NftApproval, NftStandard } from "@/lib/nft-approvals";
+import type { RiskLevel } from "@/lib/risk";
 
-export function ApprovalRow({
+export function NftApprovalRow({
   approval,
   onRevoked,
-  selected = false,
-  onToggleSelect,
-  selectionDisabled = false,
-  batchActive = false,
-  batchResult,
 }: {
-  approval: ScoredApproval;
+  approval: NftApproval;
   onRevoked?: (hash: `0x${string}`) => void;
-  selected?: boolean;
-  onToggleSelect?: (key: string) => void;
-  selectionDisabled?: boolean;
-  batchActive?: boolean;
-  batchResult?: BatchItemResult;
 }) {
   const [confirming, setConfirming] = useState(false);
 
-  const {
-    status,
-    hash,
-    errorMessage,
-    isBusy,
-    revoke,
-    reset,
-  } = useRevokeApproval({
-    target: {
-      tokenAddress: approval.tokenAddress,
-      spenderAddress: approval.spenderAddress,
-    },
-    onSuccess: (h) => {
-      setConfirming(false);
-      onRevoked?.(h);
-    },
-  });
+  const { status, hash, errorMessage, isBusy, revoke, reset } =
+    useRevokeNftApproval({
+      target: approval,
+      onSuccess: (h) => {
+        setConfirming(false);
+        onRevoked?.(h);
+      },
+    });
 
-  const showConfirm = confirming && status === "idle" && !batchActive;
-  const showStatus = status !== "idle" && !batchActive;
+  const showConfirm = confirming && status === "idle";
+  const showStatus = status !== "idle";
+
+  const tokenIdLabel =
+    approval.kind === "tokenApproval" && approval.tokenId !== undefined
+      ? `#${approval.tokenId.toString()}`
+      : null;
 
   return (
     <li className="border-b border-pulse-border/60 last:border-b-0">
-      <div className="grid grid-cols-1 gap-3 px-4 py-4 sm:grid-cols-[auto_1.2fr_1.5fr_1fr_auto] sm:items-center sm:gap-4">
-        <div className="flex items-center">
-          <input
-            type="checkbox"
-            checked={selected}
-            onChange={() => onToggleSelect?.(approval.key)}
-            disabled={selectionDisabled || !onToggleSelect}
-            aria-label={`Select ${approval.tokenSymbol} approval for ${approval.spenderLabel}`}
-            className="h-4 w-4 cursor-pointer accent-pulse-purple disabled:cursor-not-allowed disabled:opacity-50"
-          />
-        </div>
+      <div className="grid grid-cols-1 gap-3 px-4 py-4 sm:grid-cols-[1.2fr_1.5fr_1fr_auto] sm:items-center sm:gap-4">
         <div className="flex min-w-0 items-center gap-3">
           <RiskDot level={approval.risk.level} />
-          <TokenAvatar symbol={approval.tokenSymbol} />
+          <CollectionAvatar name={approval.collectionName ?? "NFT"} />
           <div className="min-w-0">
             <p className="truncate text-sm font-semibold text-pulse-text">
-              {approval.tokenSymbol}
+              {approval.collectionName ?? "Unnamed collection"}
+              {tokenIdLabel ? (
+                <span className="ml-1.5 font-mono text-xs text-pulse-muted">
+                  {tokenIdLabel}
+                </span>
+              ) : null}
             </p>
-            <ExplorerLink
-              address={approval.tokenAddress}
-              label={approval.tokenName}
-            />
+            <ExplorerLink address={approval.collectionAddress} />
           </div>
         </div>
 
         <div className="min-w-0">
           <p className="truncate text-sm font-medium text-pulse-text">
-            {approval.spenderLabel}
+            {approval.operatorLabel}
           </p>
           <p className="truncate text-xs text-pulse-muted">
-            <ExplorerLink address={approval.spenderAddress} inline />
+            <ExplorerLink address={approval.operatorAddress} inline />
           </p>
           <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
-            <ProtocolBadge
-              protocol={approval.protocol}
-              category={approval.spenderCategory}
-            />
+            <StandardBadge standard={approval.standard} />
+            <KindBadge kind={approval.kind} />
             {approval.trusted ? (
               <TrustedBadge
-                verificationMethod={approval.spenderVerificationMethod}
+                verificationMethod={approval.operatorVerificationMethod}
               />
             ) : (
               <UnverifiedBadge />
@@ -99,43 +75,26 @@ export function ApprovalRow({
 
         <div className="flex flex-col items-start gap-1.5">
           <RiskBadge risk={approval.risk} />
-          {approval.unlimited ? (
-            <span className="inline-flex items-center gap-1.5 rounded-full border border-pulse-red/40 bg-pulse-red/10 px-2.5 py-1 text-xs font-semibold text-pulse-red">
-              <span
-                className="h-1.5 w-1.5 rounded-full bg-pulse-red"
-                aria-hidden
-              />
-              Unlimited
-            </span>
-          ) : (
-            <span className="font-mono text-sm text-pulse-text">
-              {approval.formattedAllowance}
-            </span>
-          )}
-          {approval.unlimited ? (
-            <span className="font-mono text-[11px] text-pulse-muted">
-              max uint256
-            </span>
-          ) : null}
+          <span className="text-[11px] text-pulse-muted">
+            {approval.kind === "approvalForAll"
+              ? "Collection-wide"
+              : "Single NFT"}
+          </span>
         </div>
 
         <div className="flex justify-start sm:justify-end">
-          {batchActive && batchResult ? (
-            <BatchStatusPill result={batchResult} />
-          ) : (
-            <RowAction
-              status={status}
-              hash={hash}
-              isBusy={isBusy || batchActive}
-              confirming={confirming}
-              onConfirmClick={() => setConfirming(true)}
-              onCancel={() => setConfirming(false)}
-              onRetry={() => {
-                reset();
-                setConfirming(true);
-              }}
-            />
-          )}
+          <RowAction
+            status={status}
+            hash={hash}
+            isBusy={isBusy}
+            confirming={confirming}
+            onConfirmClick={() => setConfirming(true)}
+            onCancel={() => setConfirming(false)}
+            onRetry={() => {
+              reset();
+              setConfirming(true);
+            }}
+          />
         </div>
       </div>
 
@@ -143,9 +102,7 @@ export function ApprovalRow({
         <ConfirmPanel
           approval={approval}
           onCancel={() => setConfirming(false)}
-          onConfirm={() => {
-            revoke();
-          }}
+          onConfirm={() => revoke()}
         />
       ) : null}
 
@@ -182,7 +139,7 @@ const RISK_STYLES: Record<
   },
 };
 
-function RiskBadge({ risk }: { risk: ScoredApproval["risk"] }) {
+function RiskBadge({ risk }: { risk: NftApproval["risk"] }) {
   const style = RISK_STYLES[risk.level];
   return (
     <span
@@ -205,35 +162,39 @@ function RiskDot({ level }: { level: RiskLevel }) {
   );
 }
 
-const SPENDER_CATEGORY_LABEL: Record<string, string> = {
-  router: "Router",
-  dex: "DEX",
-  bridge: "Bridge",
-  staking: "Staking",
-  farm: "Farm",
-  unknown: "",
-};
-
-function ProtocolBadge({
-  protocol,
-  category,
-}: {
-  protocol: string;
-  category?: string;
-}) {
-  const categoryLabel = category ? SPENDER_CATEGORY_LABEL[category] ?? "" : "";
-  const title = categoryLabel
-    ? `${protocol} · ${categoryLabel}`
-    : protocol;
+function StandardBadge({ standard }: { standard: NftStandard }) {
+  const label =
+    standard === "erc721"
+      ? "ERC-721"
+      : standard === "erc1155"
+      ? "ERC-1155"
+      : "Standard unknown";
   return (
     <span
-      className="inline-flex items-center gap-1 rounded-full border border-pulse-border bg-pulse-bg/60 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-pulse-muted"
+      className="inline-flex items-center rounded-full border border-pulse-border bg-pulse-bg/60 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-pulse-muted"
+      title={
+        standard === "unknown"
+          ? "Collection did not report a standard via ERC-165."
+          : `Detected via ERC-165 supportsInterface.`
+      }
+    >
+      {label}
+    </span>
+  );
+}
+
+function KindBadge({ kind }: { kind: NftApproval["kind"] }) {
+  const label = kind === "approvalForAll" ? "Operator (all)" : "Per-token";
+  const title =
+    kind === "approvalForAll"
+      ? "ApprovalForAll — the operator can move every NFT in this collection."
+      : "Per-token approve — the operator can move a single tokenId.";
+  return (
+    <span
+      className="inline-flex items-center rounded-full border border-pulse-border bg-pulse-bg/60 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-pulse-muted"
       title={title}
     >
-      {protocol}
-      {categoryLabel ? (
-        <span className="text-pulse-muted/70">· {categoryLabel}</span>
-      ) : null}
+      {label}
     </span>
   );
 }
@@ -244,25 +205,13 @@ function TrustedBadge({
   verificationMethod?: string;
 }) {
   const title = verificationMethod
-    ? `Known spender — ${verificationMethod} This is not an absolute safety claim.`
-    : "Spender address matches a manually verified entry in the Pulse Revoke registry. This is not an absolute safety claim.";
+    ? `Known operator — ${verificationMethod} This is not an absolute safety claim.`
+    : "Operator address matches a manually verified entry in the Pulse Revoke registry. This is not an absolute safety claim.";
   return (
     <span
       className="inline-flex items-center gap-1 rounded-full border border-pulse-cyan/40 bg-pulse-cyan/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-pulse-cyan"
       title={title}
     >
-      <svg
-        aria-hidden
-        viewBox="0 0 12 12"
-        className="h-2.5 w-2.5"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="2"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      >
-        <path d="M2.5 6.5 L5 9 L9.5 3.5" />
-      </svg>
       Known
     </span>
   );
@@ -272,7 +221,7 @@ function UnverifiedBadge() {
   return (
     <span
       className="inline-flex items-center rounded-full border border-pulse-border bg-pulse-bg/60 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-pulse-muted"
-      title="This spender is not in the verified registry. Verify the contract before leaving an allowance in place."
+      title="This operator is not in the verified registry. Verify the contract before leaving an approval in place."
     >
       Unverified
     </span>
@@ -288,7 +237,7 @@ function RowAction({
   onCancel,
   onRetry,
 }: {
-  status: ReturnType<typeof useRevokeApproval>["status"];
+  status: ReturnType<typeof useRevokeNftApproval>["status"];
   hash?: `0x${string}`;
   isBusy: boolean;
   confirming: boolean;
@@ -308,7 +257,6 @@ function RowAction({
       </span>
     );
   }
-
   if (status === "pending") {
     return (
       <span
@@ -319,7 +267,6 @@ function RowAction({
       </span>
     );
   }
-
   if (status === "success") {
     return (
       <span
@@ -330,7 +277,6 @@ function RowAction({
       </span>
     );
   }
-
   if (status === "error") {
     return (
       <button
@@ -342,7 +288,6 @@ function RowAction({
       </button>
     );
   }
-
   if (status === "rejected") {
     return (
       <button
@@ -354,7 +299,6 @@ function RowAction({
       </button>
     );
   }
-
   if (confirming) {
     return (
       <button
@@ -366,7 +310,6 @@ function RowAction({
       </button>
     );
   }
-
   return (
     <button
       type="button"
@@ -384,27 +327,30 @@ function ConfirmPanel({
   onCancel,
   onConfirm,
 }: {
-  approval: ScoredApproval;
+  approval: NftApproval;
   onCancel: () => void;
   onConfirm: () => void;
 }) {
+  const summary =
+    approval.kind === "approvalForAll"
+      ? `Sends setApprovalForAll(${shortenAddress(
+          approval.operatorAddress,
+        )}, false) on-chain. This clears collection-wide operator access. Gas fees apply.`
+      : `Sends approve(0x0, ${approval.tokenId?.toString()}) on-chain. This clears the per-token approval. The call will revert if you no longer own the NFT. Gas fees apply.`;
+
   return (
     <div className="border-t border-pulse-border/60 bg-pulse-bg/50 px-4 py-4 sm:px-6">
       <div className="flex flex-col items-start gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="text-sm">
           <p className="font-medium text-pulse-text">
             Revoke{" "}
-            <span className="font-semibold">{approval.tokenSymbol}</span>{" "}
-            approval for{" "}
-            <span className="font-semibold">{approval.spenderLabel}</span>?
-          </p>
-          <p className="mt-1 text-xs text-pulse-muted">
-            Sends{" "}
-            <span className="font-mono text-pulse-text">
-              approve({shortenAddress(approval.spenderAddress)}, 0)
+            <span className="font-semibold">
+              {approval.collectionName ?? shortenAddress(approval.collectionAddress)}
             </span>{" "}
-            on-chain. Gas fees apply.
+            approval for{" "}
+            <span className="font-semibold">{approval.operatorLabel}</span>?
           </p>
+          <p className="mt-1 text-xs text-pulse-muted">{summary}</p>
           <p className="mt-1 text-xs text-pulse-muted">{approval.risk.reason}</p>
         </div>
         <div className="flex items-center gap-2 self-stretch sm:self-auto">
@@ -434,7 +380,7 @@ function StatusPanel({
   errorMessage,
   onDismiss,
 }: {
-  status: ReturnType<typeof useRevokeApproval>["status"];
+  status: ReturnType<typeof useRevokeNftApproval>["status"];
   hash?: `0x${string}`;
   errorMessage?: string;
   onDismiss: () => void;
@@ -446,7 +392,6 @@ function StatusPanel({
       </StatusRow>
     );
   }
-
   if (status === "pending") {
     return (
       <StatusRow tone="info">
@@ -460,11 +405,10 @@ function StatusPanel({
       </StatusRow>
     );
   }
-
   if (status === "success") {
     return (
       <StatusRow tone="success" onDismiss={onDismiss}>
-        Approval revoked on-chain.
+        NFT approval revoked on-chain.
         {hash ? (
           <>
             {" "}
@@ -474,7 +418,6 @@ function StatusPanel({
       </StatusRow>
     );
   }
-
   if (status === "rejected") {
     return (
       <StatusRow tone="muted" onDismiss={onDismiss}>
@@ -482,7 +425,6 @@ function StatusPanel({
       </StatusRow>
     );
   }
-
   if (status === "error") {
     return (
       <StatusRow tone="error" onDismiss={onDismiss}>
@@ -490,7 +432,6 @@ function StatusPanel({
       </StatusRow>
     );
   }
-
   return null;
 }
 
@@ -528,82 +469,6 @@ function StatusRow({
   );
 }
 
-function BatchStatusPill({ result }: { result: BatchItemResult }) {
-  const base =
-    "inline-flex items-center justify-center gap-2 rounded-xl px-3 py-2 text-xs font-semibold";
-
-  if (result.status === "queued") {
-    return (
-      <span
-        className={`${base} border border-pulse-border bg-white/5 text-pulse-muted`}
-      >
-        Queued
-      </span>
-    );
-  }
-
-  if (result.status === "wallet") {
-    return (
-      <span
-        className={`${base} border border-pulse-cyan/40 bg-pulse-cyan/10 text-pulse-cyan`}
-      >
-        <Spinner /> Confirm in wallet…
-      </span>
-    );
-  }
-
-  if (result.status === "submitted") {
-    return (
-      <span
-        className={`${base} border border-pulse-cyan/40 bg-pulse-cyan/10 text-pulse-cyan`}
-      >
-        <Spinner /> Confirming…
-        {result.hash ? <TxLink hash={result.hash} /> : null}
-      </span>
-    );
-  }
-
-  if (result.status === "success") {
-    return (
-      <span
-        className={`${base} border border-pulse-green/40 bg-pulse-green/10 text-pulse-green`}
-      >
-        Revoked
-        {result.hash ? <TxLink hash={result.hash} tone="success" /> : null}
-      </span>
-    );
-  }
-
-  if (result.status === "rejected") {
-    return (
-      <span
-        className={`${base} border border-pulse-border bg-white/5 text-pulse-muted`}
-      >
-        Rejected
-      </span>
-    );
-  }
-
-  if (result.status === "skipped") {
-    return (
-      <span
-        className={`${base} border border-pulse-border bg-white/5 text-pulse-muted`}
-      >
-        Skipped
-      </span>
-    );
-  }
-
-  return (
-    <span
-      className={`${base} border border-pulse-red/40 bg-pulse-red/10 text-pulse-red`}
-      title={result.error}
-    >
-      Failed
-    </span>
-  );
-}
-
 function Spinner() {
   return (
     <span
@@ -636,12 +501,12 @@ function TxLink({
   );
 }
 
-function TokenAvatar({ symbol }: { symbol: string }) {
-  const initials = symbol.slice(0, 3).toUpperCase();
+function CollectionAvatar({ name }: { name: string }) {
+  const initials = name.slice(0, 3).toUpperCase();
   return (
     <div
       aria-hidden
-      className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-pulse-gradient text-[10px] font-bold text-pulse-bg"
+      className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-pulse-gradient text-[10px] font-bold text-pulse-bg"
     >
       {initials}
     </div>
@@ -650,14 +515,12 @@ function TokenAvatar({ symbol }: { symbol: string }) {
 
 function ExplorerLink({
   address,
-  label,
   inline,
 }: {
   address: string;
-  label?: string;
   inline?: boolean;
 }) {
-  const text = label ?? shortenAddress(address);
+  const text = shortenAddress(address);
   const base =
     "text-xs text-pulse-muted hover:text-pulse-cyan hover:underline underline-offset-2";
   return (
@@ -665,7 +528,7 @@ function ExplorerLink({
       href={explorerAddressUrl(address)}
       target="_blank"
       rel="noreferrer"
-      className={inline ? `${base} font-mono` : `truncate ${base}`}
+      className={inline ? `${base} font-mono` : `truncate ${base} font-mono`}
       title={address}
     >
       {text}
