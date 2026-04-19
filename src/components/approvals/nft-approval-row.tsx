@@ -335,8 +335,8 @@ function ConfirmPanel({
     approval.kind === "approvalForAll"
       ? `Sends setApprovalForAll(${shortenAddress(
           approval.operatorAddress,
-        )}, false) on-chain. This clears collection-wide operator access.`
-      : `Sends approve(0x0, ${approval.tokenId?.toString()}) on-chain. This clears the per-token approval. The call will revert if you no longer own the NFT.`;
+        )}, false) on-chain. This clears collection-wide operator access. Gas fees apply.`
+      : `Sends approve(0x0, ${approval.tokenId?.toString()}) on-chain. This clears the per-token approval. The call will revert if you no longer own the NFT. Gas fees apply.`;
 
   return (
     <div className="border-t border-pulse-border/60 bg-pulse-bg/50 px-4 py-4 sm:px-6">

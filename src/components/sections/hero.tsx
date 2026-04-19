@@ -23,9 +23,10 @@ export function Hero() {
           </h1>
 
           <p className="mt-6 text-lg text-pulse-muted sm:text-xl">
-            Every ERC-20 approval you sign stays on-chain until you revoke it.
-            Pulse Revoke shows exactly which spenders can move your tokens, so
-            you can clear old permissions and keep unlimited approvals in check.
+            Every ERC-20 allowance and NFT operator approval you sign stays
+            on-chain until you revoke it. Pulse Revoke shows exactly who can
+            move your tokens and NFTs, so you can clear old permissions and
+            keep unlimited approvals in check.
           </p>
 
           <div className="mt-10 flex flex-col items-center justify-center gap-3 sm:flex-row">

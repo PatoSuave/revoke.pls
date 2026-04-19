@@ -45,10 +45,10 @@ export const siteConfig = {
   tagline: "Manage PulseChain token approvals",
   /** Single-sentence meta description (used for SEO + OG). */
   description:
-    "Pulse Revoke is a non-custodial tool to review and revoke ERC-20 token approvals on PulseChain. Open source, read-only until you sign.",
+    "Pulse Revoke is a non-custodial tool to review and revoke ERC-20 and NFT approvals on PulseChain. Open source, read-only until you sign.",
   /** Longer paragraph for hero copy and social previews. */
   longDescription:
-    "Review every ERC-20 allowance your wallet has granted on PulseChain, understand the risk, and revoke the ones you no longer need — one signature at a time.",
+    "Review every ERC-20 allowance and NFT operator approval your wallet has granted on PulseChain, understand the risk, and revoke the ones you no longer need — one signature at a time.",
   /** Canonical public URL. Override at build time with NEXT_PUBLIC_SITE_URL. */
   url: resolvedUrl,
   /** Keywords for search engines. Keep conservative and factual. */
@@ -59,6 +59,8 @@ export const siteConfig = {
     "revoke.pls",
     "token allowance",
     "ERC-20 allowance",
+    "NFT approvals",
+    "ApprovalForAll",
     "wallet security",
     "revoke.cash alternative",
   ] as const,
