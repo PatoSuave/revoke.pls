@@ -51,8 +51,9 @@ export function ApprovalScanner() {
               Approval <span className="text-gradient-pulse">scanner</span>
             </h2>
             <p className="mt-3 text-pulse-muted">
-              Connect a wallet on PulseChain to discover ERC-20 allowances
-              from your approval history, then verify each live on-chain.
+              Connect a wallet on PulseChain to discover ERC-20 allowances and
+              NFT operator approvals from your history, then verify each live
+              on-chain.
             </p>
           </div>
           <div className="hidden sm:block">
