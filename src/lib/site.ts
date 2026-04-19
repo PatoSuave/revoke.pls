@@ -32,6 +32,29 @@ function hostFromUrl(input: string): string {
 
 const resolvedUrl = normalizeUrl(process.env.NEXT_PUBLIC_SITE_URL);
 
+/**
+ * Sentinel value used for launcher links that do not have a real target yet
+ * (desktop builds, checksums, etc). Components check against this to render
+ * buttons as disabled / "coming soon" instead of leaking `"#"` everywhere.
+ */
+export const LAUNCHER_PLACEHOLDER_URL = "#";
+
+/**
+ * Sentinel value used for the IPFS CID until a real build is pinned. The
+ * prefix `bafybei` is a valid CIDv1 prefix, which means UI code that just
+ * renders the string still looks right — but logic can detect the
+ * placeholder state via `isLauncherPlaceholderCid()`.
+ */
+export const LAUNCHER_PLACEHOLDER_CID = "bafybeiexamplecidplaceholder";
+
+export function isLauncherPlaceholderUrl(value: string): boolean {
+  return value === LAUNCHER_PLACEHOLDER_URL;
+}
+
+export function isLauncherPlaceholderCid(value: string): boolean {
+  return value === LAUNCHER_PLACEHOLDER_CID;
+}
+
 export const siteConfig = {
   /** Public-facing product name. */
   name: "Pulse Revoke",
@@ -91,20 +114,22 @@ export const siteConfig = {
     /** Path to the app preview image shown on the landing page. Place the
      *  PNG at `public/launcher-preview.png` to activate it. */
     previewImage: "/launcher-preview.png",
-    /** Desktop download URLs. Use "#" as a placeholder until builds ship. */
+    /** Desktop download URLs. Use the `LAUNCHER_PLACEHOLDER_URL` sentinel
+     *  (`"#"`) until builds ship — components detect it and render the
+     *  "coming soon" state. */
     downloads: {
-      windows: "#",
-      windowsArm: "#",
-      macos: "#",
-      linux: "#",
+      windows: LAUNCHER_PLACEHOLDER_URL,
+      windowsArm: LAUNCHER_PLACEHOLDER_URL,
+      macos: LAUNCHER_PLACEHOLDER_URL,
+      linux: LAUNCHER_PLACEHOLDER_URL,
       /** URL to the checksums file for the release. */
-      checksums: "#",
+      checksums: LAUNCHER_PLACEHOLDER_URL,
     },
-    /** IPFS distribution config. */
+    /** IPFS distribution config. Swap `cid` for the real pinned value when
+     *  a build is published. */
     ipfs: {
-      /** Replace with the actual CID when the build is pinned. */
-      cid: "bafybeiexamplecidplaceholder",
-      /** Public IPFS gateway base URL (no trailing slash after /ipfs/). */
+      cid: LAUNCHER_PLACEHOLDER_CID,
+      /** Public IPFS gateway base URL (include trailing `/ipfs/`). */
       gateway: "https://ipfs.io/ipfs/",
     },
   } as const,
