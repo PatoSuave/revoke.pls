@@ -323,8 +323,13 @@ function NftSection({ owner }: { owner: `0x${string}` }) {
 
       <p className="text-xs text-pulse-muted">
         Collection-wide operator approvals expose every NFT in the collection.
+        NFT approvals are discovered via {nft.sourceMeta.name}
+        {nft.stats.windows > 1
+          ? ` (${nft.stats.windows} block-range windows)`
+          : ""}{" "}
+        and re-verified live on-chain before display.
         {nft.truncated
-          ? " Fetch caps were reached, so very old NFT approvals may be missing."
+          ? " A per-wallet fetch cap was reached, so very old approvals may be missing."
           : ""}{" "}
         Per-token approvals are ERC-721 only; ERC-1155 exposes the operator
         pattern exclusively.
@@ -378,10 +383,13 @@ function NftSectionBody({
         <p className="font-semibold text-pulse-text">No active NFT approvals</p>
         <p className="mt-1 text-pulse-muted">
           {nft.stats.candidates === 0
-            ? `No ApprovalForAll or ERC-721 Approval history was found for this wallet on ${nft.sourceMeta.name}.`
+            ? `We couldn't find any NFT approval history for this wallet on ${nft.sourceMeta.name}.`
             : `${nft.stats.candidates} historical NFT approval${
                 nft.stats.candidates === 1 ? "" : "s"
-              } were discovered, but none are still active on-chain.`}
+              } were checked, but none are still active on-chain.`}
+          {nft.truncated
+            ? " A per-wallet fetch cap was reached; very old approvals may be missing."
+            : ""}
         </p>
       </div>
     );
@@ -557,12 +565,12 @@ function ScanContent({
         <p className="font-semibold text-pulse-text">No active approvals found</p>
         <p className="mt-1 text-pulse-muted">
           {scan.stats.candidates === 0
-            ? `No ERC-20 Approval events were found for this wallet on ${scan.sourceMeta.name}. Coverage is bounded by the indexer — if you believe you hold an active approval, verify it directly on PulseScan.`
+            ? `We couldn't find any ERC-20 approval history for this wallet on ${scan.sourceMeta.name}. If you expect an approval is in place, verify directly on PulseScan.`
             : `${scan.stats.candidates} historical approval${
                 scan.stats.candidates === 1 ? "" : "s"
-              } were discovered, but none currently hold a non-zero on-chain allowance.`}
+              } were checked, but none currently hold a non-zero allowance on-chain.`}
           {scan.truncated
-            ? " The explorer response was capped; very old approvals may be missing from this list."
+            ? " A per-wallet fetch cap was reached; very old approvals may be missing."
             : ""}
         </p>
       </div>
