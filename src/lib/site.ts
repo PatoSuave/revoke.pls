@@ -80,6 +80,10 @@ export const siteConfig = {
   },
   /** Short attribution line shown in the footer. */
   attribution: "Built for the PulseChain community.",
+  /**
+   * Launcher release metadata (downloads, IPFS, checksums) lives in
+   * `./release.ts` — keep this file focused on branding and metadata.
+   */
   /** Brand accent colors used by the OG image and icon renderers. */
   brandColors: {
     background: "#07070b",

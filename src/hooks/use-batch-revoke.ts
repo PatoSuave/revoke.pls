@@ -7,6 +7,7 @@ import type { Approval } from "@/lib/approvals";
 import { pulsechain } from "@/lib/chains";
 import { normalizeRevokeError } from "@/lib/errors";
 import { buildRevokeCall } from "@/lib/revoke";
+import { trackEvent } from "@/lib/telemetry";
 
 export type BatchItemStatus =
   | "queued"
@@ -119,18 +120,32 @@ export function useBatchRevoke({
   }, [resetAll]);
 
   const stop = useCallback(() => {
+    const wasRunning = stopRef.current === false;
     stopRef.current = true;
-    setState((s) => (s === "running" ? "stopping" : s));
+    setState((s) => {
+      if (s === "running") {
+        if (wasRunning) trackEvent("batch_stopped", { reason: "user" });
+        return "stopping";
+      }
+      return s;
+    });
   }, []);
 
   const start = useCallback(async () => {
     if (!publicClient) return;
     stopRef.current = false;
     setState("running");
+    trackEvent("batch_started", { size: items.length });
+
+    let successCount = 0;
+    let failedCount = 0;
+    let rejectedCount = 0;
+    let skippedCount = 0;
 
     for (const item of items) {
       if (stopRef.current) {
         patch(item.key, { status: "skipped" });
+        skippedCount += 1;
         continue;
       }
 
@@ -152,8 +167,14 @@ export function useBatchRevoke({
           status: n.rejected ? "rejected" : "failed",
           error: n.message,
         });
-        // Wallet rejection is a strong user signal: stop the batch.
-        if (n.rejected) stopRef.current = true;
+        if (n.rejected) {
+          rejectedCount += 1;
+          // Wallet rejection is a strong user signal: stop the batch.
+          stopRef.current = true;
+          trackEvent("batch_stopped", { reason: "rejected" });
+        } else {
+          failedCount += 1;
+        }
         continue;
       }
 
@@ -167,17 +188,28 @@ export function useBatchRevoke({
             hash,
             error: "Transaction reverted on-chain.",
           });
+          failedCount += 1;
         } else {
           patch(item.key, { status: "success", hash });
+          successCount += 1;
         }
       } catch (e) {
         const n = normalizeRevokeError(e);
         patch(item.key, { status: "failed", hash, error: n.message });
+        failedCount += 1;
       }
     }
 
     setCurrentKey(null);
     setState("complete");
+    trackEvent("batch_completed", {
+      total: items.length,
+      success: successCount,
+      failed: failedCount,
+      rejected: rejectedCount,
+      skipped: skippedCount,
+      partial: failedCount + rejectedCount + skippedCount > 0,
+    });
     onComplete?.();
   }, [items, publicClient, writeContractAsync, patch, onComplete]);
 
