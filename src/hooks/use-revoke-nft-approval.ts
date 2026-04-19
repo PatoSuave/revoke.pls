@@ -10,6 +10,7 @@ import {
   buildSetApprovalForAllRevoke,
 } from "@/lib/nft-approvals";
 import type { NftApproval } from "@/lib/nft-approvals";
+import { trackEvent } from "@/lib/telemetry";
 
 import type { RevokeStatus } from "@/hooks/use-revoke-approval";
 
@@ -75,6 +76,7 @@ export function useRevokeNftApproval({
   }, [write.status, write.error, wait.status, wait.error, wait.data]);
 
   const notifiedHashRef = useRef<`0x${string}` | null>(null);
+  const lastStatusRef = useRef<RevokeStatus>("idle");
 
   useEffect(() => {
     if (
@@ -87,8 +89,25 @@ export function useRevokeNftApproval({
     }
   }, [status, write.data, onSuccess]);
 
+  const telemetryKind =
+    target.kind === "approvalForAll" ? "nft-operator" : "nft-token";
+
+  useEffect(() => {
+    const prev = lastStatusRef.current;
+    if (prev === status) return;
+    lastStatusRef.current = status;
+    if (status === "success") {
+      trackEvent("revoke_confirmed", { kind: telemetryKind });
+    } else if (status === "error") {
+      trackEvent("revoke_failed", { kind: telemetryKind }, "warn");
+    } else if (status === "rejected") {
+      trackEvent("revoke_rejected", { kind: telemetryKind });
+    }
+  }, [status, telemetryKind]);
+
   const revoke = useCallback(() => {
     notifiedHashRef.current = null;
+    trackEvent("revoke_submitted", { kind: telemetryKind });
     const call =
       target.kind === "approvalForAll"
         ? buildSetApprovalForAllRevoke({
@@ -103,7 +122,7 @@ export function useRevokeNftApproval({
       ...call,
       chainId: pulsechain.id,
     });
-  }, [target, write]);
+  }, [target, write, telemetryKind]);
 
   const reset = useCallback(() => {
     notifiedHashRef.current = null;

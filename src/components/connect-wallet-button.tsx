@@ -12,6 +12,7 @@ import {
 
 import { pulsechain } from "@/lib/chains";
 import { shortenAddress } from "@/lib/format";
+import { trackEvent } from "@/lib/telemetry";
 
 type Variant = "primary" | "ghost";
 
@@ -191,6 +192,7 @@ export function ConnectWalletButton({
           disabled={isConnecting}
           onClick={() => {
             setPendingId(only.uid);
+            trackEvent("connector_selected", { type: only.type });
             connect({ connector: only });
           }}
           className={`${base} ${variantStyles[variant]}`}
@@ -237,6 +239,7 @@ export function ConnectWalletButton({
                 disabled={isConnecting}
                 onClick={() => {
                   setPendingId(c.uid);
+                  trackEvent("connector_selected", { type: c.type });
                   connect({ connector: c });
                 }}
                 className="flex w-full items-start justify-between gap-3 rounded-xl px-3 py-2.5 text-left text-sm text-pulse-text transition hover:bg-white/5 disabled:cursor-not-allowed disabled:opacity-60"

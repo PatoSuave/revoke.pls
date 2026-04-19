@@ -6,6 +6,7 @@ import { useWaitForTransactionReceipt, useWriteContract } from "wagmi";
 import { pulsechain } from "@/lib/chains";
 import { normalizeRevokeError } from "@/lib/errors";
 import { buildRevokeCall, type RevokeTarget } from "@/lib/revoke";
+import { trackEvent } from "@/lib/telemetry";
 
 export type RevokeStatus =
   | "idle"
@@ -82,6 +83,7 @@ export function useRevokeApproval({
   }, [write.status, write.error, wait.status, wait.error, wait.data]);
 
   const notifiedHashRef = useRef<`0x${string}` | null>(null);
+  const lastStatusRef = useRef<RevokeStatus>("idle");
 
   useEffect(() => {
     if (
@@ -94,8 +96,22 @@ export function useRevokeApproval({
     }
   }, [status, write.data, onSuccess]);
 
+  useEffect(() => {
+    const prev = lastStatusRef.current;
+    if (prev === status) return;
+    lastStatusRef.current = status;
+    if (status === "success") {
+      trackEvent("revoke_confirmed", { kind: "erc20" });
+    } else if (status === "error") {
+      trackEvent("revoke_failed", { kind: "erc20" }, "warn");
+    } else if (status === "rejected") {
+      trackEvent("revoke_rejected", { kind: "erc20" });
+    }
+  }, [status]);
+
   const revoke = useCallback(() => {
     notifiedHashRef.current = null;
+    trackEvent("revoke_submitted", { kind: "erc20" });
     write.writeContract({
       ...buildRevokeCall(target),
       chainId: pulsechain.id,
