@@ -68,11 +68,15 @@ export interface SpenderEntry {
  * for the labeled protocol — not that interacting with the protocol is
  * risk-free.
  *
- * Manual-verification TODO queue (not yet in the registry):
- *   - Additional DEX aggregator routers as they launch on PulseChain
- *   - Lending protocol debt/collateral managers
- *   - Staking / farm contracts once a verified list is available
- *   - Bridge contracts (PulseChain bridge, third-party bridges)
+ * Manual-verification TODO queue (candidates — verify address on PulseScan
+ * against the protocol's own documentation before adding):
+ *   - PulseX MasterChef v1 and v2 (farm staking; label per version)
+ *   - Piteas DEX aggregator router
+ *   - 9mm / 9inch DEX router(s)
+ *   - PHUX / PHIAT router and vault contracts
+ *   - Official PulseChain bridge contracts (ETH ↔ PLS legs, per direction)
+ *   - Any NFT marketplace router that proxies approvals (e.g. Tangled, Rarible
+ *     if deployed) — each needs its own entry once documented.
  *
  * All additions should be manually cross-checked on PulseScan before merging
  * and should set `isTrusted` and `category` accurately. See
