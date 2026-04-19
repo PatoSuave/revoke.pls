@@ -3,11 +3,16 @@ import Link from "next/link";
 
 import { PulseMark } from "@/components/pulse-mark";
 import {
-  absoluteUrl,
-  isLauncherPlaceholderCid,
-  isLauncherPlaceholderUrl,
-  siteConfig,
-} from "@/lib/site";
+  currentRelease,
+  isPlaceholderCid,
+  isPlaceholderUrl,
+  type ArtifactIcon,
+  type ChecksumsArtifact,
+  type IpfsGateway,
+  type ReleaseArtifact,
+  type ReleaseManifest,
+} from "@/lib/release";
+import { absoluteUrl, siteConfig } from "@/lib/site";
 
 // ─── Metadata ────────────────────────────────────────────────────────────────
 
@@ -37,7 +42,8 @@ export const metadata: Metadata = {
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
 export default function LauncherPage() {
-  const { launcher, links } = siteConfig;
+  const release = currentRelease;
+  const { links } = siteConfig;
 
   return (
     <div className="flex min-h-dvh flex-col bg-pulse-bg text-pulse-text">
@@ -88,7 +94,7 @@ export default function LauncherPage() {
             <PulseMark className="mx-auto h-16 w-16 sm:h-20 sm:w-20" />
 
             <div className="mt-5 inline-flex items-center gap-2 rounded-full border border-pulse-border bg-pulse-panel/80 px-3 py-1 text-[11px] font-semibold text-pulse-muted">
-              <span className="text-gradient-pulse">{launcher.version}</span>
+              <span className="text-gradient-pulse">{release.version}</span>
               <span className="text-pulse-border">·</span>
               <span>Public release</span>
             </div>
@@ -161,34 +167,13 @@ export default function LauncherPage() {
             />
 
             <div className="mt-8 grid grid-cols-2 gap-3 sm:grid-cols-4">
-              <DownloadButton
-                href={launcher.downloads.windows}
-                platform="Windows"
-                arch="x64"
-                icon={<WindowsIcon />}
-              />
-              <DownloadButton
-                href={launcher.downloads.windowsArm}
-                platform="Windows"
-                arch="ARM64"
-                icon={<WindowsIcon />}
-              />
-              <DownloadButton
-                href={launcher.downloads.macos}
-                platform="macOS"
-                arch="Universal"
-                icon={<MacIcon />}
-              />
-              <DownloadButton
-                href={launcher.downloads.linux}
-                platform="Linux"
-                arch="AppImage"
-                icon={<LinuxIcon />}
-              />
+              {release.artifacts.map((artifact) => (
+                <DownloadButton key={artifact.id} artifact={artifact} />
+              ))}
             </div>
 
-            <div className="mt-5 flex justify-center">
-              <ChecksumsLink href={launcher.downloads.checksums} />
+            <div className="mt-5 flex flex-col items-center gap-2">
+              <ChecksumsLink checksums={release.checksums} />
             </div>
           </div>
         </section>
@@ -201,7 +186,7 @@ export default function LauncherPage() {
               title="Available on IPFS"
               description="Each release is pinned to IPFS for censorship-resistant distribution. Access via any public gateway or your own node — the CID stays the same."
             />
-            <IpfsCard cid={launcher.ipfs.cid} gateway={launcher.ipfs.gateway} />
+            <IpfsCard ipfs={release.ipfs} />
           </div>
         </section>
 
@@ -301,19 +286,17 @@ function SectionHeader({
   );
 }
 
-function DownloadButton({
-  href,
-  platform,
-  arch,
-  icon,
-}: {
-  href: string;
-  platform: string;
-  arch: string;
-  icon: React.ReactNode;
-}) {
-  const unreleased = isLauncherPlaceholderUrl(href);
-  const label = `Download for ${platform} ${arch}`;
+const PLATFORM_ICONS: Record<ArtifactIcon, React.ReactElement> = {
+  windows: <WindowsIcon />,
+  macos: <MacIcon />,
+  linux: <LinuxIcon />,
+};
+
+function DownloadButton({ artifact }: { artifact: ReleaseArtifact }) {
+  const { href, platform, architecture, icon, note } = artifact;
+  const unreleased = isPlaceholderUrl(href);
+  const label = `Download for ${platform} ${architecture}`;
+  const platformIcon = PLATFORM_ICONS[icon];
 
   const base =
     "flex flex-col items-center gap-2.5 rounded-xl border px-4 py-5 text-center transition";
@@ -327,12 +310,12 @@ function DownloadButton({
         className={`${base} cursor-not-allowed border-pulse-border/70 bg-pulse-panel/40`}
       >
         <span className="text-pulse-muted/70" aria-hidden>
-          {icon}
+          {platformIcon}
         </span>
         <span className="text-sm font-semibold text-pulse-muted">
           {platform}
         </span>
-        <span className="text-[10px] text-pulse-muted/60">{arch}</span>
+        <span className="text-[10px] text-pulse-muted/60">{architecture}</span>
         <span className="rounded-full border border-pulse-border/70 bg-pulse-bg/60 px-2 py-0.5 text-[9px] font-semibold uppercase tracking-wider text-pulse-muted">
           Coming soon
         </span>
@@ -347,19 +330,23 @@ function DownloadButton({
       className={`${base} border-pulse-border bg-pulse-panel/70 hover:border-pulse-purple/50 hover:bg-pulse-panel2`}
     >
       <span className="text-pulse-text" aria-hidden>
-        {icon}
+        {platformIcon}
       </span>
       <span className="text-sm font-semibold text-pulse-text">{platform}</span>
-      <span className="text-[10px] text-pulse-muted">{arch}</span>
+      <span className="text-[10px] text-pulse-muted">{architecture}</span>
       <span className="text-[10px] font-semibold uppercase tracking-wider text-pulse-cyan">
         Download
       </span>
+      {note ? (
+        <span className="text-[10px] text-pulse-muted/70">{note}</span>
+      ) : null}
     </a>
   );
 }
 
-function ChecksumsLink({ href }: { href: string }) {
-  const unreleased = isLauncherPlaceholderUrl(href);
+function ChecksumsLink({ checksums }: { checksums: ChecksumsArtifact }) {
+  const { href, note } = checksums;
+  const unreleased = isPlaceholderUrl(href);
   const base =
     "inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-medium transition";
   const icon = (
@@ -378,31 +365,36 @@ function ChecksumsLink({ href }: { href: string }) {
     </svg>
   );
 
-  if (unreleased) {
-    return (
-      <span
-        aria-disabled="true"
-        className={`${base} cursor-not-allowed border-pulse-border/60 bg-pulse-panel/40 text-pulse-muted/70`}
-      >
-        {icon}
-        SHA-256 checksums — coming soon
-      </span>
-    );
-  }
-
   return (
-    <a
-      href={href}
-      className={`${base} border-pulse-border bg-pulse-panel/60 text-pulse-muted hover:border-pulse-cyan/40 hover:text-pulse-cyan`}
-    >
-      {icon}
-      SHA-256 checksums
-    </a>
+    <>
+      {unreleased ? (
+        <span
+          aria-disabled="true"
+          className={`${base} cursor-not-allowed border-pulse-border/60 bg-pulse-panel/40 text-pulse-muted/70`}
+        >
+          {icon}
+          SHA-256 checksums — coming soon
+        </span>
+      ) : (
+        <a
+          href={href}
+          className={`${base} border-pulse-border bg-pulse-panel/60 text-pulse-muted hover:border-pulse-cyan/40 hover:text-pulse-cyan`}
+        >
+          {icon}
+          SHA-256 checksums
+        </a>
+      )}
+      <p className="max-w-md text-center text-[11px] text-pulse-muted/70">
+        {note}
+      </p>
+    </>
   );
 }
 
-function IpfsCard({ cid, gateway }: { cid: string; gateway: string }) {
-  const unreleased = isLauncherPlaceholderCid(cid);
+function IpfsCard({ ipfs }: { ipfs: ReleaseManifest["ipfs"] }) {
+  const { cid, preferredGateway, alternateGateways } = ipfs;
+  const unreleased = isPlaceholderCid(cid);
+  const gateways: readonly IpfsGateway[] = [preferredGateway, ...alternateGateways];
 
   return (
     <div className="mt-8 overflow-hidden rounded-2xl border border-pulse-border bg-pulse-panel/70">
@@ -428,21 +420,14 @@ function IpfsCard({ cid, gateway }: { cid: string; gateway: string }) {
         </p>
       </div>
       <div className="flex flex-wrap gap-2 border-t border-pulse-border/60 px-5 py-4">
-        <IpfsGatewayLink
-          gateway="IPFS.io"
-          href={`${gateway}${cid}`}
-          disabled={unreleased}
-        />
-        <IpfsGatewayLink
-          gateway="Cloudflare"
-          href={`https://cloudflare-ipfs.com/ipfs/${cid}`}
-          disabled={unreleased}
-        />
-        <IpfsGatewayLink
-          gateway="Pinata"
-          href={`https://gateway.pinata.cloud/ipfs/${cid}`}
-          disabled={unreleased}
-        />
+        {gateways.map((gateway) => (
+          <IpfsGatewayLink
+            key={gateway.base}
+            gateway={gateway}
+            cid={cid}
+            disabled={unreleased}
+          />
+        ))}
       </div>
     </div>
   );
@@ -450,11 +435,11 @@ function IpfsCard({ cid, gateway }: { cid: string; gateway: string }) {
 
 function IpfsGatewayLink({
   gateway,
-  href,
+  cid,
   disabled,
 }: {
-  gateway: string;
-  href: string;
+  gateway: IpfsGateway;
+  cid: string;
   disabled?: boolean;
 }) {
   const base =
@@ -481,20 +466,20 @@ function IpfsGatewayLink({
         className={`${base} cursor-not-allowed border-pulse-border/60 bg-pulse-bg/30 text-pulse-muted/60`}
       >
         {icon}
-        {gateway}
+        {gateway.label}
       </span>
     );
   }
 
   return (
     <a
-      href={href}
+      href={`${gateway.base}${cid}`}
       target="_blank"
       rel="noreferrer"
       className={`${base} border-pulse-border bg-pulse-bg/60 text-pulse-muted hover:border-pulse-cyan/40 hover:text-pulse-cyan`}
     >
       {icon}
-      {gateway}
+      {gateway.label}
     </a>
   );
 }
