@@ -63,13 +63,24 @@ export function ConnectWalletButton({
   const [pendingId, setPendingId] = useState<string | null>(null);
   const wrapperRef = useRef<HTMLDivElement>(null);
 
-  const availableConnectors = useMemo(
-    () =>
-      SUPPORTED_CONNECTOR_TYPES.flatMap((t) =>
-        connectors.filter((c) => c.type === t),
-      ),
-    [connectors],
-  );
+  // Deduplicate connectors by type. wagmi auto-registers EIP-6963 providers
+  // alongside our explicit `injected()` connector — each with `type: "injected"`
+  // — which would otherwise render as multiple identical "Browser wallet" rows.
+  // We keep the first entry per type, preserving the order declared in
+  // SUPPORTED_CONNECTOR_TYPES so injected appears before WalletConnect.
+  const availableConnectors = useMemo(() => {
+    const seen = new Set<string>();
+    const out: Connector[] = [];
+    for (const t of SUPPORTED_CONNECTOR_TYPES) {
+      for (const c of connectors) {
+        if (c.type !== t) continue;
+        if (seen.has(c.type)) continue;
+        seen.add(c.type);
+        out.push(c);
+      }
+    }
+    return out;
+  }, [connectors]);
 
   // Close the menu on outside click or Escape.
   useEffect(() => {
