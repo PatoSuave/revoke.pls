@@ -4,6 +4,7 @@ import { siteConfig } from "@/lib/site";
 
 // Next.js file-based metadata — this generates `/icon` at build time and
 // automatically populates `metadata.icons.icon` for the entire app.
+export const dynamic = "force-static";
 export const size = { width: 32, height: 32 };
 export const contentType = "image/png";
 
