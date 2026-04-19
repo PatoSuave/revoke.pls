@@ -1,7 +1,7 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import { useMemo } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import type { Address } from "viem";
 import { useReadContracts } from "wagmi";
 
@@ -16,6 +16,7 @@ import {
   parseNftValidationResults,
   type NftApproval,
 } from "@/lib/nft-approvals";
+import { trackEvent } from "@/lib/telemetry";
 
 export type NftDiscoveryStatus = "idle" | "pending" | "success" | "error";
 
@@ -139,6 +140,39 @@ export function useNftApprovalDiscovery({
 
   const error: Error | null =
     (discoveryQuery.error as Error | null) ?? reads.error ?? null;
+
+  const lastStatusRef = useRef<NftDiscoveryStatus>("idle");
+  useEffect(() => {
+    const prev = lastStatusRef.current;
+    if (prev === status) return;
+    lastStatusRef.current = status;
+    const source = discoverySource.meta.id;
+    if (status === "pending") {
+      trackEvent("scan_started", { kind: "nft", source });
+    } else if (status === "success") {
+      trackEvent("scan_completed", {
+        kind: "nft",
+        source,
+        candidates: candidates.length,
+        active: parsed.approvals.length,
+        registryMatched: parsed.stats.registryMatched,
+        windows: discoveryQuery.data?.windows ?? 0,
+      });
+      if (discoveryQuery.data?.truncated) {
+        trackEvent("scan_truncated", { kind: "nft", source });
+      }
+    } else if (status === "error") {
+      trackEvent("scan_failed", { kind: "nft", source }, "warn");
+    }
+  }, [
+    status,
+    discoverySource.meta.id,
+    candidates.length,
+    parsed.approvals.length,
+    parsed.stats.registryMatched,
+    discoveryQuery.data?.windows,
+    discoveryQuery.data?.truncated,
+  ]);
 
   const refetch = () => {
     void discoveryQuery.refetch();
