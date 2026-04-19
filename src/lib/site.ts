@@ -80,6 +80,34 @@ export const siteConfig = {
   },
   /** Short attribution line shown in the footer. */
   attribution: "Built for the PulseChain community.",
+  /**
+   * Launcher / distribution page config.
+   * Centralises all release metadata so the landing page never hardcodes
+   * values. Swap placeholder strings for real values when a release ships.
+   */
+  launcher: {
+    /** Current release version displayed on the landing page. */
+    version: "v0.1.0",
+    /** Path to the app preview image shown on the landing page. Place the
+     *  PNG at `public/launcher-preview.png` to activate it. */
+    previewImage: "/launcher-preview.png",
+    /** Desktop download URLs. Use "#" as a placeholder until builds ship. */
+    downloads: {
+      windows: "#",
+      windowsArm: "#",
+      macos: "#",
+      linux: "#",
+      /** URL to the checksums file for the release. */
+      checksums: "#",
+    },
+    /** IPFS distribution config. */
+    ipfs: {
+      /** Replace with the actual CID when the build is pinned. */
+      cid: "bafybeiexamplecidplaceholder",
+      /** Public IPFS gateway base URL (no trailing slash after /ipfs/). */
+      gateway: "https://ipfs.io/ipfs/",
+    },
+  } as const,
   /** Brand accent colors used by the OG image and icon renderers. */
   brandColors: {
     background: "#07070b",
