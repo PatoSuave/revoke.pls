@@ -463,7 +463,7 @@ function StatusPanel({
 
   if (status === "success") {
     return (
-      <StatusRow tone="success">
+      <StatusRow tone="success" onDismiss={onDismiss}>
         Approval revoked on-chain.
         {hash ? (
           <>

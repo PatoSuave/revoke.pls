@@ -175,7 +175,7 @@ export function ConnectWalletButton({
           Connect Wallet
         </button>
         <span className="text-xs text-pulse-muted">
-          No wallet connectors available
+          Install a browser wallet to continue
         </span>
       </div>
     );

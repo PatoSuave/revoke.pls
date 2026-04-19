@@ -407,7 +407,7 @@ function StatusPanel({
   }
   if (status === "success") {
     return (
-      <StatusRow tone="success">
+      <StatusRow tone="success" onDismiss={onDismiss}>
         NFT approval revoked on-chain.
         {hash ? (
           <>

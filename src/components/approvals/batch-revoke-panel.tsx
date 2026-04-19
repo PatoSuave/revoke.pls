@@ -247,6 +247,7 @@ function RunningCard({ batch }: { batch: UseBatchRevokeResult }) {
 
 function CompleteCard({ batch }: { batch: UseBatchRevokeResult }) {
   const { success, failed, rejected, skipped, total } = batch.counts;
+  const stoppedByRejection = rejected > 0 && skipped > 0;
 
   return (
     <div className="rounded-2xl border border-pulse-border bg-pulse-panel/60 p-5">
@@ -256,6 +257,13 @@ function CompleteCard({ batch }: { batch: UseBatchRevokeResult }) {
       <h3 className="mt-1 text-lg font-semibold text-pulse-text">
         {success} of {total} revoked
       </h3>
+
+      {stoppedByRejection ? (
+        <p className="mt-1 text-xs text-pulse-muted">
+          Batch stopped after a wallet rejection. Remaining approvals were not
+          submitted — you can re-select and retry.
+        </p>
+      ) : null}
 
       <ul className="mt-3 flex flex-wrap gap-1.5 text-xs">
         {success > 0 ? <Pill tone="green">{success} succeeded</Pill> : null}
