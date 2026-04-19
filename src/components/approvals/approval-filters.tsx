@@ -23,7 +23,7 @@ export function ApprovalFilters({
   filter,
   onFilterChange,
   count,
-  totalChecks,
+  candidateCount,
   disabled,
 }: {
   query: string;
@@ -33,7 +33,7 @@ export function ApprovalFilters({
   filter: ApprovalFilter;
   onFilterChange: (next: ApprovalFilter) => void;
   count: number;
-  totalChecks: number;
+  candidateCount: number;
   disabled?: boolean;
 }) {
   return (
@@ -84,8 +84,8 @@ export function ApprovalFilters({
         </div>
 
         <p className="text-xs text-pulse-muted">
-          {count} {count === 1 ? "approval" : "approvals"} shown · {totalChecks}{" "}
-          checks
+          {count} {count === 1 ? "approval" : "approvals"} shown ·{" "}
+          {candidateCount} candidate{candidateCount === 1 ? "" : "s"}
         </p>
       </div>
 

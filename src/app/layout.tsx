@@ -4,6 +4,11 @@ import "@/app/globals.css";
 import { Providers } from "@/components/providers";
 import { absoluteUrl, siteConfig } from "@/lib/site";
 
+// Icons and social previews are generated from the co-located metadata
+// files (`icon.tsx`, `apple-icon.tsx`, `opengraph-image.tsx`). Next.js
+// auto-populates `metadata.icons.*` and `metadata.openGraph.images` from
+// those routes — do not duplicate them here.
+
 const pageTitle = `${siteConfig.name} — ${siteConfig.tagline}`;
 
 export const metadata: Metadata = {
@@ -30,28 +35,17 @@ export const metadata: Metadata = {
     title: pageTitle,
     description: siteConfig.description,
     url: absoluteUrl("/"),
-    images: [
-      {
-        url: siteConfig.ogImage,
-        width: 1200,
-        height: 630,
-        alt: `${siteConfig.name} — ${siteConfig.tagline}`,
-      },
-    ],
+    locale: "en_US",
   },
   twitter: {
     card: "summary_large_image",
     title: pageTitle,
     description: siteConfig.description,
-    images: [siteConfig.ogImage],
-  },
-  icons: {
-    icon: "/favicon.ico",
   },
 };
 
 export const viewport: Viewport = {
-  themeColor: "#07070b",
+  themeColor: siteConfig.brandColors.background,
   width: "device-width",
   initialScale: 1,
 };

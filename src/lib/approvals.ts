@@ -1,12 +1,16 @@
 import type { Address } from "viem";
 
+import type { DiscoveredPair } from "@/lib/discovery";
 import { erc20Abi, formatAllowance, isUnlimitedAllowance } from "@/lib/erc20";
-import type {
-  SpenderCategory,
-  SpenderEntry,
-  TokenCategory,
-  TokenEntry,
+import {
+  getSpenderEntry,
+  getTokenEntry,
+  type SpenderCategory,
+  type SpenderEntry,
+  type TokenCategory,
+  type TokenEntry,
 } from "@/lib/registry";
+import { shortenAddress } from "@/lib/format";
 
 /**
  * Flat representation of a single positive ERC-20 approval. This is the
@@ -162,4 +166,181 @@ export function parseScanResults(
   });
 
   return approvals;
+}
+
+/**
+ * Unique list of token addresses present in the discovered pairs, in the
+ * order they first appear. Used to batch metadata reads (symbol/decimals/name)
+ * exactly once per token rather than once per pair.
+ */
+function uniqueTokenAddresses(pairs: readonly DiscoveredPair[]): Address[] {
+  const seen = new Set<string>();
+  const out: Address[] = [];
+  for (const p of pairs) {
+    const key = p.tokenAddress.toLowerCase();
+    if (seen.has(key)) continue;
+    seen.add(key);
+    out.push(p.tokenAddress);
+  }
+  return out;
+}
+
+/**
+ * Build a flat `useReadContracts` config for the discovery-first pipeline.
+ *
+ * Layout:
+ *   [ t0.symbol, t0.decimals, t0.name,
+ *     t1.symbol, t1.decimals, t1.name, …,
+ *     allowance(owner, pair0.spender) on pair0.token,
+ *     allowance(owner, pair1.spender) on pair1.token, … ]
+ *
+ * Deduping tokens before the metadata reads keeps Multicall3 payloads small
+ * even for wallets with hundreds of historical approvals.
+ */
+export function buildDiscoveryContracts(
+  owner: Address,
+  pairs: readonly DiscoveredPair[],
+) {
+  const tokens = uniqueTokenAddresses(pairs);
+  const metadata = tokens.flatMap((address) => [
+    { address, abi: erc20Abi, functionName: "symbol" as const },
+    { address, abi: erc20Abi, functionName: "decimals" as const },
+    { address, abi: erc20Abi, functionName: "name" as const },
+  ]);
+  const allowances = pairs.map((pair) => ({
+    address: pair.tokenAddress,
+    abi: erc20Abi,
+    functionName: "allowance" as const,
+    args: [owner, pair.spenderAddress] as const,
+  }));
+  return {
+    contracts: [...metadata, ...allowances],
+    uniqueTokens: tokens,
+  };
+}
+
+export interface ParseDiscoveryStats {
+  /** Number of `(token, spender)` pairs fed into the pipeline. */
+  candidates: number;
+  /** How many survived live `allowance > 0` validation. */
+  active: number;
+  /** How many of the active approvals matched a registry spender entry. */
+  registryMatched: number;
+}
+
+export interface ParseDiscoveryOutput {
+  approvals: Approval[];
+  stats: ParseDiscoveryStats;
+}
+
+/**
+ * Parse the discovery-first `useReadContracts` output back into scan-layer
+ * approvals. Always:
+ *  - prefers on-chain metadata, falling back to registry fallbacks then to a
+ *    short-address placeholder for tokens we have never seen before
+ *  - drops zero allowances (including revoked-but-still-logged entries)
+ *  - skips tokens with no decimals info (we won't mis-scale a number)
+ *  - enriches spenders from the registry when a match exists; otherwise marks
+ *    them untrusted with category `unknown` and does NOT fabricate a label
+ */
+export function parseDiscoveryResults(
+  results: readonly ReadResult[],
+  owner: Address,
+  pairs: readonly DiscoveredPair[],
+): ParseDiscoveryOutput {
+  void owner; // reserved for future multi-owner caching
+  const tokens = uniqueTokenAddresses(pairs);
+  const tokenIndex = new Map<string, number>();
+  tokens.forEach((address, i) => {
+    tokenIndex.set(address.toLowerCase(), i);
+  });
+
+  const tokenMetaOffset = 0;
+  const allowanceOffset = tokens.length * METADATA_CALLS_PER_TOKEN;
+
+  interface TokenMeta {
+    symbol: string;
+    name?: string;
+    decimals: number | undefined;
+    category: TokenCategory;
+  }
+
+  const tokenMeta = new Map<string, TokenMeta>();
+  tokens.forEach((address, i) => {
+    const base = tokenMetaOffset + i * METADATA_CALLS_PER_TOKEN;
+    const symbolRes = results[base];
+    const decimalsRes = results[base + 1];
+    const nameRes = results[base + 2];
+    const registry = getTokenEntry(address);
+
+    const onChainSymbol =
+      symbolRes?.status === "success" && typeof symbolRes.result === "string"
+        ? symbolRes.result
+        : undefined;
+    const onChainName =
+      nameRes?.status === "success" && typeof nameRes.result === "string"
+        ? nameRes.result
+        : undefined;
+    const onChainDecimals =
+      decimalsRes?.status === "success" &&
+      typeof decimalsRes.result === "number"
+        ? decimalsRes.result
+        : undefined;
+
+    const decimals = onChainDecimals ?? registry?.decimals;
+    const symbol = onChainSymbol ?? registry?.symbol ?? shortenAddress(address);
+    const name = onChainName ?? registry?.name;
+    const category: TokenCategory = registry?.category ?? "unknown";
+
+    tokenMeta.set(address.toLowerCase(), { symbol, name, decimals, category });
+  });
+
+  const approvals: Approval[] = [];
+  let registryMatched = 0;
+
+  pairs.forEach((pair, pairIdx) => {
+    const allowanceRes = results[allowanceOffset + pairIdx];
+    if (!allowanceRes || allowanceRes.status !== "success") return;
+
+    const raw = allowanceRes.result;
+    if (typeof raw !== "bigint" || raw === 0n) return;
+
+    const meta = tokenMeta.get(pair.tokenAddress.toLowerCase());
+    if (!meta || typeof meta.decimals !== "number") return;
+
+    const unlimited = isUnlimitedAllowance(raw);
+    const spenderEntry = getSpenderEntry(pair.spenderAddress);
+    if (spenderEntry) registryMatched += 1;
+
+    approvals.push({
+      key: `${pair.tokenAddress}-${pair.spenderAddress}`,
+      tokenAddress: pair.tokenAddress,
+      tokenSymbol: meta.symbol,
+      tokenName: meta.name,
+      tokenDecimals: meta.decimals,
+      tokenCategory: meta.category,
+      spenderAddress: pair.spenderAddress,
+      spenderLabel: spenderEntry?.label ?? "Unknown spender",
+      protocol: spenderEntry?.protocol ?? "Unknown",
+      spenderCategory: spenderEntry?.category ?? "unknown",
+      trusted: spenderEntry?.isTrusted ?? false,
+      spenderUrl: spenderEntry?.url,
+      spenderNotes: spenderEntry?.notes,
+      spenderVerificationMethod: spenderEntry?.verificationMethod,
+      rawAllowance: raw,
+      formattedAllowance: unlimited
+        ? "Unlimited"
+        : `${formatAllowance(raw, meta.decimals)} ${meta.symbol}`,
+      unlimited,
+    });
+  });
+
+  return {
+    approvals,
+    stats: {
+      candidates: pairs.length,
+      active: approvals.length,
+      registryMatched,
+    },
+  };
 }

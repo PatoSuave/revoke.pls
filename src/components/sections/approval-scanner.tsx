@@ -10,7 +10,7 @@ import {
   BatchRevokePanel,
 } from "@/components/approvals/batch-revoke-panel";
 import { ConnectWalletButton } from "@/components/connect-wallet-button";
-import { useApprovalScan } from "@/hooks/use-approval-scan";
+import { useApprovalDiscovery } from "@/hooks/use-approval-discovery";
 import { useBatchRevoke } from "@/hooks/use-batch-revoke";
 import { pulsechain } from "@/lib/chains";
 import { shortenAddress } from "@/lib/format";
@@ -25,9 +25,11 @@ import {
 /**
  * Connected-wallet approval scanner for PulseChain.
  *
- * Reads are issued through `useApprovalScan` which batches the curated
- * registry (tokens × spenders) into a single Multicall3 call. This component
- * is pure UI glue: state branching, filter/sort, and render.
+ * Uses `useApprovalDiscovery` to pull historical `Approval` events from the
+ * configured explorer, re-validate every `(token, spender)` pair live via
+ * Multicall3, and enrich matches from the curated registry. The registry-
+ * only `useApprovalScan` hook is preserved under `@/hooks/use-approval-scan`
+ * as a secondary option for future registry-constrained modes.
  */
 export function ApprovalScanner() {
   const { address, isConnected, status: accountStatus } = useAccount();
@@ -46,8 +48,8 @@ export function ApprovalScanner() {
               Approval <span className="text-gradient-pulse">scanner</span>
             </h2>
             <p className="mt-3 text-pulse-muted">
-              Connect a wallet on PulseChain to review ERC-20 allowances that
-              you have granted to spender contracts in the curated registry.
+              Connect a wallet on PulseChain to discover ERC-20 allowances
+              from your approval history, then verify each live on-chain.
             </p>
           </div>
           <div className="hidden sm:block">
@@ -117,7 +119,7 @@ function ScannerBody({
 }
 
 function ConnectedScanner({ owner }: { owner: `0x${string}` }) {
-  const scan = useApprovalScan({ owner });
+  const scan = useApprovalDiscovery({ owner });
 
   const [query, setQuery] = useState("");
   const [sort, setSort] = useState<ApprovalSort>("risk");
@@ -217,8 +219,13 @@ function ConnectedScanner({ owner }: { owner: `0x${string}` }) {
             {shortenAddress(owner)}
           </span>
           <span className="text-xs text-pulse-muted">
-            Scanning {scan.tokensScanned} tokens × {scan.spendersScanned}{" "}
-            spenders
+            {scan.stats.candidates > 0
+              ? `${scan.stats.active} active · ${scan.stats.candidates} candidate${
+                  scan.stats.candidates === 1 ? "" : "s"
+                }`
+              : scan.status === "pending"
+              ? "Searching approval history…"
+              : "No approval history found"}
           </span>
           {highRiskCount > 0 ? (
             <span className="inline-flex items-center gap-1.5 rounded-full border border-pulse-red/40 bg-pulse-red/10 px-3 py-1 text-xs font-semibold text-pulse-red">
@@ -262,12 +269,68 @@ function ConnectedScanner({ owner }: { owner: `0x${string}` }) {
         batch={batch}
       />
 
-      <p className="text-xs text-pulse-muted">
-        Scans are limited to the curated registry in this build. Discovery of
-        approvals outside the registry requires indexing and will ship in a
-        later milestone.
-      </p>
+      <CoverageNote scan={scan} />
+      <DiscoveryDebug scan={scan} />
     </div>
+  );
+}
+
+function CoverageNote({
+  scan,
+}: {
+  scan: ReturnType<typeof useApprovalDiscovery>;
+}) {
+  return (
+    <p className="text-xs text-pulse-muted">
+      Approvals are discovered from your wallet&rsquo;s historical ERC-20
+      Approval events via {scan.sourceMeta.name}
+      {scan.stats.windows > 1
+        ? ` (${scan.stats.windows} block-range windows)`
+        : ""}{" "}
+      and re-verified live on-chain before display.
+      {scan.truncated
+        ? " A per-wallet fetch cap was reached, so very old approvals may be missing. Verify directly on PulseScan if you suspect a legacy approval."
+        : ""}{" "}
+      Protocol labels and trust badges come from the curated registry; unknown
+      spenders stay unverified.
+    </p>
+  );
+}
+
+function DiscoveryDebug({
+  scan,
+}: {
+  scan: ReturnType<typeof useApprovalDiscovery>;
+}) {
+  if (process.env.NODE_ENV === "production") return null;
+  if (scan.status !== "success") return null;
+  const { stats } = scan;
+  return (
+    <details className="rounded-xl border border-pulse-border/60 bg-pulse-bg/40 px-3 py-2 text-[11px] text-pulse-muted">
+      <summary className="cursor-pointer font-semibold uppercase tracking-wide text-pulse-text/80">
+        Discovery debug
+      </summary>
+      <dl className="mt-2 grid grid-cols-2 gap-x-4 gap-y-1 font-mono">
+        <dt>source</dt>
+        <dd>{scan.sourceMeta.id}</dd>
+        <dt>windows</dt>
+        <dd>{stats.windows}</dd>
+        <dt>requests</dt>
+        <dd>{stats.requests}</dd>
+        <dt>raw logs</dt>
+        <dd>{stats.rawCandidateLogs}</dd>
+        <dt>candidate pairs</dt>
+        <dd>{stats.candidates}</dd>
+        <dt>unique tokens</dt>
+        <dd>{stats.uniqueTokens}</dd>
+        <dt>active (live &gt; 0)</dt>
+        <dd>{stats.active}</dd>
+        <dt>registry matched</dt>
+        <dd>{stats.registryMatched}</dd>
+        <dt>truncated</dt>
+        <dd>{String(scan.truncated)}</dd>
+      </dl>
+    </details>
   );
 }
 
@@ -291,7 +354,7 @@ function ScanContent({
   onReviewBatch,
   batch,
 }: {
-  scan: ReturnType<typeof useApprovalScan>;
+  scan: ReturnType<typeof useApprovalDiscovery>;
   scored: readonly ScoredApproval[];
   visibleApprovals: readonly ScoredApproval[];
   query: string;
@@ -313,7 +376,7 @@ function ScanContent({
   const batchActive = batch.state === "running" || batch.state === "stopping";
   const batchInteracting = batch.state !== "idle";
   if (scan.status === "pending") {
-    return <ScannerSkeleton totalChecks={scan.totalChecks} />;
+    return <ScannerSkeleton candidates={scan.stats.candidates} />;
   }
 
   if (scan.status === "error") {
@@ -340,8 +403,14 @@ function ScanContent({
       <div className="rounded-2xl border border-dashed border-pulse-border/80 bg-pulse-bg/40 p-6 text-sm">
         <p className="font-semibold text-pulse-text">No active approvals found</p>
         <p className="mt-1 text-pulse-muted">
-          This wallet has no non-zero allowances to any spender in the curated
-          registry. Broader chain-wide discovery ships in a later milestone.
+          {scan.stats.candidates === 0
+            ? `No ERC-20 Approval events were found for this wallet on ${scan.sourceMeta.name}. Coverage is bounded by the indexer — if you believe you hold an active approval, verify it directly on PulseScan.`
+            : `${scan.stats.candidates} historical approval${
+                scan.stats.candidates === 1 ? "" : "s"
+              } were discovered, but none currently hold a non-zero on-chain allowance.`}
+          {scan.truncated
+            ? " The explorer response was capped; very old approvals may be missing from this list."
+            : ""}
         </p>
       </div>
     );
@@ -359,7 +428,7 @@ function ScanContent({
         filter={filter}
         onFilterChange={onFilterChange}
         count={visibleApprovals.length}
-        totalChecks={scan.totalChecks}
+        candidateCount={scan.stats.candidates}
         disabled={scan.isFetching || batchInteracting}
       />
 
@@ -437,12 +506,16 @@ function GuidancePanel() {
   );
 }
 
-function ScannerSkeleton({ totalChecks }: { totalChecks: number }) {
+function ScannerSkeleton({ candidates }: { candidates: number }) {
   return (
     <div className="space-y-4">
       <div className="flex items-center gap-3 text-xs text-pulse-muted">
         <span className="inline-flex h-2 w-2 animate-pulse rounded-full bg-pulse-cyan" />
-        Reading allowances for {totalChecks} token/spender pairs…
+        {candidates > 0
+          ? `Verifying ${candidates} candidate approval${
+              candidates === 1 ? "" : "s"
+            } on-chain…`
+          : "Searching your approval history…"}
       </div>
       <div className="overflow-hidden rounded-2xl border border-pulse-border">
         {[0, 1, 2].map((i) => (
