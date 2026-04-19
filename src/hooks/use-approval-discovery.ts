@@ -42,6 +42,8 @@ export interface UseApprovalDiscoveryResult {
     active: number;
     registryMatched: number;
     rawCandidateLogs: number;
+    windows: number;
+    requests: number;
   };
   sourceMeta: DiscoverySourceMeta;
   truncated: boolean;
@@ -158,6 +160,8 @@ export function useApprovalDiscovery({
       active: parsed.stats.active,
       registryMatched: parsed.stats.registryMatched,
       rawCandidateLogs: discoveryQuery.data?.rawCount ?? 0,
+      windows: discoveryQuery.data?.windows ?? 0,
+      requests: discoveryQuery.data?.requests ?? 0,
     },
     sourceMeta: discoverySource.meta,
     truncated: discoveryQuery.data?.truncated ?? false,
