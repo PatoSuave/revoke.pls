@@ -60,9 +60,22 @@ export interface TokenEntry {
  * high-confidence entries over a large unverified list.
  *
  * Manual-verification TODO queue (not yet in the registry):
- *   - Bridged stablecoins (USDC.e, USDT.e, DAI) from the official PulseChain bridge
- *   - eHEX vs pHEX disambiguation in UI copy
- *   - Additional blue-chip ecosystem tokens (e.g. PLSD, LOAN, TSFi)
+ *   - PulseChain-native bridged assets (e.g. pDAI, pUSDC, pUSDT, pWETH)
+ *     issued via the official PulseChain bridge — each needs its own entry
+ *     separate from the fork-copied Ethereum mainnet contracts below.
+ *   - eHEX vs pHEX disambiguation in UI copy.
+ *   - Additional blue-chip ecosystem tokens (e.g. PLSD, LOAN, TSFi, PHUX,
+ *     PHIAT) once a single canonical source of addresses is identified.
+ *
+ * About the "from ETH" entries below: PulseChain launched in May 2023 as a
+ * full-state fork of Ethereum, so every ERC-20 that existed on Ethereum at
+ * the snapshot block exists at the *same address* on PulseChain. Their
+ * symbols and names are copied verbatim from Ethereum (the contract code is
+ * identical). On-chain balances on PulseChain come from that fork snapshot
+ * and have since diverged — the ETH-side peg mechanisms (MakerDAO for DAI,
+ * Circle for USDC, Tether for USDT) do not apply on PulseChain. These tokens
+ * do, however, still hold live PulseX approvals for fork-holders trading them,
+ * which is why they earn their place in the registry.
  */
 export const TOKEN_REGISTRY: readonly TokenEntry[] = [
   {
@@ -97,6 +110,46 @@ export const TOKEN_REGISTRY: readonly TokenEntry[] = [
     decimals: 18,
     category: "ecosystem",
     source: "https://pulsex.com",
+  },
+  {
+    address: "0x6B175474E89094C44Da98b954EedeAC495271d0F",
+    symbol: "DAI",
+    name: "Dai Stablecoin",
+    decimals: 18,
+    category: "bridged",
+    notes:
+      "Fork-copied from Ethereum at PulseChain genesis. Same address and bytecode as Ethereum mainnet DAI; peg mechanism does not apply on PulseChain.",
+    source: "https://scan.pulsechain.com",
+  },
+  {
+    address: "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
+    symbol: "USDC",
+    name: "USD Coin",
+    decimals: 6,
+    category: "bridged",
+    notes:
+      "Fork-copied from Ethereum at PulseChain genesis. Same address and bytecode as Ethereum mainnet USDC; Circle does not redeem on PulseChain.",
+    source: "https://scan.pulsechain.com",
+  },
+  {
+    address: "0xdAC17F958D2ee523a2206206994597C13D831ec7",
+    symbol: "USDT",
+    name: "Tether USD",
+    decimals: 6,
+    category: "bridged",
+    notes:
+      "Fork-copied from Ethereum at PulseChain genesis. Same address and bytecode as Ethereum mainnet USDT; Tether does not redeem on PulseChain.",
+    source: "https://scan.pulsechain.com",
+  },
+  {
+    address: "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2",
+    symbol: "WETH",
+    name: "Wrapped Ether",
+    decimals: 18,
+    category: "bridged",
+    notes:
+      "Fork-copied from Ethereum at PulseChain genesis. Same address and bytecode as Ethereum mainnet WETH; wraps PulseChain-side ETH balances from the fork snapshot.",
+    source: "https://scan.pulsechain.com",
   },
 ] as const;
 
