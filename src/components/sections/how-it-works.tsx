@@ -7,12 +7,12 @@ const STEPS = [
   {
     n: "02",
     title: "Review your approvals",
-    body: "The scanner walks the curated registry of PulseChain tokens and spenders, flags unlimited allowances, and explains why each one is ranked low, medium, or high risk.",
+    body: "Pulse Revoke pulls your wallet's historical Approval events from the PulseChain explorer, re-verifies every allowance live on-chain, and labels known spenders from a curated registry so you can judge risk at a glance.",
   },
   {
     n: "03",
     title: "Revoke what you don't need",
-    body: "Clear approvals one at a time, or select several and run them as a sequential batch. Each revoke is a standard approve(spender, 0) transaction on the token itself.",
+    body: "Clear approvals one at a time, or select several and run them as a sequential batch. Each revoke is a standard approve(spender, 0) transaction on the token contract, submitted on-chain and paid in PLS gas — there is no fee on top.",
   },
 ] as const;
 
