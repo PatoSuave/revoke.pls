@@ -12,6 +12,7 @@ import {
 
 import { pulsechain } from "@/lib/chains";
 import { shortenAddress } from "@/lib/format";
+import { isDesktopBuild } from "@/lib/platform";
 import { trackEvent } from "@/lib/telemetry";
 
 type Variant = "primary" | "ghost";
@@ -38,13 +39,17 @@ function describeConnector(c: Connector): { label: string; sub: string } {
   if (c.type === "walletConnect") {
     return {
       label: "WalletConnect",
-      sub: "Scan a QR code with a mobile wallet",
+      sub: isDesktopBuild
+        ? "Scan a QR code with a mobile or hardware wallet (recommended)"
+        : "Scan a QR code with a mobile wallet",
     };
   }
   if (c.type === "injected") {
     return {
       label: "Browser wallet",
-      sub: "MetaMask, Rabby, Brave, and similar",
+      sub: isDesktopBuild
+        ? "Browser extensions run only in the web app — use the web version for MetaMask, Rabby, etc."
+        : "MetaMask, Rabby, Brave, and similar",
     };
   }
   return { label: c.name, sub: c.type };
@@ -176,7 +181,9 @@ export function ConnectWalletButton({
           Connect Wallet
         </button>
         <span className="text-xs text-pulse-muted">
-          Install a browser wallet to continue
+          {isDesktopBuild
+            ? "Configure a WalletConnect project ID to enable pairing"
+            : "Install a browser wallet to continue"}
         </span>
       </div>
     );

@@ -65,6 +65,9 @@ export default function LauncherPage() {
             </span>
           </div>
           <nav className="hidden items-center gap-6 text-xs text-pulse-muted sm:flex">
+            <a href="#how-it-works" className="transition hover:text-pulse-text">
+              How it works
+            </a>
             <a href="#downloads" className="transition hover:text-pulse-text">
               Downloads
             </a>
@@ -104,10 +107,30 @@ export default function LauncherPage() {
             </h1>
 
             <p className="mt-4 text-base text-pulse-muted sm:text-lg">
-              {siteConfig.longDescription}
+              See every ERC-20 allowance and NFT operator approval your wallet
+              has granted on PulseChain, and revoke the ones you no longer
+              need — one signature at a time.
             </p>
 
-            <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
+            <ul className="mt-5 flex flex-wrap items-center justify-center gap-x-4 gap-y-1.5 text-[11px] text-pulse-muted">
+              {[
+                "Non-custodial",
+                "Live on-chain validation",
+                "ERC-20 + NFT approvals",
+                "Open source",
+                "One transaction per revoke",
+              ].map((b) => (
+                <li key={b} className="inline-flex items-center gap-1.5">
+                  <span
+                    aria-hidden
+                    className="h-1.5 w-1.5 rounded-full bg-pulse-cyan/80"
+                  />
+                  {b}
+                </li>
+              ))}
+            </ul>
+
+            <div className="mt-7 flex flex-wrap items-center justify-center gap-3">
               <Link
                 href="/app"
                 className="inline-flex items-center gap-2 rounded-xl bg-pulse-gradient px-6 py-3 text-sm font-semibold text-white shadow-glow transition hover:brightness-110"
@@ -157,6 +180,36 @@ export default function LauncherPage() {
           </div>
         </section>
 
+        {/* How it works */}
+        <section id="how-it-works" className="border-t border-pulse-border/60 py-16 sm:py-20">
+          <div className="mx-auto max-w-3xl px-4 sm:px-6">
+            <SectionHeader
+              eyebrow="How it works"
+              title="Three steps, no surprises"
+              description="Pulse Revoke is deliberately narrow: connect, review, and revoke. No account, no tracking, no custody."
+            />
+
+            <ol className="mt-10 grid gap-3 sm:grid-cols-3">
+              {LAUNCHER_STEPS.map((step) => (
+                <li
+                  key={step.n}
+                  className="relative overflow-hidden rounded-2xl border border-pulse-border bg-pulse-panel/60 p-5"
+                >
+                  <span className="font-mono text-[11px] font-semibold text-pulse-muted">
+                    {step.n}
+                  </span>
+                  <h3 className="mt-2 text-sm font-semibold text-pulse-text">
+                    {step.title}
+                  </h3>
+                  <p className="mt-1.5 text-xs leading-relaxed text-pulse-muted">
+                    {step.body}
+                  </p>
+                </li>
+              ))}
+            </ol>
+          </div>
+        </section>
+
         {/* Downloads */}
         <section id="downloads" className="border-t border-pulse-border/60 py-16 sm:py-20">
           <div className="mx-auto max-w-3xl px-4 sm:px-6">
@@ -165,6 +218,12 @@ export default function LauncherPage() {
               title="Download"
               description="Native desktop builds are coming. The web app at /app works in any browser today — no install required."
             />
+
+            <p className="mx-auto mt-4 max-w-xl text-center text-[11px] text-pulse-muted/70">
+              Desktop builds pair wallets over WalletConnect (mobile or
+              hardware). Browser-extension wallets like MetaMask and Rabby
+              continue to work in the web app.
+            </p>
 
             <div className="mt-8 grid grid-cols-2 gap-3 sm:grid-cols-4">
               {release.artifacts.map((artifact) => (
@@ -219,10 +278,9 @@ export default function LauncherPage() {
                 external
               />
               <ResourceCard
-                title="WalletConnect"
-                description="Get a project ID to enable QR wallet pairing."
-                href={links.walletConnect}
-                external
+                title="How revoking works"
+                description="A plain-English walkthrough of approvals, risk, and what each revoke does on-chain."
+                href="/app#how-it-works"
               />
             </div>
           </div>
@@ -261,6 +319,24 @@ export default function LauncherPage() {
     </div>
   );
 }
+
+const LAUNCHER_STEPS = [
+  {
+    n: "01",
+    title: "Connect your wallet",
+    body: "Pulse Revoke reads your public address to look up allowances. It never asks for a seed phrase and never signs anything until you revoke.",
+  },
+  {
+    n: "02",
+    title: "Review your approvals",
+    body: "We pull your historical Approval events from the PulseChain explorer, re-verify each one live on-chain, and label known spenders so you can judge risk at a glance.",
+  },
+  {
+    n: "03",
+    title: "Revoke access you don't need",
+    body: "Clear approvals one at a time or in a sequential batch. Each revoke is a standard approve(spender, 0) transaction on the token contract, paid in PLS gas.",
+  },
+] as const;
 
 // ─── Sub-components ────────────────────────────────────────────────────────────
 
