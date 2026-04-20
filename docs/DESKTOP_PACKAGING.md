@@ -94,16 +94,60 @@ No changes to scanner logic, telemetry, `/app` route, or `src/lib/release.ts`.
 
 ---
 
-## Implementation steps (when ready)
+## Implementation status
+
+The scaffold is in place. `next.config.ts` conditionally enables static
+export when `TAURI_BUILD=1`, `src-tauri/` holds a minimal Tauri v2 app, and
+`npm run build:desktop` produces `out/` for Tauri to bundle.
 
 ```
-# 1. Enable static export (one-liner in next.config.ts):
-#    output: 'export'
+# One-time prerequisites
+rustup install stable                     # Rust toolchain
+npm install                               # picks up @tauri-apps/cli@^2
 
-# 2. Scaffold Tauri (adds src-tauri/ only):
-npm install --save-dev @tauri-apps/cli@^2
-npx tauri init
+# Dev (hot-reload against Next.js dev server)
+NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID=... npx tauri dev
+
+# Production bundle (icons must exist under src-tauri/icons/ first)
+npx tauri icon path/to/icon-1024.png
+NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID=... npm run build:desktop
+npx tauri build
 ```
+
+### Desktop runtime detection
+
+`npm run build:desktop` sets `NEXT_PUBLIC_TAURI_BUILD=1`. The frontend reads
+this via `src/lib/platform.ts` (`isDesktopBuild`) — Next.js inlines it at
+build time, so the desktop and web branches are tree-shaken away
+respectively. UI copy that differs between desktop and web (connect menu,
+launcher downloads section) branches on this constant only.
+
+### CSP
+
+`tauri.conf.json` now sets an explicit CSP:
+
+```
+default-src 'self';
+script-src  'self' 'unsafe-inline' 'wasm-unsafe-eval';
+style-src   'self' 'unsafe-inline';
+img-src     'self' data: blob:;
+font-src    'self' data:;
+connect-src 'self' https: wss:;
+frame-src   'self' https:;
+object-src  'none';
+base-uri    'self';
+```
+
+Notes on unavoidable looseness:
+
+- `script-src 'unsafe-inline'`: Next.js static export emits inline hydration
+  scripts. Nonce-based CSP is not available for `output: 'export'`.
+- `script-src 'wasm-unsafe-eval'`: reserved for wallet crypto libraries that
+  may ship wasm. `'unsafe-eval'` is deliberately omitted.
+- `connect-src https: wss:`: wagmi/viem talks to user-configurable RPC
+  endpoints, the explorer API, and the WalletConnect relay (multiple hosts).
+  Pinning to specific hostnames would break custom RPC overrides.
+- `frame-src https:`: WalletConnect's verify.walletconnect.com iframe.
 
 Key `tauri.conf.json` settings:
 ```json
