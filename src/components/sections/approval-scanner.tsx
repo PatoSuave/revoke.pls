@@ -45,20 +45,15 @@ export function ApprovalScanner() {
       className="relative border-t border-pulse-border/60 bg-gradient-to-b from-pulse-bg to-pulse-panel/40 py-20 sm:py-24"
     >
       <div className="mx-auto max-w-6xl px-4 sm:px-6">
-        <div className="flex flex-col items-start justify-between gap-6 sm:flex-row sm:items-end">
-          <div className="max-w-2xl">
-            <h2 className="text-3xl font-bold tracking-tight sm:text-4xl">
-              Approval <span className="text-gradient-pulse">scanner</span>
-            </h2>
-            <p className="mt-3 text-pulse-muted">
-              Connect a wallet on PulseChain to discover ERC-20 allowances and
-              NFT operator approvals from your history, then verify each live
-              on-chain.
-            </p>
-          </div>
-          <div className="hidden sm:block">
-            <ConnectWalletButton variant="ghost" />
-          </div>
+        <div className="max-w-2xl">
+          <h2 className="text-3xl font-bold tracking-tight sm:text-4xl">
+            Approval <span className="text-gradient-pulse">scanner</span>
+          </h2>
+          <p className="mt-3 text-pulse-muted">
+            Connect a wallet on PulseChain to discover ERC-20 allowances and
+            NFT operator approvals from your history, then verify each live
+            on-chain.
+          </p>
         </div>
 
         <div className="relative mt-10 overflow-hidden rounded-3xl border border-pulse-border bg-pulse-panel/70 p-6 sm:p-10">
