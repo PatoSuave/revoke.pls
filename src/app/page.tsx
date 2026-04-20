@@ -166,6 +166,12 @@ export default function LauncherPage() {
               description="Native desktop builds are coming. The web app at /app works in any browser today — no install required."
             />
 
+            <p className="mx-auto mt-4 max-w-xl text-center text-[11px] text-pulse-muted/70">
+              Desktop builds pair wallets over WalletConnect (mobile or
+              hardware). Browser-extension wallets like MetaMask and Rabby
+              continue to work in the web app.
+            </p>
+
             <div className="mt-8 grid grid-cols-2 gap-3 sm:grid-cols-4">
               {release.artifacts.map((artifact) => (
                 <DownloadButton key={artifact.id} artifact={artifact} />
