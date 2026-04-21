@@ -410,7 +410,7 @@ function NftSectionBody({
               }.`
             : `${nft.stats.candidates} historical NFT approval${
                 nft.stats.candidates === 1 ? "" : "s"
-              } were checked, but none are still active on-chain.`}
+              } were checked on ${chainConfig.displayName}, but none are still active on-chain.`}
           {nft.truncated
             ? " A per-wallet fetch cap was reached; very old approvals may be missing."
             : ""}
@@ -599,7 +599,7 @@ function ScanContent({
               }. If you expect an approval is in place, verify directly on ${chainConfig.explorer.name}.`
             : `${scan.stats.candidates} historical approval${
                 scan.stats.candidates === 1 ? "" : "s"
-              } were checked, but none currently hold a non-zero allowance on-chain.`}
+              } were checked on ${chainConfig.displayName}, but none currently hold a non-zero allowance on-chain.`}
           {scan.truncated
             ? " A per-wallet fetch cap was reached; very old approvals may be missing."
             : ""}

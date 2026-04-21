@@ -170,7 +170,7 @@ export function ConnectWalletButton({
 
     return (
       <div className={`inline-flex items-center gap-2 ${className}`}>
-        <span className="hidden sm:inline-flex items-center gap-2 rounded-xl border border-pulse-border bg-pulse-panel/70 px-3 py-2 text-xs font-medium text-pulse-muted">
+        <span className="inline-flex items-center gap-2 rounded-xl border border-pulse-border bg-pulse-panel/70 px-3 py-2 text-xs font-medium text-pulse-muted">
           <span className="h-2 w-2 rounded-full bg-pulse-green" aria-hidden />
           {currentConfig?.displayName}
         </span>

@@ -148,6 +148,8 @@ export function ApprovalRow({
       {showConfirm ? (
         <ConfirmPanel
           approval={approval}
+          chainName={chainConfig?.displayName ?? "the network"}
+          nativeSymbol={chainConfig?.nativeSymbol}
           onCancel={() => setConfirming(false)}
           onConfirm={() => {
             revoke();
@@ -391,10 +393,14 @@ function RowAction({
 
 function ConfirmPanel({
   approval,
+  chainName,
+  nativeSymbol,
   onCancel,
   onConfirm,
 }: {
   approval: ScoredApproval;
+  chainName: string;
+  nativeSymbol?: string;
   onCancel: () => void;
   onConfirm: () => void;
 }) {
@@ -413,7 +419,8 @@ function ConfirmPanel({
             <span className="font-mono text-pulse-text">
               approve({shortenAddress(approval.spenderAddress)}, 0)
             </span>{" "}
-            on-chain. Gas fees apply.
+            on {chainName}
+            {nativeSymbol ? `. Paid in ${nativeSymbol} gas.` : ". Gas fees apply."}
           </p>
           <p className="mt-1 text-xs text-pulse-muted">{approval.risk.reason}</p>
         </div>
