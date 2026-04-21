@@ -6,8 +6,12 @@ import { erc20Abi } from "@/lib/erc20";
  * The minimum amount of information needed to revoke a single ERC-20
  * approval. Deliberately decoupled from the richer `Approval` UI model so
  * this module stays reusable from places that don't have full metadata.
+ *
+ * `chainId` is required so each revoke broadcasts on the chain the approval
+ * actually lives on, regardless of what the wallet is currently connected to.
  */
 export interface RevokeTarget {
+  chainId: number;
   tokenAddress: Address;
   spenderAddress: Address;
 }

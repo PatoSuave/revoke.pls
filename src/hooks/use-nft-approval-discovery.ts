@@ -5,12 +5,13 @@ import { useEffect, useMemo, useRef } from "react";
 import type { Address } from "viem";
 import { useReadContracts } from "wagmi";
 
+import type { SupportedChainId } from "@/lib/chains";
 import type {
   DiscoverySource,
   DiscoverySourceMeta,
   NftDiscoveredApproval,
 } from "@/lib/discovery";
-import { getDefaultDiscoverySource } from "@/lib/discovery";
+import { getDiscoverySourceForChain } from "@/lib/discovery";
 import {
   buildNftValidationContracts,
   parseNftValidationResults,
@@ -24,6 +25,7 @@ const EMPTY_CANDIDATES: readonly NftDiscoveredApproval[] = [];
 
 export interface UseNftApprovalDiscoveryOptions {
   owner: Address | undefined;
+  chainId: number | undefined;
   source?: DiscoverySource;
   enabled?: boolean;
 }
@@ -44,7 +46,7 @@ export interface UseNftApprovalDiscoveryResult {
     windows: number;
     requests: number;
   };
-  sourceMeta: DiscoverySourceMeta;
+  sourceMeta: DiscoverySourceMeta | null;
   truncated: boolean;
 }
 
@@ -52,30 +54,33 @@ export interface UseNftApprovalDiscoveryResult {
  * Discovery-first NFT approval pipeline, parallel to `useApprovalDiscovery`.
  *
  * 1. Fetch historical `ApprovalForAll` + ERC-721 per-token `Approval` events
- *    for `owner` from the configured discovery source.
+ *    for `owner` on `chainId` from the chain's configured discovery source.
  * 2. Deduplicate into `(collection, operator, [tokenId])` candidates.
  * 3. Re-validate on-chain with `isApprovedForAll(owner, operator)` or
- *    `getApproved(tokenId) == operator` via Multicall3, fetching collection
- *    metadata (standard detection via ERC-165 + optional `name()`) in the
- *    same batch.
- * 4. Drop inactive approvals and enrich operators from the curated registry.
+ *    `getApproved(tokenId) == operator` via Multicall3 on the same chain,
+ *    fetching collection metadata in the same batch.
+ * 4. Drop inactive approvals and enrich operators from the curated registry
+ *    scoped to `chainId`.
  */
 export function useNftApprovalDiscovery({
   owner,
+  chainId,
   source,
   enabled = true,
 }: UseNftApprovalDiscoveryOptions): UseNftApprovalDiscoveryResult {
   const discoverySource = useMemo(
-    () => source ?? getDefaultDiscoverySource(),
-    [source],
+    () => source ?? getDiscoverySourceForChain(chainId),
+    [source, chainId],
   );
 
-  const discoveryEnabled = enabled && Boolean(owner);
+  const discoveryEnabled =
+    enabled && Boolean(owner) && Boolean(discoverySource) && Boolean(chainId);
 
   const discoveryQuery = useQuery({
     queryKey: [
       "nft-approval-discovery",
-      discoverySource.meta.id,
+      discoverySource?.meta.id ?? null,
+      chainId ?? null,
       owner?.toLowerCase() ?? null,
     ],
     enabled: discoveryEnabled,
@@ -83,6 +88,7 @@ export function useNftApprovalDiscovery({
     gcTime: 5 * 60_000,
     queryFn: async ({ signal }) => {
       if (!owner) throw new Error("owner required");
+      if (!discoverySource) throw new Error("unsupported chain");
       return discoverySource.discoverNftApprovals(owner, { signal });
     },
   });
@@ -93,11 +99,15 @@ export function useNftApprovalDiscovery({
   );
 
   const { contracts, uniqueCollections } = useMemo(() => {
-    if (!owner || candidates.length === 0) {
+    if (!owner || !chainId || candidates.length === 0) {
       return { contracts: [], uniqueCollections: [] as Address[] };
     }
-    return buildNftValidationContracts(owner, candidates);
-  }, [owner, candidates]);
+    return buildNftValidationContracts(
+      owner,
+      candidates,
+      chainId as SupportedChainId,
+    );
+  }, [owner, chainId, candidates]);
 
   const readsEnabled =
     discoveryEnabled &&
@@ -115,7 +125,7 @@ export function useNftApprovalDiscovery({
   });
 
   const parsed = useMemo(() => {
-    if (!owner || !reads.data || candidates.length === 0) {
+    if (!owner || !chainId || !reads.data || candidates.length === 0) {
       return {
         approvals: [] as NftApproval[],
         stats: {
@@ -125,8 +135,8 @@ export function useNftApprovalDiscovery({
         },
       };
     }
-    return parseNftValidationResults(reads.data, owner, candidates);
-  }, [owner, reads.data, candidates]);
+    return parseNftValidationResults(reads.data, owner, chainId, candidates);
+  }, [owner, chainId, reads.data, candidates]);
 
   const status: NftDiscoveryStatus = useMemo(() => {
     if (!discoveryEnabled) return "idle";
@@ -146,27 +156,29 @@ export function useNftApprovalDiscovery({
     const prev = lastStatusRef.current;
     if (prev === status) return;
     lastStatusRef.current = status;
-    const source = discoverySource.meta.id;
+    const src = discoverySource?.meta.id ?? "unknown";
     if (status === "pending") {
-      trackEvent("scan_started", { kind: "nft", source });
+      trackEvent("scan_started", { kind: "nft", source: src, chainId });
     } else if (status === "success") {
       trackEvent("scan_completed", {
         kind: "nft",
-        source,
+        source: src,
+        chainId,
         candidates: candidates.length,
         active: parsed.approvals.length,
         registryMatched: parsed.stats.registryMatched,
         windows: discoveryQuery.data?.windows ?? 0,
       });
       if (discoveryQuery.data?.truncated) {
-        trackEvent("scan_truncated", { kind: "nft", source });
+        trackEvent("scan_truncated", { kind: "nft", source: src, chainId });
       }
     } else if (status === "error") {
-      trackEvent("scan_failed", { kind: "nft", source }, "warn");
+      trackEvent("scan_failed", { kind: "nft", source: src, chainId }, "warn");
     }
   }, [
     status,
-    discoverySource.meta.id,
+    discoverySource?.meta.id,
+    chainId,
     candidates.length,
     parsed.approvals.length,
     parsed.stats.registryMatched,
@@ -195,7 +207,7 @@ export function useNftApprovalDiscovery({
       windows: discoveryQuery.data?.windows ?? 0,
       requests: discoveryQuery.data?.requests ?? 0,
     },
-    sourceMeta: discoverySource.meta,
+    sourceMeta: discoverySource?.meta ?? null,
     truncated: discoveryQuery.data?.truncated ?? false,
   };
 }

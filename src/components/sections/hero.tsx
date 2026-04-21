@@ -13,18 +13,19 @@ export function Hero() {
         <div className="mx-auto max-w-3xl text-center">
           <span className="inline-flex items-center gap-2 rounded-full border border-pulse-border bg-pulse-panel/60 px-3 py-1 text-xs font-medium text-pulse-muted">
             <span className="h-1.5 w-1.5 rounded-full bg-pulse-green" aria-hidden />
-            PulseChain · Mainnet (369)
+            PulseChain · Ethereum
           </span>
 
           <h1 className="mt-4 text-3xl font-bold tracking-tight sm:text-5xl">
             Review and revoke your{" "}
-            <span className="text-gradient-pulse">PulseChain approvals</span>.
+            <span className="text-gradient-pulse">token approvals</span>.
           </h1>
 
           <p className="mt-4 text-base text-pulse-muted sm:text-lg">
             Every ERC-20 allowance and NFT operator approval you sign stays
-            on-chain until you revoke it. Connect your wallet below to see who
-            can still move your tokens and clear the ones you no longer need.
+            on-chain until you revoke it. Connect your wallet on PulseChain or
+            Ethereum to see who can still move your tokens and clear the ones
+            you no longer need.
           </p>
 
           <ul className="mt-6 flex flex-wrap items-center justify-center gap-x-5 gap-y-2 text-xs text-pulse-muted">

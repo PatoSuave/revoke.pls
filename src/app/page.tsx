@@ -16,9 +16,9 @@ import { absoluteUrl, siteConfig } from "@/lib/site";
 
 // ─── Metadata ────────────────────────────────────────────────────────────────
 
-const launcherTitle = `${siteConfig.name} — PulseChain Token Approval Manager`;
+const launcherTitle = `${siteConfig.name} — PulseChain & Ethereum Token Approval Manager`;
 const launcherDescription =
-  "Download Pulse Revoke or launch the web app. Review and revoke ERC-20 and NFT token approvals on PulseChain — non-custodial, open source.";
+  "Download Pulse Revoke or launch the web app. Review and revoke ERC-20 and NFT token approvals on PulseChain and Ethereum — non-custodial, open source.";
 
 export const metadata: Metadata = {
   title: launcherTitle,
@@ -51,7 +51,7 @@ export default function LauncherPage() {
       <div className="border-b border-pulse-border/50 bg-pulse-panel/60 px-4 py-2 text-center text-[11px] font-medium text-pulse-muted">
         <span className="inline-flex items-center gap-2">
           <span className="h-1.5 w-1.5 rounded-full bg-pulse-green" aria-hidden />
-          Mainnet live · PulseChain · chainId 369
+          Mainnet live · PulseChain (369) · Ethereum (1)
         </span>
       </div>
 
@@ -108,8 +108,8 @@ export default function LauncherPage() {
 
             <p className="mt-4 text-base text-pulse-muted sm:text-lg">
               See every ERC-20 allowance and NFT operator approval your wallet
-              has granted on PulseChain, and revoke the ones you no longer
-              need — one signature at a time.
+              has granted on PulseChain or Ethereum, and revoke the ones you
+              no longer need — one signature at a time.
             </p>
 
             <ul className="mt-5 flex flex-wrap items-center justify-center gap-x-4 gap-y-1.5 text-[11px] text-pulse-muted">
@@ -272,6 +272,12 @@ export default function LauncherPage() {
                 external
               />
               <ResourceCard
+                title="Etherscan"
+                description="Block explorer for Ethereum mainnet."
+                href={links.etherscan}
+                external
+              />
+              <ResourceCard
                 title="PulseX"
                 description="Native DEX for the PulseChain ecosystem."
                 href={links.pulsex}
@@ -329,12 +335,12 @@ const LAUNCHER_STEPS = [
   {
     n: "02",
     title: "Review your approvals",
-    body: "We pull your historical Approval events from the PulseChain explorer, re-verify each one live on-chain, and label known spenders so you can judge risk at a glance.",
+    body: "We pull your historical Approval events from the connected chain's explorer (PulseScan or Etherscan), re-verify each one live on-chain, and label known spenders so you can judge risk at a glance.",
   },
   {
     n: "03",
     title: "Revoke access you don't need",
-    body: "Clear approvals one at a time or in a sequential batch. Each revoke is a standard approve(spender, 0) transaction on the token contract, paid in PLS gas.",
+    body: "Clear approvals one at a time or in a sequential batch. Each revoke is a standard approve(spender, 0) transaction on the token contract, paid in the chain's native gas token (PLS or ETH).",
   },
 ] as const;
 

@@ -42,19 +42,21 @@ export const siteConfig = {
    *  and OG image rendering. */
   domain: hostFromUrl(resolvedUrl),
   /** One-line tagline. */
-  tagline: "Manage PulseChain token approvals",
+  tagline: "Manage PulseChain and Ethereum token approvals",
   /** Single-sentence meta description (used for SEO + OG). */
   description:
-    "Pulse Revoke is a non-custodial tool to review and revoke ERC-20 and NFT approvals on PulseChain. Open source, read-only until you sign.",
+    "Pulse Revoke is a non-custodial tool to review and revoke ERC-20 and NFT approvals on PulseChain and Ethereum. Open source, read-only until you sign.",
   /** Longer paragraph for hero copy and social previews. */
   longDescription:
-    "Review every ERC-20 allowance and NFT operator approval your wallet has granted on PulseChain, understand the risk, and revoke the ones you no longer need — one signature at a time.",
+    "Review every ERC-20 allowance and NFT operator approval your wallet has granted on PulseChain or Ethereum, understand the risk, and revoke the ones you no longer need — one signature at a time.",
   /** Canonical public URL. Override at build time with NEXT_PUBLIC_SITE_URL. */
   url: resolvedUrl,
   /** Keywords for search engines. Keep conservative and factual. */
   keywords: [
     "PulseChain",
+    "Ethereum",
     "PulseChain approvals",
+    "Ethereum approvals",
     "revoke approvals",
     "revoke.pls",
     "token allowance",
@@ -74,6 +76,7 @@ export const siteConfig = {
   /** External / utility links. */
   links: {
     explorer: "https://scan.pulsechain.com",
+    etherscan: "https://etherscan.io",
     pulsex: "https://pulsex.com",
     walletConnect: "https://cloud.reown.com",
     github: "https://github.com/PatoSuave/revoke.pls",

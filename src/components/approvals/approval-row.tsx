@@ -4,6 +4,7 @@ import { useState } from "react";
 
 import type { BatchItemResult } from "@/hooks/use-batch-revoke";
 import { useRevokeApproval } from "@/hooks/use-revoke-approval";
+import { getChainConfig } from "@/lib/chains";
 import { explorerAddressUrl, explorerTxUrl } from "@/lib/explorer";
 import { shortenAddress } from "@/lib/format";
 import type { RiskLevel, ScoredApproval } from "@/lib/risk";
@@ -36,6 +37,7 @@ export function ApprovalRow({
     reset,
   } = useRevokeApproval({
     target: {
+      chainId: approval.chainId,
       tokenAddress: approval.tokenAddress,
       spenderAddress: approval.spenderAddress,
     },
@@ -45,6 +47,8 @@ export function ApprovalRow({
     },
   });
 
+  const chainConfig = getChainConfig(approval.chainId);
+  const chainId = approval.chainId;
   const showConfirm = confirming && status === "idle" && !batchActive;
   const showStatus = status !== "idle" && !batchActive;
 
@@ -69,6 +73,7 @@ export function ApprovalRow({
               {approval.tokenSymbol}
             </p>
             <ExplorerLink
+              chainId={chainId}
               address={approval.tokenAddress}
               label={approval.tokenName}
             />
@@ -80,7 +85,7 @@ export function ApprovalRow({
             {approval.spenderLabel}
           </p>
           <p className="truncate text-xs text-pulse-muted">
-            <ExplorerLink address={approval.spenderAddress} inline />
+            <ExplorerLink chainId={chainId} address={approval.spenderAddress} inline />
           </p>
           <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
             <ProtocolBadge
@@ -121,11 +126,12 @@ export function ApprovalRow({
 
         <div className="flex justify-start sm:justify-end">
           {batchActive && batchResult ? (
-            <BatchStatusPill result={batchResult} />
+            <BatchStatusPill result={batchResult} chainId={chainId} />
           ) : (
             <RowAction
               status={status}
               hash={hash}
+              chainId={chainId}
               isBusy={isBusy || batchActive}
               confirming={confirming}
               onConfirmClick={() => setConfirming(true)}
@@ -153,6 +159,8 @@ export function ApprovalRow({
         <StatusPanel
           status={status}
           hash={hash}
+          chainId={chainId}
+          chainName={chainConfig?.displayName ?? "the network"}
           errorMessage={errorMessage}
           onDismiss={reset}
         />
@@ -282,6 +290,7 @@ function UnverifiedBadge() {
 function RowAction({
   status,
   hash,
+  chainId,
   isBusy,
   confirming,
   onConfirmClick,
@@ -290,6 +299,7 @@ function RowAction({
 }: {
   status: ReturnType<typeof useRevokeApproval>["status"];
   hash?: `0x${string}`;
+  chainId: number;
   isBusy: boolean;
   confirming: boolean;
   onConfirmClick: () => void;
@@ -315,7 +325,7 @@ function RowAction({
         className={`${base} border border-pulse-border bg-white/5 text-pulse-muted`}
       >
         <Spinner /> Confirming…
-        {hash ? <TxLink hash={hash} /> : null}
+        {hash ? <TxLink chainId={chainId} hash={hash} /> : null}
       </span>
     );
   }
@@ -326,7 +336,7 @@ function RowAction({
         className={`${base} border border-pulse-green/40 bg-pulse-green/10 text-pulse-green`}
       >
         Revoked
-        {hash ? <TxLink hash={hash} tone="success" /> : null}
+        {hash ? <TxLink chainId={chainId} hash={hash} tone="success" /> : null}
       </span>
     );
   }
@@ -431,11 +441,15 @@ function ConfirmPanel({
 function StatusPanel({
   status,
   hash,
+  chainId,
+  chainName,
   errorMessage,
   onDismiss,
 }: {
   status: ReturnType<typeof useRevokeApproval>["status"];
   hash?: `0x${string}`;
+  chainId: number;
+  chainName: string;
   errorMessage?: string;
   onDismiss: () => void;
 }) {
@@ -450,11 +464,11 @@ function StatusPanel({
   if (status === "pending") {
     return (
       <StatusRow tone="info">
-        Waiting for PulseChain to confirm the revoke transaction.
+        Waiting for {chainName} to confirm the revoke transaction.
         {hash ? (
           <>
             {" "}
-            <TxLink hash={hash} />
+            <TxLink chainId={chainId} hash={hash} />
           </>
         ) : null}
       </StatusRow>
@@ -468,7 +482,7 @@ function StatusPanel({
         {hash ? (
           <>
             {" "}
-            <TxLink hash={hash} tone="success" />
+            <TxLink chainId={chainId} hash={hash} tone="success" />
           </>
         ) : null}
       </StatusRow>
@@ -528,7 +542,13 @@ function StatusRow({
   );
 }
 
-function BatchStatusPill({ result }: { result: BatchItemResult }) {
+function BatchStatusPill({
+  result,
+  chainId,
+}: {
+  result: BatchItemResult;
+  chainId: number;
+}) {
   const base =
     "inline-flex items-center justify-center gap-2 rounded-xl px-3 py-2 text-xs font-semibold";
 
@@ -558,7 +578,7 @@ function BatchStatusPill({ result }: { result: BatchItemResult }) {
         className={`${base} border border-pulse-cyan/40 bg-pulse-cyan/10 text-pulse-cyan`}
       >
         <Spinner /> Confirming…
-        {result.hash ? <TxLink hash={result.hash} /> : null}
+        {result.hash ? <TxLink chainId={chainId} hash={result.hash} /> : null}
       </span>
     );
   }
@@ -569,7 +589,9 @@ function BatchStatusPill({ result }: { result: BatchItemResult }) {
         className={`${base} border border-pulse-green/40 bg-pulse-green/10 text-pulse-green`}
       >
         Revoked
-        {result.hash ? <TxLink hash={result.hash} tone="success" /> : null}
+        {result.hash ? (
+          <TxLink chainId={chainId} hash={result.hash} tone="success" />
+        ) : null}
       </span>
     );
   }
@@ -614,9 +636,11 @@ function Spinner() {
 }
 
 function TxLink({
+  chainId,
   hash,
   tone = "muted",
 }: {
+  chainId: number;
   hash: `0x${string}`;
   tone?: "muted" | "success";
 }) {
@@ -626,7 +650,7 @@ function TxLink({
       : "underline underline-offset-2 hover:text-pulse-cyan";
   return (
     <a
-      href={explorerTxUrl(hash)}
+      href={explorerTxUrl(chainId, hash)}
       target="_blank"
       rel="noreferrer"
       className={`text-[11px] font-semibold ${cls}`}
@@ -649,10 +673,12 @@ function TokenAvatar({ symbol }: { symbol: string }) {
 }
 
 function ExplorerLink({
+  chainId,
   address,
   label,
   inline,
 }: {
+  chainId: number;
   address: string;
   label?: string;
   inline?: boolean;
@@ -662,7 +688,7 @@ function ExplorerLink({
     "text-xs text-pulse-muted hover:text-pulse-cyan hover:underline underline-offset-2";
   return (
     <a
-      href={explorerAddressUrl(address)}
+      href={explorerAddressUrl(chainId, address)}
       target="_blank"
       rel="noreferrer"
       className={inline ? `${base} font-mono` : `truncate ${base}`}

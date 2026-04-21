@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef } from "react";
 import { useWaitForTransactionReceipt, useWriteContract } from "wagmi";
 
-import { pulsechain } from "@/lib/chains";
+import type { SupportedChainId } from "@/lib/chains";
 import { normalizeRevokeError } from "@/lib/errors";
 import {
   buildErc721TokenRevoke,
@@ -44,6 +44,7 @@ export function useRevokeNftApproval({
   const write = useWriteContract();
   const wait = useWaitForTransactionReceipt({
     hash: write.data,
+    chainId: target.chainId as SupportedChainId,
     query: { enabled: Boolean(write.data) },
   });
 
@@ -97,17 +98,30 @@ export function useRevokeNftApproval({
     if (prev === status) return;
     lastStatusRef.current = status;
     if (status === "success") {
-      trackEvent("revoke_confirmed", { kind: telemetryKind });
+      trackEvent("revoke_confirmed", {
+        kind: telemetryKind,
+        chainId: target.chainId,
+      });
     } else if (status === "error") {
-      trackEvent("revoke_failed", { kind: telemetryKind }, "warn");
+      trackEvent(
+        "revoke_failed",
+        { kind: telemetryKind, chainId: target.chainId },
+        "warn",
+      );
     } else if (status === "rejected") {
-      trackEvent("revoke_rejected", { kind: telemetryKind });
+      trackEvent("revoke_rejected", {
+        kind: telemetryKind,
+        chainId: target.chainId,
+      });
     }
-  }, [status, telemetryKind]);
+  }, [status, telemetryKind, target.chainId]);
 
   const revoke = useCallback(() => {
     notifiedHashRef.current = null;
-    trackEvent("revoke_submitted", { kind: telemetryKind });
+    trackEvent("revoke_submitted", {
+      kind: telemetryKind,
+      chainId: target.chainId,
+    });
     const call =
       target.kind === "approvalForAll"
         ? buildSetApprovalForAllRevoke({
@@ -120,7 +134,7 @@ export function useRevokeNftApproval({
           });
     write.writeContract({
       ...call,
-      chainId: pulsechain.id,
+      chainId: target.chainId as SupportedChainId,
     });
   }, [target, write, telemetryKind]);
 

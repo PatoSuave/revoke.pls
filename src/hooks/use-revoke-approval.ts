@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef } from "react";
 import { useWaitForTransactionReceipt, useWriteContract } from "wagmi";
 
-import { pulsechain } from "@/lib/chains";
+import type { SupportedChainId } from "@/lib/chains";
 import { normalizeRevokeError } from "@/lib/errors";
 import { buildRevokeCall, type RevokeTarget } from "@/lib/revoke";
 import { trackEvent } from "@/lib/telemetry";
@@ -51,6 +51,7 @@ export function useRevokeApproval({
   const write = useWriteContract();
   const wait = useWaitForTransactionReceipt({
     hash: write.data,
+    chainId: target.chainId as SupportedChainId,
     query: { enabled: Boolean(write.data) },
   });
 
@@ -101,20 +102,24 @@ export function useRevokeApproval({
     if (prev === status) return;
     lastStatusRef.current = status;
     if (status === "success") {
-      trackEvent("revoke_confirmed", { kind: "erc20" });
+      trackEvent("revoke_confirmed", { kind: "erc20", chainId: target.chainId });
     } else if (status === "error") {
-      trackEvent("revoke_failed", { kind: "erc20" }, "warn");
+      trackEvent(
+        "revoke_failed",
+        { kind: "erc20", chainId: target.chainId },
+        "warn",
+      );
     } else if (status === "rejected") {
-      trackEvent("revoke_rejected", { kind: "erc20" });
+      trackEvent("revoke_rejected", { kind: "erc20", chainId: target.chainId });
     }
-  }, [status]);
+  }, [status, target.chainId]);
 
   const revoke = useCallback(() => {
     notifiedHashRef.current = null;
-    trackEvent("revoke_submitted", { kind: "erc20" });
+    trackEvent("revoke_submitted", { kind: "erc20", chainId: target.chainId });
     write.writeContract({
       ...buildRevokeCall(target),
-      chainId: pulsechain.id,
+      chainId: target.chainId as SupportedChainId,
     });
   }, [target, write]);
 

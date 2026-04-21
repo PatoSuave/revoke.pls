@@ -237,6 +237,7 @@ function RunningCard({ batch }: { batch: UseBatchRevokeResult }) {
               label={`${item.tokenSymbol} → ${item.spenderLabel}`}
               current={isCurrent}
               result={result}
+              chainId={item.chainId}
             />
           );
         })}
@@ -279,6 +280,7 @@ function CompleteCard({ batch }: { batch: UseBatchRevokeResult }) {
             index={i + 1}
             label={`${item.tokenSymbol} → ${item.spenderLabel}`}
             result={batch.results[item.key]}
+            chainId={item.chainId}
           />
         ))}
       </ul>
@@ -324,11 +326,13 @@ function BatchProgressRow({
   label,
   current,
   result,
+  chainId,
 }: {
   index: number;
   label: string;
   current?: boolean;
   result?: BatchItemResult;
+  chainId: number;
 }) {
   const status = result?.status ?? "queued";
   const tone = STATUS_TONE[status];
@@ -359,7 +363,7 @@ function BatchProgressRow({
         {STATUS_LABEL[status]}
         {result?.hash ? (
           <a
-            href={explorerTxUrl(result.hash)}
+            href={explorerTxUrl(chainId, result.hash)}
             target="_blank"
             rel="noreferrer"
             className="text-[11px] font-semibold underline underline-offset-2 hover:text-pulse-cyan"

@@ -51,6 +51,14 @@ export function SiteFooter() {
           >
             PulseScan
           </a>
+          <a
+            href={siteConfig.links.etherscan}
+            target="_blank"
+            rel="noreferrer"
+            className="transition hover:text-pulse-text"
+          >
+            Etherscan
+          </a>
         </nav>
 
         <div className="flex flex-col gap-1 text-[11px] text-pulse-muted md:items-end">
@@ -64,6 +72,15 @@ export function SiteFooter() {
               className="text-pulse-text underline underline-offset-2 hover:text-pulse-cyan"
             >
               PulseScan
+            </a>{" "}
+            or{" "}
+            <a
+              href={siteConfig.links.etherscan}
+              target="_blank"
+              rel="noreferrer"
+              className="text-pulse-text underline underline-offset-2 hover:text-pulse-cyan"
+            >
+              Etherscan
             </a>{" "}
             before signing.
           </p>

@@ -1,10 +1,11 @@
 "use client";
 
+import { getPublicClient } from "@wagmi/core";
 import { useCallback, useMemo, useRef, useState } from "react";
-import { usePublicClient, useWriteContract } from "wagmi";
+import { useConfig, useWriteContract } from "wagmi";
 
 import type { Approval } from "@/lib/approvals";
-import { pulsechain } from "@/lib/chains";
+import type { SupportedChainId } from "@/lib/chains";
 import { normalizeRevokeError } from "@/lib/errors";
 import { buildRevokeCall } from "@/lib/revoke";
 import { trackEvent } from "@/lib/telemetry";
@@ -84,7 +85,7 @@ export function useBatchRevoke({
   const [currentKey, setCurrentKey] = useState<string | null>(null);
   const [results, setResults] = useState<Record<string, BatchItemResult>>({});
 
-  const publicClient = usePublicClient({ chainId: pulsechain.id });
+  const config = useConfig();
   const { writeContractAsync } = useWriteContract();
   const stopRef = useRef(false);
 
@@ -132,10 +133,10 @@ export function useBatchRevoke({
   }, []);
 
   const start = useCallback(async () => {
-    if (!publicClient) return;
     stopRef.current = false;
     setState("running");
-    trackEvent("batch_started", { size: items.length });
+    const batchChainId = items[0]?.chainId;
+    trackEvent("batch_started", { size: items.length, chainId: batchChainId });
 
     let successCount = 0;
     let failedCount = 0;
@@ -156,10 +157,11 @@ export function useBatchRevoke({
       try {
         hash = await writeContractAsync({
           ...buildRevokeCall({
+            chainId: item.chainId,
             tokenAddress: item.tokenAddress,
             spenderAddress: item.spenderAddress,
           }),
-          chainId: pulsechain.id,
+          chainId: item.chainId as SupportedChainId,
         });
       } catch (e) {
         const n = normalizeRevokeError(e);
@@ -181,7 +183,11 @@ export function useBatchRevoke({
       patch(item.key, { status: "submitted", hash });
 
       try {
-        const receipt = await publicClient.waitForTransactionReceipt({ hash });
+        const client = getPublicClient(config, {
+          chainId: item.chainId as SupportedChainId,
+        });
+        if (!client) throw new Error(`No public client for chain ${item.chainId}`);
+        const receipt = await client.waitForTransactionReceipt({ hash });
         if (receipt.status === "reverted") {
           patch(item.key, {
             status: "failed",
@@ -204,6 +210,7 @@ export function useBatchRevoke({
     setState("complete");
     trackEvent("batch_completed", {
       total: items.length,
+      chainId: batchChainId,
       success: successCount,
       failed: failedCount,
       rejected: rejectedCount,
@@ -211,7 +218,7 @@ export function useBatchRevoke({
       partial: failedCount + rejectedCount + skippedCount > 0,
     });
     onComplete?.();
-  }, [items, publicClient, writeContractAsync, patch, onComplete]);
+  }, [items, config, writeContractAsync, patch, onComplete]);
 
   const counts = useMemo<BatchCounts>(() => {
     let success = 0;

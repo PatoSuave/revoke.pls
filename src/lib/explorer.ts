@@ -1,13 +1,28 @@
 import type { Address } from "viem";
 
-import { pulsechain } from "@/lib/chains";
+import { getChainConfig, pulsechain } from "@/lib/chains";
 
-const EXPLORER_BASE = pulsechain.blockExplorers.default.url.replace(/\/$/, "");
-
-export function explorerAddressUrl(address: Address | string): string {
-  return `${EXPLORER_BASE}/address/${address}`;
+function baseUrlFor(chainId: number | undefined): string {
+  const config = getChainConfig(chainId);
+  const base = config?.explorer.baseUrl ?? pulsechain.blockExplorers.default.url;
+  return base.replace(/\/$/, "");
 }
 
-export function explorerTxUrl(hash: string): string {
-  return `${EXPLORER_BASE}/tx/${hash}`;
+export function explorerAddressUrl(
+  chainId: number | undefined,
+  address: Address | string,
+): string {
+  return `${baseUrlFor(chainId)}/address/${address}`;
+}
+
+export function explorerTxUrl(
+  chainId: number | undefined,
+  hash: string,
+): string {
+  return `${baseUrlFor(chainId)}/tx/${hash}`;
+}
+
+/** Display name for the active chain's explorer (falls back to PulseScan). */
+export function explorerName(chainId: number | undefined): string {
+  return getChainConfig(chainId)?.explorer.name ?? "PulseScan";
 }
