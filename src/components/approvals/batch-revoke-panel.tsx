@@ -5,6 +5,7 @@ import type {
   BatchItemStatus,
   UseBatchRevokeResult,
 } from "@/hooks/use-batch-revoke";
+import { getChainConfig } from "@/lib/chains";
 import { explorerTxUrl } from "@/lib/explorer";
 import type { ScoredApproval } from "@/lib/risk";
 
@@ -119,6 +120,10 @@ function ConfirmingCard({ batch }: { batch: UseBatchRevokeResult }) {
     return approval.risk?.level === "high";
   }).length;
   const unlimited = batch.items.filter((a) => a.unlimited).length;
+  const chainConfig = getChainConfig(batch.items[0]?.chainId);
+  const gasLabel = chainConfig
+    ? `${batch.items.length} ${chainConfig.nativeSymbol} gas fees`
+    : `${batch.items.length} gas fees`;
 
   return (
     <div className="rounded-2xl border border-pulse-purple/40 bg-pulse-purple/5 p-5">
@@ -128,6 +133,7 @@ function ConfirmingCard({ batch }: { batch: UseBatchRevokeResult }) {
       <h3 className="mt-1 text-lg font-semibold text-pulse-text">
         Revoke {batch.items.length}{" "}
         {batch.items.length === 1 ? "approval" : "approvals"} sequentially
+        {chainConfig ? ` on ${chainConfig.displayName}` : ""}
       </h3>
       <ul className="mt-3 flex flex-wrap gap-1.5 text-xs text-pulse-muted">
         {highRisk > 0 ? (
@@ -137,7 +143,7 @@ function ConfirmingCard({ batch }: { batch: UseBatchRevokeResult }) {
           <Pill tone="red">{unlimited} unlimited</Pill>
         ) : null}
         <Pill tone="muted">
-          {batch.items.length} wallet prompts · {batch.items.length} gas fees
+          {batch.items.length} wallet prompts · {gasLabel}
         </Pill>
       </ul>
       <p className="mt-3 text-xs text-pulse-muted">

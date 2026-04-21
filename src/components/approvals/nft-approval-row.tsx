@@ -106,6 +106,8 @@ export function NftApprovalRow({
       {showConfirm ? (
         <ConfirmPanel
           approval={approval}
+          chainName={chainName}
+          nativeSymbol={chainConfig?.nativeSymbol}
           onCancel={() => setConfirming(false)}
           onConfirm={() => revoke()}
         />
@@ -333,19 +335,24 @@ function RowAction({
 
 function ConfirmPanel({
   approval,
+  chainName,
+  nativeSymbol,
   onCancel,
   onConfirm,
 }: {
   approval: NftApproval;
+  chainName: string;
+  nativeSymbol?: string;
   onCancel: () => void;
   onConfirm: () => void;
 }) {
+  const gas = nativeSymbol ? `Paid in ${nativeSymbol} gas.` : "Gas fees apply.";
   const summary =
     approval.kind === "approvalForAll"
       ? `Sends setApprovalForAll(${shortenAddress(
           approval.operatorAddress,
-        )}, false) on-chain. This clears collection-wide operator access. Gas fees apply.`
-      : `Sends approve(0x0, ${approval.tokenId?.toString()}) on-chain. This clears the per-token approval. The call will revert if you no longer own the NFT. Gas fees apply.`;
+        )}, false) on ${chainName}. This clears collection-wide operator access. ${gas}`
+      : `Sends approve(0x0, ${approval.tokenId?.toString()}) on ${chainName}. This clears the per-token approval. The call will revert if you no longer own the NFT. ${gas}`;
 
   return (
     <div className="border-t border-pulse-border/60 bg-pulse-bg/50 px-4 py-4 sm:px-6">

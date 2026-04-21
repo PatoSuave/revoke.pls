@@ -123,14 +123,15 @@ export function useBatchRevoke({
   const stop = useCallback(() => {
     const wasRunning = stopRef.current === false;
     stopRef.current = true;
+    const chainId = items[0]?.chainId;
     setState((s) => {
       if (s === "running") {
-        if (wasRunning) trackEvent("batch_stopped", { reason: "user" });
+        if (wasRunning) trackEvent("batch_stopped", { reason: "user", chainId });
         return "stopping";
       }
       return s;
     });
-  }, []);
+  }, [items]);
 
   const start = useCallback(async () => {
     stopRef.current = false;
@@ -173,7 +174,10 @@ export function useBatchRevoke({
           rejectedCount += 1;
           // Wallet rejection is a strong user signal: stop the batch.
           stopRef.current = true;
-          trackEvent("batch_stopped", { reason: "rejected" });
+          trackEvent("batch_stopped", {
+            reason: "rejected",
+            chainId: item.chainId,
+          });
         } else {
           failedCount += 1;
         }
