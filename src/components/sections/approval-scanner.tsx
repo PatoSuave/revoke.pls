@@ -14,7 +14,12 @@ import { ConnectWalletButton } from "@/components/connect-wallet-button";
 import { useApprovalDiscovery } from "@/hooks/use-approval-discovery";
 import { useBatchRevoke } from "@/hooks/use-batch-revoke";
 import { useNftApprovalDiscovery } from "@/hooks/use-nft-approval-discovery";
-import { pulsechain } from "@/lib/chains";
+import {
+  getChainConfig,
+  isSupportedChainId,
+  supportedChainConfigList,
+  type SupportedChainConfig,
+} from "@/lib/chains";
 import { shortenAddress } from "@/lib/format";
 import type { NftApproval } from "@/lib/nft-approvals";
 import {
@@ -26,7 +31,7 @@ import {
 } from "@/lib/risk";
 
 /**
- * Connected-wallet approval scanner for PulseChain.
+ * Connected-wallet approval scanner (PulseChain + Ethereum).
  *
  * Uses `useApprovalDiscovery` to pull historical `Approval` events from the
  * configured explorer, re-validate every `(token, spender)` pair live via
@@ -37,7 +42,8 @@ import {
 export function ApprovalScanner() {
   const { address, isConnected, status: accountStatus } = useAccount();
   const chainId = useChainId();
-  const onPulseChain = chainId === pulsechain.id;
+  const chainConfig = getChainConfig(chainId);
+  const onSupportedChain = isSupportedChainId(chainId);
 
   return (
     <section
@@ -50,9 +56,9 @@ export function ApprovalScanner() {
             Approval <span className="text-gradient-pulse">scanner</span>
           </h2>
           <p className="mt-3 text-pulse-muted">
-            Connect a wallet on PulseChain to discover ERC-20 allowances and
-            NFT operator approvals from your history, then verify each live
-            on-chain.
+            Connect a wallet on PulseChain or Ethereum to discover ERC-20
+            allowances and NFT operator approvals from your history, then
+            verify each live on-chain.
           </p>
         </div>
 
@@ -61,7 +67,8 @@ export function ApprovalScanner() {
             accountStatus={accountStatus}
             address={address}
             isConnected={isConnected}
-            onPulseChain={onPulseChain}
+            chainConfig={chainConfig}
+            onSupportedChain={onSupportedChain}
           />
         </div>
       </div>
@@ -73,12 +80,14 @@ function ScannerBody({
   accountStatus,
   address,
   isConnected,
-  onPulseChain,
+  chainConfig,
+  onSupportedChain,
 }: {
   accountStatus: ReturnType<typeof useAccount>["status"];
   address: `0x${string}` | undefined;
   isConnected: boolean;
-  onPulseChain: boolean;
+  chainConfig: SupportedChainConfig | undefined;
+  onSupportedChain: boolean;
 }) {
   if (accountStatus === "reconnecting" || accountStatus === "connecting") {
     return (
@@ -102,23 +111,30 @@ function ScannerBody({
     );
   }
 
-  if (!onPulseChain) {
+  if (!onSupportedChain || !chainConfig) {
+    const names = supportedChainConfigList.map((c) => c.displayName).join(" or ");
     return (
       <ScannerState
         tone="warning"
-        eyebrow="Wrong network"
-        title="Switch to PulseChain"
-        body="Pulse Revoke supports PulseChain mainnet (chainId 369). Switch networks to continue."
+        eyebrow="Unsupported network"
+        title={`Switch to ${names}`}
+        body={`Pulse Revoke supports ${names}. Switch networks in your wallet to continue — your connection stays intact.`}
         action={<ConnectWalletButton variant="ghost" />}
       />
     );
   }
 
-  return <ConnectedScanner owner={address} />;
+  return <ConnectedScanner owner={address} chainConfig={chainConfig} />;
 }
 
-function ConnectedScanner({ owner }: { owner: `0x${string}` }) {
-  const scan = useApprovalDiscovery({ owner });
+function ConnectedScanner({
+  owner,
+  chainConfig,
+}: {
+  owner: `0x${string}`;
+  chainConfig: SupportedChainConfig;
+}) {
+  const scan = useApprovalDiscovery({ owner, chainId: chainConfig.chainId });
 
   const [query, setQuery] = useState("");
   const [sort, setSort] = useState<ApprovalSort>("risk");
@@ -212,7 +228,7 @@ function ConnectedScanner({ owner }: { owner: `0x${string}` }) {
         <div className="flex flex-wrap items-center gap-3">
           <span className="inline-flex items-center gap-2 rounded-full border border-pulse-border bg-pulse-bg/60 px-3 py-1 text-xs font-medium text-pulse-muted">
             <span className="h-1.5 w-1.5 rounded-full bg-pulse-green" aria-hidden />
-            Connected
+            {chainConfig.displayName}
           </span>
           <span className="font-mono text-xs text-pulse-muted">
             {shortenAddress(owner)}
@@ -249,6 +265,7 @@ function ConnectedScanner({ owner }: { owner: `0x${string}` }) {
 
       <ScanContent
         scan={scan}
+        chainConfig={chainConfig}
         scored={scored}
         visibleApprovals={visibleApprovals}
         query={query}
@@ -268,16 +285,22 @@ function ConnectedScanner({ owner }: { owner: `0x${string}` }) {
         batch={batch}
       />
 
-      <CoverageNote scan={scan} />
+      <CoverageNote scan={scan} chainConfig={chainConfig} />
       <DiscoveryDebug scan={scan} />
 
-      <NftSection owner={owner} />
+      <NftSection owner={owner} chainConfig={chainConfig} />
     </div>
   );
 }
 
-function NftSection({ owner }: { owner: `0x${string}` }) {
-  const nft = useNftApprovalDiscovery({ owner });
+function NftSection({
+  owner,
+  chainConfig,
+}: {
+  owner: `0x${string}`;
+  chainConfig: SupportedChainConfig;
+}) {
+  const nft = useNftApprovalDiscovery({ owner, chainId: chainConfig.chainId });
   const sorted = useMemo(() => sortNftApprovals(nft.approvals), [nft.approvals]);
   const highRisk = sorted.filter((a) => a.risk.level === "high").length;
 
@@ -315,11 +338,12 @@ function NftSection({ owner }: { owner: `0x${string}` }) {
         </div>
       </header>
 
-      <NftSectionBody nft={nft} sorted={sorted} />
+      <NftSectionBody nft={nft} sorted={sorted} chainConfig={chainConfig} />
 
       <p className="text-xs text-pulse-muted">
         Collection-wide operator approvals expose every NFT in the collection.
-        NFT approvals are discovered via {nft.sourceMeta.name}
+        NFT approvals are discovered via{" "}
+        {nft.sourceMeta?.name ?? chainConfig.discovery.name}
         {nft.stats.windows > 1
           ? ` (${nft.stats.windows} block-range windows)`
           : ""}{" "}
@@ -337,9 +361,11 @@ function NftSection({ owner }: { owner: `0x${string}` }) {
 function NftSectionBody({
   nft,
   sorted,
+  chainConfig,
 }: {
   nft: ReturnType<typeof useNftApprovalDiscovery>;
   sorted: NftApproval[];
+  chainConfig: SupportedChainConfig;
 }) {
   if (nft.status === "pending") {
     return (
@@ -360,7 +386,7 @@ function NftSectionBody({
         <p className="font-semibold text-pulse-red">NFT scan failed</p>
         <p className="mt-1 text-pulse-muted">
           {nft.error?.message ??
-            "Something went wrong reading NFT approvals from PulseChain."}
+            `Something went wrong reading NFT approvals from ${chainConfig.displayName}.`}
         </p>
         <button
           type="button"
@@ -379,7 +405,9 @@ function NftSectionBody({
         <p className="font-semibold text-pulse-text">No active NFT approvals</p>
         <p className="mt-1 text-pulse-muted">
           {nft.stats.candidates === 0
-            ? `We couldn't find any NFT approval history for this wallet on ${nft.sourceMeta.name}.`
+            ? `We couldn't find any NFT approval history for this wallet on ${
+                nft.sourceMeta?.name ?? chainConfig.discovery.name
+              }.`
             : `${nft.stats.candidates} historical NFT approval${
                 nft.stats.candidates === 1 ? "" : "s"
               } were checked, but none are still active on-chain.`}
@@ -434,19 +462,22 @@ function sortNftApprovals(approvals: readonly NftApproval[]): NftApproval[] {
 
 function CoverageNote({
   scan,
+  chainConfig,
 }: {
   scan: ReturnType<typeof useApprovalDiscovery>;
+  chainConfig: SupportedChainConfig;
 }) {
   return (
     <p className="text-xs text-pulse-muted">
       Approvals are discovered from your wallet&rsquo;s historical ERC-20
-      Approval events via {scan.sourceMeta.name}
+      Approval events via{" "}
+      {scan.sourceMeta?.name ?? chainConfig.discovery.name}
       {scan.stats.windows > 1
         ? ` (${scan.stats.windows} block-range windows)`
         : ""}{" "}
       and re-verified live on-chain before display.
       {scan.truncated
-        ? " A per-wallet fetch cap was reached, so very old approvals may be missing. Verify directly on PulseScan if you suspect a legacy approval."
+        ? ` A per-wallet fetch cap was reached, so very old approvals may be missing. Verify directly on ${chainConfig.explorer.name} if you suspect a legacy approval.`
         : ""}{" "}
       Protocol labels and trust badges come from the curated registry; unknown
       spenders stay unverified.
@@ -469,7 +500,7 @@ function DiscoveryDebug({
       </summary>
       <dl className="mt-2 grid grid-cols-2 gap-x-4 gap-y-1 font-mono">
         <dt>source</dt>
-        <dd>{scan.sourceMeta.id}</dd>
+        <dd>{scan.sourceMeta?.id ?? "unknown"}</dd>
         <dt>windows</dt>
         <dd>{stats.windows}</dd>
         <dt>requests</dt>
@@ -493,6 +524,7 @@ function DiscoveryDebug({
 
 function ScanContent({
   scan,
+  chainConfig,
   scored,
   visibleApprovals,
   query,
@@ -512,6 +544,7 @@ function ScanContent({
   batch,
 }: {
   scan: ReturnType<typeof useApprovalDiscovery>;
+  chainConfig: SupportedChainConfig;
   scored: readonly ScoredApproval[];
   visibleApprovals: readonly ScoredApproval[];
   query: string;
@@ -542,7 +575,7 @@ function ScanContent({
         <p className="font-semibold text-pulse-red">Scan failed</p>
         <p className="mt-1 text-pulse-muted">
           {scan.error?.message ??
-            "Something went wrong reading allowances from PulseChain."}
+            `Something went wrong reading allowances from ${chainConfig.displayName}.`}
         </p>
         <button
           type="button"
@@ -561,7 +594,9 @@ function ScanContent({
         <p className="font-semibold text-pulse-text">No active approvals found</p>
         <p className="mt-1 text-pulse-muted">
           {scan.stats.candidates === 0
-            ? `We couldn't find any ERC-20 approval history for this wallet on ${scan.sourceMeta.name}. If you expect an approval is in place, verify directly on PulseScan.`
+            ? `We couldn't find any ERC-20 approval history for this wallet on ${
+                scan.sourceMeta?.name ?? chainConfig.discovery.name
+              }. If you expect an approval is in place, verify directly on ${chainConfig.explorer.name}.`
             : `${scan.stats.candidates} historical approval${
                 scan.stats.candidates === 1 ? "" : "s"
               } were checked, but none currently hold a non-zero allowance on-chain.`}
@@ -651,7 +686,7 @@ function GuidancePanel() {
         <li>
           <span className="font-semibold text-pulse-text">Unknown spenders.</span>{" "}
           Spenders outside the verified registry deserve extra caution. Confirm
-          the address on PulseScan before leaving an approval in place.
+          the address on the block explorer before leaving an approval in place.
         </li>
         <li>
           <span className="font-semibold text-pulse-text">Trusted + finite.</span>{" "}

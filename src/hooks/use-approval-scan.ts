@@ -9,7 +9,8 @@ import {
   parseScanResults,
   type Approval,
 } from "@/lib/approvals";
-import { SPENDER_REGISTRY, TOKEN_REGISTRY } from "@/lib/registry";
+import type { SupportedChainId } from "@/lib/chains";
+import { getSpendersForChain, getTokensForChain } from "@/lib/registry";
 
 export type ScanStatus = "idle" | "pending" | "success" | "error";
 
@@ -27,28 +28,44 @@ export interface UseApprovalScanResult {
 
 export interface UseApprovalScanOptions {
   owner: Address | undefined;
+  chainId: number | undefined;
   enabled?: boolean;
 }
 
 /**
- * Scans the curated PulseChain registry for positive ERC-20 allowances that
- * `owner` has granted to any of the registered spender contracts.
- *
- * All reads are batched by wagmi through PulseChain's Multicall3 deployment
- * so the entire scan resolves in a single RPC round-trip. Per-call failures
- * are tolerated (`allowFailure: true`) so one bad token can't sink the scan.
+ * Registry-first scan kept for parity / fallback. Takes the chain-scoped
+ * curated registry and checks every (token, spender) allowance via Multicall3
+ * on that chain. The primary pipeline is now `useApprovalDiscovery`.
  */
 export function useApprovalScan({
   owner,
+  chainId,
   enabled = true,
 }: UseApprovalScanOptions): UseApprovalScanResult {
-  const contracts = useMemo(
-    () =>
-      owner ? buildScanContracts(owner, TOKEN_REGISTRY, SPENDER_REGISTRY) : [],
-    [owner],
+  const tokens = useMemo(
+    () => (chainId ? getTokensForChain(chainId) : []),
+    [chainId],
+  );
+  const spenders = useMemo(
+    () => (chainId ? getSpendersForChain(chainId) : []),
+    [chainId],
   );
 
-  const isEnabled = enabled && Boolean(owner) && contracts.length > 0;
+  const contracts = useMemo(
+    () =>
+      owner && chainId
+        ? buildScanContracts(
+            owner,
+            tokens,
+            spenders,
+            chainId as SupportedChainId,
+          )
+        : [],
+    [owner, chainId, tokens, spenders],
+  );
+
+  const isEnabled =
+    enabled && Boolean(owner) && Boolean(chainId) && contracts.length > 0;
 
   const {
     data,
@@ -69,8 +86,8 @@ export function useApprovalScan({
 
   const approvals = useMemo(
     () =>
-      data ? parseScanResults(data, TOKEN_REGISTRY, SPENDER_REGISTRY) : [],
-    [data],
+      data && chainId ? parseScanResults(data, chainId, tokens, spenders) : [],
+    [data, chainId, tokens, spenders],
   );
 
   return {
@@ -82,8 +99,8 @@ export function useApprovalScan({
     refetch: () => {
       void refetch();
     },
-    tokensScanned: TOKEN_REGISTRY.length,
-    spendersScanned: SPENDER_REGISTRY.length,
-    totalChecks: TOKEN_REGISTRY.length * SPENDER_REGISTRY.length,
+    tokensScanned: tokens.length,
+    spendersScanned: spenders.length,
+    totalChecks: tokens.length * spenders.length,
   };
 }

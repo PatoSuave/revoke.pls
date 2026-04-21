@@ -1,5 +1,3 @@
-import { siteConfig } from "@/lib/site";
-
 const QUESTIONS: ReadonlyArray<{ q: string; a: React.ReactNode }> = [
   {
     q: "What is a token approval?",
@@ -40,9 +38,10 @@ const QUESTIONS: ReadonlyArray<{ q: string; a: React.ReactNode }> = [
     a: (
       <>
         Revoking is an on-chain state change: it writes a new allowance
-        value to the token contract. Every state change on PulseChain
-        requires a transaction, and every transaction pays gas in PLS.
-        Pulse Revoke does not take a fee — you pay only the network cost.
+        value to the token contract. Every state change requires a
+        transaction, paid in the chain&rsquo;s native gas token (PLS on
+        PulseChain, ETH on Ethereum). Pulse Revoke does not take a fee —
+        you pay only the network cost.
       </>
     ),
   },
@@ -50,17 +49,21 @@ const QUESTIONS: ReadonlyArray<{ q: string; a: React.ReactNode }> = [
     q: "What chains and tokens are supported?",
     a: (
       <>
-        PulseChain mainnet (chainId 369). The scanner reads a curated
-        registry of tokens and spenders that are verified against{" "}
+        PulseChain mainnet (chainId 369) and Ethereum mainnet (chainId 1).
+        Discovery uses each chain&rsquo;s explorer API — PulseScan on
+        PulseChain and{" "}
         <a
           className="underline underline-offset-2 hover:text-pulse-cyan"
-          href={siteConfig.links.explorer}
+          href="https://etherscan.io"
           target="_blank"
           rel="noreferrer"
         >
-          PulseScan
-        </a>
-        . Broader chain-wide discovery will ship in a later milestone.
+          Etherscan
+        </a>{" "}
+        on Ethereum — and every discovered allowance is re-verified live
+        on-chain before display. Known protocol labels come from a
+        chain-scoped curated registry, so an Ethereum address is never
+        mislabeled from a PulseChain entry or vice versa.
       </>
     ),
   },

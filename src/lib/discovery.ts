@@ -1,6 +1,11 @@
 import { type Address, getAddress } from "viem";
 
-import { pulsechain } from "@/lib/chains";
+import {
+  getChainConfig,
+  supportedChainConfigList,
+  type DiscoverySourceConfig,
+  type SupportedChainConfig,
+} from "@/lib/chains";
 
 /**
  * ERC-20 `Approval(address indexed owner, address indexed spender, uint256 value)`
@@ -19,13 +24,6 @@ export const ERC20_APPROVAL_TOPIC0 =
  */
 export const ERC_APPROVAL_FOR_ALL_TOPIC0 =
   "0x17307eab39ab6107e8899845ad3d59bd9653f200f220920489ca2b5937696c31";
-
-/**
- * Default Blockscout-compatible API endpoint for PulseChain. Overridable via
- * `NEXT_PUBLIC_PULSECHAIN_EXPLORER_API` so self-hosters and preview deploys
- * can point at a different indexer without a code change.
- */
-const DEFAULT_EXPLORER_API = "https://api.scan.pulsechain.com/api";
 
 /**
  * A raw discovered `(token, spender)` pair sourced from historical Approval
@@ -61,6 +59,8 @@ export interface DiscoverySourceMeta {
   name: string;
   /** URL the user can visit to learn more about the source. */
   url?: string;
+  /** Chain this source is bound to. */
+  chainId: number;
 }
 
 interface WindowedFetchStats {
@@ -212,14 +212,14 @@ function dedupeNftApprovals(
   return out;
 }
 
-async function fetchLogsPage(
+function buildLogsUrl(
   apiUrl: string,
+  apiKey: string | undefined,
   paddedOwner: string,
   topic0: string,
   fromBlock: string,
   toBlock: string,
-  signal: AbortSignal | undefined,
-): Promise<BlockscoutLogEntry[]> {
+): string {
   const params = new URLSearchParams({
     module: "logs",
     action: "getLogs",
@@ -229,7 +229,21 @@ async function fetchLogsPage(
     topic1: paddedOwner,
     topic0_1_opr: "and",
   });
-  const res = await fetch(`${apiUrl}?${params.toString()}`, {
+  if (apiKey) params.set("apikey", apiKey);
+  return `${apiUrl}?${params.toString()}`;
+}
+
+async function fetchLogsPage(
+  apiUrl: string,
+  apiKey: string | undefined,
+  paddedOwner: string,
+  topic0: string,
+  fromBlock: string,
+  toBlock: string,
+  signal: AbortSignal | undefined,
+): Promise<BlockscoutLogEntry[]> {
+  const url = buildLogsUrl(apiUrl, apiKey, paddedOwner, topic0, fromBlock, toBlock);
+  const res = await fetch(url, {
     signal,
     headers: { accept: "application/json" },
   });
@@ -244,12 +258,14 @@ async function fetchLogsPage(
 
 async function fetchBlockTip(
   apiUrl: string,
+  apiKey: string | undefined,
   signal: AbortSignal | undefined,
 ): Promise<bigint | null> {
   const params = new URLSearchParams({
     module: "block",
     action: "eth_block_number",
   });
+  if (apiKey) params.set("apikey", apiKey);
   try {
     const res = await fetch(`${apiUrl}?${params.toString()}`, {
       signal,
@@ -280,6 +296,7 @@ function maxBlockFrom(logs: readonly BlockscoutLogEntry[]): bigint | null {
  */
 async function windowedFetchLogs(
   apiUrl: string,
+  apiKey: string | undefined,
   paddedOwner: string,
   topic0: string,
   limits: DiscoveryLimits,
@@ -290,6 +307,7 @@ async function windowedFetchLogs(
 }> {
   const initial = await fetchLogsPage(
     apiUrl,
+    apiKey,
     paddedOwner,
     topic0,
     "0",
@@ -312,7 +330,7 @@ async function windowedFetchLogs(
   }
 
   // Capped. Get the chain tip once so we can split the range.
-  let tip = await fetchBlockTip(apiUrl, signal);
+  let tip = await fetchBlockTip(apiUrl, apiKey, signal);
   requests += 1;
   if (tip === null) tip = maxBlockFrom(initial);
   if (tip === null) {
@@ -346,6 +364,7 @@ async function windowedFetchLogs(
     const range = stack.pop()!;
     const logs = await fetchLogsPage(
       apiUrl,
+      apiKey,
       paddedOwner,
       topic0,
       range.from.toString(),
@@ -471,6 +490,12 @@ function mergeStats(
   };
 }
 
+export interface BlockscoutDiscoveryOptions {
+  chainId: number;
+  source: DiscoverySourceConfig;
+  limits?: DiscoveryLimits;
+}
+
 /**
  * Blockscout / Etherscan-compatible logs discovery source with adaptive
  * block-range windowing. See `windowedFetchLogs` for the recursion
@@ -485,15 +510,18 @@ function mergeStats(
  * (`allowance` / `isApprovedForAll` / `getApproved`) before displaying
  * anything as an active approval.
  */
-export function createBlockscoutDiscoverySource(
-  apiUrl: string = DEFAULT_EXPLORER_API,
-  limits: DiscoveryLimits = DEFAULT_DISCOVERY_LIMITS,
-): DiscoverySource {
+export function createBlockscoutDiscoverySource({
+  chainId,
+  source,
+  limits = DEFAULT_DISCOVERY_LIMITS,
+}: BlockscoutDiscoveryOptions): DiscoverySource {
   const meta: DiscoverySourceMeta = {
-    id: "blockscout-pulsescan",
-    name: "PulseScan (Blockscout)",
-    url: pulsechain.blockExplorers.default.url,
+    id: source.id,
+    name: source.name,
+    url: source.url,
+    chainId,
   };
+  const { apiUrl, apiKey } = source;
 
   return {
     meta,
@@ -501,6 +529,7 @@ export function createBlockscoutDiscoverySource(
       const padded = padTopicAddress(owner);
       const { logs, stats } = await windowedFetchLogs(
         apiUrl,
+        apiKey,
         padded,
         ERC20_APPROVAL_TOPIC0,
         limits,
@@ -518,6 +547,7 @@ export function createBlockscoutDiscoverySource(
       const [forAll, perToken] = await Promise.all([
         windowedFetchLogs(
           apiUrl,
+          apiKey,
           padded,
           ERC_APPROVAL_FOR_ALL_TOPIC0,
           limits,
@@ -525,6 +555,7 @@ export function createBlockscoutDiscoverySource(
         ),
         windowedFetchLogs(
           apiUrl,
+          apiKey,
           padded,
           ERC20_APPROVAL_TOPIC0,
           limits,
@@ -546,17 +577,41 @@ export function createBlockscoutDiscoverySource(
   };
 }
 
-let cachedDefaultSource: DiscoverySource | null = null;
+/**
+ * Per-chain cache of discovery sources. Module-scoped caching keeps sources
+ * stable across hook re-renders without pulling a runtime DI layer into an
+ * otherwise small app.
+ */
+const sourceCache = new Map<number, DiscoverySource>();
+
+function buildSourceForConfig(config: SupportedChainConfig): DiscoverySource {
+  return createBlockscoutDiscoverySource({
+    chainId: config.chainId,
+    source: config.discovery,
+  });
+}
+
+/** Returns the discovery source for a supported chain, or `undefined`. */
+export function getDiscoverySourceForChain(
+  chainId: number | undefined,
+): DiscoverySource | undefined {
+  const config = getChainConfig(chainId);
+  if (!config) return undefined;
+  const cached = sourceCache.get(config.chainId);
+  if (cached) return cached;
+  const source = buildSourceForConfig(config);
+  sourceCache.set(config.chainId, source);
+  return source;
+}
 
 /**
- * Lazily-constructed default discovery source. Module-scoped caching keeps
- * the source stable across hook re-renders without pulling a runtime DI layer
- * into an otherwise small app.
+ * Stable default source for code paths that don't yet know a chain — returns
+ * the first configured supported chain (currently PulseChain). Prefer
+ * `getDiscoverySourceForChain(chainId)` when a chain is available.
  */
 export function getDefaultDiscoverySource(): DiscoverySource {
-  if (cachedDefaultSource) return cachedDefaultSource;
-  const apiUrl =
-    process.env.NEXT_PUBLIC_PULSECHAIN_EXPLORER_API || DEFAULT_EXPLORER_API;
-  cachedDefaultSource = createBlockscoutDiscoverySource(apiUrl);
-  return cachedDefaultSource;
+  const first = supportedChainConfigList[0];
+  return (
+    getDiscoverySourceForChain(first.chainId) ?? buildSourceForConfig(first)
+  );
 }
