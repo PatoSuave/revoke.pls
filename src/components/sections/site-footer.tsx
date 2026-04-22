@@ -38,7 +38,7 @@ export function SiteFooter() {
           <a
             href={siteConfig.links.github}
             target="_blank"
-            rel="noreferrer"
+            rel="noopener noreferrer"
             className="transition hover:text-pulse-text"
           >
             GitHub
@@ -46,7 +46,7 @@ export function SiteFooter() {
           <a
             href={siteConfig.links.explorer}
             target="_blank"
-            rel="noreferrer"
+            rel="noopener noreferrer"
             className="transition hover:text-pulse-text"
           >
             PulseScan
@@ -54,7 +54,7 @@ export function SiteFooter() {
           <a
             href={siteConfig.links.etherscan}
             target="_blank"
-            rel="noreferrer"
+            rel="noopener noreferrer"
             className="transition hover:text-pulse-text"
           >
             Etherscan
@@ -68,7 +68,7 @@ export function SiteFooter() {
             <a
               href={siteConfig.links.explorer}
               target="_blank"
-              rel="noreferrer"
+              rel="noopener noreferrer"
               className="text-pulse-text underline underline-offset-2 hover:text-pulse-cyan"
             >
               PulseScan
@@ -77,7 +77,7 @@ export function SiteFooter() {
             <a
               href={siteConfig.links.etherscan}
               target="_blank"
-              rel="noreferrer"
+              rel="noopener noreferrer"
               className="text-pulse-text underline underline-offset-2 hover:text-pulse-cyan"
             >
               Etherscan
