@@ -83,6 +83,11 @@ export interface DiscoverySourceConfig {
   /** Optional API key appended as `apikey` — required by Etherscan for
    *  non-trivial rate limits; ignored by Blockscout. */
   apiKey?: string;
+  /**
+   * Optional fixed query parameters appended to every discovery request.
+   * Used for explorer-specific requirements (e.g. Etherscan v2 `chainid`).
+   */
+  queryParams?: Record<string, string>;
 }
 
 export interface ExplorerConfig {
@@ -140,6 +145,7 @@ export const supportedChainConfigs: Record<number, SupportedChainConfig> = {
         process.env.NEXT_PUBLIC_MAINNET_EXPLORER_API ||
         MAINNET_EXPLORER_API_DEFAULT,
       apiKey: process.env.NEXT_PUBLIC_ETHERSCAN_API_KEY || undefined,
+      queryParams: { chainid: "1" },
     },
   },
 };
