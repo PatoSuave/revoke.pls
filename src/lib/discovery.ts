@@ -301,8 +301,9 @@ async function fetchBlockTip(
   queryParams: Record<string, string> | undefined,
   signal: AbortSignal | undefined,
 ): Promise<bigint | null> {
+  // Use 'proxy' module for canonical eth_block_number on Etherscan/Blockscout.
   const params = new URLSearchParams({
-    module: "block",
+    module: "proxy",
     action: "eth_block_number",
   });
   if (queryParams) {

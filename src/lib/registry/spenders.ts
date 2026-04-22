@@ -201,6 +201,32 @@ export const MAINNET_SPENDER_REGISTRY: readonly SpenderEntry[] = [
       "Manual Etherscan cross-check against Uniswap v3-periphery deployments.",
     source: "https://docs.uniswap.org",
   },
+  {
+    chainId: mainnet.id,
+    address: "0x1111111254EEB25477B68fb85Ed929f73A960582",
+    label: "1inch v5 Router",
+    protocol: "1inch",
+    protocolSlug: "1inch",
+    category: "router",
+    isTrusted: true,
+    url: "https://1inch.io",
+    notes: "Canonical 1inch v5 aggregation router.",
+    verificationMethod: "Manual Etherscan cross-check.",
+    source: "https://docs.1inch.io",
+  },
+  {
+    chainId: mainnet.id,
+    address: "0x000000000000Ad05Ccc3F1004589f0580AA02644",
+    label: "Blur: Execution Delegate",
+    protocol: "Blur",
+    protocolSlug: "blur",
+    category: "dex",
+    isTrusted: true,
+    url: "https://blur.io",
+    notes: "Spender for Blur NFT marketplace.",
+    verificationMethod: "Manual Etherscan cross-check.",
+    source: "https://docs.blur.foundation",
+  },
 ] as const;
 
 /** Combined flat view across every supported chain. */

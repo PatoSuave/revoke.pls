@@ -107,7 +107,7 @@ export interface SupportedChainConfig {
 }
 
 const PULSECHAIN_EXPLORER_API_DEFAULT = "https://api.scan.pulsechain.com/api";
-const MAINNET_EXPLORER_API_DEFAULT = "https://api.etherscan.io/api";
+const MAINNET_EXPLORER_API_DEFAULT = "https://api.etherscan.io/v2/api";
 
 export const supportedChainConfigs: Record<number, SupportedChainConfig> = {
   [pulsechain.id]: {
