@@ -141,9 +141,7 @@ export const supportedChainConfigs: Record<number, SupportedChainConfig> = {
       id: "etherscan-mainnet",
       name: "Etherscan",
       url: mainnet.blockExplorers.default.url,
-      apiUrl:
-        process.env.NEXT_PUBLIC_MAINNET_EXPLORER_API ||
-        MAINNET_EXPLORER_API_DEFAULT,
+      apiUrl: MAINNET_EXPLORER_API_DEFAULT,
       apiKey: process.env.NEXT_PUBLIC_ETHERSCAN_API_KEY || undefined,
       queryParams: { chainid: "1" },
     },
