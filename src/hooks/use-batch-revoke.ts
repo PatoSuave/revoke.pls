@@ -144,6 +144,8 @@ export function useBatchRevoke({
     let rejectedCount = 0;
     let skippedCount = 0;
 
+    const receiptPromises: Promise<void>[] = [];
+
     for (const item of items) {
       if (stopRef.current) {
         patch(item.key, { status: "skipped" });
@@ -186,31 +188,38 @@ export function useBatchRevoke({
 
       patch(item.key, { status: "submitted", hash });
 
-      try {
-        const client = getPublicClient(config, {
-          chainId: item.chainId as SupportedChainId,
-        });
-        if (!client) throw new Error(`No public client for chain ${item.chainId}`);
-        const receipt = await client.waitForTransactionReceipt({ hash });
-        if (receipt.status === "reverted") {
-          patch(item.key, {
-            status: "failed",
-            hash,
-            error: "Transaction reverted on-chain.",
+      const receiptPromise = (async () => {
+        try {
+          const client = getPublicClient(config, {
+            chainId: item.chainId as SupportedChainId,
           });
+          if (!client) throw new Error(`No public client for chain ${item.chainId}`);
+          const receipt = await client.waitForTransactionReceipt({ hash });
+          if (receipt.status === "reverted") {
+            patch(item.key, {
+              status: "failed",
+              hash,
+              error: "Transaction reverted on-chain.",
+            });
+            failedCount += 1;
+          } else {
+            patch(item.key, { status: "success", hash });
+            successCount += 1;
+          }
+        } catch (e) {
+          const n = normalizeRevokeError(e);
+          patch(item.key, { status: "failed", hash, error: n.message });
           failedCount += 1;
-        } else {
-          patch(item.key, { status: "success", hash });
-          successCount += 1;
         }
-      } catch (e) {
-        const n = normalizeRevokeError(e);
-        patch(item.key, { status: "failed", hash, error: n.message });
-        failedCount += 1;
-      }
+      })();
+      receiptPromises.push(receiptPromise);
     }
 
     setCurrentKey(null);
+
+    // Wait for all transaction receipts to be processed
+    await Promise.all(receiptPromises);
+
     setState("complete");
     trackEvent("batch_completed", {
       total: items.length,
