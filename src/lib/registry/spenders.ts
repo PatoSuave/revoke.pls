@@ -105,6 +105,20 @@ export const PULSECHAIN_SPENDER_REGISTRY: readonly SpenderEntry[] = [
       "Manual PulseScan cross-check against pulsex.com documentation.",
     source: "https://pulsex.com",
   },
+  {
+    chainId: pulsechain.id,
+    address: "0x7F51AC3df6A034273FB09BB29e383FCF655e473c",
+    label: "PHUX Vault",
+    protocol: "PHUX",
+    protocolSlug: "phux",
+    category: "dex",
+    isTrusted: true,
+    url: "https://phux.io",
+    notes: "Canonical Balancer-fork vault for PHUX. Primary liquidity hub for stable and weighted pools.",
+    verificationMethod:
+      "Manual PulseScan cross-check against phux.io documentation.",
+    source: "https://docs.phux.io",
+  },
 ] as const;
 
 /**

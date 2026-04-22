@@ -1,4 +1,5 @@
 import type { Approval } from "@/lib/approvals";
+import type { NftApprovalKind } from "@/lib/discovery";
 
 /**
  * Three-bucket approval risk classification. This is a deliberate, explicit,
@@ -60,6 +61,45 @@ export function classifyApprovalRisk(input: {
   return {
     level: "medium",
     reason: "Unknown spender with a bounded allowance. Verify before trusting.",
+  };
+}
+
+/**
+ * Three-bucket NFT risk classification, parallel in shape to the ERC-20 one.
+ *
+ *   approvalForAll + unknown operator  → high   (collection-wide, unverified)
+ *   approvalForAll + trusted operator  → medium (collection-wide, verified)
+ *   tokenApproval + unknown operator   → medium (single NFT, unverified)
+ *   tokenApproval + trusted operator   → low    (single NFT, verified)
+ */
+export function classifyNftRisk(input: {
+  kind: NftApprovalKind;
+  trusted: boolean;
+}): RiskAssessment {
+  if (input.kind === "approvalForAll") {
+    if (input.trusted) {
+      return {
+        level: "medium",
+        reason:
+          "Trusted operator with collection-wide approval. Review periodically if the position is no longer active.",
+      };
+    }
+    return {
+      level: "high",
+      reason:
+        "Unknown operator with collection-wide approval. Every NFT in this collection is exposed — verify the operator before leaving it in place.",
+    };
+  }
+  if (input.trusted) {
+    return {
+      level: "low",
+      reason: "Trusted operator approved for a single NFT.",
+    };
+  }
+  return {
+    level: "medium",
+    reason:
+      "Unknown operator approved for a single NFT. Verify the operator before trusting.",
   };
 }
 
