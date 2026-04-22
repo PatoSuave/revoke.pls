@@ -371,7 +371,7 @@ function BatchProgressRow({
           <a
             href={explorerTxUrl(chainId, result.hash)}
             target="_blank"
-            rel="noreferrer"
+            rel="noopener noreferrer"
             className="text-[11px] font-semibold underline underline-offset-2 hover:text-pulse-cyan"
           >
             tx ↗

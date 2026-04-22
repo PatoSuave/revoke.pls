@@ -56,7 +56,7 @@ const QUESTIONS: ReadonlyArray<{ q: string; a: React.ReactNode }> = [
           className="underline underline-offset-2 hover:text-pulse-cyan"
           href="https://etherscan.io"
           target="_blank"
-          rel="noreferrer"
+          rel="noopener noreferrer"
         >
           Etherscan
         </a>{" "}

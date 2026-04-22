@@ -515,7 +515,7 @@ function TxLink({
     <a
       href={explorerTxUrl(chainId, hash)}
       target="_blank"
-      rel="noreferrer"
+      rel="noopener noreferrer"
       className={`text-[11px] font-semibold ${cls}`}
     >
       view tx ↗
@@ -551,7 +551,7 @@ function ExplorerLink({
     <a
       href={explorerAddressUrl(chainId, address)}
       target="_blank"
-      rel="noreferrer"
+      rel="noopener noreferrer"
       className={inline ? `${base} font-mono` : `truncate ${base} font-mono`}
       title={address}
     >
