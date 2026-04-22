@@ -140,6 +140,7 @@ function ConnectedScanner({
   const [sort, setSort] = useState<ApprovalSort>("risk");
   const [filter, setFilter] = useState<ApprovalFilter>("all");
   const [selected, setSelected] = useState<Set<string>>(() => new Set());
+  const [showDebug, setShowDebug] = useState(false);
 
   const scored = useMemo(
     () => scoreApprovals(scan.approvals),
@@ -261,6 +262,14 @@ function ConnectedScanner({
         >
           {scan.isFetching ? "Scanning…" : "Rescan"}
         </button>
+        <button
+          type="button"
+          onClick={() => setShowDebug((v) => !v)}
+          className="inline-flex items-center gap-2 rounded-xl border border-pulse-border bg-white/5 px-3 py-2 text-xs font-semibold text-pulse-text transition hover:bg-white/10"
+          aria-pressed={showDebug}
+        >
+          Debug {showDebug ? "on" : "off"}
+        </button>
       </div>
 
       <ScanContent
@@ -286,7 +295,7 @@ function ConnectedScanner({
       />
 
       <CoverageNote scan={scan} chainConfig={chainConfig} />
-      <DiscoveryDebug scan={scan} />
+      <DiscoveryDebug scan={scan} enabled={showDebug} />
 
       <NftSection owner={owner} chainConfig={chainConfig} />
     </div>
@@ -487,10 +496,12 @@ function CoverageNote({
 
 function DiscoveryDebug({
   scan,
+  enabled,
 }: {
   scan: ReturnType<typeof useApprovalDiscovery>;
+  enabled: boolean;
 }) {
-  if (process.env.NODE_ENV === "production") return null;
+  if (!enabled) return null;
   if (scan.status !== "success") return null;
   const { stats } = scan;
   return (
