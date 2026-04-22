@@ -10,8 +10,9 @@ import {
   parseDiscoveryResults,
   type Approval,
 } from "@/lib/approvals";
+import type { SupportedChainId } from "@/lib/chains";
 import {
-  getDefaultDiscoverySource,
+  getDiscoverySourceForChain,
   type DiscoveredPair,
   type DiscoverySource,
   type DiscoverySourceMeta,
@@ -24,6 +25,7 @@ const EMPTY_PAIRS: readonly DiscoveredPair[] = [];
 
 export interface UseApprovalDiscoveryOptions {
   owner: Address | undefined;
+  chainId: number | undefined;
   source?: DiscoverySource;
   enabled?: boolean;
 }
@@ -46,40 +48,43 @@ export interface UseApprovalDiscoveryResult {
     windows: number;
     requests: number;
   };
-  sourceMeta: DiscoverySourceMeta;
+  sourceMeta: DiscoverySourceMeta | null;
   truncated: boolean;
 }
 
 /**
  * Discovery-first approval pipeline.
  *
- * 1. Fetch historical ERC-20 `Approval` events for `owner` from the configured
- *    discovery source (default: PulseScan's Blockscout API).
+ * 1. Fetch historical ERC-20 `Approval` events for `owner` on `chainId`
+ *    from the chain's configured discovery source.
  * 2. Deduplicate into `(token, spender)` pairs.
- * 3. Re-validate on-chain with `allowance(owner, spender)` via Multicall3,
- *    fetching token metadata in the same batch.
+ * 3. Re-validate on-chain with `allowance(owner, spender)` via Multicall3
+ *    on the same chain, fetching token metadata in the same batch.
  * 4. Drop zero allowances, identify unlimited allowances, and enrich spenders
- *    from the curated registry when a match exists.
+ *    from the curated registry scoped to `chainId` when a match exists.
  *
  * The registry is an enrichment layer, not the primary discovery mechanism.
  * Unknown spenders stay unknown and untrusted.
  */
 export function useApprovalDiscovery({
   owner,
+  chainId,
   source,
   enabled = true,
 }: UseApprovalDiscoveryOptions): UseApprovalDiscoveryResult {
   const discoverySource = useMemo(
-    () => source ?? getDefaultDiscoverySource(),
-    [source],
+    () => source ?? getDiscoverySourceForChain(chainId),
+    [source, chainId],
   );
 
-  const discoveryEnabled = enabled && Boolean(owner);
+  const discoveryEnabled =
+    enabled && Boolean(owner) && Boolean(discoverySource) && Boolean(chainId);
 
   const discoveryQuery = useQuery({
     queryKey: [
       "approval-discovery",
-      discoverySource.meta.id,
+      discoverySource?.meta.id ?? null,
+      chainId ?? null,
       owner?.toLowerCase() ?? null,
     ],
     enabled: discoveryEnabled,
@@ -87,6 +92,7 @@ export function useApprovalDiscovery({
     gcTime: 5 * 60_000,
     queryFn: async ({ signal }) => {
       if (!owner) throw new Error("owner required");
+      if (!discoverySource) throw new Error("unsupported chain");
       return discoverySource.discover(owner, { signal });
     },
   });
@@ -97,11 +103,11 @@ export function useApprovalDiscovery({
   );
 
   const { contracts, uniqueTokens } = useMemo(() => {
-    if (!owner || pairs.length === 0) {
+    if (!owner || !chainId || pairs.length === 0) {
       return { contracts: [], uniqueTokens: [] as Address[] };
     }
-    return buildDiscoveryContracts(owner, pairs);
-  }, [owner, pairs]);
+    return buildDiscoveryContracts(owner, pairs, chainId as SupportedChainId);
+  }, [owner, chainId, pairs]);
 
   const readsEnabled =
     discoveryEnabled &&
@@ -119,14 +125,14 @@ export function useApprovalDiscovery({
   });
 
   const parsed = useMemo(() => {
-    if (!owner || !reads.data || pairs.length === 0) {
+    if (!owner || !chainId || !reads.data || pairs.length === 0) {
       return {
         approvals: [] as Approval[],
         stats: { candidates: pairs.length, active: 0, registryMatched: 0 },
       };
     }
-    return parseDiscoveryResults(reads.data, owner, pairs);
-  }, [owner, reads.data, pairs]);
+    return parseDiscoveryResults(reads.data, owner, chainId, pairs);
+  }, [owner, chainId, reads.data, pairs]);
 
   const status: DiscoveryStatus = useMemo(() => {
     if (!discoveryEnabled) return "idle";
@@ -148,27 +154,29 @@ export function useApprovalDiscovery({
     const prev = lastStatusRef.current;
     if (prev === status) return;
     lastStatusRef.current = status;
-    const source = discoverySource.meta.id;
+    const src = discoverySource?.meta.id ?? "unknown";
     if (status === "pending") {
-      trackEvent("scan_started", { kind: "erc20", source });
+      trackEvent("scan_started", { kind: "erc20", source: src, chainId });
     } else if (status === "success") {
       trackEvent("scan_completed", {
         kind: "erc20",
-        source,
+        source: src,
+        chainId,
         candidates: pairs.length,
         active: parsed.approvals.length,
         registryMatched: parsed.stats.registryMatched,
         windows: discoveryQuery.data?.windows ?? 0,
       });
       if (discoveryQuery.data?.truncated) {
-        trackEvent("scan_truncated", { kind: "erc20", source });
+        trackEvent("scan_truncated", { kind: "erc20", source: src, chainId });
       }
     } else if (status === "error") {
-      trackEvent("scan_failed", { kind: "erc20", source }, "warn");
+      trackEvent("scan_failed", { kind: "erc20", source: src, chainId }, "warn");
     }
   }, [
     status,
-    discoverySource.meta.id,
+    discoverySource?.meta.id,
+    chainId,
     pairs.length,
     parsed.approvals.length,
     parsed.stats.registryMatched,
@@ -197,7 +205,7 @@ export function useApprovalDiscovery({
       windows: discoveryQuery.data?.windows ?? 0,
       requests: discoveryQuery.data?.requests ?? 0,
     },
-    sourceMeta: discoverySource.meta,
+    sourceMeta: discoverySource?.meta ?? null,
     truncated: discoveryQuery.data?.truncated ?? false,
   };
 }

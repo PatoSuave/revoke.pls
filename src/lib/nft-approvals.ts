@@ -1,5 +1,6 @@
 import type { Abi, Address } from "viem";
 
+import type { SupportedChainId } from "@/lib/chains";
 import type { NftApprovalKind, NftDiscoveredApproval } from "@/lib/discovery";
 import { getSpenderEntry } from "@/lib/registry";
 import type { RiskAssessment, RiskLevel } from "@/lib/risk";
@@ -79,6 +80,9 @@ export type NftStandard = "erc721" | "erc1155" | "unknown";
 
 export interface NftApproval {
   key: string;
+  /** Chain the approval lives on. Needed for explorer links and revoke
+   *  routing. */
+  chainId: number;
   kind: NftApprovalKind;
   standard: NftStandard;
   collectionAddress: Address;
@@ -125,6 +129,7 @@ function uniqueCollectionAddresses(
 export function buildNftValidationContracts(
   owner: Address,
   candidates: readonly NftDiscoveredApproval[],
+  chainId: SupportedChainId,
 ) {
   const collections = uniqueCollectionAddresses(candidates);
   const metadata = collections.flatMap((address) => [
@@ -133,14 +138,16 @@ export function buildNftValidationContracts(
       abi: nftReadAbi,
       functionName: "supportsInterface" as const,
       args: [INTERFACE_ID_ERC721] as const,
+      chainId,
     },
     {
       address,
       abi: nftReadAbi,
       functionName: "supportsInterface" as const,
       args: [INTERFACE_ID_ERC1155] as const,
+      chainId,
     },
-    { address, abi: nftReadAbi, functionName: "name" as const },
+    { address, abi: nftReadAbi, functionName: "name" as const, chainId },
   ]);
 
   const liveChecks = candidates.map((c) => {
@@ -150,6 +157,7 @@ export function buildNftValidationContracts(
         abi: nftReadAbi,
         functionName: "isApprovedForAll" as const,
         args: [owner, c.operatorAddress] as const,
+        chainId,
       };
     }
     return {
@@ -157,6 +165,7 @@ export function buildNftValidationContracts(
       abi: nftReadAbi,
       functionName: "getApproved" as const,
       args: [c.tokenId!] as const,
+      chainId,
     };
   });
 
@@ -240,6 +249,7 @@ export function classifyNftRisk(input: {
 export function parseNftValidationResults(
   results: readonly ReadResult[],
   owner: Address,
+  chainId: number,
   candidates: readonly NftDiscoveredApproval[],
 ): NftParseOutput {
   void owner;
@@ -304,10 +314,11 @@ export function parseNftValidationResults(
       candidate.kind,
     );
 
-    const registry = getSpenderEntry(candidate.operatorAddress);
+    const registry = getSpenderEntry(chainId, candidate.operatorAddress);
     if (registry) registryMatched += 1;
 
     const keyParts = [
+      chainId.toString(),
       candidate.kind,
       candidate.collectionAddress,
       candidate.operatorAddress,
@@ -316,6 +327,7 @@ export function parseNftValidationResults(
 
     approvals.push({
       key: keyParts.join("-"),
+      chainId,
       kind: candidate.kind,
       standard,
       collectionAddress: candidate.collectionAddress,

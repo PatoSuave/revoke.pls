@@ -10,7 +10,12 @@ import {
   type Connector,
 } from "wagmi";
 
-import { pulsechain } from "@/lib/chains";
+import {
+  getChainConfig,
+  isSupportedChainId,
+  supportedChainConfigList,
+  type SupportedChainId,
+} from "@/lib/chains";
 import { shortenAddress } from "@/lib/format";
 import { isDesktopBuild } from "@/lib/platform";
 import { trackEvent } from "@/lib/telemetry";
@@ -135,26 +140,39 @@ export function ConnectWalletButton({
   }
 
   if (isConnected && address) {
-    const onWrongChain = chainId !== pulsechain.id;
+    const onSupportedChain = isSupportedChainId(chainId);
+    const currentConfig = getChainConfig(chainId);
 
-    if (onWrongChain) {
+    if (!onSupportedChain) {
       return (
-        <button
-          type="button"
-          onClick={() => switchChain({ chainId: pulsechain.id })}
-          disabled={isSwitching}
-          className={`${base} bg-pulse-red/20 text-pulse-red border border-pulse-red/40 hover:bg-pulse-red/30 ${className}`}
+        <div
+          className={`inline-flex flex-wrap items-center gap-2 ${className}`}
         >
-          {isSwitching ? "Switching…" : "Switch to PulseChain"}
-        </button>
+          <span className="text-xs font-semibold text-pulse-red">
+            Unsupported network
+          </span>
+          {supportedChainConfigList.map((c) => (
+            <button
+              key={c.chainId}
+              type="button"
+              onClick={() =>
+                switchChain({ chainId: c.chainId as SupportedChainId })
+              }
+              disabled={isSwitching}
+              className={`${base} bg-pulse-red/20 text-pulse-red border border-pulse-red/40 hover:bg-pulse-red/30`}
+            >
+              {isSwitching ? "Switching…" : `Switch to ${c.displayName}`}
+            </button>
+          ))}
+        </div>
       );
     }
 
     return (
       <div className={`inline-flex items-center gap-2 ${className}`}>
-        <span className="hidden sm:inline-flex items-center gap-2 rounded-xl border border-pulse-border bg-pulse-panel/70 px-3 py-2 text-xs font-medium text-pulse-muted">
+        <span className="inline-flex items-center gap-2 rounded-xl border border-pulse-border bg-pulse-panel/70 px-3 py-2 text-xs font-medium text-pulse-muted">
           <span className="h-2 w-2 rounded-full bg-pulse-green" aria-hidden />
-          PulseChain
+          {currentConfig?.displayName}
         </span>
         <button
           type="button"

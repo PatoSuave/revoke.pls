@@ -3,6 +3,7 @@
 import { useState } from "react";
 
 import { useRevokeNftApproval } from "@/hooks/use-revoke-nft-approval";
+import { getChainConfig } from "@/lib/chains";
 import { explorerAddressUrl, explorerTxUrl } from "@/lib/explorer";
 import { shortenAddress } from "@/lib/format";
 import type { NftApproval, NftStandard } from "@/lib/nft-approvals";
@@ -26,6 +27,9 @@ export function NftApprovalRow({
       },
     });
 
+  const chainId = approval.chainId;
+  const chainConfig = getChainConfig(chainId);
+  const chainName = chainConfig?.displayName ?? "the network";
   const showConfirm = confirming && status === "idle";
   const showStatus = status !== "idle";
 
@@ -49,7 +53,7 @@ export function NftApprovalRow({
                 </span>
               ) : null}
             </p>
-            <ExplorerLink address={approval.collectionAddress} />
+            <ExplorerLink chainId={chainId} address={approval.collectionAddress} />
           </div>
         </div>
 
@@ -58,7 +62,7 @@ export function NftApprovalRow({
             {approval.operatorLabel}
           </p>
           <p className="truncate text-xs text-pulse-muted">
-            <ExplorerLink address={approval.operatorAddress} inline />
+            <ExplorerLink chainId={chainId} address={approval.operatorAddress} inline />
           </p>
           <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
             <StandardBadge standard={approval.standard} />
@@ -86,6 +90,7 @@ export function NftApprovalRow({
           <RowAction
             status={status}
             hash={hash}
+            chainId={chainId}
             isBusy={isBusy}
             confirming={confirming}
             onConfirmClick={() => setConfirming(true)}
@@ -101,6 +106,8 @@ export function NftApprovalRow({
       {showConfirm ? (
         <ConfirmPanel
           approval={approval}
+          chainName={chainName}
+          nativeSymbol={chainConfig?.nativeSymbol}
           onCancel={() => setConfirming(false)}
           onConfirm={() => revoke()}
         />
@@ -110,6 +117,8 @@ export function NftApprovalRow({
         <StatusPanel
           status={status}
           hash={hash}
+          chainId={chainId}
+          chainName={chainName}
           errorMessage={errorMessage}
           onDismiss={reset}
         />
@@ -231,6 +240,7 @@ function UnverifiedBadge() {
 function RowAction({
   status,
   hash,
+  chainId,
   isBusy,
   confirming,
   onConfirmClick,
@@ -239,6 +249,7 @@ function RowAction({
 }: {
   status: ReturnType<typeof useRevokeNftApproval>["status"];
   hash?: `0x${string}`;
+  chainId: number;
   isBusy: boolean;
   confirming: boolean;
   onConfirmClick: () => void;
@@ -263,7 +274,7 @@ function RowAction({
         className={`${base} border border-pulse-border bg-white/5 text-pulse-muted`}
       >
         <Spinner /> Confirming…
-        {hash ? <TxLink hash={hash} /> : null}
+        {hash ? <TxLink chainId={chainId} hash={hash} /> : null}
       </span>
     );
   }
@@ -273,7 +284,7 @@ function RowAction({
         className={`${base} border border-pulse-green/40 bg-pulse-green/10 text-pulse-green`}
       >
         Revoked
-        {hash ? <TxLink hash={hash} tone="success" /> : null}
+        {hash ? <TxLink chainId={chainId} hash={hash} tone="success" /> : null}
       </span>
     );
   }
@@ -324,19 +335,24 @@ function RowAction({
 
 function ConfirmPanel({
   approval,
+  chainName,
+  nativeSymbol,
   onCancel,
   onConfirm,
 }: {
   approval: NftApproval;
+  chainName: string;
+  nativeSymbol?: string;
   onCancel: () => void;
   onConfirm: () => void;
 }) {
+  const gas = nativeSymbol ? `Paid in ${nativeSymbol} gas.` : "Gas fees apply.";
   const summary =
     approval.kind === "approvalForAll"
       ? `Sends setApprovalForAll(${shortenAddress(
           approval.operatorAddress,
-        )}, false) on-chain. This clears collection-wide operator access. Gas fees apply.`
-      : `Sends approve(0x0, ${approval.tokenId?.toString()}) on-chain. This clears the per-token approval. The call will revert if you no longer own the NFT. Gas fees apply.`;
+        )}, false) on ${chainName}. This clears collection-wide operator access. ${gas}`
+      : `Sends approve(0x0, ${approval.tokenId?.toString()}) on ${chainName}. This clears the per-token approval. The call will revert if you no longer own the NFT. ${gas}`;
 
   return (
     <div className="border-t border-pulse-border/60 bg-pulse-bg/50 px-4 py-4 sm:px-6">
@@ -377,11 +393,15 @@ function ConfirmPanel({
 function StatusPanel({
   status,
   hash,
+  chainId,
+  chainName,
   errorMessage,
   onDismiss,
 }: {
   status: ReturnType<typeof useRevokeNftApproval>["status"];
   hash?: `0x${string}`;
+  chainId: number;
+  chainName: string;
   errorMessage?: string;
   onDismiss: () => void;
 }) {
@@ -395,11 +415,11 @@ function StatusPanel({
   if (status === "pending") {
     return (
       <StatusRow tone="info">
-        Waiting for PulseChain to confirm the revoke transaction.
+        Waiting for {chainName} to confirm the revoke transaction.
         {hash ? (
           <>
             {" "}
-            <TxLink hash={hash} />
+            <TxLink chainId={chainId} hash={hash} />
           </>
         ) : null}
       </StatusRow>
@@ -412,7 +432,7 @@ function StatusPanel({
         {hash ? (
           <>
             {" "}
-            <TxLink hash={hash} tone="success" />
+            <TxLink chainId={chainId} hash={hash} tone="success" />
           </>
         ) : null}
       </StatusRow>
@@ -479,9 +499,11 @@ function Spinner() {
 }
 
 function TxLink({
+  chainId,
   hash,
   tone = "muted",
 }: {
+  chainId: number;
   hash: `0x${string}`;
   tone?: "muted" | "success";
 }) {
@@ -491,7 +513,7 @@ function TxLink({
       : "underline underline-offset-2 hover:text-pulse-cyan";
   return (
     <a
-      href={explorerTxUrl(hash)}
+      href={explorerTxUrl(chainId, hash)}
       target="_blank"
       rel="noreferrer"
       className={`text-[11px] font-semibold ${cls}`}
@@ -514,9 +536,11 @@ function CollectionAvatar({ name }: { name: string }) {
 }
 
 function ExplorerLink({
+  chainId,
   address,
   inline,
 }: {
+  chainId: number;
   address: string;
   inline?: boolean;
 }) {
@@ -525,7 +549,7 @@ function ExplorerLink({
     "text-xs text-pulse-muted hover:text-pulse-cyan hover:underline underline-offset-2";
   return (
     <a
-      href={explorerAddressUrl(address)}
+      href={explorerAddressUrl(chainId, address)}
       target="_blank"
       rel="noreferrer"
       className={inline ? `${base} font-mono` : `truncate ${base} font-mono`}

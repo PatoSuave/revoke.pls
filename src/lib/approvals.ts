@@ -1,5 +1,6 @@
 import type { Address } from "viem";
 
+import type { SupportedChainId } from "@/lib/chains";
 import type { DiscoveredPair } from "@/lib/discovery";
 import { erc20Abi, formatAllowance, isUnlimitedAllowance } from "@/lib/erc20";
 import {
@@ -19,6 +20,9 @@ import { shortenAddress } from "@/lib/format";
  */
 export interface Approval {
   key: string;
+  /** Chain the approval lives on. Needed for explorer links and to route
+   *  the revoke write to the correct chain. */
+  chainId: number;
   tokenAddress: Address;
   tokenSymbol: string;
   tokenName?: string;
@@ -60,28 +64,33 @@ export function buildScanContracts(
   owner: Address,
   tokens: readonly TokenEntry[],
   spenders: readonly SpenderEntry[],
+  chainId: SupportedChainId,
 ) {
   return tokens.flatMap((token) => [
     {
       address: token.address,
       abi: erc20Abi,
       functionName: "symbol" as const,
+      chainId,
     },
     {
       address: token.address,
       abi: erc20Abi,
       functionName: "decimals" as const,
+      chainId,
     },
     {
       address: token.address,
       abi: erc20Abi,
       functionName: "name" as const,
+      chainId,
     },
     ...spenders.map((spender) => ({
       address: token.address,
       abi: erc20Abi,
       functionName: "allowance" as const,
       args: [owner, spender.address] as const,
+      chainId,
     })),
   ]);
 }
@@ -101,6 +110,7 @@ type ReadResult =
  */
 export function parseScanResults(
   results: readonly ReadResult[],
+  chainId: number,
   tokens: readonly TokenEntry[],
   spenders: readonly SpenderEntry[],
 ): Approval[] {
@@ -142,7 +152,8 @@ export function parseScanResults(
       const unlimited = isUnlimitedAllowance(raw);
 
       approvals.push({
-        key: `${token.address}-${spender.address}`,
+        key: `${chainId}-${token.address}-${spender.address}`,
+        chainId,
         tokenAddress: token.address,
         tokenSymbol: symbol,
         tokenName: name,
@@ -200,18 +211,20 @@ function uniqueTokenAddresses(pairs: readonly DiscoveredPair[]): Address[] {
 export function buildDiscoveryContracts(
   owner: Address,
   pairs: readonly DiscoveredPair[],
+  chainId: SupportedChainId,
 ) {
   const tokens = uniqueTokenAddresses(pairs);
   const metadata = tokens.flatMap((address) => [
-    { address, abi: erc20Abi, functionName: "symbol" as const },
-    { address, abi: erc20Abi, functionName: "decimals" as const },
-    { address, abi: erc20Abi, functionName: "name" as const },
+    { address, abi: erc20Abi, functionName: "symbol" as const, chainId },
+    { address, abi: erc20Abi, functionName: "decimals" as const, chainId },
+    { address, abi: erc20Abi, functionName: "name" as const, chainId },
   ]);
   const allowances = pairs.map((pair) => ({
     address: pair.tokenAddress,
     abi: erc20Abi,
     functionName: "allowance" as const,
     args: [owner, pair.spenderAddress] as const,
+    chainId,
   }));
   return {
     contracts: [...metadata, ...allowances],
@@ -246,6 +259,7 @@ export interface ParseDiscoveryOutput {
 export function parseDiscoveryResults(
   results: readonly ReadResult[],
   owner: Address,
+  chainId: number,
   pairs: readonly DiscoveredPair[],
 ): ParseDiscoveryOutput {
   void owner; // reserved for future multi-owner caching
@@ -271,7 +285,7 @@ export function parseDiscoveryResults(
     const symbolRes = results[base];
     const decimalsRes = results[base + 1];
     const nameRes = results[base + 2];
-    const registry = getTokenEntry(address);
+    const registry = getTokenEntry(chainId, address);
 
     const onChainSymbol =
       symbolRes?.status === "success" && typeof symbolRes.result === "string"
@@ -309,11 +323,12 @@ export function parseDiscoveryResults(
     if (!meta || typeof meta.decimals !== "number") return;
 
     const unlimited = isUnlimitedAllowance(raw);
-    const spenderEntry = getSpenderEntry(pair.spenderAddress);
+    const spenderEntry = getSpenderEntry(chainId, pair.spenderAddress);
     if (spenderEntry) registryMatched += 1;
 
     approvals.push({
-      key: `${pair.tokenAddress}-${pair.spenderAddress}`,
+      key: `${chainId}-${pair.tokenAddress}-${pair.spenderAddress}`,
+      chainId,
       tokenAddress: pair.tokenAddress,
       tokenSymbol: meta.symbol,
       tokenName: meta.name,

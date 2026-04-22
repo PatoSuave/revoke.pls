@@ -1,14 +1,17 @@
 import { createConfig, http } from "wagmi";
 import { injected, walletConnect } from "wagmi/connectors";
 
-import { pulsechain } from "@/lib/chains";
+import { mainnet, pulsechain } from "@/lib/chains";
 
 /**
  * Wagmi client configuration for Pulse Revoke.
  *
- * Keeps MVP surface minimal:
- *  - PulseChain only
- *  - Injected connector (MetaMask, Rabby, Brave, etc.)
+ * Supported chains:
+ *  - PulseChain mainnet (369)
+ *  - Ethereum mainnet (1)
+ *
+ * Connectors:
+ *  - Injected (MetaMask, Rabby, Brave, etc.)
  *  - WalletConnect v2 when NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID is set
  *
  * SSR is enabled so wagmi state hydrates safely under the Next.js App Router.
@@ -25,7 +28,8 @@ export const hasWalletConnect: boolean = Boolean(walletConnectProjectId);
 
 const WALLETCONNECT_METADATA = {
   name: "Pulse Revoke",
-  description: "Review and revoke ERC-20 token approvals on PulseChain.",
+  description:
+    "Review and revoke ERC-20 token approvals on PulseChain and Ethereum.",
   url: "https://pulse-revoke.app",
   icons: ["https://pulse-revoke.app/icon.png"],
 };
@@ -44,11 +48,14 @@ const connectors = [
 ];
 
 export const wagmiConfig = createConfig({
-  chains: [pulsechain],
+  chains: [pulsechain, mainnet],
   connectors,
   transports: {
     [pulsechain.id]: http(
       process.env.NEXT_PUBLIC_PULSECHAIN_RPC_URL ?? undefined,
+    ),
+    [mainnet.id]: http(
+      process.env.NEXT_PUBLIC_MAINNET_RPC_URL ?? undefined,
     ),
   },
   ssr: true,
