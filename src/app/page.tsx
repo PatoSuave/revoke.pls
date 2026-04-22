@@ -143,7 +143,7 @@ export default function LauncherPage() {
               <a
                 href={links.github}
                 target="_blank"
-                rel="noreferrer"
+                rel="noopener noreferrer"
                 className="inline-flex items-center gap-2 rounded-xl border border-pulse-border bg-white/5 px-6 py-3 text-sm font-semibold text-pulse-text transition hover:bg-white/10"
               >
                 View on GitHub
@@ -350,10 +350,10 @@ export default function LauncherPage() {
             <Link href="/app" className="transition hover:text-pulse-text">
               Launch App
             </Link>
-            <a href={links.github} target="_blank" rel="noreferrer" className="transition hover:text-pulse-text">
+            <a href={links.github} target="_blank" rel="noopener noreferrer" className="transition hover:text-pulse-text">
               GitHub
             </a>
-            <a href={links.explorer} target="_blank" rel="noreferrer" className="transition hover:text-pulse-text">
+            <a href={links.explorer} target="_blank" rel="noopener noreferrer" className="transition hover:text-pulse-text">
               PulseScan
             </a>
           </div>
@@ -444,7 +444,7 @@ function ManualRevokeGuide({
             <a
               href={explorerHref}
               target="_blank"
-              rel="noreferrer"
+              rel="noopener noreferrer"
               className="underline underline-offset-2 hover:text-pulse-text"
             >
               {explorerName}
@@ -666,7 +666,7 @@ function IpfsGatewayLink({
     <a
       href={`${gateway.base}${cid}`}
       target="_blank"
-      rel="noreferrer"
+      rel="noopener noreferrer"
       className={`${base} border-pulse-border bg-pulse-bg/60 text-pulse-muted hover:border-pulse-cyan/40 hover:text-pulse-cyan`}
     >
       {icon}
@@ -689,7 +689,7 @@ function ResourceCard({
   return (
     <a
       href={href}
-      {...(external ? { target: "_blank", rel: "noreferrer" } : {})}
+      {...(external ? { target: "_blank", rel: "noopener noreferrer" } : {})}
       className="flex flex-col gap-1.5 rounded-xl border border-pulse-border bg-pulse-panel/60 px-5 py-4 transition hover:border-pulse-purple/50 hover:bg-pulse-panel2"
     >
       <span className="flex items-center justify-between">
