@@ -253,7 +253,23 @@ async function fetchLogsPage(
     );
   }
   const body = (await res.json()) as BlockscoutLogsResponse;
-  return Array.isArray(body.result) ? body.result : [];
+  if (Array.isArray(body.result)) return body.result;
+
+  const message = typeof body.result === "string" ? body.result : body.message;
+  const lower = message?.toLowerCase() ?? "";
+  const noRecords =
+    lower.includes("no records") || lower.includes("no logs found");
+
+  if (
+    !noRecords &&
+    (body.status === "0" || lower.includes("rate limit") || lower.includes("notok"))
+  ) {
+    throw new Error(
+      `Discovery source rejected the request: ${message ?? "unknown explorer error"}`,
+    );
+  }
+
+  return [];
 }
 
 async function fetchBlockTip(
