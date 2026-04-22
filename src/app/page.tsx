@@ -255,7 +255,7 @@ export default function LauncherPage() {
             <SectionHeader
               eyebrow="Links"
               title="Resources"
-              description="Source code, block explorer, and ecosystem tools."
+              description="Source code, block explorers, ecosystem tools, and manual revoke guides."
             />
 
             <div className="mt-8 grid grid-cols-1 gap-3 sm:grid-cols-2">
@@ -287,6 +287,47 @@ export default function LauncherPage() {
                 title="How revoking works"
                 description="A plain-English walkthrough of approvals, risk, and what each revoke does on-chain."
                 href="/app#how-it-works"
+              />
+              <ResourceCard
+                title="Manual revoke on PulseChain"
+                description="Step-by-step guide to verify and revoke approvals directly through PulseScan."
+                href="#manual-revoke-pulsechain"
+              />
+              <ResourceCard
+                title="Manual revoke on Ethereum"
+                description="Step-by-step guide to verify and revoke approvals directly through Etherscan."
+                href="#manual-revoke-ethereum"
+              />
+            </div>
+          </div>
+        </section>
+
+        {/* Manual revoke guides */}
+        <section
+          id="manual-revoke-guides"
+          className="border-t border-pulse-border/60 py-16 sm:py-20"
+        >
+          <div className="mx-auto max-w-3xl px-4 sm:px-6">
+            <SectionHeader
+              eyebrow="Guides"
+              title="Manual revoke through public explorers"
+              description="Pulse Revoke helps you scan faster, but approvals are on-chain and can always be verified and revoked manually using public explorer tooling."
+            />
+
+            <div className="mt-8 grid grid-cols-1 gap-4">
+              <ManualRevokeGuide
+                id="manual-revoke-pulsechain"
+                title="Manual revoke on PulseChain"
+                explorerName="PulseScan"
+                explorerHref={links.explorer}
+                nativeGasSymbol="PLS"
+              />
+              <ManualRevokeGuide
+                id="manual-revoke-ethereum"
+                title="Manual revoke on Ethereum"
+                explorerName="Etherscan"
+                explorerHref={links.etherscan}
+                nativeGasSymbol="ETH"
               />
             </div>
           </div>
@@ -365,6 +406,74 @@ function SectionHeader({
       </h2>
       <p className="mt-3 text-sm text-pulse-muted">{description}</p>
     </div>
+  );
+}
+
+function ManualRevokeGuide({
+  id,
+  title,
+  explorerName,
+  explorerHref,
+  nativeGasSymbol,
+}: {
+  id: string;
+  title: string;
+  explorerName: string;
+  explorerHref: string;
+  nativeGasSymbol: string;
+}) {
+  return (
+    <article id={id} className="rounded-2xl border border-pulse-border bg-pulse-panel/60 p-5 sm:p-6">
+      <h3 className="text-sm font-semibold text-pulse-text sm:text-base">{title}</h3>
+
+      <div className="mt-3 space-y-3 text-xs leading-relaxed text-pulse-muted sm:text-sm">
+        <p>
+          <strong className="text-pulse-text">What manual revoke means:</strong>{" "}
+          instead of using Pulse Revoke, you open the chain explorer directly,
+          inspect your approvals there, and submit the revoke transaction from
+          your wallet.
+        </p>
+        <p>
+          Approvals (token allowances and NFT operator permissions) are
+          on-chain permissions and remain active until you change or revoke
+          them.
+        </p>
+        <ol className="list-decimal space-y-1.5 pl-4">
+          <li>
+            Open{" "}
+            <a
+              href={explorerHref}
+              target="_blank"
+              rel="noreferrer"
+              className="underline underline-offset-2 hover:text-pulse-text"
+            >
+              {explorerName}
+            </a>{" "}
+            and connect your wallet if needed.
+          </li>
+          <li>
+            Navigate to the explorer section for token/NFT approvals (labeling
+            can vary by explorer and over time).
+          </li>
+          <li>
+            Find the approval you no longer need and start the revoke action.
+          </li>
+          <li>
+            Before signing, verify the spender address, token/NFT, and that you
+            are on the correct network.
+          </li>
+          <li>
+            Confirm the transaction in your wallet and wait for on-chain
+            confirmation.
+          </li>
+        </ol>
+        <p>
+          Revoking is an on-chain transaction, so it requires gas in{" "}
+          {nativeGasSymbol}. Pulse Revoke does not have special control over
+          approvals — it simply helps you discover and review them faster.
+        </p>
+      </div>
+    </article>
   );
 }
 

@@ -138,8 +138,10 @@ export interface DiscoveryLimits {
 }
 
 export const DEFAULT_DISCOVERY_LIMITS: DiscoveryLimits = {
-  maxRequests: 40,
-  maxRawLogs: 20_000,
+  // Increased to reduce false negatives for long-lived wallets with large
+  // approval histories across PulseChain/Ethereum.
+  maxRequests: 120,
+  maxRawLogs: 100_000,
   pageCap: 1000,
   minSplitSpan: 16,
 };
@@ -215,20 +217,28 @@ function dedupeNftApprovals(
 function buildLogsUrl(
   apiUrl: string,
   apiKey: string | undefined,
+  queryParams: Record<string, string> | undefined,
   paddedOwner: string,
   topic0: string,
   fromBlock: string,
   toBlock: string,
+  page: number,
+  offset: number,
 ): string {
   const params = new URLSearchParams({
     module: "logs",
     action: "getLogs",
     fromBlock,
     toBlock,
+    page: page.toString(),
+    offset: offset.toString(),
     topic0,
     topic1: paddedOwner,
     topic0_1_opr: "and",
   });
+  if (queryParams) {
+    for (const [k, v] of Object.entries(queryParams)) params.set(k, v);
+  }
   if (apiKey) params.set("apikey", apiKey);
   return `${apiUrl}?${params.toString()}`;
 }
@@ -236,13 +246,26 @@ function buildLogsUrl(
 async function fetchLogsPage(
   apiUrl: string,
   apiKey: string | undefined,
+  queryParams: Record<string, string> | undefined,
   paddedOwner: string,
   topic0: string,
   fromBlock: string,
   toBlock: string,
+  page: number,
+  offset: number,
   signal: AbortSignal | undefined,
 ): Promise<BlockscoutLogEntry[]> {
-  const url = buildLogsUrl(apiUrl, apiKey, paddedOwner, topic0, fromBlock, toBlock);
+  const url = buildLogsUrl(
+    apiUrl,
+    apiKey,
+    queryParams,
+    paddedOwner,
+    topic0,
+    fromBlock,
+    toBlock,
+    page,
+    offset,
+  );
   const res = await fetch(url, {
     signal,
     headers: { accept: "application/json" },
@@ -253,18 +276,38 @@ async function fetchLogsPage(
     );
   }
   const body = (await res.json()) as BlockscoutLogsResponse;
-  return Array.isArray(body.result) ? body.result : [];
+  if (Array.isArray(body.result)) return body.result;
+
+  const message = typeof body.result === "string" ? body.result : body.message;
+  const lower = message?.toLowerCase() ?? "";
+  const noRecords =
+    lower.includes("no records") || lower.includes("no logs found");
+
+  if (
+    !noRecords &&
+    (body.status === "0" || lower.includes("rate limit") || lower.includes("notok"))
+  ) {
+    throw new Error(
+      `Discovery source rejected the request: ${message ?? "unknown explorer error"}`,
+    );
+  }
+
+  return [];
 }
 
 async function fetchBlockTip(
   apiUrl: string,
   apiKey: string | undefined,
+  queryParams: Record<string, string> | undefined,
   signal: AbortSignal | undefined,
 ): Promise<bigint | null> {
   const params = new URLSearchParams({
     module: "block",
     action: "eth_block_number",
   });
+  if (queryParams) {
+    for (const [k, v] of Object.entries(queryParams)) params.set(k, v);
+  }
   if (apiKey) params.set("apikey", apiKey);
   try {
     const res = await fetch(`${apiUrl}?${params.toString()}`, {
@@ -297,6 +340,7 @@ function maxBlockFrom(logs: readonly BlockscoutLogEntry[]): bigint | null {
 async function windowedFetchLogs(
   apiUrl: string,
   apiKey: string | undefined,
+  queryParams: Record<string, string> | undefined,
   paddedOwner: string,
   topic0: string,
   limits: DiscoveryLimits,
@@ -308,10 +352,13 @@ async function windowedFetchLogs(
   const initial = await fetchLogsPage(
     apiUrl,
     apiKey,
+    queryParams,
     paddedOwner,
     topic0,
     "0",
     "latest",
+    1,
+    limits.pageCap,
     signal,
   );
   let requests = 1;
@@ -330,7 +377,7 @@ async function windowedFetchLogs(
   }
 
   // Capped. Get the chain tip once so we can split the range.
-  let tip = await fetchBlockTip(apiUrl, apiKey, signal);
+  let tip = await fetchBlockTip(apiUrl, apiKey, queryParams, signal);
   requests += 1;
   if (tip === null) tip = maxBlockFrom(initial);
   if (tip === null) {
@@ -365,10 +412,13 @@ async function windowedFetchLogs(
     const logs = await fetchLogsPage(
       apiUrl,
       apiKey,
+      queryParams,
       paddedOwner,
       topic0,
       range.from.toString(),
       range.to.toString(),
+      1,
+      limits.pageCap,
       signal,
     );
     requests += 1;
@@ -382,7 +432,42 @@ async function windowedFetchLogs(
       continue;
     }
 
-    if (logs.length >= limits.pageCap) truncated = true;
+    // If the response is capped but the range is already too narrow to split
+    // further, page through this exact range to pull additional rows.
+    if (logs.length >= limits.pageCap) {
+      let page = 2;
+      while (requests < limits.maxRequests && collected.length < limits.maxRawLogs) {
+        const paged = await fetchLogsPage(
+          apiUrl,
+          apiKey,
+          queryParams,
+          paddedOwner,
+          topic0,
+          range.from.toString(),
+          range.to.toString(),
+          page,
+          limits.pageCap,
+          signal,
+        );
+        requests += 1;
+        if (paged.length === 0) break;
+
+        const remaining = limits.maxRawLogs - collected.length;
+        if (paged.length > remaining) {
+          collected.push(...paged.slice(0, remaining));
+          truncated = true;
+          break;
+        }
+        collected.push(...paged);
+
+        if (paged.length < limits.pageCap) break;
+        page += 1;
+      }
+
+      if (requests >= limits.maxRequests || collected.length >= limits.maxRawLogs) {
+        truncated = true;
+      }
+    }
 
     const remaining = limits.maxRawLogs - collected.length;
     if (logs.length > remaining) {
@@ -522,6 +607,7 @@ export function createBlockscoutDiscoverySource({
     chainId,
   };
   const { apiUrl, apiKey } = source;
+  const queryParams = source.queryParams;
 
   return {
     meta,
@@ -530,6 +616,7 @@ export function createBlockscoutDiscoverySource({
       const { logs, stats } = await windowedFetchLogs(
         apiUrl,
         apiKey,
+        queryParams,
         padded,
         ERC20_APPROVAL_TOPIC0,
         limits,
@@ -548,6 +635,7 @@ export function createBlockscoutDiscoverySource({
         windowedFetchLogs(
           apiUrl,
           apiKey,
+          queryParams,
           padded,
           ERC_APPROVAL_FOR_ALL_TOPIC0,
           limits,
@@ -556,6 +644,7 @@ export function createBlockscoutDiscoverySource({
         windowedFetchLogs(
           apiUrl,
           apiKey,
+          queryParams,
           padded,
           ERC20_APPROVAL_TOPIC0,
           limits,
