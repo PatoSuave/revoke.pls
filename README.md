@@ -18,6 +18,7 @@ Pulse Revoke helps users:
 Pulse Revoke currently covers:
 
 - PulseChain mainnet (chainId 369)
+- Ethereum mainnet (chainId 1)
 - ERC-20 approval discovery, risk scoring, and single / batch revoke
 - NFT approval discovery for ERC-721 and ERC-1155 (`ApprovalForAll`
   plus ERC-721 per-token approvals), with single revoke
@@ -28,7 +29,6 @@ Pulse Revoke currently covers:
 
 Out of scope for the current release:
 
-- Chains other than PulseChain mainnet
 - Backend, database, or analytics
 - Batch revoke for NFTs
 - Historical activity feeds beyond what the explorer surfaces
@@ -46,7 +46,7 @@ Out of scope for the current release:
 
 ## Core User Flow
 
-1. User connects a wallet on PulseChain
+1. User connects a wallet on PulseChain or Ethereum
 2. App discovers ERC-20 `Approval` and NFT `ApprovalForAll` / per-token
    `Approval` events from the wallet's on-chain history
 3. App re-validates every candidate live via Multicall3 and enriches
@@ -121,6 +121,10 @@ Copy `.env.example` to `.env.local` if you want to override defaults.
 | Variable | Required | Purpose |
 | --- | --- | --- |
 | `NEXT_PUBLIC_PULSECHAIN_RPC_URL` | No | Override the default PulseChain RPC (`https://rpc.pulsechain.com`) for both viem reads and the wagmi transport. |
+| `NEXT_PUBLIC_MAINNET_RPC_URL` | No | Override Ethereum mainnet RPC for wagmi/viem reads. Defaults to viem's mainnet transport; set a private RPC for higher reliability. |
+| `NEXT_PUBLIC_PULSECHAIN_EXPLORER_API` | No | Override the PulseChain discovery API (`https://api.scan.pulsechain.com/api`). Must support Etherscan-compatible `logs/getLogs` topic filters. |
+| `NEXT_PUBLIC_MAINNET_EXPLORER_API` | No | Override Ethereum discovery API (`https://api.etherscan.io/v2/api`). Must support Etherscan v2-style params including `chainid=1`. |
+| `NEXT_PUBLIC_ETHERSCAN_API_KEY` | No (recommended) | API key for Ethereum discovery. Strongly recommended in production to avoid rate-limit failures on large histories. |
 | `NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID` | No | Enables the WalletConnect option in the connect menu (QR pairing for mobile wallets). Obtain a free project ID at [cloud.reown.com](https://cloud.reown.com). When unset, only the injected wallet option is shown — the app still runs. |
 | `NEXT_PUBLIC_SITE_URL` | No | Canonical public URL used by SEO metadata, Open Graph, and Twitter cards. Defaults to `https://revoke.pls`. Set to your own origin for preview/staging deploys so previews do not advertise the production canonical. |
 
@@ -162,8 +166,8 @@ src/
     use-revoke-nft-approval.ts     # per-row NFT revoke state machine
     use-batch-revoke.ts            # sequential ERC-20 batch coordinator
   lib/
-    chains.ts          # PulseChain viem chain definition
-    wagmi.ts           # wagmi config (PulseChain + injected + WC)
+    chains.ts          # PulseChain + Ethereum chain definitions/config
+    wagmi.ts           # wagmi config (PulseChain + Ethereum + connectors)
     discovery.ts       # windowed Blockscout log fetcher; ERC-20 + NFT sources
     approvals.ts       # ERC-20 validation build/parse + types
     nft-approvals.ts   # NFT ABIs, validation, risk, revoke call builders
@@ -212,7 +216,7 @@ production domain at a deploy.
 - [ ] Header nav anchors scroll to Scanner / How it works / Safety / FAQ.
 - [ ] Connect wallet menu shows exactly one Browser wallet row, plus
       WalletConnect when enabled.
-- [ ] Wrong-chain prompt appears when a non-PulseChain wallet is
+- [ ] Wrong-chain prompt appears when a non-supported wallet network is
       connected, and switches back with one click.
 - [ ] ERC-20 scan shows approvals, filters/sort/search work, single
       revoke lands and the row disappears after confirmation.
