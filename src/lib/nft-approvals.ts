@@ -12,6 +12,7 @@ import type { RiskAssessment, RiskLevel } from "@/lib/risk";
  *   - `name`                — optional collection label (ERC-721 only)
  *   - `isApprovedForAll`    — live validation of collection-wide approvals
  *   - `getApproved`         — live validation of ERC-721 per-token approvals
+ *   - `ownerOf`             — confirms the connected wallet still owns token
  *   - `setApprovalForAll`   — revoke collection-wide approval
  *   - `approve` (ERC-721)   — revoke per-token approval
  */
@@ -42,6 +43,13 @@ export const nftReadAbi: Abi = [
   },
   {
     name: "getApproved",
+    type: "function",
+    stateMutability: "view",
+    inputs: [{ name: "tokenId", type: "uint256" }],
+    outputs: [{ name: "", type: "address" }],
+  },
+  {
+    name: "ownerOf",
     type: "function",
     stateMutability: "view",
     inputs: [{ name: "tokenId", type: "uint256" }],
@@ -105,7 +113,8 @@ export interface NftApproval {
  *
  * Layout:
  *   [supportsInterface(ERC721), supportsInterface(ERC1155), name()]   × unique collections
- *   [isApprovedForAll(owner, operator) | getApproved(tokenId)]         × pairs
+ *   [isApprovedForAll(owner, operator) | getApproved(tokenId), ownerOf(tokenId)]
+ *                                                             × candidates
  *
  * Metadata reads are deduped per collection address so that multiple
  * approvals on the same collection don't each trigger their own reads.
@@ -160,17 +169,26 @@ export function buildNftValidationContracts(
         chainId,
       };
     }
-    return {
-      address: c.collectionAddress,
-      abi: nftReadAbi,
-      functionName: "getApproved" as const,
-      args: [c.tokenId!] as const,
-      chainId,
-    };
+    return [
+      {
+        address: c.collectionAddress,
+        abi: nftReadAbi,
+        functionName: "getApproved" as const,
+        args: [c.tokenId!] as const,
+        chainId,
+      },
+      {
+        address: c.collectionAddress,
+        abi: nftReadAbi,
+        functionName: "ownerOf" as const,
+        args: [c.tokenId!] as const,
+        chainId,
+      },
+    ];
   });
 
   return {
-    contracts: [...metadata, ...liveChecks],
+    contracts: [...metadata, ...liveChecks.flat()],
     uniqueCollections: collections,
   };
 }
@@ -288,23 +306,37 @@ export function parseNftValidationResults(
   const approvals: NftApproval[] = [];
   let registryMatched = 0;
 
-  candidates.forEach((candidate, idx) => {
-    const liveRes = results[checksOffset + idx];
-    if (!liveRes || liveRes.status !== "success") return;
+  let checkCursor = checksOffset;
+  candidates.forEach((candidate) => {
+    const firstLiveRes = results[checkCursor];
+    if (!firstLiveRes || firstLiveRes.status !== "success") {
+      checkCursor += candidate.kind === "approvalForAll" ? 1 : 2;
+      return;
+    }
 
     // Live validation gate. For approvalForAll we expect a boolean true; for
-    // per-token ERC-721 we expect the `getApproved` result to equal our
-    // candidate operator. Anything else means the approval is no longer live.
+    // per-token ERC-721 we require BOTH:
+    //   - `getApproved(tokenId) == candidate.operator`
+    //   - `ownerOf(tokenId) == owner`
+    // Anything else means the approval is no longer revokable by this wallet.
     if (candidate.kind === "approvalForAll") {
-      if (liveRes.result !== true) return;
+      checkCursor += 1;
+      if (firstLiveRes.result !== true) return;
     } else {
-      if (typeof liveRes.result !== "string") return;
+      const ownerRes = results[checkCursor + 1];
+      checkCursor += 2;
+
+      if (typeof firstLiveRes.result !== "string") return;
+      if (!ownerRes || ownerRes.status !== "success") return;
+      if (typeof ownerRes.result !== "string") return;
+
       if (
-        liveRes.result.toLowerCase() !==
+        firstLiveRes.result.toLowerCase() !==
         candidate.operatorAddress.toLowerCase()
       ) {
         return;
       }
+      if (ownerRes.result.toLowerCase() !== owner.toLowerCase()) return;
     }
 
     const meta = collectionMeta.get(candidate.collectionAddress.toLowerCase());
