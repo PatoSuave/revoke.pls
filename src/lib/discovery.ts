@@ -25,6 +25,8 @@ export const ERC20_APPROVAL_TOPIC0 =
 export const ERC_APPROVAL_FOR_ALL_TOPIC0 =
   "0x17307eab39ab6107e8899845ad3d59bd9653f200f220920489ca2b5937696c31";
 
+const ZERO_ADDRESS = "0x0000000000000000000000000000000000000000";
+
 /**
  * A raw discovered `(token, spender)` pair sourced from historical Approval
  * events. This is the "on-chain fact" layer — it carries no labels, no risk
@@ -553,6 +555,10 @@ function extractErc721TokenApprovals(
     const operatorAddress = operatorRaw ? topicToAddress(operatorRaw) : null;
     const tokenId = tokenIdRaw ? topicToBigInt(tokenIdRaw) : null;
     if (!collectionAddress || !operatorAddress || tokenId === null) continue;
+    // `approve(address(0), tokenId)` is an explicit revoke event. Keep it out
+    // of discovery candidates so we never treat the zero address as an active
+    // operator after a successful revoke.
+    if (operatorAddress.toLowerCase() === ZERO_ADDRESS) continue;
     out.push({
       kind: "tokenApproval",
       collectionAddress,
