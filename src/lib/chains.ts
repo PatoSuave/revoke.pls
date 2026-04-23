@@ -107,7 +107,19 @@ export interface SupportedChainConfig {
 }
 
 const PULSECHAIN_EXPLORER_API_DEFAULT = "https://api.scan.pulsechain.com/api";
-const MAINNET_EXPLORER_API_DEFAULT = "https://api.etherscan.io/v2/api";
+const MAINNET_EXPLORER_API_DEFAULT_WITH_KEY = "https://api.etherscan.io/v2/api";
+const MAINNET_EXPLORER_API_DEFAULT_NO_KEY = "https://eth.blockscout.com/api";
+const MAINNET_BLOCKSCOUT_URL = "https://eth.blockscout.com";
+
+const mainnetDiscoveryApiKey =
+  process.env.NEXT_PUBLIC_ETHERSCAN_API_KEY || undefined;
+const mainnetDiscoveryApiUrl =
+  process.env.NEXT_PUBLIC_MAINNET_EXPLORER_API ||
+  (mainnetDiscoveryApiKey
+    ? MAINNET_EXPLORER_API_DEFAULT_WITH_KEY
+    : MAINNET_EXPLORER_API_DEFAULT_NO_KEY);
+const mainnetDiscoveryUsesBlockscout =
+  mainnetDiscoveryApiUrl === MAINNET_EXPLORER_API_DEFAULT_NO_KEY;
 
 export const supportedChainConfigs: Record<number, SupportedChainConfig> = {
   [pulsechain.id]: {
@@ -138,12 +150,16 @@ export const supportedChainConfigs: Record<number, SupportedChainConfig> = {
       baseUrl: mainnet.blockExplorers.default.url,
     },
     discovery: {
-      id: "etherscan-mainnet",
-      name: "Etherscan",
-      url: mainnet.blockExplorers.default.url,
-      apiUrl: MAINNET_EXPLORER_API_DEFAULT,
-      apiKey: process.env.NEXT_PUBLIC_ETHERSCAN_API_KEY || undefined,
-      queryParams: { chainid: "1" },
+      id: mainnetDiscoveryUsesBlockscout
+        ? "blockscout-mainnet"
+        : "etherscan-mainnet",
+      name: mainnetDiscoveryUsesBlockscout ? "Blockscout" : "Etherscan",
+      url: mainnetDiscoveryUsesBlockscout
+        ? MAINNET_BLOCKSCOUT_URL
+        : mainnet.blockExplorers.default.url,
+      apiUrl: mainnetDiscoveryApiUrl,
+      apiKey: mainnetDiscoveryApiKey,
+      queryParams: mainnetDiscoveryUsesBlockscout ? undefined : { chainid: "1" },
     },
   },
 };
