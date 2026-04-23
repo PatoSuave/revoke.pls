@@ -184,22 +184,26 @@ function ConnectedScanner({
 
   const clearSelection = useCallback(() => setSelected(new Set()), []);
 
-  const allVisibleSelected =
-    visibleApprovals.length > 0 &&
-    visibleApprovals.every((a) => selected.has(a.key));
+  const allVisibleSelected = useMemo(
+    () =>
+      visibleApprovals.length > 0 &&
+      visibleApprovals.every((a) => selected.has(a.key)),
+    [visibleApprovals, selected],
+  );
 
   const toggleSelectAllVisible = useCallback(() => {
+    if (visibleApprovals.length === 0) return;
+
     setSelected((prev) => {
       const next = new Set(prev);
-      const all = visibleApprovals.every((a) => next.has(a.key));
-      if (all) {
+      if (allVisibleSelected) {
         for (const a of visibleApprovals) next.delete(a.key);
       } else {
         for (const a of visibleApprovals) next.add(a.key);
       }
       return next;
     });
-  }, [visibleApprovals]);
+  }, [visibleApprovals, allVisibleSelected]);
 
   const batch = useBatchRevoke({ onComplete: scan.refetch });
   const batchActive =
