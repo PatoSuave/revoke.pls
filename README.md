@@ -123,7 +123,7 @@ Copy `.env.example` to `.env.local` if you want to override defaults.
 | `NEXT_PUBLIC_PULSECHAIN_RPC_URL` | No | Override the default PulseChain RPC (`https://rpc.pulsechain.com`) for both viem reads and the wagmi transport. |
 | `NEXT_PUBLIC_MAINNET_RPC_URL` | No | Override Ethereum mainnet RPC for wagmi/viem reads. Defaults to viem's mainnet transport; set a private RPC for higher reliability. |
 | `NEXT_PUBLIC_PULSECHAIN_EXPLORER_API` | No | Override the PulseChain discovery API (`https://api.scan.pulsechain.com/api`). Must support Etherscan-compatible `logs/getLogs` topic filters. |
-| `NEXT_PUBLIC_MAINNET_EXPLORER_API` | No | Override Ethereum discovery API. Default is `https://api.etherscan.io/v2/api` when an Etherscan key is set, otherwise `https://eth.blockscout.com/api`. |
+| `NEXT_PUBLIC_MAINNET_EXPLORER_API` | No | Override Ethereum discovery API. Default is `https://api.etherscan.io/v2/api` when an Etherscan key is set, otherwise `https://eth.blockscout.com/api`. Custom overrides are treated as generic Etherscan-compatible APIs (no forced `chainid=1` query param). |
 | `NEXT_PUBLIC_ETHERSCAN_API_KEY` | No (strongly recommended) | Optional API key for Ethereum discovery. When set, Ethereum discovery uses Etherscan v2; when omitted, it falls back to Blockscout. |
 | `NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID` | No | Enables the WalletConnect option in the connect menu (QR pairing for mobile wallets). Obtain a free project ID at [cloud.reown.com](https://cloud.reown.com). When unset, only the injected wallet option is shown — the app still runs. |
 | `NEXT_PUBLIC_SITE_URL` | No | Canonical public URL used by SEO metadata, Open Graph, and Twitter cards. Defaults to `https://revoke.pls`. Set to your own origin for preview/staging deploys so previews do not advertise the production canonical. |
@@ -196,6 +196,12 @@ production domain at a deploy.
 - [ ] Confirm `NEXT_PUBLIC_PULSECHAIN_EXPLORER_API` is unset (uses
       `api.scan.pulsechain.com`) or points at a Blockscout-compatible
       mirror.
+- [ ] Confirm `NEXT_PUBLIC_MAINNET_RPC_URL` is unset (viem default) or
+      points at a trusted Ethereum mainnet RPC endpoint.
+- [ ] Confirm `NEXT_PUBLIC_MAINNET_EXPLORER_API` is unset (automatic
+      Etherscan/Blockscout selection) or points at a compatible explorer API.
+- [ ] Set `NEXT_PUBLIC_ETHERSCAN_API_KEY` for higher Ethereum discovery
+      reliability (optional but strongly recommended for production).
 
 ### Branding and metadata
 

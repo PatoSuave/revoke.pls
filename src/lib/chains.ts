@@ -110,16 +110,28 @@ const PULSECHAIN_EXPLORER_API_DEFAULT = "https://api.scan.pulsechain.com/api";
 const MAINNET_EXPLORER_API_DEFAULT_WITH_KEY = "https://api.etherscan.io/v2/api";
 const MAINNET_EXPLORER_API_DEFAULT_NO_KEY = "https://eth.blockscout.com/api";
 const MAINNET_BLOCKSCOUT_URL = "https://eth.blockscout.com";
+const ETHERSCAN_MAINNET_URL = "https://etherscan.io";
 
 const mainnetDiscoveryApiKey =
   process.env.NEXT_PUBLIC_ETHERSCAN_API_KEY || undefined;
+const mainnetDiscoveryApiOverride = process.env.NEXT_PUBLIC_MAINNET_EXPLORER_API;
 const mainnetDiscoveryApiUrl =
-  process.env.NEXT_PUBLIC_MAINNET_EXPLORER_API ||
+  mainnetDiscoveryApiOverride ||
   (mainnetDiscoveryApiKey
     ? MAINNET_EXPLORER_API_DEFAULT_WITH_KEY
     : MAINNET_EXPLORER_API_DEFAULT_NO_KEY);
-const mainnetDiscoveryUsesBlockscout =
-  mainnetDiscoveryApiUrl === MAINNET_EXPLORER_API_DEFAULT_NO_KEY;
+
+/**
+ * When users provide a custom explorer API override, we intentionally avoid
+ * forcing Etherscan-specific query params (`chainid=1`) because many
+ * Etherscan-compatible providers (including some Blockscout deployments) do not
+ * accept or require that parameter.
+ */
+const mainnetDiscoveryProvider = mainnetDiscoveryApiOverride
+  ? "custom"
+  : mainnetDiscoveryApiKey
+    ? "etherscan"
+    : "blockscout";
 
 export const supportedChainConfigs: Record<number, SupportedChainConfig> = {
   [pulsechain.id]: {
@@ -150,16 +162,28 @@ export const supportedChainConfigs: Record<number, SupportedChainConfig> = {
       baseUrl: mainnet.blockExplorers.default.url,
     },
     discovery: {
-      id: mainnetDiscoveryUsesBlockscout
-        ? "blockscout-mainnet"
-        : "etherscan-mainnet",
-      name: mainnetDiscoveryUsesBlockscout ? "Blockscout" : "Etherscan",
-      url: mainnetDiscoveryUsesBlockscout
-        ? MAINNET_BLOCKSCOUT_URL
-        : mainnet.blockExplorers.default.url,
+      id:
+        mainnetDiscoveryProvider === "etherscan"
+          ? "etherscan-mainnet"
+          : mainnetDiscoveryProvider === "blockscout"
+            ? "blockscout-mainnet"
+            : "custom-mainnet",
+      name:
+        mainnetDiscoveryProvider === "etherscan"
+          ? "Etherscan"
+          : mainnetDiscoveryProvider === "blockscout"
+            ? "Blockscout"
+            : "Custom explorer",
+      url:
+        mainnetDiscoveryProvider === "etherscan"
+          ? ETHERSCAN_MAINNET_URL
+          : mainnetDiscoveryProvider === "blockscout"
+            ? MAINNET_BLOCKSCOUT_URL
+            : mainnet.blockExplorers.default.url,
       apiUrl: mainnetDiscoveryApiUrl,
       apiKey: mainnetDiscoveryApiKey,
-      queryParams: mainnetDiscoveryUsesBlockscout ? undefined : { chainid: "1" },
+      queryParams:
+        mainnetDiscoveryProvider === "etherscan" ? { chainid: "1" } : undefined,
     },
   },
 };
