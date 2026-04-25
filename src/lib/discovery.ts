@@ -301,10 +301,10 @@ async function fetchBlockTip(
   queryParams: Record<string, string> | undefined,
   signal: AbortSignal | undefined,
 ): Promise<bigint | null> {
-  // Use 'proxy' module for canonical eth_block_number on Etherscan/Blockscout.
+  // Use 'proxy' module for canonical eth_blockNumber on Etherscan/Blockscout.
   const params = new URLSearchParams({
     module: "proxy",
-    action: "eth_block_number",
+    action: "eth_blockNumber",
   });
   if (queryParams) {
     for (const [k, v] of Object.entries(queryParams)) params.set(k, v);
