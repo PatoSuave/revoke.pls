@@ -37,10 +37,28 @@ export const metadata: Metadata = {
 };
 
 const TRUST_POINTS = [
-  "Non-custodial",
-  "User signs every transaction",
-  "No hidden revoke transactions",
-  "Curated labels, still verify",
+  {
+    title: "Non-custodial",
+    body: "Revoke.PLS never holds wallet funds.",
+  },
+  {
+    title: "User-signed",
+    body: "Every revoke is confirmed in your wallet.",
+  },
+  {
+    title: "No hidden writes",
+    body: "Write transactions appear only after you click revoke.",
+  },
+  {
+    title: "Curated labels",
+    body: "Registry names help, but users should still verify.",
+  },
+] as const;
+
+const HERO_STATS = [
+  { label: "Primary chain", value: "PulseChain" },
+  { label: "Scanner", value: "Live at /app" },
+  { label: "Desktop", value: "Pending release" },
 ] as const;
 
 const HOW_IT_WORKS = [
@@ -148,7 +166,9 @@ function SiteHeader({ desktopReady }: { desktopReady: boolean }) {
         </nav>
 
         <div className="flex items-center gap-2">
-          <StatusPill>{desktopReady ? "Desktop ready" : "Desktop pending"}</StatusPill>
+          <StatusPill className="hidden sm:inline-flex">
+            {desktopReady ? "Desktop ready" : "Desktop pending"}
+          </StatusPill>
           <Link
             href="/app"
             className="inline-flex items-center justify-center rounded-xl bg-pulse-gradient px-4 py-2 text-xs font-semibold text-white shadow-glow transition hover:brightness-110"
@@ -170,22 +190,29 @@ function Hero({ desktopReady }: { desktopReady: boolean }) {
         aria-hidden
       />
 
-      <div className="relative mx-auto grid max-w-6xl gap-10 px-4 py-16 sm:px-6 sm:py-24 lg:grid-cols-[1.05fr_0.95fr] lg:items-center">
+      <div className="relative mx-auto grid max-w-6xl gap-10 px-4 py-16 sm:px-6 sm:py-24 lg:grid-cols-[1.02fr_0.98fr] lg:items-center">
         <div>
-          <div className="inline-flex items-center gap-2 rounded-full border border-pulse-cyan/35 bg-pulse-panel/75 px-3 py-1 text-xs font-semibold text-pulse-cyan shadow-glow">
-            <span className="h-1.5 w-1.5 rounded-full bg-pulse-green" />
+          <div className="inline-flex items-center gap-2 rounded-full border border-pulse-cyan/35 bg-pulse-panel/75 px-3 py-1 text-xs font-semibold text-pulse-cyan">
+            <span
+              className="h-1.5 w-1.5 rounded-full bg-pulse-green"
+              aria-hidden
+            />
             PulseChain approval safety
           </div>
 
-          <h1 className="mt-5 max-w-3xl text-4xl font-bold tracking-tight sm:text-6xl">
-            Revoke risky token approvals with{" "}
-            <span className="text-gradient-pulse">Revoke.PLS</span>.
+          <h1 className="mt-5 text-5xl font-bold tracking-tight sm:text-7xl">
+            Revoke<span className="text-gradient-pulse">.PLS</span>
           </h1>
 
-          <p className="mt-5 max-w-2xl text-base leading-7 text-pulse-muted sm:text-lg">
-            Review ERC-20 allowances and NFT approvals on PulseChain and
-            Ethereum, then clear the ones you do not trust. Revoke.PLS is
-            read-only until you choose a revoke and approve it in your wallet.
+          <p className="mt-5 max-w-2xl text-xl font-semibold leading-8 text-pulse-text sm:text-2xl">
+            Revoke risky approvals on PulseChain with a scanner built for
+            careful wallet review.
+          </p>
+
+          <p className="mt-4 max-w-2xl text-base leading-7 text-pulse-muted">
+            Review ERC-20 allowances and NFT operator approvals, then clear the
+            permissions you do not trust. The app stays read-only until you
+            choose a revoke action and confirm it in your own wallet.
           </p>
 
           <div className="mt-8 flex flex-col gap-3 sm:flex-row">
@@ -203,7 +230,25 @@ function Hero({ desktopReady }: { desktopReady: boolean }) {
             </a>
           </div>
 
-          <p className="mt-4 max-w-xl text-xs leading-5 text-pulse-muted">
+          <dl className="mt-8 grid max-w-2xl grid-cols-1 gap-3 sm:grid-cols-3">
+            {HERO_STATS.map((item) => (
+              <div
+                key={item.label}
+                className="rounded-xl border border-pulse-border bg-pulse-panel/55 p-4"
+              >
+                <dt className="text-[11px] font-semibold uppercase tracking-[0.16em] text-pulse-muted">
+                  {item.label}
+                </dt>
+                <dd className="mt-1 text-sm font-semibold text-pulse-text">
+                  {desktopReady && item.label === "Desktop"
+                    ? "Release ready"
+                    : item.value}
+                </dd>
+              </div>
+            ))}
+          </dl>
+
+          <p className="mt-5 max-w-xl text-xs leading-5 text-pulse-muted">
             Always verify spender addresses on PulseScan or Etherscan before
             signing. Registry labels are curated, not a guarantee of safety.
           </p>
@@ -217,10 +262,24 @@ function Hero({ desktopReady }: { desktopReady: boolean }) {
 
 function LaunchChoicePanel({ desktopReady }: { desktopReady: boolean }) {
   return (
-    <div className="rounded-2xl border border-pulse-border bg-pulse-panel/80 p-4 shadow-glow">
-      <div className="grid gap-3">
+    <aside aria-label="Launch options" className="grid gap-3">
+      <div className="rounded-2xl border border-pulse-border bg-pulse-panel/70 p-5 shadow-glow">
+        <p className="text-xs font-semibold uppercase tracking-[0.18em] text-pulse-cyan">
+          Choose your path
+        </p>
+        <p className="mt-2 text-2xl font-semibold text-pulse-text">
+          Scan now in the browser. Use desktop when a signed build is released.
+        </p>
+        <p className="mt-3 text-sm leading-6 text-pulse-muted">
+          Both paths use the same wallet-confirmed revoke model. The desktop
+          download stays inactive until release artifacts are real.
+        </p>
+      </div>
+
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-1">
         <ChoiceCard
-          eyebrow="Available now"
+          eyebrow="Web app"
+          status={<StatusPill tone="success">Available now</StatusPill>}
           title="Launch web scanner"
           body="Use the hosted scanner in your browser. Browser wallets and WalletConnect continue to work here."
           action={
@@ -234,7 +293,12 @@ function LaunchChoicePanel({ desktopReady }: { desktopReady: boolean }) {
         />
 
         <ChoiceCard
-          eyebrow={desktopReady ? "Desktop release" : "Release pending"}
+          eyebrow="Desktop app"
+          status={
+            <StatusPill tone={desktopReady ? "success" : "neutral"}>
+              {desktopReady ? "Ready" : "Coming soon"}
+            </StatusPill>
+          }
           title="Download local desktop app"
           body={
             desktopReady
@@ -251,26 +315,31 @@ function LaunchChoicePanel({ desktopReady }: { desktopReady: boolean }) {
           }
         />
       </div>
-    </div>
+    </aside>
   );
 }
 
 function ChoiceCard({
   eyebrow,
+  status,
   title,
   body,
   action,
 }: {
   eyebrow: string;
+  status: ReactNode;
   title: string;
   body: string;
   action: ReactNode;
 }) {
   return (
-    <article className="rounded-xl border border-pulse-border bg-pulse-bg/55 p-5">
-      <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-pulse-cyan">
-        {eyebrow}
-      </p>
+    <article className="rounded-2xl border border-pulse-border bg-pulse-bg/65 p-5 transition hover:border-pulse-cyan/45">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-pulse-cyan">
+          {eyebrow}
+        </p>
+        {status}
+      </div>
       <h2 className="mt-2 text-xl font-semibold text-pulse-text">{title}</h2>
       <p className="mt-2 text-sm leading-6 text-pulse-muted">{body}</p>
       <div className="mt-4">{action}</div>
@@ -280,15 +349,25 @@ function ChoiceCard({
 
 function TrustStrip() {
   return (
-    <section className="border-b border-pulse-border/60 bg-pulse-bg py-6">
-      <div className="mx-auto grid max-w-6xl gap-2 px-4 sm:grid-cols-2 sm:px-6 lg:grid-cols-4">
+    <section className="border-b border-pulse-border/60 bg-pulse-bg py-8">
+      <div className="mx-auto grid max-w-6xl gap-3 px-4 sm:grid-cols-2 sm:px-6 lg:grid-cols-4">
         {TRUST_POINTS.map((point) => (
           <div
-            key={point}
-            className="flex items-center gap-2 rounded-xl border border-pulse-border bg-pulse-panel/55 px-4 py-3 text-sm text-pulse-muted"
+            key={point.title}
+            className="rounded-2xl border border-pulse-border bg-pulse-panel/55 p-4"
           >
-            <span className="h-1.5 w-1.5 rounded-full bg-pulse-green" />
-            {point}
+            <div className="flex items-center gap-2">
+              <span
+                className="h-1.5 w-1.5 rounded-full bg-pulse-green"
+                aria-hidden
+              />
+              <p className="text-sm font-semibold text-pulse-text">
+                {point.title}
+              </p>
+            </div>
+            <p className="mt-2 text-xs leading-5 text-pulse-muted">
+              {point.body}
+            </p>
           </div>
         ))}
       </div>
@@ -354,31 +433,43 @@ function DesktopSection({
           </div>
         </div>
 
-        <div className="rounded-2xl border border-pulse-border bg-pulse-panel/70 p-4">
-          <div className="flex flex-wrap items-center justify-between gap-3 border-b border-pulse-border/60 pb-4">
-            <div>
-              <p className="text-sm font-semibold text-pulse-text">
-                Desktop release status
-              </p>
-              <p className="mt-1 text-xs text-pulse-muted">
-                {desktopReady
-                  ? `Artifacts listed for ${release.version}.`
-                  : "No public desktop artifact is published yet."}
-              </p>
+        <div className="grid gap-3">
+          <div className="rounded-2xl border border-pulse-border bg-pulse-panel/70 p-5">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div>
+                <p className="text-sm font-semibold text-pulse-text">
+                  Desktop release status
+                </p>
+                <p className="mt-1 text-xs text-pulse-muted">
+                  {desktopReady
+                    ? `Artifacts listed for ${release.version}.`
+                    : "No public desktop artifact is published yet."}
+                </p>
+              </div>
+              <StatusPill tone={desktopReady ? "success" : "neutral"}>
+                {desktopReady ? release.version : "Coming soon"}
+              </StatusPill>
             </div>
-            <StatusPill>{desktopReady ? release.version : "Coming soon"}</StatusPill>
           </div>
 
-          <div className="mt-4 grid gap-3 sm:grid-cols-2">
+          <div className="grid gap-3 sm:grid-cols-2">
             {release.artifacts.map((artifact) => (
               <ArtifactCard key={artifact.id} artifact={artifact} />
             ))}
           </div>
 
-          <p className="mt-4 rounded-xl border border-pulse-border bg-pulse-bg/55 p-3 text-xs leading-5 text-pulse-muted">
-            Desktop downloads remain disabled until signed release artifacts and
-            checksums are available.
-          </p>
+          <div className="rounded-2xl border border-pulse-border bg-pulse-panel/60 p-5">
+            <div>
+              <p className="text-sm font-semibold text-pulse-text">
+                Release guardrail
+              </p>
+              <p className="mt-2 text-xs leading-5 text-pulse-muted">
+                Desktop downloads remain disabled until signed release
+                artifacts and checksums are available. Placeholder manifest
+                values never render as download links.
+              </p>
+            </div>
+          </div>
         </div>
       </div>
     </section>
@@ -445,37 +536,43 @@ function IpfsSection({
           </p>
         </div>
 
-        <div className="rounded-2xl border border-pulse-border bg-pulse-panel/70 p-5">
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <div>
-              <p className="text-sm font-semibold text-pulse-text">
-                IPFS status
-              </p>
-              <p className="mt-1 text-xs text-pulse-muted">
-                {ipfsReady
-                  ? "A pinned CID is present in the release manifest."
-                  : "Final CID pending release."}
-              </p>
+        <div className="grid gap-3">
+          <div className="rounded-2xl border border-pulse-border bg-pulse-panel/70 p-5">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div>
+                <p className="text-sm font-semibold text-pulse-text">
+                  IPFS status
+                </p>
+                <p className="mt-1 text-xs text-pulse-muted">
+                  {ipfsReady
+                    ? "A pinned CID is present in the release manifest."
+                    : "Final CID pending release."}
+                </p>
+              </div>
+              <StatusPill tone={ipfsReady ? "success" : "neutral"}>
+                {ipfsReady ? "Pinned" : "CID pending"}
+              </StatusPill>
             </div>
-            <StatusPill>{ipfsReady ? "Pinned" : "CID pending"}</StatusPill>
           </div>
 
-          <div className="mt-5 rounded-xl border border-pulse-border bg-pulse-bg/55 p-4">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-pulse-muted">
-              Content ID
-            </p>
-            {ipfsReady ? (
-              <p className="mt-2 break-all font-mono text-sm text-pulse-text">
-                {release.ipfs.cid}
+          <div className="rounded-2xl border border-pulse-border bg-pulse-panel/60 p-5">
+            <div>
+              <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-pulse-muted">
+                Content ID
               </p>
-            ) : (
-              <p className="mt-2 text-sm text-pulse-muted">
-                No final CID has been published yet.
-              </p>
-            )}
+              {ipfsReady ? (
+                <p className="mt-2 break-all font-mono text-sm text-pulse-text">
+                  {release.ipfs.cid}
+                </p>
+              ) : (
+                <p className="mt-2 text-sm text-pulse-muted">
+                  No final CID has been published yet.
+                </p>
+              )}
+            </div>
           </div>
 
-          <div className="mt-4 flex flex-wrap gap-2">
+          <div className="flex flex-wrap gap-2">
             {[release.ipfs.preferredGateway, ...release.ipfs.alternateGateways].map(
               (gateway) => (
                 <span
@@ -488,7 +585,7 @@ function IpfsSection({
             )}
           </div>
 
-          <p className="mt-4 text-xs leading-5 text-pulse-muted">
+          <p className="rounded-2xl border border-pulse-border bg-pulse-panel/60 p-5 text-xs leading-5 text-pulse-muted">
             Gateway links stay disabled until a real CID is present. Checksums
             should be published with the same release.
           </p>
@@ -514,7 +611,10 @@ function FAQSection() {
           >
             <summary className="flex cursor-pointer list-none items-center justify-between gap-4 text-sm font-semibold text-pulse-text">
               {item.question}
-              <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-pulse-border text-pulse-muted transition group-open:rotate-45">
+              <span
+                className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-pulse-border text-pulse-muted transition group-open:rotate-45"
+                aria-hidden
+              >
                 +
               </span>
             </summary>
@@ -592,15 +692,33 @@ function SectionKicker({ children }: { children: ReactNode }) {
 function CheckLine({ children }: { children: ReactNode }) {
   return (
     <p className="flex items-start gap-2">
-      <span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-pulse-green" />
+      <span
+        className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-pulse-green"
+        aria-hidden
+      />
       <span>{children}</span>
     </p>
   );
 }
 
-function StatusPill({ children }: { children: ReactNode }) {
+function StatusPill({
+  children,
+  tone = "neutral",
+  className = "",
+}: {
+  children: ReactNode;
+  tone?: "neutral" | "success";
+  className?: string;
+}) {
+  const toneClass =
+    tone === "success"
+      ? "border-pulse-green/35 bg-pulse-green/10 text-pulse-green"
+      : "border-pulse-border bg-pulse-panel/70 text-pulse-muted";
+
   return (
-    <span className="rounded-full border border-pulse-border bg-pulse-panel/70 px-3 py-1 text-[11px] font-semibold uppercase tracking-wide text-pulse-muted">
+    <span
+      className={`rounded-full border px-3 py-1 text-[11px] font-semibold uppercase tracking-wide ${toneClass} ${className}`}
+    >
       {children}
     </span>
   );
