@@ -53,9 +53,13 @@ export function ApprovalRow({
   const showStatus = status !== "idle" && !batchActive;
 
   return (
-    <li className="border-b border-pulse-border/60 last:border-b-0">
-      <div className="grid grid-cols-1 gap-3 px-4 py-4 sm:grid-cols-[auto_1.2fr_1.5fr_1fr_auto] sm:items-center sm:gap-4">
-        <div className="flex items-center">
+    <li
+      className={`border-b border-pulse-border/60 transition last:border-b-0 ${
+        selected ? "bg-pulse-purple/5" : "hover:bg-white/[0.025]"
+      }`}
+    >
+      <div className="grid grid-cols-1 gap-4 px-4 py-4 sm:grid-cols-[auto_1.15fr_1.45fr_1fr_auto] sm:items-center sm:gap-4">
+        <div className="flex items-center sm:justify-center">
           <input
             type="checkbox"
             checked={selected}
@@ -66,12 +70,14 @@ export function ApprovalRow({
           />
         </div>
         <div className="flex min-w-0 items-center gap-3">
-          <RiskDot level={approval.risk.level} />
           <TokenAvatar symbol={approval.tokenSymbol} />
           <div className="min-w-0">
-            <p className="truncate text-sm font-semibold text-pulse-text">
-              {approval.tokenSymbol}
-            </p>
+            <div className="flex min-w-0 flex-wrap items-center gap-2">
+              <p className="truncate text-sm font-semibold text-pulse-text">
+                {approval.tokenSymbol}
+              </p>
+              <RiskBadge risk={approval.risk} compact />
+            </div>
             <ExplorerLink
               chainId={chainId}
               address={approval.tokenAddress}
@@ -80,8 +86,11 @@ export function ApprovalRow({
           </div>
         </div>
 
-        <div className="min-w-0">
-          <p className="truncate text-sm font-medium text-pulse-text">
+        <div className="min-w-0 rounded-xl border border-pulse-border/60 bg-pulse-panel/35 p-3 sm:border-0 sm:bg-transparent sm:p-0">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-pulse-muted sm:hidden">
+            Spender
+          </p>
+          <p className="mt-1 truncate text-sm font-medium text-pulse-text sm:mt-0">
             {approval.spenderLabel}
           </p>
           <p className="truncate text-xs text-pulse-muted">
@@ -102,8 +111,10 @@ export function ApprovalRow({
           </div>
         </div>
 
-        <div className="flex flex-col items-start gap-1.5">
-          <RiskBadge risk={approval.risk} />
+        <div className="flex flex-col items-start gap-1.5 rounded-xl border border-pulse-border/60 bg-pulse-panel/35 p-3 sm:border-0 sm:bg-transparent sm:p-0">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-pulse-muted sm:hidden">
+            Exposure
+          </p>
           {approval.unlimited ? (
             <span className="inline-flex items-center gap-1.5 rounded-full border border-pulse-red/40 bg-pulse-red/10 px-2.5 py-1 text-xs font-semibold text-pulse-red">
               <span
@@ -124,7 +135,7 @@ export function ApprovalRow({
           ) : null}
         </div>
 
-        <div className="flex justify-start sm:justify-end">
+        <div className="flex justify-stretch sm:justify-end">
           {batchActive && batchResult ? (
             <BatchStatusPill result={batchResult} chainId={chainId} />
           ) : (
@@ -192,26 +203,24 @@ const RISK_STYLES: Record<
   },
 };
 
-function RiskBadge({ risk }: { risk: ScoredApproval["risk"] }) {
+function RiskBadge({
+  risk,
+  compact = false,
+}: {
+  risk: ScoredApproval["risk"];
+  compact?: boolean;
+}) {
   const style = RISK_STYLES[risk.level];
   return (
     <span
-      className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide ${style.pill}`}
+      className={`inline-flex items-center gap-1.5 rounded-full border font-semibold uppercase tracking-wide ${style.pill} ${
+        compact ? "px-2 py-0.5 text-[10px]" : "px-2.5 py-1 text-[11px]"
+      }`}
       title={risk.reason}
     >
       <span className={`h-1.5 w-1.5 rounded-full ${style.dot}`} aria-hidden />
       {style.label}
     </span>
-  );
-}
-
-function RiskDot({ level }: { level: RiskLevel }) {
-  const style = RISK_STYLES[level];
-  return (
-    <span
-      aria-hidden
-      className={`h-2 w-2 shrink-0 rounded-full ${style.dot}`}
-    />
   );
 }
 
@@ -221,6 +230,7 @@ const SPENDER_CATEGORY_LABEL: Record<string, string> = {
   bridge: "Bridge",
   staking: "Staking",
   farm: "Farm",
+  permit2: "Permit2",
   unknown: "",
 };
 
@@ -233,7 +243,7 @@ function ProtocolBadge({
 }) {
   const categoryLabel = category ? SPENDER_CATEGORY_LABEL[category] ?? "" : "";
   const title = categoryLabel
-    ? `${protocol} · ${categoryLabel}`
+    ? `${protocol} / ${categoryLabel}`
     : protocol;
   return (
     <span
@@ -242,7 +252,7 @@ function ProtocolBadge({
     >
       {protocol}
       {categoryLabel ? (
-        <span className="text-pulse-muted/70">· {categoryLabel}</span>
+        <span className="text-pulse-muted/70">/ {categoryLabel}</span>
       ) : null}
     </span>
   );
@@ -309,14 +319,14 @@ function RowAction({
   onRetry: () => void;
 }) {
   const base =
-    "inline-flex items-center justify-center gap-2 rounded-xl px-3 py-2 text-xs font-semibold transition disabled:cursor-not-allowed";
+    "inline-flex w-full items-center justify-center gap-2 rounded-xl px-3 py-2 text-xs font-semibold transition disabled:cursor-not-allowed sm:w-auto";
 
   if (status === "wallet") {
     return (
       <span
         className={`${base} border border-pulse-border bg-white/5 text-pulse-muted`}
       >
-        <Spinner /> Confirm in wallet…
+        <Spinner /> Confirm in wallet...
       </span>
     );
   }
@@ -326,7 +336,7 @@ function RowAction({
       <span
         className={`${base} border border-pulse-border bg-white/5 text-pulse-muted`}
       >
-        <Spinner /> Confirming…
+        <Spinner /> Confirming...
         {hash ? <TxLink chainId={chainId} hash={hash} /> : null}
       </span>
     );
@@ -386,7 +396,7 @@ function RowAction({
       disabled={isBusy}
       className={`${base} bg-pulse-gradient text-pulse-bg shadow-glow hover:brightness-110 active:brightness-95`}
     >
-      Revoke
+      Review revoke
     </button>
   );
 }
@@ -406,23 +416,33 @@ function ConfirmPanel({
 }) {
   return (
     <div className="border-t border-pulse-border/60 bg-pulse-bg/50 px-4 py-4 sm:px-6">
-      <div className="flex flex-col items-start gap-3 sm:flex-row sm:items-center sm:justify-between">
+      <div className="grid gap-4 lg:grid-cols-[1fr_auto] lg:items-center">
         <div className="text-sm">
-          <p className="font-medium text-pulse-text">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-pulse-cyan">
+            Review transaction
+          </p>
+          <p className="mt-1 font-medium text-pulse-text">
             Revoke{" "}
             <span className="font-semibold">{approval.tokenSymbol}</span>{" "}
             approval for{" "}
             <span className="font-semibold">{approval.spenderLabel}</span>?
           </p>
-          <p className="mt-1 text-xs text-pulse-muted">
-            Sends{" "}
+          <p className="mt-2 text-xs leading-5 text-pulse-muted">
+            This requests one wallet transaction that sets the allowance to
+            zero:{" "}
             <span className="font-mono text-pulse-text">
               approve({shortenAddress(approval.spenderAddress)}, 0)
             </span>{" "}
             on {chainName}
             {nativeSymbol ? `. Paid in ${nativeSymbol} gas.` : ". Gas fees apply."}
           </p>
-          <p className="mt-1 text-xs text-pulse-muted">{approval.risk.reason}</p>
+          <p className="mt-1 text-xs leading-5 text-pulse-muted">
+            Revoke.PLS cannot move funds. Your wallet shows the final
+            transaction before you sign.
+          </p>
+          <p className="mt-2 rounded-xl border border-pulse-border/70 bg-pulse-panel/45 p-3 text-xs leading-5 text-pulse-muted">
+            {approval.risk.reason}
+          </p>
         </div>
         <div className="flex items-center gap-2 self-stretch sm:self-auto">
           <button
@@ -463,7 +483,7 @@ function StatusPanel({
   if (status === "wallet") {
     return (
       <StatusRow tone="info">
-        Open your wallet to approve the revoke transaction.
+        Open your wallet and review the approval reset before signing.
       </StatusRow>
     );
   }
@@ -471,7 +491,7 @@ function StatusPanel({
   if (status === "pending") {
     return (
       <StatusRow tone="info">
-        Waiting for {chainName} to confirm the revoke transaction.
+        Transaction submitted. Waiting for {chainName} confirmation.
         {hash ? (
           <>
             {" "}
@@ -574,7 +594,7 @@ function BatchStatusPill({
       <span
         className={`${base} border border-pulse-cyan/40 bg-pulse-cyan/10 text-pulse-cyan`}
       >
-        <Spinner /> Confirm in wallet…
+        <Spinner /> Confirm in wallet...
       </span>
     );
   }
@@ -584,7 +604,7 @@ function BatchStatusPill({
       <span
         className={`${base} border border-pulse-cyan/40 bg-pulse-cyan/10 text-pulse-cyan`}
       >
-        <Spinner /> Confirming…
+        <Spinner /> Confirming...
         {result.hash ? <TxLink chainId={chainId} hash={result.hash} /> : null}
       </span>
     );
@@ -662,7 +682,7 @@ function TxLink({
       rel="noopener noreferrer"
       className={`text-[11px] font-semibold ${cls}`}
     >
-      view tx ↗
+      view tx
     </a>
   );
 }

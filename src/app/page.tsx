@@ -1,24 +1,21 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import type { ReactNode } from "react";
 
 import { PulseMark } from "@/components/pulse-mark";
 import {
   currentRelease,
   isPlaceholderCid,
   isPlaceholderUrl,
-  type ArtifactIcon,
-  type ChecksumsArtifact,
-  type IpfsGateway,
   type ReleaseArtifact,
   type ReleaseManifest,
 } from "@/lib/release";
 import { absoluteUrl, siteConfig } from "@/lib/site";
 
-// ─── Metadata ────────────────────────────────────────────────────────────────
-
-const launcherTitle = `${siteConfig.name} — PulseChain & Ethereum Token Approval Manager`;
+const productName = "Revoke.PLS";
+const launcherTitle = `${productName} - PulseChain approval safety`;
 const launcherDescription =
-  "Download Pulse Revoke or launch the web app. Review and revoke ERC-20 and NFT token approvals on PulseChain and Ethereum — non-custodial, open source.";
+  "Launch the Revoke.PLS scanner or track desktop release status. Review and revoke token approvals on PulseChain and Ethereum without custody.";
 
 export const metadata: Metadata = {
   title: launcherTitle,
@@ -26,7 +23,7 @@ export const metadata: Metadata = {
   alternates: { canonical: "/" },
   openGraph: {
     type: "website",
-    siteName: siteConfig.name,
+    siteName: productName,
     title: launcherTitle,
     description: launcherDescription,
     url: absoluteUrl("/"),
@@ -39,806 +36,572 @@ export const metadata: Metadata = {
   },
 };
 
-// ─── Page ─────────────────────────────────────────────────────────────────────
+const TRUST_POINTS = [
+  "Non-custodial",
+  "User signs every transaction",
+  "No hidden revoke transactions",
+  "Curated labels, still verify",
+] as const;
 
-export default function LauncherPage() {
-  const release = currentRelease;
-  const { links } = siteConfig;
-
-  return (
-    <div className="flex min-h-dvh flex-col bg-pulse-bg text-pulse-text">
-      {/* Status banner */}
-      <div className="border-b border-pulse-border/50 bg-pulse-panel/60 px-4 py-2 text-center text-[11px] font-medium text-pulse-muted">
-        <span className="inline-flex items-center gap-2">
-          <span className="h-1.5 w-1.5 rounded-full bg-pulse-green" aria-hidden />
-          Mainnet live · PulseChain (369) · Ethereum (1)
-        </span>
-      </div>
-
-      {/* Header */}
-      <header className="sticky top-0 z-40 border-b border-pulse-border/60 bg-pulse-bg/80 backdrop-blur">
-        <div className="mx-auto flex h-14 max-w-5xl items-center justify-between gap-4 px-4 sm:px-6">
-          <div className="flex items-center gap-2.5">
-            <PulseMark className="h-7 w-7" />
-            <span className="text-sm font-semibold tracking-tight">
-              Pulse<span className="text-gradient-pulse"> Revoke</span>
-            </span>
-          </div>
-          <nav className="hidden items-center gap-6 text-xs text-pulse-muted sm:flex">
-            <a href="#how-it-works" className="transition hover:text-pulse-text">
-              How it works
-            </a>
-            <a href="#downloads" className="transition hover:text-pulse-text">
-              Downloads
-            </a>
-            <a href="#ipfs" className="transition hover:text-pulse-text">
-              IPFS
-            </a>
-            <a href="#resources" className="transition hover:text-pulse-text">
-              Resources
-            </a>
-          </nav>
-          <Link
-            href="/app"
-            className="inline-flex items-center gap-1.5 rounded-xl bg-pulse-gradient px-4 py-2 text-xs font-semibold text-white shadow-glow transition hover:brightness-110"
-          >
-            Launch App
-            <svg viewBox="0 0 16 16" className="h-3.5 w-3.5" aria-hidden fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M3 8h10M9 4l4 4-4 4" />
-            </svg>
-          </Link>
-        </div>
-      </header>
-
-      <main className="flex-1">
-        {/* Hero */}
-        <section className="relative overflow-hidden bg-pulse-radial py-20 sm:py-28">
-          <div className="mx-auto max-w-3xl px-4 text-center sm:px-6">
-            <PulseMark className="mx-auto h-16 w-16 sm:h-20 sm:w-20" />
-
-            <div className="mt-5 inline-flex items-center gap-2 rounded-full border border-pulse-border bg-pulse-panel/80 px-3 py-1 text-[11px] font-semibold text-pulse-muted">
-              <span className="text-gradient-pulse">{release.version}</span>
-              <span className="text-pulse-border">·</span>
-              <span>Public release</span>
-            </div>
-
-            <h1 className="mt-4 text-4xl font-bold tracking-tight sm:text-6xl">
-              Pulse<span className="text-gradient-pulse"> Revoke</span>
-            </h1>
-
-            <p className="mt-4 text-base text-pulse-muted sm:text-lg">
-              See every ERC-20 allowance and NFT operator approval your wallet
-              has granted on PulseChain or Ethereum, and revoke the ones you
-              no longer need — one signature at a time.
-            </p>
-
-            <ul className="mt-5 flex flex-wrap items-center justify-center gap-x-4 gap-y-1.5 text-[11px] text-pulse-muted">
-              {[
-                "Non-custodial",
-                "Live on-chain validation",
-                "ERC-20 + NFT approvals",
-                "Open source",
-                "One transaction per revoke",
-              ].map((b) => (
-                <li key={b} className="inline-flex items-center gap-1.5">
-                  <span
-                    aria-hidden
-                    className="h-1.5 w-1.5 rounded-full bg-pulse-cyan/80"
-                  />
-                  {b}
-                </li>
-              ))}
-            </ul>
-
-            <div className="mt-7 flex flex-wrap items-center justify-center gap-3">
-              <Link
-                href="/app"
-                className="inline-flex items-center gap-2 rounded-xl bg-pulse-gradient px-6 py-3 text-sm font-semibold text-white shadow-glow transition hover:brightness-110"
-              >
-                Launch Web App
-                <svg viewBox="0 0 16 16" className="h-4 w-4" aria-hidden fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M3 8h10M9 4l4 4-4 4" />
-                </svg>
-              </Link>
-              <a
-                href={links.github}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center gap-2 rounded-xl border border-pulse-border bg-white/5 px-6 py-3 text-sm font-semibold text-pulse-text transition hover:bg-white/10"
-              >
-                View on GitHub
-              </a>
-            </div>
-
-            {/* Preview card */}
-            <figure
-              className="relative mx-auto mt-14 max-w-3xl"
-              aria-label="Pulse Revoke scanner preview"
-            >
-              <div className="overflow-hidden rounded-2xl border border-pulse-border bg-pulse-panel shadow-glow">
-                {/* Browser chrome */}
-                <div className="flex items-center gap-3 border-b border-pulse-border/70 bg-pulse-bg/60 px-4 py-2.5">
-                  <div className="flex items-center gap-1.5" aria-hidden>
-                    <span className="h-2.5 w-2.5 rounded-full bg-pulse-red/70" />
-                    <span className="h-2.5 w-2.5 rounded-full bg-yellow-400/70" />
-                    <span className="h-2.5 w-2.5 rounded-full bg-pulse-green/70" />
-                  </div>
-                  <div className="flex-1 truncate rounded-md border border-pulse-border/60 bg-pulse-panel/80 px-3 py-1 text-center font-mono text-[11px] text-pulse-muted">
-                    {siteConfig.domain}/app
-                  </div>
-                </div>
-                {/* App preview */}
-                <PreviewMockup />
-              </div>
-              <figcaption className="mt-3 text-center text-[11px] text-pulse-muted/70">
-                Preview of the live scanner at{" "}
-                <Link href="/app" className="underline-offset-2 hover:text-pulse-text hover:underline">
-                  {siteConfig.domain}/app
-                </Link>
-              </figcaption>
-            </figure>
-          </div>
-        </section>
-
-        {/* How it works */}
-        <section id="how-it-works" className="border-t border-pulse-border/60 py-16 sm:py-20">
-          <div className="mx-auto max-w-3xl px-4 sm:px-6">
-            <SectionHeader
-              eyebrow="How it works"
-              title="Three steps, no surprises"
-              description="Pulse Revoke is deliberately narrow: connect, review, and revoke. No account, no tracking, no custody."
-            />
-
-            <ol className="mt-10 grid gap-3 sm:grid-cols-3">
-              {LAUNCHER_STEPS.map((step) => (
-                <li
-                  key={step.n}
-                  className="relative overflow-hidden rounded-2xl border border-pulse-border bg-pulse-panel/60 p-5"
-                >
-                  <span className="font-mono text-[11px] font-semibold text-pulse-muted">
-                    {step.n}
-                  </span>
-                  <h3 className="mt-2 text-sm font-semibold text-pulse-text">
-                    {step.title}
-                  </h3>
-                  <p className="mt-1.5 text-xs leading-relaxed text-pulse-muted">
-                    {step.body}
-                  </p>
-                </li>
-              ))}
-            </ol>
-          </div>
-        </section>
-
-        {/* Downloads */}
-        <section id="downloads" className="border-t border-pulse-border/60 py-16 sm:py-20">
-          <div className="mx-auto max-w-3xl px-4 sm:px-6">
-            <SectionHeader
-              eyebrow="Desktop"
-              title="Download"
-              description="Native desktop builds are coming. The web app at /app works in any browser today — no install required."
-            />
-
-            <p className="mx-auto mt-4 max-w-xl text-center text-[11px] text-pulse-muted/70">
-              Desktop builds pair wallets over WalletConnect (mobile or
-              hardware). Browser-extension wallets like MetaMask and Rabby
-              continue to work in the web app.
-            </p>
-
-            <div className="mt-8 grid grid-cols-2 gap-3 sm:grid-cols-4">
-              {release.artifacts.map((artifact) => (
-                <DownloadButton key={artifact.id} artifact={artifact} />
-              ))}
-            </div>
-
-            <div className="mt-5 flex flex-col items-center gap-2">
-              <ChecksumsLink checksums={release.checksums} />
-            </div>
-          </div>
-        </section>
-
-        {/* IPFS */}
-        <section id="ipfs" className="border-t border-pulse-border/60 py-16 sm:py-20">
-          <div className="mx-auto max-w-3xl px-4 sm:px-6">
-            <SectionHeader
-              eyebrow="Distributed"
-              title="Available on IPFS"
-              description="Each release is pinned to IPFS for censorship-resistant distribution. Access via any public gateway or your own node — the CID stays the same."
-            />
-            <IpfsCard ipfs={release.ipfs} />
-          </div>
-        </section>
-
-        {/* Resources */}
-        <section id="resources" className="border-t border-pulse-border/60 py-16 sm:py-20">
-          <div className="mx-auto max-w-3xl px-4 sm:px-6">
-            <SectionHeader
-              eyebrow="Links"
-              title="Resources"
-              description="Source code, block explorers, ecosystem tools, and manual revoke guides."
-            />
-
-            <div className="mt-8 grid grid-cols-1 gap-3 sm:grid-cols-2">
-              <ResourceCard
-                title="GitHub"
-                description="Source code, issues, and pull requests."
-                href={links.github}
-                external
-              />
-              <ResourceCard
-                title="PulseScan"
-                description="Block explorer for PulseChain mainnet."
-                href={links.explorer}
-                external
-              />
-              <ResourceCard
-                title="Etherscan"
-                description="Block explorer for Ethereum mainnet."
-                href={links.etherscan}
-                external
-              />
-              <ResourceCard
-                title="PulseX"
-                description="Native DEX for the PulseChain ecosystem."
-                href={links.pulsex}
-                external
-              />
-              <ResourceCard
-                title="How revoking works"
-                description="A plain-English walkthrough of approvals, risk, and what each revoke does on-chain."
-                href="/app#how-it-works"
-              />
-              <ResourceCard
-                title="Manual revoke on PulseChain"
-                description="Step-by-step guide to verify and revoke approvals directly through PulseScan."
-                href="#manual-revoke-pulsechain"
-              />
-              <ResourceCard
-                title="Manual revoke on Ethereum"
-                description="Step-by-step guide to verify and revoke approvals directly through Etherscan."
-                href="#manual-revoke-ethereum"
-              />
-            </div>
-          </div>
-        </section>
-
-        {/* Manual revoke guides */}
-        <section
-          id="manual-revoke-guides"
-          className="border-t border-pulse-border/60 py-16 sm:py-20"
-        >
-          <div className="mx-auto max-w-3xl px-4 sm:px-6">
-            <SectionHeader
-              eyebrow="Guides"
-              title="Manual revoke through public explorers"
-              description="Pulse Revoke helps you scan faster, but approvals are on-chain and can always be verified and revoked manually using public explorer tooling."
-            />
-
-            <div className="mt-8 grid grid-cols-1 gap-4">
-              <ManualRevokeGuide
-                id="manual-revoke-pulsechain"
-                title="Manual revoke on PulseChain"
-                explorerName="PulseScan"
-                explorerHref={links.explorer}
-                nativeGasSymbol="PLS"
-              />
-              <ManualRevokeGuide
-                id="manual-revoke-ethereum"
-                title="Manual revoke on Ethereum"
-                explorerName="Etherscan"
-                explorerHref={links.etherscan}
-                nativeGasSymbol="ETH"
-              />
-            </div>
-          </div>
-        </section>
-      </main>
-
-      {/* Footer */}
-      <footer className="border-t border-pulse-border/60 bg-pulse-bg py-10">
-        <div className="mx-auto flex max-w-5xl flex-col items-center gap-5 px-4 text-center sm:px-6">
-          <div className="flex items-center gap-2.5">
-            <PulseMark className="h-6 w-6" />
-            <span className="text-sm font-semibold text-pulse-text">
-              {siteConfig.name}
-            </span>
-            <span className="font-mono text-[11px] text-pulse-muted">
-              {siteConfig.domain}
-            </span>
-          </div>
-          <div className="flex flex-wrap items-center justify-center gap-4 text-xs text-pulse-muted">
-            <Link href="/app" className="transition hover:text-pulse-text">
-              Launch App
-            </Link>
-            <a href={links.github} target="_blank" rel="noopener noreferrer" className="transition hover:text-pulse-text">
-              GitHub
-            </a>
-            <a href={links.explorer} target="_blank" rel="noopener noreferrer" className="transition hover:text-pulse-text">
-              PulseScan
-            </a>
-          </div>
-          <p className="text-[11px] text-pulse-muted/70">
-            Informational and transactional. Not financial advice.{" "}
-            © {new Date().getFullYear()} {siteConfig.name} · {siteConfig.attribution}
-          </p>
-        </div>
-      </footer>
-    </div>
-  );
-}
-
-const LAUNCHER_STEPS = [
+const HOW_IT_WORKS = [
   {
-    n: "01",
-    title: "Connect your wallet",
-    body: "Pulse Revoke reads your public address to look up allowances. It never asks for a seed phrase and never signs anything until you revoke.",
+    step: "01",
+    title: "Connect wallet",
+    body: "Use a browser wallet or WalletConnect. The scanner reads public chain data for your address.",
   },
   {
-    n: "02",
-    title: "Review your approvals",
-    body: "We pull your historical Approval events from the connected chain's explorer (PulseScan or Etherscan), re-verify each one live on-chain, and label known spenders so you can judge risk at a glance.",
+    step: "02",
+    title: "Review approvals",
+    body: "See active ERC-20 allowances and NFT operator approvals, with risk cues and spender labels.",
   },
   {
-    n: "03",
-    title: "Revoke access you don't need",
-    body: "Clear approvals one at a time or in a sequential batch. Each revoke is a standard approve(spender, 0) transaction on the token contract, paid in the chain's native gas token (PLS or ETH).",
+    step: "03",
+    title: "Revoke what you do not trust",
+    body: "Each revoke is a wallet-confirmed on-chain transaction that clears an approval.",
   },
 ] as const;
 
-// ─── Sub-components ────────────────────────────────────────────────────────────
+const FAQ_ITEMS = [
+  {
+    question: "Does Revoke.PLS custody funds?",
+    answer:
+      "No. Revoke.PLS reads public wallet and chain data. Your funds stay in your wallet at all times.",
+  },
+  {
+    question: "Can it move my tokens?",
+    answer:
+      "The app cannot move tokens by itself. It only prepares explicit revoke transactions after you click a revoke action and confirm in your wallet.",
+  },
+  {
+    question: "Why do I need to sign transactions?",
+    answer:
+      "Revoking changes approval state on-chain, so your wallet must sign and submit a transaction. Network gas applies.",
+  },
+  {
+    question: "What does revoking do?",
+    answer:
+      "For ERC-20s, revoking sets the spender allowance to zero. For NFTs, it clears the relevant operator or per-token approval.",
+  },
+  {
+    question: "Is the desktop app available yet?",
+    answer:
+      "Not yet. The Tauri desktop path is scaffolded, but public desktop artifacts are still pending release.",
+  },
+  {
+    question: "What chains are supported?",
+    answer:
+      "PulseChain mainnet (369) and Ethereum mainnet (1). Results should still be checked on PulseScan or Etherscan before signing.",
+  },
+] as const;
 
-function SectionHeader({
-  eyebrow,
-  title,
-  description,
-}: {
-  eyebrow: string;
-  title: string;
-  description: string;
-}) {
+export default function LauncherPage() {
+  const release = currentRelease;
+  const desktopReady = release.artifacts.some(
+    (artifact) => !isPlaceholderUrl(artifact.href),
+  );
+  const ipfsReady = !isPlaceholderCid(release.ipfs.cid);
+
   return (
-    <div className="text-center">
-      <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-pulse-muted">
-        {eyebrow}
-      </p>
-      <h2 className="mt-2 text-2xl font-bold tracking-tight sm:text-3xl">
-        {title}
-      </h2>
-      <p className="mt-3 text-sm text-pulse-muted">{description}</p>
+    <div className="min-h-dvh bg-pulse-bg text-pulse-text">
+      <SiteHeader desktopReady={desktopReady} />
+      <main>
+        <Hero desktopReady={desktopReady} />
+        <TrustStrip />
+        <HowItWorks />
+        <DesktopSection release={release} desktopReady={desktopReady} />
+        <IpfsSection release={release} ipfsReady={ipfsReady} />
+        <FAQSection />
+      </main>
+      <SiteFooter desktopReady={desktopReady} />
     </div>
   );
 }
 
-function ManualRevokeGuide({
-  id,
+function SiteHeader({ desktopReady }: { desktopReady: boolean }) {
+  return (
+    <header className="sticky top-0 z-40 border-b border-pulse-border/60 bg-pulse-bg/85 backdrop-blur">
+      <div className="mx-auto flex h-16 max-w-6xl items-center justify-between gap-4 px-4 sm:px-6">
+        <Link
+          href="/"
+          className="flex items-center gap-2.5"
+          aria-label={`${productName} home`}
+        >
+          <PulseMark className="h-8 w-8" />
+          <span className="text-sm font-semibold tracking-tight sm:text-base">
+            Revoke<span className="text-gradient-pulse">.PLS</span>
+          </span>
+        </Link>
+
+        <nav className="hidden items-center gap-6 text-sm text-pulse-muted md:flex">
+          <a href="#how-it-works" className="transition hover:text-pulse-text">
+            How it works
+          </a>
+          <a href="#desktop" className="transition hover:text-pulse-text">
+            Desktop
+          </a>
+          <a href="#ipfs" className="transition hover:text-pulse-text">
+            IPFS
+          </a>
+          <a href="#faq" className="transition hover:text-pulse-text">
+            FAQ
+          </a>
+        </nav>
+
+        <div className="flex items-center gap-2">
+          <StatusPill>{desktopReady ? "Desktop ready" : "Desktop pending"}</StatusPill>
+          <Link
+            href="/app"
+            className="inline-flex items-center justify-center rounded-xl bg-pulse-gradient px-4 py-2 text-xs font-semibold text-white shadow-glow transition hover:brightness-110"
+          >
+            Launch Scanner
+          </Link>
+        </div>
+      </div>
+    </header>
+  );
+}
+
+function Hero({ desktopReady }: { desktopReady: boolean }) {
+  return (
+    <section className="relative overflow-hidden border-b border-pulse-border/50">
+      <div className="absolute inset-0 bg-pulse-radial opacity-90" aria-hidden />
+      <div
+        className="absolute inset-x-0 bottom-0 h-28 bg-gradient-to-t from-pulse-bg to-transparent"
+        aria-hidden
+      />
+
+      <div className="relative mx-auto grid max-w-6xl gap-10 px-4 py-16 sm:px-6 sm:py-24 lg:grid-cols-[1.05fr_0.95fr] lg:items-center">
+        <div>
+          <div className="inline-flex items-center gap-2 rounded-full border border-pulse-cyan/35 bg-pulse-panel/75 px-3 py-1 text-xs font-semibold text-pulse-cyan shadow-glow">
+            <span className="h-1.5 w-1.5 rounded-full bg-pulse-green" />
+            PulseChain approval safety
+          </div>
+
+          <h1 className="mt-5 max-w-3xl text-4xl font-bold tracking-tight sm:text-6xl">
+            Revoke risky token approvals with{" "}
+            <span className="text-gradient-pulse">Revoke.PLS</span>.
+          </h1>
+
+          <p className="mt-5 max-w-2xl text-base leading-7 text-pulse-muted sm:text-lg">
+            Review ERC-20 allowances and NFT approvals on PulseChain and
+            Ethereum, then clear the ones you do not trust. Revoke.PLS is
+            read-only until you choose a revoke and approve it in your wallet.
+          </p>
+
+          <div className="mt-8 flex flex-col gap-3 sm:flex-row">
+            <Link
+              href="/app"
+              className="inline-flex items-center justify-center rounded-xl bg-pulse-gradient px-6 py-3 text-sm font-semibold text-white shadow-glow transition hover:brightness-110"
+            >
+              Launch Scanner
+            </Link>
+            <a
+              href="#desktop"
+              className="inline-flex items-center justify-center rounded-xl border border-pulse-border bg-white/5 px-6 py-3 text-sm font-semibold text-pulse-text transition hover:bg-white/10"
+            >
+              Desktop App {desktopReady ? "" : "/ Coming Soon"}
+            </a>
+          </div>
+
+          <p className="mt-4 max-w-xl text-xs leading-5 text-pulse-muted">
+            Always verify spender addresses on PulseScan or Etherscan before
+            signing. Registry labels are curated, not a guarantee of safety.
+          </p>
+        </div>
+
+        <LaunchChoicePanel desktopReady={desktopReady} />
+      </div>
+    </section>
+  );
+}
+
+function LaunchChoicePanel({ desktopReady }: { desktopReady: boolean }) {
+  return (
+    <div className="rounded-2xl border border-pulse-border bg-pulse-panel/80 p-4 shadow-glow">
+      <div className="grid gap-3">
+        <ChoiceCard
+          eyebrow="Available now"
+          title="Launch web scanner"
+          body="Use the hosted scanner in your browser. Browser wallets and WalletConnect continue to work here."
+          action={
+            <Link
+              href="/app"
+              className="inline-flex items-center justify-center rounded-xl bg-pulse-gradient px-4 py-2.5 text-sm font-semibold text-white transition hover:brightness-110"
+            >
+              Open /app
+            </Link>
+          }
+        />
+
+        <ChoiceCard
+          eyebrow={desktopReady ? "Desktop release" : "Release pending"}
+          title="Download local desktop app"
+          body={
+            desktopReady
+              ? "Download a signed desktop build from the current release."
+              : "Desktop builds are planned for local use, but no public artifact is published in this repo yet."
+          }
+          action={
+            <a
+              href="#desktop"
+              className="inline-flex items-center justify-center rounded-xl border border-pulse-border bg-white/5 px-4 py-2.5 text-sm font-semibold text-pulse-text transition hover:bg-white/10"
+            >
+              View status
+            </a>
+          }
+        />
+      </div>
+    </div>
+  );
+}
+
+function ChoiceCard({
+  eyebrow,
   title,
-  explorerName,
-  explorerHref,
-  nativeGasSymbol,
+  body,
+  action,
 }: {
-  id: string;
+  eyebrow: string;
   title: string;
-  explorerName: string;
-  explorerHref: string;
-  nativeGasSymbol: string;
+  body: string;
+  action: ReactNode;
 }) {
   return (
-    <article id={id} className="rounded-2xl border border-pulse-border bg-pulse-panel/60 p-5 sm:p-6">
-      <h3 className="text-sm font-semibold text-pulse-text sm:text-base">{title}</h3>
-
-      <div className="mt-3 space-y-3 text-xs leading-relaxed text-pulse-muted sm:text-sm">
-        <p>
-          <strong className="text-pulse-text">What manual revoke means:</strong>{" "}
-          instead of using Pulse Revoke, you open the chain explorer directly,
-          inspect your approvals there, and submit the revoke transaction from
-          your wallet.
-        </p>
-        <p>
-          Approvals (token allowances and NFT operator permissions) are
-          on-chain permissions and remain active until you change or revoke
-          them.
-        </p>
-        <ol className="list-decimal space-y-1.5 pl-4">
-          <li>
-            Open{" "}
-            <a
-              href={explorerHref}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="underline underline-offset-2 hover:text-pulse-text"
-            >
-              {explorerName}
-            </a>{" "}
-            and connect your wallet if needed.
-          </li>
-          <li>
-            Navigate to the explorer section for token/NFT approvals (labeling
-            can vary by explorer and over time).
-          </li>
-          <li>
-            Find the approval you no longer need and start the revoke action.
-          </li>
-          <li>
-            Before signing, verify the spender address, token/NFT, and that you
-            are on the correct network.
-          </li>
-          <li>
-            Confirm the transaction in your wallet and wait for on-chain
-            confirmation.
-          </li>
-        </ol>
-        <p>
-          Revoking is an on-chain transaction, so it requires gas in{" "}
-          {nativeGasSymbol}. Pulse Revoke does not have special control over
-          approvals — it simply helps you discover and review them faster.
-        </p>
-      </div>
+    <article className="rounded-xl border border-pulse-border bg-pulse-bg/55 p-5">
+      <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-pulse-cyan">
+        {eyebrow}
+      </p>
+      <h2 className="mt-2 text-xl font-semibold text-pulse-text">{title}</h2>
+      <p className="mt-2 text-sm leading-6 text-pulse-muted">{body}</p>
+      <div className="mt-4">{action}</div>
     </article>
   );
 }
 
-const PLATFORM_ICONS: Record<ArtifactIcon, React.ReactElement> = {
-  windows: <WindowsIcon />,
-  macos: <MacIcon />,
-  linux: <LinuxIcon />,
-};
-
-function DownloadButton({ artifact }: { artifact: ReleaseArtifact }) {
-  const { href, platform, architecture, icon, note } = artifact;
-  const unreleased = isPlaceholderUrl(href);
-  const label = `Download for ${platform} ${architecture}`;
-  const platformIcon = PLATFORM_ICONS[icon];
-
-  const base =
-    "flex flex-col items-center gap-2.5 rounded-xl border px-4 py-5 text-center transition";
-
-  if (unreleased) {
-    return (
-      <div
-        role="button"
-        aria-disabled="true"
-        aria-label={`${label} — coming soon`}
-        className={`${base} cursor-not-allowed border-pulse-border/70 bg-pulse-panel/40`}
-      >
-        <span className="text-pulse-muted/70" aria-hidden>
-          {platformIcon}
-        </span>
-        <span className="text-sm font-semibold text-pulse-muted">
-          {platform}
-        </span>
-        <span className="text-[10px] text-pulse-muted/60">{architecture}</span>
-        <span className="rounded-full border border-pulse-border/70 bg-pulse-bg/60 px-2 py-0.5 text-[9px] font-semibold uppercase tracking-wider text-pulse-muted">
-          Coming soon
-        </span>
-      </div>
-    );
-  }
-
+function TrustStrip() {
   return (
-    <a
-      href={href}
-      aria-label={label}
-      className={`${base} border-pulse-border bg-pulse-panel/70 hover:border-pulse-purple/50 hover:bg-pulse-panel2`}
-    >
-      <span className="text-pulse-text" aria-hidden>
-        {platformIcon}
-      </span>
-      <span className="text-sm font-semibold text-pulse-text">{platform}</span>
-      <span className="text-[10px] text-pulse-muted">{architecture}</span>
-      <span className="text-[10px] font-semibold uppercase tracking-wider text-pulse-cyan">
-        Download
-      </span>
-      {note ? (
-        <span className="text-[10px] text-pulse-muted/70">{note}</span>
-      ) : null}
-    </a>
-  );
-}
-
-function ChecksumsLink({ checksums }: { checksums: ChecksumsArtifact }) {
-  const { href, note } = checksums;
-  const unreleased = isPlaceholderUrl(href);
-  const base =
-    "inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-medium transition";
-  const icon = (
-    <svg
-      viewBox="0 0 16 16"
-      className="h-3.5 w-3.5"
-      aria-hidden
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.5"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <rect x="2" y="2" width="12" height="12" rx="2" />
-      <path d="M5 8h6M5 5h4M5 11h3" />
-    </svg>
-  );
-
-  return (
-    <>
-      {unreleased ? (
-        <span
-          aria-disabled="true"
-          className={`${base} cursor-not-allowed border-pulse-border/60 bg-pulse-panel/40 text-pulse-muted/70`}
-        >
-          {icon}
-          SHA-256 checksums — coming soon
-        </span>
-      ) : (
-        <a
-          href={href}
-          className={`${base} border-pulse-border bg-pulse-panel/60 text-pulse-muted hover:border-pulse-cyan/40 hover:text-pulse-cyan`}
-        >
-          {icon}
-          SHA-256 checksums
-        </a>
-      )}
-      <p className="max-w-md text-center text-[11px] text-pulse-muted/70">
-        {note}
-      </p>
-    </>
-  );
-}
-
-function IpfsCard({ ipfs }: { ipfs: ReleaseManifest["ipfs"] }) {
-  const { cid, preferredGateway, alternateGateways } = ipfs;
-  const unreleased = isPlaceholderCid(cid);
-  const gateways: readonly IpfsGateway[] = [preferredGateway, ...alternateGateways];
-
-  return (
-    <div className="mt-8 overflow-hidden rounded-2xl border border-pulse-border bg-pulse-panel/70">
-      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-pulse-border/60 px-5 py-4">
-        <p className="text-[11px] font-semibold uppercase tracking-widest text-pulse-muted">
-          Content ID
-        </p>
-        {unreleased ? (
-          <span className="rounded-full border border-pulse-border/70 bg-pulse-bg/60 px-2 py-0.5 text-[9px] font-semibold uppercase tracking-wider text-pulse-muted">
-            Placeholder
-          </span>
-        ) : (
-          <span className="rounded-full border border-pulse-green/30 bg-pulse-green/10 px-2 py-0.5 text-[9px] font-semibold uppercase tracking-wider text-pulse-green">
-            Pinned
-          </span>
-        )}
-      </div>
-      <div className="px-5 py-4">
-        <p className="break-all font-mono text-sm text-pulse-text">{cid}</p>
-        <p className="mt-2 text-[11px] text-pulse-muted/80">
-          CIDs are content-addressed: any gateway below serves the same bytes.
-          Verify against the checksums file after download.
-        </p>
-      </div>
-      <div className="flex flex-wrap gap-2 border-t border-pulse-border/60 px-5 py-4">
-        {gateways.map((gateway) => (
-          <IpfsGatewayLink
-            key={gateway.base}
-            gateway={gateway}
-            cid={cid}
-            disabled={unreleased}
-          />
+    <section className="border-b border-pulse-border/60 bg-pulse-bg py-6">
+      <div className="mx-auto grid max-w-6xl gap-2 px-4 sm:grid-cols-2 sm:px-6 lg:grid-cols-4">
+        {TRUST_POINTS.map((point) => (
+          <div
+            key={point}
+            className="flex items-center gap-2 rounded-xl border border-pulse-border bg-pulse-panel/55 px-4 py-3 text-sm text-pulse-muted"
+          >
+            <span className="h-1.5 w-1.5 rounded-full bg-pulse-green" />
+            {point}
+          </div>
         ))}
       </div>
-    </div>
+    </section>
   );
 }
 
-function IpfsGatewayLink({
-  gateway,
-  cid,
-  disabled,
-}: {
-  gateway: IpfsGateway;
-  cid: string;
-  disabled?: boolean;
-}) {
-  const base =
-    "inline-flex items-center gap-1.5 rounded-lg border px-3 py-2 text-xs font-medium transition";
-  const icon = (
-    <svg
-      viewBox="0 0 16 16"
-      className="h-3.5 w-3.5 shrink-0"
-      aria-hidden
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.5"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <path d="M8 2a6 6 0 1 1 0 12A6 6 0 0 1 8 2zm0 0v12M2 8h12M3 5a9 9 0 0 0 10 0M3 11a9 9 0 0 0 10 0" />
-    </svg>
+function HowItWorks() {
+  return (
+    <section id="how-it-works" className="border-b border-pulse-border/60 py-16 sm:py-20">
+      <SectionHeader
+        eyebrow="How it works"
+        title="A narrow flow for approval review"
+        body="The product does three things: connect, review, and revoke. Nothing else needs custody or hidden signing."
+      />
+      <div className="mx-auto mt-10 grid max-w-6xl gap-4 px-4 sm:px-6 lg:grid-cols-3">
+        {HOW_IT_WORKS.map((item) => (
+          <article
+            key={item.step}
+            className="rounded-2xl border border-pulse-border bg-pulse-panel/60 p-6"
+          >
+            <span className="font-mono text-xs font-semibold text-pulse-cyan">
+              {item.step}
+            </span>
+            <h3 className="mt-3 text-lg font-semibold text-pulse-text">
+              {item.title}
+            </h3>
+            <p className="mt-2 text-sm leading-6 text-pulse-muted">
+              {item.body}
+            </p>
+          </article>
+        ))}
+      </div>
+    </section>
   );
+}
 
-  if (disabled) {
+function DesktopSection({
+  release,
+  desktopReady,
+}: {
+  release: ReleaseManifest;
+  desktopReady: boolean;
+}) {
+  return (
+    <section id="desktop" className="border-b border-pulse-border/60 py-16 sm:py-20">
+      <div className="mx-auto grid max-w-6xl gap-8 px-4 sm:px-6 lg:grid-cols-[0.95fr_1.05fr] lg:items-start">
+        <div>
+          <SectionKicker>Desktop app</SectionKicker>
+          <h2 className="mt-2 text-3xl font-bold tracking-tight sm:text-4xl">
+            A local app path for users who prefer not to rely on a hosted
+            frontend.
+          </h2>
+          <p className="mt-4 text-sm leading-7 text-pulse-muted">
+            The desktop build is designed to run the same scanner locally in a
+            Tauri shell. It keeps the same wallet-confirmed revoke flow: every
+            write still appears in your wallet before you sign.
+          </p>
+          <div className="mt-5 grid gap-2 text-sm text-pulse-muted">
+            <CheckLine>Run the interface locally after installation.</CheckLine>
+            <CheckLine>Use WalletConnect for desktop pairing.</CheckLine>
+            <CheckLine>Same approval review and revoke model as /app.</CheckLine>
+          </div>
+        </div>
+
+        <div className="rounded-2xl border border-pulse-border bg-pulse-panel/70 p-4">
+          <div className="flex flex-wrap items-center justify-between gap-3 border-b border-pulse-border/60 pb-4">
+            <div>
+              <p className="text-sm font-semibold text-pulse-text">
+                Desktop release status
+              </p>
+              <p className="mt-1 text-xs text-pulse-muted">
+                {desktopReady
+                  ? `Artifacts listed for ${release.version}.`
+                  : "No public desktop artifact is published yet."}
+              </p>
+            </div>
+            <StatusPill>{desktopReady ? release.version : "Coming soon"}</StatusPill>
+          </div>
+
+          <div className="mt-4 grid gap-3 sm:grid-cols-2">
+            {release.artifacts.map((artifact) => (
+              <ArtifactCard key={artifact.id} artifact={artifact} />
+            ))}
+          </div>
+
+          <p className="mt-4 rounded-xl border border-pulse-border bg-pulse-bg/55 p-3 text-xs leading-5 text-pulse-muted">
+            Desktop downloads remain disabled until signed release artifacts and
+            checksums are available.
+          </p>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function ArtifactCard({ artifact }: { artifact: ReleaseArtifact }) {
+  const ready = !isPlaceholderUrl(artifact.href);
+
+  if (!ready) {
     return (
-      <span
-        aria-disabled="true"
-        className={`${base} cursor-not-allowed border-pulse-border/60 bg-pulse-bg/30 text-pulse-muted/60`}
-      >
-        {icon}
-        {gateway.label}
-      </span>
+      <div className="rounded-xl border border-pulse-border bg-pulse-bg/55 p-4">
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <p className="text-sm font-semibold text-pulse-text">
+              {artifact.platform}
+            </p>
+            <p className="mt-1 text-xs text-pulse-muted">
+              {artifact.architecture}
+            </p>
+          </div>
+          <span className="rounded-full border border-pulse-border bg-pulse-panel/70 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-pulse-muted">
+            Pending
+          </span>
+        </div>
+        <p className="mt-3 text-xs text-pulse-muted">Download coming soon.</p>
+      </div>
     );
   }
 
   return (
     <a
-      href={`${gateway.base}${cid}`}
-      target="_blank"
-      rel="noopener noreferrer"
-      className={`${base} border-pulse-border bg-pulse-bg/60 text-pulse-muted hover:border-pulse-cyan/40 hover:text-pulse-cyan`}
+      href={artifact.href}
+      className="block rounded-xl border border-pulse-cyan/40 bg-pulse-cyan/10 p-4 transition hover:bg-pulse-cyan/15"
     >
-      {icon}
-      {gateway.label}
+      <p className="text-sm font-semibold text-pulse-text">
+        {artifact.platform}
+      </p>
+      <p className="mt-1 text-xs text-pulse-muted">{artifact.architecture}</p>
+      <p className="mt-3 text-xs font-semibold text-pulse-cyan">Download</p>
     </a>
   );
 }
 
-function ResourceCard({
-  title,
-  description,
-  href,
-  external,
+function IpfsSection({
+  release,
+  ipfsReady,
 }: {
-  title: string;
-  description: string;
-  href: string;
-  external?: boolean;
+  release: ReleaseManifest;
+  ipfsReady: boolean;
 }) {
   return (
-    <a
-      href={href}
-      {...(external ? { target: "_blank", rel: "noopener noreferrer" } : {})}
-      className="flex flex-col gap-1.5 rounded-xl border border-pulse-border bg-pulse-panel/60 px-5 py-4 transition hover:border-pulse-purple/50 hover:bg-pulse-panel2"
-    >
-      <span className="flex items-center justify-between">
-        <span className="text-sm font-semibold text-pulse-text">{title}</span>
-        {external && (
-          <svg viewBox="0 0 16 16" className="h-3.5 w-3.5 text-pulse-muted" aria-hidden fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M6 3H3v10h10v-3M13 3H9m4 0v4M7 9l6-6" />
-          </svg>
-        )}
-      </span>
-      <span className="text-xs text-pulse-muted">{description}</span>
-    </a>
+    <section id="ipfs" className="border-b border-pulse-border/60 py-16 sm:py-20">
+      <div className="mx-auto grid max-w-6xl gap-8 px-4 sm:px-6 lg:grid-cols-[0.9fr_1.1fr] lg:items-start">
+        <div>
+          <SectionKicker>Decentralized distribution</SectionKicker>
+          <h2 className="mt-2 text-3xl font-bold tracking-tight sm:text-4xl">
+            IPFS-ready distribution path.
+          </h2>
+          <p className="mt-4 text-sm leading-7 text-pulse-muted">
+            The release manifest already models IPFS gateways and checksums so
+            builds can be pinned after release. The final CID is pending until a
+            real artifact is published and verified.
+          </p>
+        </div>
+
+        <div className="rounded-2xl border border-pulse-border bg-pulse-panel/70 p-5">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <p className="text-sm font-semibold text-pulse-text">
+                IPFS status
+              </p>
+              <p className="mt-1 text-xs text-pulse-muted">
+                {ipfsReady
+                  ? "A pinned CID is present in the release manifest."
+                  : "Final CID pending release."}
+              </p>
+            </div>
+            <StatusPill>{ipfsReady ? "Pinned" : "CID pending"}</StatusPill>
+          </div>
+
+          <div className="mt-5 rounded-xl border border-pulse-border bg-pulse-bg/55 p-4">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-pulse-muted">
+              Content ID
+            </p>
+            {ipfsReady ? (
+              <p className="mt-2 break-all font-mono text-sm text-pulse-text">
+                {release.ipfs.cid}
+              </p>
+            ) : (
+              <p className="mt-2 text-sm text-pulse-muted">
+                No final CID has been published yet.
+              </p>
+            )}
+          </div>
+
+          <div className="mt-4 flex flex-wrap gap-2">
+            {[release.ipfs.preferredGateway, ...release.ipfs.alternateGateways].map(
+              (gateway) => (
+                <span
+                  key={gateway.base}
+                  className="rounded-full border border-pulse-border bg-pulse-bg/55 px-3 py-1 text-xs text-pulse-muted"
+                >
+                  {gateway.label}
+                </span>
+              ),
+            )}
+          </div>
+
+          <p className="mt-4 text-xs leading-5 text-pulse-muted">
+            Gateway links stay disabled until a real CID is present. Checksums
+            should be published with the same release.
+          </p>
+        </div>
+      </div>
+    </section>
   );
 }
 
-const PREVIEW_ROWS = [
-  {
-    symbol: "USDC",
-    spender: "PulseX Router v2",
-    trusted: true,
-    allowance: "Unlimited",
-    risk: "High",
-    riskColor: "red",
-  },
-  {
-    symbol: "DAI",
-    spender: "0x9f3…a21c",
-    trusted: false,
-    allowance: "1,000.00",
-    risk: "Medium",
-    riskColor: "yellow",
-  },
-  {
-    symbol: "WPLS",
-    spender: "PulseX Router v1",
-    trusted: true,
-    allowance: "250.00",
-    risk: "Low",
-    riskColor: "green",
-  },
-] as const;
-
-function PreviewMockup() {
+function FAQSection() {
   return (
-    <div className="p-5 sm:p-6" aria-hidden>
-      {/* Connected header */}
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="flex flex-wrap items-center gap-2">
-          <span className="inline-flex items-center gap-1.5 rounded-full border border-pulse-border bg-pulse-bg/60 px-2.5 py-1 text-[10px] font-medium text-pulse-muted">
-            <span className="h-1.5 w-1.5 rounded-full bg-pulse-green" />
-            Connected
-          </span>
-          <span className="font-mono text-[10px] text-pulse-muted">
-            0x3f2…b7c
-          </span>
-          <span className="text-[10px] text-pulse-muted">3 active · 5 candidates</span>
-          <span className="inline-flex items-center gap-1 rounded-full border border-pulse-red/40 bg-pulse-red/10 px-2 py-0.5 text-[10px] font-semibold text-pulse-red">
-            1 high-risk
-          </span>
-        </div>
-        <span className="rounded-lg border border-pulse-border bg-white/5 px-3 py-1.5 text-[10px] font-semibold text-pulse-text">
-          Rescan
-        </span>
+    <section id="faq" className="py-16 sm:py-20">
+      <SectionHeader
+        eyebrow="FAQ"
+        title="Short answers before you connect"
+        body="Approval tools should be boring in the right places: clear permissions, clear transactions, clear limits."
+      />
+      <div className="mx-auto mt-10 grid max-w-6xl gap-3 px-4 sm:px-6 lg:grid-cols-2">
+        {FAQ_ITEMS.map((item) => (
+          <details
+            key={item.question}
+            className="group rounded-2xl border border-pulse-border bg-pulse-panel/60 p-5"
+          >
+            <summary className="flex cursor-pointer list-none items-center justify-between gap-4 text-sm font-semibold text-pulse-text">
+              {item.question}
+              <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-pulse-border text-pulse-muted transition group-open:rotate-45">
+                +
+              </span>
+            </summary>
+            <p className="mt-3 text-sm leading-6 text-pulse-muted">
+              {item.answer}
+            </p>
+          </details>
+        ))}
       </div>
+    </section>
+  );
+}
 
-      {/* Table */}
-      <div className="mt-4 overflow-hidden rounded-xl border border-pulse-border bg-pulse-bg/40">
-        <div className="hidden grid-cols-[1.2fr_1.5fr_1fr_auto] gap-4 border-b border-pulse-border bg-pulse-bg/60 px-4 py-2.5 text-[9px] font-semibold uppercase tracking-wider text-pulse-muted sm:grid">
-          <div>Token</div>
-          <div>Spender</div>
-          <div>Allowance · Risk</div>
-          <div className="text-right">Action</div>
+function SiteFooter({ desktopReady }: { desktopReady: boolean }) {
+  return (
+    <footer className="border-t border-pulse-border/60 bg-pulse-bg py-10">
+      <div className="mx-auto flex max-w-6xl flex-col gap-6 px-4 text-sm text-pulse-muted sm:px-6 lg:flex-row lg:items-center lg:justify-between">
+        <div className="flex items-center gap-3">
+          <PulseMark className="h-7 w-7" />
+          <div>
+            <p className="font-semibold text-pulse-text">{productName}</p>
+            <p className="text-xs">{siteConfig.attribution}</p>
+          </div>
         </div>
-        <ul className="divide-y divide-pulse-border/60">
-          {PREVIEW_ROWS.map((row) => (
-            <li
-              key={row.symbol}
-              className="grid grid-cols-1 items-center gap-3 px-4 py-3 sm:grid-cols-[1.2fr_1.5fr_1fr_auto] sm:gap-4"
-            >
-              <div className="flex items-center gap-2.5">
-                <div className="flex h-7 w-7 items-center justify-center rounded-full bg-pulse-gradient text-[10px] font-bold text-white">
-                  {row.symbol.slice(0, 2)}
-                </div>
-                <span className="text-xs font-semibold text-pulse-text">
-                  {row.symbol}
-                </span>
-              </div>
-              <div className="flex items-center gap-1.5">
-                <span className="truncate text-xs text-pulse-text">
-                  {row.spender}
-                </span>
-                {row.trusted ? (
-                  <span className="rounded-full border border-pulse-cyan/40 bg-pulse-cyan/10 px-1.5 py-0.5 text-[9px] font-semibold text-pulse-cyan">
-                    Trusted
-                  </span>
-                ) : (
-                  <span className="rounded-full border border-pulse-border bg-pulse-panel2/60 px-1.5 py-0.5 text-[9px] font-semibold text-pulse-muted">
-                    Unknown
-                  </span>
-                )}
-              </div>
-              <div className="flex items-center gap-2">
-                <span
-                  className={`h-1.5 w-1.5 rounded-full ${
-                    row.riskColor === "red"
-                      ? "bg-pulse-red"
-                      : row.riskColor === "yellow"
-                      ? "bg-yellow-400"
-                      : "bg-pulse-green"
-                  }`}
-                />
-                <span className="text-xs text-pulse-text">{row.allowance}</span>
-                <span className="text-[10px] text-pulse-muted">· {row.risk}</span>
-              </div>
-              <div className="flex justify-start sm:justify-end">
-                <span className="rounded-lg bg-pulse-gradient px-3 py-1.5 text-[10px] font-semibold text-white shadow-glow">
-                  Revoke
-                </span>
-              </div>
-            </li>
-          ))}
-        </ul>
+
+        <nav className="flex flex-wrap gap-4 text-xs">
+          <Link href="/app" className="transition hover:text-pulse-text">
+            Launch Scanner
+          </Link>
+          <a
+            href={siteConfig.links.github}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="transition hover:text-pulse-text"
+          >
+            GitHub
+          </a>
+          <a href="#desktop" className="transition hover:text-pulse-text">
+            Desktop {desktopReady ? "downloads" : "coming soon"}
+          </a>
+        </nav>
       </div>
+    </footer>
+  );
+}
+
+function SectionHeader({
+  eyebrow,
+  title,
+  body,
+}: {
+  eyebrow: string;
+  title: string;
+  body: string;
+}) {
+  return (
+    <div className="mx-auto max-w-3xl px-4 text-center sm:px-6">
+      <SectionKicker>{eyebrow}</SectionKicker>
+      <h2 className="mt-2 text-3xl font-bold tracking-tight sm:text-4xl">
+        {title}
+      </h2>
+      <p className="mt-3 text-sm leading-7 text-pulse-muted">{body}</p>
     </div>
   );
 }
 
-// ─── Platform icons ────────────────────────────────────────────────────────────
-
-function WindowsIcon() {
+function SectionKicker({ children }: { children: ReactNode }) {
   return (
-    <svg viewBox="0 0 24 24" className="h-6 w-6" aria-hidden fill="currentColor">
-      <path d="M3 5.5 11 4v7.5H3V5.5zm9-1.65L21 2v9.5h-9V3.85zM3 12.5h8V20l-8-1.5v-6zm9 0h9V22l-9-1.5v-8z" />
-    </svg>
+    <p className="text-xs font-semibold uppercase tracking-[0.18em] text-pulse-cyan">
+      {children}
+    </p>
   );
 }
 
-function MacIcon() {
+function CheckLine({ children }: { children: ReactNode }) {
   return (
-    <svg viewBox="0 0 24 24" className="h-6 w-6" aria-hidden fill="currentColor">
-      <path d="M16.37 1.5c.06 1.34-.47 2.64-1.26 3.58-.85 1-2.23 1.76-3.53 1.66-.13-1.3.5-2.63 1.29-3.51.88-1.02 2.37-1.75 3.5-1.73zM20.6 17.37c-.55 1.26-.81 1.82-1.52 2.93-1 1.55-2.4 3.49-4.15 3.5-1.55.02-1.95-1.02-4.05-1.01-2.1.01-2.54 1.03-4.1 1.01-1.74-.02-3.07-1.76-4.07-3.31C.53 16.1.25 10.9 2.53 8.14c1.62-1.96 4.17-3.1 6.57-3.1 2.44 0 3.98 1.34 6 1.34 1.96 0 3.15-1.34 5.98-1.34 2.14 0 4.4 1.17 6.01 3.19-5.27 2.89-4.41 10.43-5.49 9.14z" />
-    </svg>
+    <p className="flex items-start gap-2">
+      <span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-pulse-green" />
+      <span>{children}</span>
+    </p>
   );
 }
 
-function LinuxIcon() {
+function StatusPill({ children }: { children: ReactNode }) {
   return (
-    <svg viewBox="0 0 24 24" className="h-6 w-6" aria-hidden fill="currentColor">
-      <path d="M12 2c-2.2 0-4 1.8-4 4v1.4c-1.8 1.3-3 3.3-3 5.6 0 1.9.8 3.6 2 4.8l-.8 2.3c-.2.5.3 1 .8.8l2.3-.8c.9.5 1.9.8 3 .8 1.1 0 2.1-.3 3-.8l2.2.8c.5.2 1-.3.8-.8l-.8-2.3c1.2-1.2 2-2.9 2-4.8 0-2.3-1.2-4.3-3-5.6V6c0-2.2-1.8-4-4-4zm-1.5 5.5a.75.75 0 110 1.5.75.75 0 010-1.5zm3 0a.75.75 0 110 1.5.75.75 0 010-1.5zM12 13c1.5 0 2.7.5 3 1.3-.3.8-1.5 1.3-3 1.3s-2.7-.5-3-1.3c.3-.8 1.5-1.3 3-1.3z" />
-    </svg>
+    <span className="rounded-full border border-pulse-border bg-pulse-panel/70 px-3 py-1 text-[11px] font-semibold uppercase tracking-wide text-pulse-muted">
+      {children}
+    </span>
   );
 }
