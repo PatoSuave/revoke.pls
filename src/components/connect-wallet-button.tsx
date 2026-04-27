@@ -134,7 +134,7 @@ export function ConnectWalletButton({
         disabled
         className={`${base} ${variantStyles[variant]} ${className}`}
       >
-        Connecting…
+        Connecting...
       </button>
     );
   }
@@ -161,7 +161,7 @@ export function ConnectWalletButton({
               disabled={isSwitching}
               className={`${base} bg-pulse-red/20 text-pulse-red border border-pulse-red/40 hover:bg-pulse-red/30`}
             >
-              {isSwitching ? "Switching…" : `Switch to ${c.displayName}`}
+              {isSwitching ? "Switching..." : `Switch to ${c.displayName}`}
             </button>
           ))}
         </div>
@@ -222,7 +222,7 @@ export function ConnectWalletButton({
           }}
           className={`${base} ${variantStyles[variant]}`}
         >
-          {isConnecting ? "Confirm in wallet…" : "Connect Wallet"}
+          {isConnecting ? "Confirm in wallet..." : "Connect Wallet"}
         </button>
         {error ? (
           <span className="max-w-xs truncate text-xs text-pulse-red">
@@ -244,7 +244,7 @@ export function ConnectWalletButton({
         aria-expanded={menuOpen}
         className={`${base} ${variantStyles[variant]}`}
       >
-        {isConnecting ? "Confirm in wallet…" : "Connect Wallet"}
+        {isConnecting ? "Confirm in wallet..." : "Connect Wallet"}
       </button>
 
       {menuOpen ? (
@@ -274,7 +274,7 @@ export function ConnectWalletButton({
                   <span className="text-xs text-pulse-muted">{d.sub}</span>
                 </span>
                 <span className="text-xs text-pulse-muted">
-                  {isThisPending ? "…" : ""}
+                  {isThisPending ? "..." : ""}
                 </span>
               </button>
             );

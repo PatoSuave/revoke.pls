@@ -39,7 +39,7 @@ export function BatchActionBar({
   if (!showBar) return null;
 
   return (
-    <div className="flex flex-col gap-3 rounded-2xl border border-pulse-border bg-pulse-bg/60 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+    <div className="flex flex-col gap-3 rounded-2xl border border-pulse-purple/35 bg-pulse-purple/10 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
       <div className="flex flex-wrap items-center gap-2 text-xs text-pulse-muted">
         <button
           type="button"
@@ -56,7 +56,7 @@ export function BatchActionBar({
             <>
               {highRiskSelected > 0 ? (
                 <>
-                  {" · "}
+                  {" / "}
                   <span className="text-pulse-red">
                     {highRiskSelected} high-risk
                   </span>
@@ -64,7 +64,7 @@ export function BatchActionBar({
               ) : null}
               {unlimitedSelected > 0 ? (
                 <>
-                  {" · "}
+                  {" / "}
                   <span className="text-pulse-red">
                     {unlimitedSelected} unlimited
                   </span>
@@ -90,7 +90,7 @@ export function BatchActionBar({
           disabled={disabled || selectedCount === 0}
           className="flex-1 rounded-xl bg-pulse-gradient px-3 py-2 text-xs font-semibold text-pulse-bg shadow-glow transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-60 sm:flex-none"
         >
-          Revoke selected
+          Review selected
         </button>
       </div>
     </div>
@@ -128,7 +128,7 @@ function ConfirmingCard({ batch }: { batch: UseBatchRevokeResult }) {
   return (
     <div className="rounded-2xl border border-pulse-purple/40 bg-pulse-purple/5 p-5">
       <p className="text-xs font-semibold uppercase tracking-[0.18em] text-pulse-purple">
-        Review batch
+        Batch review
       </p>
       <h3 className="mt-1 text-lg font-semibold text-pulse-text">
         Revoke {batch.items.length}{" "}
@@ -143,13 +143,17 @@ function ConfirmingCard({ batch }: { batch: UseBatchRevokeResult }) {
           <Pill tone="red">{unlimited} unlimited</Pill>
         ) : null}
         <Pill tone="muted">
-          {batch.items.length} wallet prompts · {gasLabel}
+          {batch.items.length} wallet prompts / {gasLabel}
         </Pill>
       </ul>
-      <p className="mt-3 text-xs text-pulse-muted">
-        Each revoke is a separate on-chain transaction. Your wallet will prompt
-        you once per approval. You can stop between transactions — the current
-        one in flight cannot be cancelled.
+      <p className="mt-3 max-w-2xl text-xs leading-5 text-pulse-muted">
+        Each revoke is a normal token approval reset submitted one at a time.
+        Revoke.PLS never batches funds, never uses a proxy contract, and never
+        signs for you. Your wallet prompts once per approval.
+      </p>
+      <p className="mt-2 text-xs leading-5 text-pulse-muted">
+        You can stop between transactions. A transaction already submitted to
+        the wallet or chain must finish, fail, or be rejected there.
       </p>
 
       <div className="mt-4 max-h-56 overflow-y-auto rounded-xl border border-pulse-border/60 bg-pulse-bg/40">
@@ -166,7 +170,7 @@ function ConfirmingCard({ batch }: { batch: UseBatchRevokeResult }) {
                 <span className="font-semibold text-pulse-text">
                   {item.tokenSymbol}
                 </span>
-                <span className="text-pulse-muted">→ {item.spenderLabel}</span>
+                <span className="text-pulse-muted">-&gt; {item.spenderLabel}</span>
               </span>
               <span className="font-mono text-[11px] text-pulse-muted">
                 {item.unlimited ? "Unlimited" : item.formattedAllowance}
@@ -189,7 +193,7 @@ function ConfirmingCard({ batch }: { batch: UseBatchRevokeResult }) {
           onClick={() => void batch.start()}
           className="rounded-xl bg-pulse-gradient px-3 py-2 text-xs font-semibold text-pulse-bg shadow-glow transition hover:brightness-110"
         >
-          Start sequential revoke
+          Start wallet prompts
         </button>
       </div>
     </div>
@@ -220,7 +224,7 @@ function RunningCard({ batch }: { batch: UseBatchRevokeResult }) {
           disabled={stopping}
           className="rounded-xl border border-pulse-border bg-white/5 px-3 py-2 text-xs font-semibold text-pulse-text transition hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-60"
         >
-          {stopping ? "Stopping…" : "Stop after current"}
+          {stopping ? "Stopping..." : "Stop after current"}
         </button>
       </div>
 
@@ -240,7 +244,7 @@ function RunningCard({ batch }: { batch: UseBatchRevokeResult }) {
             <BatchProgressRow
               key={item.key}
               index={i + 1}
-              label={`${item.tokenSymbol} → ${item.spenderLabel}`}
+              label={`${item.tokenSymbol} -> ${item.spenderLabel}`}
               current={isCurrent}
               result={result}
               chainId={item.chainId}
@@ -264,6 +268,10 @@ function CompleteCard({ batch }: { batch: UseBatchRevokeResult }) {
       <h3 className="mt-1 text-lg font-semibold text-pulse-text">
         {success} of {total} revoked
       </h3>
+      <p className="mt-1 text-xs leading-5 text-pulse-muted">
+        Completed items have confirmed on-chain. Any failed, rejected, or
+        skipped approvals remain unchanged and can be reviewed again.
+      </p>
 
       {stoppedByRejection ? (
         <p className="mt-1 text-xs text-pulse-muted">
@@ -284,7 +292,7 @@ function CompleteCard({ batch }: { batch: UseBatchRevokeResult }) {
           <BatchProgressRow
             key={item.key}
             index={i + 1}
-            label={`${item.tokenSymbol} → ${item.spenderLabel}`}
+            label={`${item.tokenSymbol} -> ${item.spenderLabel}`}
             result={batch.results[item.key]}
             chainId={item.chainId}
           />
@@ -306,8 +314,8 @@ function CompleteCard({ batch }: { batch: UseBatchRevokeResult }) {
 
 const STATUS_LABEL: Record<BatchItemStatus, string> = {
   queued: "Queued",
-  wallet: "Confirm in wallet…",
-  submitted: "Confirming…",
+  wallet: "Confirm in wallet...",
+  submitted: "Confirming...",
   success: "Revoked",
   failed: "Failed",
   rejected: "Rejected",
@@ -374,7 +382,7 @@ function BatchProgressRow({
             rel="noopener noreferrer"
             className="text-[11px] font-semibold underline underline-offset-2 hover:text-pulse-cyan"
           >
-            tx ↗
+            tx
           </a>
         ) : null}
       </span>

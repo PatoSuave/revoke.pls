@@ -48,21 +48,32 @@ export function ApprovalScanner() {
   return (
     <section
       id="scanner"
-      className="relative border-t border-pulse-border/60 bg-gradient-to-b from-pulse-bg to-pulse-panel/40 py-20 sm:py-24"
+      className="relative bg-gradient-to-b from-pulse-bg via-pulse-panel/20 to-pulse-bg py-14 sm:py-20"
     >
       <div className="mx-auto max-w-6xl px-4 sm:px-6">
-        <div className="max-w-2xl">
-          <h2 className="text-3xl font-bold tracking-tight sm:text-4xl">
-            Approval <span className="text-gradient-pulse">scanner</span>
-          </h2>
-          <p className="mt-3 text-pulse-muted">
-            Connect a wallet on PulseChain or Ethereum to discover ERC-20
-            allowances and NFT operator approvals from your history, then
-            verify each live on-chain.
-          </p>
+        <div className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
+          <div className="max-w-2xl">
+            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-pulse-cyan">
+              Wallet safety console
+            </p>
+            <h2 className="mt-2 text-3xl font-bold tracking-tight sm:text-4xl">
+              Approval <span className="text-gradient-pulse">scanner</span>
+            </h2>
+            <p className="mt-3 leading-7 text-pulse-muted">
+              Connect on PulseChain or Ethereum to find ERC-20 allowances and
+              NFT operator approvals from your wallet history. Every result is
+              re-checked live before it is shown as active.
+            </p>
+          </div>
+          <SafetyStrip />
         </div>
 
-        <div className="relative mt-10 overflow-hidden rounded-3xl border border-pulse-border bg-pulse-panel/70 p-6 sm:p-10">
+        <div className="relative mt-8 overflow-hidden rounded-2xl border border-pulse-border bg-pulse-panel/80 shadow-glow">
+          <div
+            className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-pulse-cyan/70 to-transparent"
+            aria-hidden
+          />
+          <div className="p-4 sm:p-6 lg:p-8">
           <ScannerBody
             accountStatus={accountStatus}
             address={address}
@@ -70,9 +81,35 @@ export function ApprovalScanner() {
             chainConfig={chainConfig}
             onSupportedChain={onSupportedChain}
           />
+          </div>
         </div>
       </div>
     </section>
+  );
+}
+
+function SafetyStrip() {
+  const items = [
+    "No custody",
+    "No seed phrases",
+    "User-approved writes only",
+    "Curated labels, still verify",
+  ];
+  return (
+    <div className="grid grid-cols-2 gap-2 rounded-2xl border border-pulse-border bg-pulse-bg/60 p-2 text-[11px] text-pulse-muted sm:grid-cols-4 lg:max-w-xl">
+      {items.map((item) => (
+        <span
+          key={item}
+          className="flex items-center gap-2 rounded-xl bg-pulse-panel/70 px-3 py-2"
+        >
+          <span
+            className="h-1.5 w-1.5 rounded-full bg-pulse-green"
+            aria-hidden
+          />
+          {item}
+        </span>
+      ))}
+    </div>
   );
 }
 
@@ -94,7 +131,7 @@ function ScannerBody({
       <ScannerState
         eyebrow="Step 1"
         title="Reconnecting to your wallet"
-        body="Waiting for your wallet to finish reconnecting…"
+        body="Waiting for your wallet to finish reconnecting..."
         action={null}
       />
     );
@@ -104,8 +141,8 @@ function ScannerBody({
     return (
       <ScannerState
         eyebrow="Step 1"
-        title="Connect a wallet to scan approvals"
-        body="We never store your address. Connection is used only to query on-chain allowances from your wallet."
+        title="Connect to review live approvals"
+        body="The scan reads public wallet history and on-chain state. It does not move funds, request signatures, or send transactions."
         action={<ConnectWalletButton />}
       />
     );
@@ -118,7 +155,7 @@ function ScannerBody({
         tone="warning"
         eyebrow="Unsupported network"
         title={`Switch to ${names}`}
-        body={`Pulse Revoke supports ${names}. Switch networks in your wallet to continue — your connection stays intact.`}
+        body={`Revoke.PLS supports ${names}. Switch networks in your wallet to continue. Your wallet stays connected, and no transaction is requested.`}
         action={<ConnectWalletButton variant="ghost" />}
       />
     );
@@ -229,52 +266,19 @@ function ConnectedScanner({
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="flex flex-wrap items-center gap-3">
-          <span className="inline-flex items-center gap-2 rounded-full border border-pulse-border bg-pulse-bg/60 px-3 py-1 text-xs font-medium text-pulse-muted">
-            <span className="h-1.5 w-1.5 rounded-full bg-pulse-green" aria-hidden />
-            {chainConfig.displayName}
-          </span>
-          <span className="font-mono text-xs text-pulse-muted">
-            {shortenAddress(owner)}
-          </span>
-          <span className="text-xs text-pulse-muted">
-            {scan.stats.candidates > 0
-              ? `${scan.stats.active} active · ${scan.stats.candidates} candidate${
-                  scan.stats.candidates === 1 ? "" : "s"
-                }`
-              : scan.status === "pending"
-              ? "Searching approval history…"
-              : "No approval history found"}
-          </span>
-          {highRiskCount > 0 ? (
-            <span className="inline-flex items-center gap-1.5 rounded-full border border-pulse-red/40 bg-pulse-red/10 px-3 py-1 text-xs font-semibold text-pulse-red">
-              <span
-                className="h-1.5 w-1.5 rounded-full bg-pulse-red"
-                aria-hidden
-              />
-              {highRiskCount} high-risk
-            </span>
-          ) : null}
-        </div>
-
-        <button
-          type="button"
-          onClick={scan.refetch}
-          disabled={scan.isFetching || batchActive}
-          className="inline-flex items-center gap-2 rounded-xl border border-pulse-border bg-white/5 px-3 py-2 text-xs font-semibold text-pulse-text transition hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-60"
-        >
-          {scan.isFetching ? "Scanning…" : "Rescan"}
-        </button>
-        <button
-          type="button"
-          onClick={() => setShowDebug((v) => !v)}
-          className="inline-flex items-center gap-2 rounded-xl border border-pulse-border bg-white/5 px-3 py-2 text-xs font-semibold text-pulse-text transition hover:bg-white/10"
-          aria-pressed={showDebug}
-        >
-          Debug {showDebug ? "on" : "off"}
-        </button>
-      </div>
+      <ScannerSummary
+        owner={owner}
+        chainConfig={chainConfig}
+        activeCount={scan.stats.active}
+        candidateCount={scan.stats.candidates}
+        highRiskCount={highRiskCount}
+        status={scan.status}
+        isFetching={scan.isFetching}
+        batchActive={batchActive}
+        showDebug={showDebug}
+        onRescan={scan.refetch}
+        onToggleDebug={() => setShowDebug((v) => !v)}
+      />
 
       <ScanContent
         scan={scan}
@@ -306,6 +310,89 @@ function ConnectedScanner({
   );
 }
 
+function ScannerSummary({
+  owner,
+  chainConfig,
+  activeCount,
+  candidateCount,
+  highRiskCount,
+  status,
+  isFetching,
+  batchActive,
+  showDebug,
+  onRescan,
+  onToggleDebug,
+}: {
+  owner: `0x${string}`;
+  chainConfig: SupportedChainConfig;
+  activeCount: number;
+  candidateCount: number;
+  highRiskCount: number;
+  status: ReturnType<typeof useApprovalDiscovery>["status"];
+  isFetching: boolean;
+  batchActive: boolean;
+  showDebug: boolean;
+  onRescan: () => void;
+  onToggleDebug: () => void;
+}) {
+  const summary =
+    candidateCount > 0
+      ? `${activeCount} active / ${candidateCount} checked`
+      : status === "pending"
+      ? "Searching wallet history"
+      : "No active ERC-20 approvals";
+
+  return (
+    <div className="rounded-2xl border border-pulse-border bg-pulse-bg/55 p-4">
+      <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="inline-flex items-center gap-2 rounded-full border border-pulse-green/30 bg-pulse-green/10 px-3 py-1 text-xs font-semibold text-pulse-green">
+            <span
+              className="h-1.5 w-1.5 rounded-full bg-pulse-green"
+              aria-hidden
+            />
+            {chainConfig.displayName}
+          </span>
+          <span className="rounded-full border border-pulse-border bg-pulse-panel/70 px-3 py-1 font-mono text-xs text-pulse-muted">
+            {shortenAddress(owner)}
+          </span>
+          <span className="rounded-full border border-pulse-border bg-pulse-panel/70 px-3 py-1 text-xs font-medium text-pulse-muted">
+            {summary}
+          </span>
+          {highRiskCount > 0 ? (
+            <span className="inline-flex items-center gap-1.5 rounded-full border border-pulse-red/40 bg-pulse-red/10 px-3 py-1 text-xs font-semibold text-pulse-red">
+              <span
+                className="h-1.5 w-1.5 rounded-full bg-pulse-red"
+                aria-hidden
+              />
+              {highRiskCount} high-risk
+            </span>
+          ) : null}
+        </div>
+
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+          <button
+            type="button"
+            onClick={onRescan}
+            disabled={isFetching || batchActive}
+            className="inline-flex items-center justify-center gap-2 rounded-xl border border-pulse-cyan/35 bg-pulse-cyan/10 px-3 py-2 text-xs font-semibold text-pulse-cyan transition hover:bg-pulse-cyan/15 disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            {isFetching ? "Scanning..." : "Rescan"}
+          </button>
+          <button
+            type="button"
+            onClick={onToggleDebug}
+            className="inline-flex items-center justify-center gap-2 rounded-xl border border-pulse-border bg-white/5 px-3 py-2 text-xs font-semibold text-pulse-text transition hover:bg-white/10"
+            aria-pressed={showDebug}
+          >
+            Debug {showDebug ? "on" : "off"}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function NftSection({
   owner,
   chainConfig,
@@ -318,16 +405,19 @@ function NftSection({
   const highRisk = sorted.filter((a) => a.risk.level === "high").length;
 
   return (
-    <section className="space-y-4 border-t border-pulse-border/60 pt-8">
+    <section className="space-y-4 rounded-2xl border border-pulse-border bg-pulse-bg/45 p-4 sm:p-5">
       <header className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h3 className="text-xl font-semibold tracking-tight text-pulse-text">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-pulse-muted">
+            Collection permissions
+          </p>
+          <h3 className="mt-1 text-xl font-semibold tracking-tight text-pulse-text">
             NFT approvals
           </h3>
-          <p className="mt-1 max-w-2xl text-xs text-pulse-muted">
-            Operator approvals (ERC-721 / ERC-1155 `setApprovalForAll`) plus
-            per-token ERC-721 approvals, discovered from your wallet history
-            and re-verified live on-chain.
+          <p className="mt-1 max-w-2xl text-sm leading-6 text-pulse-muted">
+            Review collection-wide operator approvals and per-token ERC-721
+            approvals. Collection-wide permissions are usually the highest
+            priority to verify.
           </p>
         </div>
         <div className="flex items-center gap-3">
@@ -346,7 +436,7 @@ function NftSection({
             disabled={nft.isFetching}
             className="inline-flex items-center gap-2 rounded-xl border border-pulse-border bg-white/5 px-3 py-2 text-xs font-semibold text-pulse-text transition hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-60"
           >
-            {nft.isFetching ? "Scanning…" : "Rescan"}
+            {nft.isFetching ? "Scanning..." : "Rescan"}
           </button>
         </div>
       </header>
@@ -382,13 +472,13 @@ function NftSectionBody({
 }) {
   if (nft.status === "pending") {
     return (
-      <div className="rounded-2xl border border-pulse-border bg-pulse-bg/40 p-4 text-xs text-pulse-muted">
+      <div className="rounded-2xl border border-pulse-cyan/30 bg-pulse-cyan/5 p-4 text-xs text-pulse-muted">
         <span className="inline-flex h-2 w-2 animate-pulse rounded-full bg-pulse-cyan" />{" "}
         {nft.stats.candidates > 0
           ? `Verifying ${nft.stats.candidates} NFT approval candidate${
               nft.stats.candidates === 1 ? "" : "s"
-            } on-chain…`
-          : "Searching NFT approval history…"}
+            } live on-chain...`
+          : "Searching NFT approval history..."}
       </div>
     );
   }
@@ -396,7 +486,12 @@ function NftSectionBody({
   if (nft.status === "error") {
     return (
       <div className="rounded-2xl border border-pulse-red/40 bg-pulse-red/10 p-5 text-sm">
-        <p className="font-semibold text-pulse-red">NFT scan failed</p>
+        <p className="text-xs font-semibold uppercase tracking-[0.18em] text-pulse-red">
+          NFT scan interrupted
+        </p>
+        <p className="mt-2 font-semibold text-pulse-text">
+          We could not finish checking NFT approvals.
+        </p>
         <p className="mt-1 text-pulse-muted">
           {nft.error?.message ??
             `Something went wrong reading NFT approvals from ${chainConfig.displayName}.`}
@@ -415,8 +510,13 @@ function NftSectionBody({
   if (sorted.length === 0) {
     return (
       <div className="rounded-2xl border border-dashed border-pulse-border/80 bg-pulse-bg/40 p-6 text-sm">
-        <p className="font-semibold text-pulse-text">No active NFT approvals</p>
-        <p className="mt-1 text-pulse-muted">
+        <p className="text-xs font-semibold uppercase tracking-[0.18em] text-pulse-green">
+          Clear for now
+        </p>
+        <p className="mt-2 text-lg font-semibold text-pulse-text">
+          No active NFT approvals
+        </p>
+        <p className="mt-1 max-w-2xl leading-6 text-pulse-muted">
           {nft.stats.candidates === 0
             ? `We couldn't find any NFT approval history for this wallet on ${
                 nft.sourceMeta?.name ?? chainConfig.discovery.name
@@ -437,7 +537,7 @@ function NftSectionBody({
       <div className="hidden grid-cols-[1.2fr_1.5fr_1fr_auto] gap-4 border-b border-pulse-border bg-pulse-bg/60 px-4 py-3 text-xs font-semibold uppercase tracking-wider text-pulse-muted sm:grid">
         <div>Collection</div>
         <div>Operator</div>
-        <div>Type · Risk</div>
+        <div>Permission / Risk</div>
         <div className="text-right">Action</div>
       </div>
       <ul>
@@ -587,10 +687,20 @@ function ScanContent({
   if (scan.status === "error") {
     return (
       <div className="rounded-2xl border border-pulse-red/40 bg-pulse-red/10 p-5 text-sm">
-        <p className="font-semibold text-pulse-red">Scan failed</p>
-        <p className="mt-1 text-pulse-muted">
+        <p className="text-xs font-semibold uppercase tracking-[0.18em] text-pulse-red">
+          Scan interrupted
+        </p>
+        <p className="mt-2 font-semibold text-pulse-text">
+          We could not finish reading approval history.
+        </p>
+        <p className="mt-1 leading-6 text-pulse-muted">
           {scan.error?.message ??
             `Something went wrong reading allowances from ${chainConfig.displayName}.`}
+        </p>
+        <p className="mt-2 text-xs text-pulse-muted">
+          This is a read-only step. Try again, switch RPC/explorer settings, or
+          verify directly on {chainConfig.explorer.name} if the explorer is
+          rate-limited.
         </p>
         <button
           type="button"
@@ -605,9 +715,14 @@ function ScanContent({
 
   if (scored.length === 0) {
     return (
-      <div className="rounded-2xl border border-dashed border-pulse-border/80 bg-pulse-bg/40 p-6 text-sm">
-        <p className="font-semibold text-pulse-text">No active approvals found</p>
-        <p className="mt-1 text-pulse-muted">
+      <div className="rounded-2xl border border-dashed border-pulse-border/80 bg-pulse-bg/45 p-6 text-sm">
+        <p className="text-xs font-semibold uppercase tracking-[0.18em] text-pulse-green">
+          Clear for now
+        </p>
+        <p className="mt-2 text-lg font-semibold text-pulse-text">
+          No active ERC-20 approvals found
+        </p>
+        <p className="mt-2 max-w-2xl leading-6 text-pulse-muted">
           {scan.stats.candidates === 0
             ? `We couldn't find any ERC-20 approval history for this wallet on ${
                 scan.sourceMeta?.name ?? chainConfig.discovery.name
@@ -619,6 +734,11 @@ function ScanContent({
             ? " A per-wallet fetch cap was reached; very old approvals may be missing."
             : ""}
         </p>
+        <div className="mt-4 grid gap-2 text-xs text-pulse-muted sm:grid-cols-3">
+          <EmptyStateStep title="Check the network" body={chainConfig.displayName} />
+          <EmptyStateStep title="Rescan later" body="Explorer APIs can lag." />
+          <EmptyStateStep title="Verify labels" body="Use the explorer for anything suspicious." />
+        </div>
       </div>
     );
   }
@@ -663,7 +783,7 @@ function ScanContent({
             <div aria-hidden />
             <div>Token</div>
             <div>Spender</div>
-            <div>Allowance · Risk</div>
+            <div>Exposure / Risk</div>
             <div className="text-right">Action</div>
           </div>
           <ul>
@@ -690,7 +810,7 @@ function GuidancePanel() {
   return (
     <div className="rounded-2xl border border-pulse-border/70 bg-pulse-bg/50 p-4 text-xs text-pulse-muted">
       <p className="mb-2 text-[11px] font-semibold uppercase tracking-[0.16em] text-pulse-text">
-        A quick read on risk
+        How to read this scan
       </p>
       <ul className="grid gap-2 sm:grid-cols-3">
         <li>
@@ -704,25 +824,51 @@ function GuidancePanel() {
           the address on the block explorer before leaving an approval in place.
         </li>
         <li>
-          <span className="font-semibold text-pulse-text">Trusted + finite.</span>{" "}
-          Lower priority but still worth reviewing periodically — especially if
-          the position is no longer active.
+          <span className="font-semibold text-pulse-text">Known is not risk-free.</span>{" "}
+          Registry labels identify addresses we recognize. You should still
+          review every spender before signing a revoke or leaving access open.
         </li>
       </ul>
     </div>
   );
 }
 
+function EmptyStateStep({ title, body }: { title: string; body: string }) {
+  return (
+    <div className="rounded-xl border border-pulse-border/70 bg-pulse-panel/55 p-3">
+      <p className="font-semibold text-pulse-text">{title}</p>
+      <p className="mt-1 text-pulse-muted">{body}</p>
+    </div>
+  );
+}
+
 function ScannerSkeleton({ candidates }: { candidates: number }) {
+  const status =
+    candidates > 0
+      ? `Re-validating ${candidates} historical approval candidate${
+          candidates === 1 ? "" : "s"
+        } with live on-chain reads.`
+      : "Searching explorer logs for ERC-20 approval history.";
+
   return (
     <div className="space-y-4">
-      <div className="flex items-center gap-3 text-xs text-pulse-muted">
-        <span className="inline-flex h-2 w-2 animate-pulse rounded-full bg-pulse-cyan" />
-        {candidates > 0
-          ? `Verifying ${candidates} candidate approval${
-              candidates === 1 ? "" : "s"
-            } on-chain…`
-          : "Searching your approval history…"}
+      <div className="rounded-2xl border border-pulse-cyan/30 bg-pulse-cyan/5 p-4">
+        <div className="flex items-start gap-3">
+          <span
+            className="mt-1 inline-flex h-2 w-2 animate-pulse rounded-full bg-pulse-cyan"
+            aria-hidden
+          />
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-pulse-cyan">
+              Scan in progress
+            </p>
+            <p className="mt-1 text-sm text-pulse-muted">{status}</p>
+            <p className="mt-1 text-xs text-pulse-muted/80">
+              This step is read-only. Revoke transactions are requested only
+              after you choose an approval and confirm it.
+            </p>
+          </div>
+        </div>
       </div>
       <div className="overflow-hidden rounded-2xl border border-pulse-border">
         {[0, 1, 2].map((i) => (
@@ -761,17 +907,29 @@ function ScannerState({
     tone === "warning" ? "text-pulse-red" : "text-pulse-muted";
 
   return (
-    <div className="flex flex-col items-start gap-5 text-left">
-      <span
-        className={`text-xs font-semibold uppercase tracking-[0.18em] ${eyebrowClass}`}
-      >
-        {eyebrow}
-      </span>
-      <h3 className="max-w-xl text-2xl font-semibold text-pulse-text sm:text-3xl">
-        {title}
-      </h3>
-      <p className="max-w-xl text-pulse-muted">{body}</p>
-      {action ? <div>{action}</div> : null}
+    <div className="grid gap-5 lg:grid-cols-[1fr_280px] lg:items-center">
+      <div className="flex flex-col items-start gap-4 text-left">
+        <span
+          className={`text-xs font-semibold uppercase tracking-[0.18em] ${eyebrowClass}`}
+        >
+          {eyebrow}
+        </span>
+        <h3 className="max-w-xl text-2xl font-semibold text-pulse-text sm:text-3xl">
+          {title}
+        </h3>
+        <p className="max-w-xl leading-6 text-pulse-muted">{body}</p>
+        {action ? <div>{action}</div> : null}
+      </div>
+      <div className="rounded-2xl border border-pulse-border bg-pulse-bg/50 p-4 text-xs text-pulse-muted">
+        <p className="font-semibold uppercase tracking-[0.16em] text-pulse-text">
+          Safety posture
+        </p>
+        <ul className="mt-3 space-y-2">
+          <li>No private keys or seed phrases.</li>
+          <li>Reads are public wallet and chain data.</li>
+          <li>Write requests happen only after you click revoke.</li>
+        </ul>
+      </div>
     </div>
   );
 }
