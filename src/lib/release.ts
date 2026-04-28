@@ -132,7 +132,7 @@ export const currentRelease: ReleaseManifest = {
   checksums: {
     href: LAUNCHER_PLACEHOLDER_URL,
     note:
-      "Each release is published with a SHA-256 checksums file. Verify your download with `sha256sum -c` before installing.",
+      "Each public desktop release should include a SHA-256 checksums file. Verify downloads with `sha256sum -c` before installing.",
   },
   ipfs: {
     cid: LAUNCHER_PLACEHOLDER_CID,
