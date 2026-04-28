@@ -11,6 +11,7 @@ import {
 } from "@/components/approvals/batch-revoke-panel";
 import { NftApprovalRow } from "@/components/approvals/nft-approval-row";
 import { ConnectWalletButton } from "@/components/connect-wallet-button";
+import { ScannerDiagnosticsPanel } from "@/components/sections/scanner-diagnostics";
 import { useApprovalDiscovery } from "@/hooks/use-approval-discovery";
 import { useBatchRevoke } from "@/hooks/use-batch-revoke";
 import { useNftApprovalDiscovery } from "@/hooks/use-nft-approval-discovery";
@@ -44,6 +45,7 @@ export function ApprovalScanner() {
   const chainId = useChainId();
   const chainConfig = getChainConfig(chainId);
   const onSupportedChain = isSupportedChainId(chainId);
+  const debugMode = useDebugModeFromQuery();
 
   return (
     <section
@@ -74,18 +76,34 @@ export function ApprovalScanner() {
             aria-hidden
           />
           <div className="p-4 sm:p-6 lg:p-8">
-          <ScannerBody
-            accountStatus={accountStatus}
-            address={address}
-            isConnected={isConnected}
-            chainConfig={chainConfig}
-            onSupportedChain={onSupportedChain}
-          />
+            <ScannerBody
+              accountStatus={accountStatus}
+              address={address}
+              chainId={chainId}
+              isConnected={isConnected}
+              chainConfig={chainConfig}
+              onSupportedChain={onSupportedChain}
+              debugMode={debugMode}
+            />
           </div>
         </div>
       </div>
     </section>
   );
+}
+
+function useDebugModeFromQuery() {
+  const [debugMode, setDebugMode] = useState(false);
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    setDebugMode(
+      params.get("debug") === "1" ||
+        params.get("debug")?.toLowerCase() === "true",
+    );
+  }, []);
+
+  return debugMode;
 }
 
 function SafetyStrip() {
@@ -116,68 +134,110 @@ function SafetyStrip() {
 function ScannerBody({
   accountStatus,
   address,
+  chainId,
   isConnected,
   chainConfig,
   onSupportedChain,
+  debugMode,
 }: {
   accountStatus: ReturnType<typeof useAccount>["status"];
   address: `0x${string}` | undefined;
+  chainId: number | undefined;
   isConnected: boolean;
   chainConfig: SupportedChainConfig | undefined;
   onSupportedChain: boolean;
+  debugMode: boolean;
 }) {
   if (accountStatus === "reconnecting" || accountStatus === "connecting") {
     return (
-      <ScannerState
-        eyebrow="Step 1"
-        title="Reconnecting to your wallet"
-        body="Waiting for your wallet to finish reconnecting..."
-        action={null}
-      />
+      <div className="space-y-5">
+        <ScannerState
+          eyebrow="Step 1"
+          title="Reconnecting to your wallet"
+          body="Waiting for your wallet to finish reconnecting..."
+          action={null}
+        />
+        <ScannerDiagnosticsPanel
+          enabled={debugMode}
+          owner={address}
+          chainId={chainId}
+          chainConfig={chainConfig}
+          onSupportedChain={onSupportedChain}
+          isConnected={isConnected}
+        />
+      </div>
     );
   }
 
   if (!isConnected || !address) {
     return (
-      <ScannerState
-        eyebrow="Step 1"
-        title="Connect to review live approvals"
-        body="The scan reads public wallet history and on-chain state. It does not move funds, request signatures, or send transactions."
-        action={<ConnectWalletButton />}
-      />
+      <div className="space-y-5">
+        <ScannerState
+          eyebrow="Step 1"
+          title="Connect to review live approvals"
+          body="The scan reads public wallet history and on-chain state. It does not move funds, request signatures, or send transactions."
+          action={<ConnectWalletButton />}
+        />
+        <ScannerDiagnosticsPanel
+          enabled={debugMode}
+          owner={address}
+          chainId={chainId}
+          chainConfig={chainConfig}
+          onSupportedChain={onSupportedChain}
+          isConnected={isConnected}
+        />
+      </div>
     );
   }
 
   if (!onSupportedChain || !chainConfig) {
     const names = supportedChainConfigList.map((c) => c.displayName).join(" or ");
     return (
-      <ScannerState
-        tone="warning"
-        eyebrow="Unsupported network"
-        title={`Switch to ${names}`}
-        body={`Revoke.PLS supports ${names}. Switch networks in your wallet to continue. Your wallet stays connected, and no transaction is requested.`}
-        action={<ConnectWalletButton variant="ghost" />}
-      />
+      <div className="space-y-5">
+        <ScannerState
+          tone="warning"
+          eyebrow="Unsupported network"
+          title={`Switch to ${names}`}
+          body={`Revoke.PLS supports ${names}. Switch networks in your wallet to continue. Your wallet stays connected, and no transaction is requested.`}
+          action={<ConnectWalletButton variant="ghost" />}
+        />
+        <ScannerDiagnosticsPanel
+          enabled={debugMode}
+          owner={address}
+          chainId={chainId}
+          chainConfig={chainConfig}
+          onSupportedChain={onSupportedChain}
+          isConnected={isConnected}
+        />
+      </div>
     );
   }
 
-  return <ConnectedScanner owner={address} chainConfig={chainConfig} />;
+  return (
+    <ConnectedScanner
+      owner={address}
+      chainConfig={chainConfig}
+      debugMode={debugMode}
+    />
+  );
 }
 
 function ConnectedScanner({
   owner,
   chainConfig,
+  debugMode,
 }: {
   owner: `0x${string}`;
   chainConfig: SupportedChainConfig;
+  debugMode: boolean;
 }) {
   const scan = useApprovalDiscovery({ owner, chainId: chainConfig.chainId });
+  const nft = useNftApprovalDiscovery({ owner, chainId: chainConfig.chainId });
 
   const [query, setQuery] = useState("");
   const [sort, setSort] = useState<ApprovalSort>("risk");
   const [filter, setFilter] = useState<ApprovalFilter>("all");
   const [selected, setSelected] = useState<Set<string>>(() => new Set());
-  const [showDebug, setShowDebug] = useState(false);
 
   const scored = useMemo(
     () => scoreApprovals(scan.approvals),
@@ -275,9 +335,7 @@ function ConnectedScanner({
         status={scan.status}
         isFetching={scan.isFetching}
         batchActive={batchActive}
-        showDebug={showDebug}
         onRescan={scan.refetch}
-        onToggleDebug={() => setShowDebug((v) => !v)}
       />
 
       <ScanContent
@@ -303,9 +361,18 @@ function ConnectedScanner({
       />
 
       <CoverageNote scan={scan} chainConfig={chainConfig} />
-      <DiscoveryDebug scan={scan} enabled={showDebug} />
+      <ScannerDiagnosticsPanel
+        enabled={debugMode}
+        owner={owner}
+        chainId={chainConfig.chainId}
+        chainConfig={chainConfig}
+        onSupportedChain
+        isConnected
+        erc20={scan}
+        nft={nft}
+      />
 
-      <NftSection owner={owner} chainConfig={chainConfig} />
+      <NftSection nft={nft} chainConfig={chainConfig} />
     </div>
   );
 }
@@ -319,9 +386,7 @@ function ScannerSummary({
   status,
   isFetching,
   batchActive,
-  showDebug,
   onRescan,
-  onToggleDebug,
 }: {
   owner: `0x${string}`;
   chainConfig: SupportedChainConfig;
@@ -331,9 +396,7 @@ function ScannerSummary({
   status: ReturnType<typeof useApprovalDiscovery>["status"];
   isFetching: boolean;
   batchActive: boolean;
-  showDebug: boolean;
   onRescan: () => void;
-  onToggleDebug: () => void;
 }) {
   const summary =
     candidateCount > 0
@@ -379,14 +442,6 @@ function ScannerSummary({
           >
             {isFetching ? "Scanning..." : "Rescan"}
           </button>
-          <button
-            type="button"
-            onClick={onToggleDebug}
-            className="inline-flex items-center justify-center gap-2 rounded-xl border border-pulse-border bg-white/5 px-3 py-2 text-xs font-semibold text-pulse-text transition hover:bg-white/10"
-            aria-pressed={showDebug}
-          >
-            Debug {showDebug ? "on" : "off"}
-          </button>
         </div>
       </div>
     </div>
@@ -394,13 +449,12 @@ function ScannerSummary({
 }
 
 function NftSection({
-  owner,
+  nft,
   chainConfig,
 }: {
-  owner: `0x${string}`;
+  nft: ReturnType<typeof useNftApprovalDiscovery>;
   chainConfig: SupportedChainConfig;
 }) {
-  const nft = useNftApprovalDiscovery({ owner, chainId: chainConfig.chainId });
   const sorted = useMemo(() => sortNftApprovals(nft.approvals), [nft.approvals]);
   const highRisk = sorted.filter((a) => a.risk.level === "high").length;
 
@@ -595,45 +649,6 @@ function CoverageNote({
       Protocol labels and trust badges come from the curated registry; unknown
       spenders stay unverified.
     </p>
-  );
-}
-
-function DiscoveryDebug({
-  scan,
-  enabled,
-}: {
-  scan: ReturnType<typeof useApprovalDiscovery>;
-  enabled: boolean;
-}) {
-  if (!enabled) return null;
-  if (scan.status !== "success") return null;
-  const { stats } = scan;
-  return (
-    <details className="rounded-xl border border-pulse-border/60 bg-pulse-bg/40 px-3 py-2 text-[11px] text-pulse-muted">
-      <summary className="cursor-pointer font-semibold uppercase tracking-wide text-pulse-text/80">
-        Discovery debug
-      </summary>
-      <dl className="mt-2 grid grid-cols-2 gap-x-4 gap-y-1 font-mono">
-        <dt>source</dt>
-        <dd>{scan.sourceMeta?.id ?? "unknown"}</dd>
-        <dt>windows</dt>
-        <dd>{stats.windows}</dd>
-        <dt>requests</dt>
-        <dd>{stats.requests}</dd>
-        <dt>raw logs</dt>
-        <dd>{stats.rawCandidateLogs}</dd>
-        <dt>candidate pairs</dt>
-        <dd>{stats.candidates}</dd>
-        <dt>unique tokens</dt>
-        <dd>{stats.uniqueTokens}</dd>
-        <dt>active (live &gt; 0)</dt>
-        <dd>{stats.active}</dd>
-        <dt>registry matched</dt>
-        <dd>{stats.registryMatched}</dd>
-        <dt>truncated</dt>
-        <dd>{String(scan.truncated)}</dd>
-      </dl>
-    </details>
   );
 }
 

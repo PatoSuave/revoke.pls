@@ -1,7 +1,7 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import { useEffect, useMemo, useRef } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type { Address } from "viem";
 import { useReadContracts } from "wagmi";
 
@@ -22,6 +22,64 @@ import { trackEvent } from "@/lib/telemetry";
 export type DiscoveryStatus = "idle" | "pending" | "success" | "error";
 
 const EMPTY_PAIRS: readonly DiscoveredPair[] = [];
+
+interface PipelineTiming {
+  startedAt: number | null;
+  completedAt: number | null;
+  elapsedMs: number | null;
+}
+
+const EMPTY_TIMING: PipelineTiming = {
+  startedAt: null,
+  completedAt: null,
+  elapsedMs: null,
+};
+
+function errorMessage(error: unknown): string | null {
+  if (!error) return null;
+  if (error instanceof Error) return error.message;
+  return String(error);
+}
+
+function countReadFailures(results: readonly { status: string }[] | undefined) {
+  return results?.filter((result) => result.status === "failure").length ?? 0;
+}
+
+function usePipelineTiming(status: DiscoveryStatus): PipelineTiming {
+  const [timing, setTiming] = useState<PipelineTiming>(EMPTY_TIMING);
+  const previousStatusRef = useRef<DiscoveryStatus>("idle");
+
+  useEffect(() => {
+    const previousStatus = previousStatusRef.current;
+    previousStatusRef.current = status;
+
+    if (status === "pending" && previousStatus !== "pending") {
+      setTiming({
+        startedAt: Date.now(),
+        completedAt: null,
+        elapsedMs: null,
+      });
+      return;
+    }
+
+    if (
+      (status === "success" || status === "error") &&
+      previousStatus === "pending"
+    ) {
+      setTiming((current) => {
+        if (!current.startedAt) return current;
+        const completedAt = Date.now();
+        return {
+          startedAt: current.startedAt,
+          completedAt,
+          elapsedMs: completedAt - current.startedAt,
+        };
+      });
+    }
+  }, [status]);
+
+  return timing;
+}
 
 export interface UseApprovalDiscoveryOptions {
   owner: Address | undefined;
@@ -47,6 +105,12 @@ export interface UseApprovalDiscoveryResult {
     rawCandidateLogs: number;
     windows: number;
     requests: number;
+  };
+  diagnostics: {
+    discoveryError: string | null;
+    liveReadError: string | null;
+    liveReadFailureCount: number;
+    timing: PipelineTiming;
   };
   sourceMeta: DiscoverySourceMeta | null;
   truncated: boolean;
@@ -148,6 +212,7 @@ export function useApprovalDiscovery({
 
   const error: Error | null =
     (discoveryQuery.error as Error | null) ?? reads.error ?? null;
+  const timing = usePipelineTiming(status);
 
   const lastStatusRef = useRef<DiscoveryStatus>("idle");
   useEffect(() => {
@@ -204,6 +269,12 @@ export function useApprovalDiscovery({
       rawCandidateLogs: discoveryQuery.data?.rawCount ?? 0,
       windows: discoveryQuery.data?.windows ?? 0,
       requests: discoveryQuery.data?.requests ?? 0,
+    },
+    diagnostics: {
+      discoveryError: errorMessage(discoveryQuery.error),
+      liveReadError: errorMessage(reads.error),
+      liveReadFailureCount: countReadFailures(reads.data),
+      timing,
     },
     sourceMeta: discoverySource?.meta ?? null,
     truncated: discoveryQuery.data?.truncated ?? false,
