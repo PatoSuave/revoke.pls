@@ -63,7 +63,11 @@ export function ScannerDiagnosticsPanel({
       : null;
   const nftReadFailures = nft?.diagnostics.liveReadFailures;
   const nftFailureExplanation =
-    nft && nft.diagnostics.liveReadFailureCount > 0
+    nftReadFailures && nftReadFailures.getApproved > 0
+      ? `${nftReadFailures.getApproved} historical ERC-721 token approval${
+          nftReadFailures.getApproved === 1 ? "" : "s"
+        } could not be verified with getApproved(tokenId). This can happen when a token was burned, no longer exists, uses a nonstandard contract, or the RPC/multicall read failed. These are not counted as validated live approvals.`
+      : nft && nft.diagnostics.liveReadFailureCount > 0
       ? "Some historical NFT approvals can fail live reads when a token was burned, a token ID no longer exists, a contract is nonstandard, or the RPC/multicall read returned an error. Review them, but they do not automatically mean the scanner is unsafe."
       : null;
 
