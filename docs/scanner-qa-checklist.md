@@ -29,15 +29,24 @@ For each chain, confirm the diagnostics panel shows:
 - Explorer request/window counts.
 - Any truncation, explorer/API error, or RPC/live-read error.
 
-## Controlled ERC-20 approval test
+Note: the fungible-token discovery fetch starts from the shared `Approval`
+event topic. Ethereum ERC-20 approvals and PulseChain PRC-20 approvals use the
+same ERC-20-compatible 3-topic `Approval` log shape. ERC-721 per-token
+approvals use the same event signature but have a 4-topic shape. Diagnostics
+should explain how many raw Approval-topic logs were skipped because they are
+NFT-shaped rather than ERC-20/PRC-20-shaped.
+
+## Controlled ERC-20 / PRC-20 approval test
 
 1. Use a burner wallet as the owner wallet.
-2. Choose a low-value ERC-20 on the target chain.
+2. Choose a low-value ERC-20 or PRC-20 on the target chain.
 3. Approve a small allowance to a second wallet or spender address you control.
 4. Open `/app?debug=1` and connect the owner wallet.
-5. Confirm the app discovers at least one raw ERC-20 approval log candidate.
+5. Confirm the app discovers at least one raw fungible-token approval log
+   candidate.
 6. Confirm the diagnostics count a unique token/spender pair for the approval.
-7. Confirm live allowance validation returns a nonzero ERC-20 allowance.
+7. Confirm live allowance validation returns a nonzero ERC-20/PRC-20
+   allowance.
 8. Confirm the approval appears in the normal scanner results.
 9. Revoke the approval from the app.
 10. Rescan after the transaction confirms.
@@ -75,6 +84,9 @@ For ERC-721 per-token approvals:
 - Test an unsupported chain; diagnostics should show supported chain: `No`.
 - Test a wallet with a large approval history; check whether truncation is
   reported and verify older approvals directly on the explorer when needed.
+- Review NFT live-read failures when they appear. They can be caused by burned
+  tokens, missing token IDs, nonstandard contracts, or RPC/multicall read
+  errors, and do not automatically mean the scanner is unsafe.
 - If explorer/API or RPC/live-read errors appear, capture the chain, wallet,
   timestamp, source ID, request/window counts, and error text.
 

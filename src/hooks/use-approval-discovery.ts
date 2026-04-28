@@ -16,12 +16,29 @@ import {
   type DiscoveredPair,
   type DiscoverySource,
   type DiscoverySourceMeta,
+  type Erc20ApprovalParseDiagnostics,
 } from "@/lib/discovery";
 import { trackEvent } from "@/lib/telemetry";
 
 export type DiscoveryStatus = "idle" | "pending" | "success" | "error";
 
 const EMPTY_PAIRS: readonly DiscoveredPair[] = [];
+
+const EMPTY_ERC20_PARSE: Erc20ApprovalParseDiagnostics = {
+  rawLogs: 0,
+  decodeAttempts: 0,
+  erc20TopicShape: 0,
+  erc721TokenApprovalShape: 0,
+  unsupportedTopicShape: 0,
+  missingTopics: 0,
+  missingTokenAddress: 0,
+  invalidTokenAddress: 0,
+  missingSpenderTopic: 0,
+  invalidSpenderTopic: 0,
+  decodedPairs: 0,
+  uniquePairs: 0,
+  samplePairs: [],
+};
 
 interface PipelineTiming {
   startedAt: number | null;
@@ -110,6 +127,7 @@ export interface UseApprovalDiscoveryResult {
     discoveryError: string | null;
     liveReadError: string | null;
     liveReadFailureCount: number;
+    parse: Erc20ApprovalParseDiagnostics;
     timing: PipelineTiming;
   };
   sourceMeta: DiscoverySourceMeta | null;
@@ -274,6 +292,7 @@ export function useApprovalDiscovery({
       discoveryError: errorMessage(discoveryQuery.error),
       liveReadError: errorMessage(reads.error),
       liveReadFailureCount: countReadFailures(reads.data),
+      parse: discoveryQuery.data?.erc20Parse ?? EMPTY_ERC20_PARSE,
       timing,
     },
     sourceMeta: discoverySource?.meta ?? null,

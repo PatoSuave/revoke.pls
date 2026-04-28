@@ -45,6 +45,93 @@ function countReadFailures(results: readonly { status: string }[] | undefined) {
   return results?.filter((result) => result.status === "failure").length ?? 0;
 }
 
+type NftReadFailureKind =
+  | "supportsInterface"
+  | "name"
+  | "isApprovedForAll"
+  | "getApproved"
+  | "other";
+
+export interface NftReadFailureSample {
+  kind: NftReadFailureKind;
+  collectionAddress: Address;
+  tokenId?: string;
+}
+
+export interface NftReadFailureDiagnostics {
+  supportsInterface: number;
+  name: number;
+  isApprovedForAll: number;
+  getApproved: number;
+  other: number;
+  samples: readonly NftReadFailureSample[];
+}
+
+const EMPTY_NFT_READ_FAILURES: NftReadFailureDiagnostics = {
+  supportsInterface: 0,
+  name: 0,
+  isApprovedForAll: 0,
+  getApproved: 0,
+  other: 0,
+  samples: [],
+};
+
+function collectNftReadFailures(
+  results: readonly { status: string }[] | undefined,
+  candidates: readonly NftDiscoveredApproval[],
+  collections: readonly Address[],
+): NftReadFailureDiagnostics {
+  if (!results || results.length === 0) return EMPTY_NFT_READ_FAILURES;
+
+  const diagnostics: {
+    supportsInterface: number;
+    name: number;
+    isApprovedForAll: number;
+    getApproved: number;
+    other: number;
+    samples: NftReadFailureSample[];
+  } = {
+    supportsInterface: 0,
+    name: 0,
+    isApprovedForAll: 0,
+    getApproved: 0,
+    other: 0,
+    samples: [],
+  };
+  const checksOffset = collections.length * 3;
+
+  results.forEach((result, index) => {
+    if (result.status !== "failure") return;
+
+    let kind: NftReadFailureKind = "other";
+    let collectionAddress: Address | undefined;
+    let tokenId: string | undefined;
+
+    if (index < checksOffset) {
+      const collectionIndex = Math.floor(index / 3);
+      collectionAddress = collections[collectionIndex];
+      const metadataSlot = index % 3;
+      kind = metadataSlot === 2 ? "name" : "supportsInterface";
+    } else {
+      const candidate = candidates[index - checksOffset];
+      collectionAddress = candidate?.collectionAddress;
+      if (candidate?.kind === "approvalForAll") {
+        kind = "isApprovedForAll";
+      } else if (candidate?.kind === "tokenApproval") {
+        kind = "getApproved";
+        tokenId = candidate.tokenId?.toString();
+      }
+    }
+
+    diagnostics[kind] += 1;
+    if (collectionAddress && diagnostics.samples.length < 3) {
+      diagnostics.samples.push({ kind, collectionAddress, tokenId });
+    }
+  });
+
+  return diagnostics;
+}
+
 function usePipelineTiming(status: NftDiscoveryStatus): PipelineTiming {
   const [timing, setTiming] = useState<PipelineTiming>(EMPTY_TIMING);
   const previousStatusRef = useRef<NftDiscoveryStatus>("idle");
@@ -108,6 +195,7 @@ export interface UseNftApprovalDiscoveryResult {
     discoveryError: string | null;
     liveReadError: string | null;
     liveReadFailureCount: number;
+    liveReadFailures: NftReadFailureDiagnostics;
     timing: PipelineTiming;
   };
   sourceMeta: DiscoverySourceMeta | null;
@@ -202,6 +290,11 @@ export function useNftApprovalDiscovery({
     return parseNftValidationResults(reads.data, owner, chainId, candidates);
   }, [owner, chainId, reads.data, candidates]);
 
+  const readFailureDiagnostics = useMemo(
+    () => collectNftReadFailures(reads.data, candidates, uniqueCollections),
+    [reads.data, candidates, uniqueCollections],
+  );
+
   const status: NftDiscoveryStatus = useMemo(() => {
     if (!discoveryEnabled) return "idle";
     if (discoveryQuery.status === "pending") return "pending";
@@ -276,6 +369,7 @@ export function useNftApprovalDiscovery({
       discoveryError: errorMessage(discoveryQuery.error),
       liveReadError: errorMessage(reads.error),
       liveReadFailureCount: countReadFailures(reads.data),
+      liveReadFailures: readFailureDiagnostics,
       timing,
     },
     sourceMeta: discoverySource?.meta ?? null,
