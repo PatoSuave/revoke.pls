@@ -76,6 +76,7 @@ interface WindowedFetchStats {
 export interface DiscoveryResult extends WindowedFetchStats {
   pairs: DiscoveredPair[];
   source: DiscoverySourceMeta;
+  erc20Parse: Erc20ApprovalParseDiagnostics;
 }
 
 export interface NftDiscoveryResult extends WindowedFetchStats {
@@ -99,6 +100,22 @@ interface BlockscoutLogEntry {
   address?: string;
   topics?: readonly string[];
   blockNumber?: string;
+}
+
+export interface Erc20ApprovalParseDiagnostics {
+  rawLogs: number;
+  decodeAttempts: number;
+  erc20TopicShape: number;
+  erc721TokenApprovalShape: number;
+  unsupportedTopicShape: number;
+  missingTopics: number;
+  missingTokenAddress: number;
+  invalidTokenAddress: number;
+  missingSpenderTopic: number;
+  invalidSpenderTopic: number;
+  decodedPairs: number;
+  uniquePairs: number;
+  samplePairs: readonly DiscoveredPair[];
 }
 
 interface BlockscoutLogsResponse {
@@ -493,23 +510,70 @@ async function windowedFetchLogs(
 
 function extractErc20Pairs(
   logs: readonly BlockscoutLogEntry[],
-): DiscoveredPair[] {
+): { pairs: DiscoveredPair[]; diagnostics: Erc20ApprovalParseDiagnostics } {
   const pairs: DiscoveredPair[] = [];
+  const samplePairs: DiscoveredPair[] = [];
+  const diagnostics: Erc20ApprovalParseDiagnostics = {
+    rawLogs: logs.length,
+    decodeAttempts: logs.length,
+    erc20TopicShape: 0,
+    erc721TokenApprovalShape: 0,
+    unsupportedTopicShape: 0,
+    missingTopics: 0,
+    missingTokenAddress: 0,
+    invalidTokenAddress: 0,
+    missingSpenderTopic: 0,
+    invalidSpenderTopic: 0,
+    decodedPairs: 0,
+    uniquePairs: 0,
+    samplePairs,
+  };
   for (const log of logs) {
     const topics = log.topics;
     // ERC-20 Approval: 3 topics. ERC-721's per-token Approval shares the same
     // topic0 but ships 4 topics; drop those here — they're picked up by the
     // NFT pipeline instead.
-    if (!topics || topics.length !== 3) continue;
+    if (!topics) {
+      diagnostics.missingTopics += 1;
+      continue;
+    }
+    if (topics.length === 4) {
+      diagnostics.erc721TokenApprovalShape += 1;
+      continue;
+    }
+    if (topics.length !== 3) {
+      diagnostics.unsupportedTopicShape += 1;
+      continue;
+    }
+    diagnostics.erc20TopicShape += 1;
     const tokenRaw = log.address;
     const spenderRaw = topics[2];
-    if (typeof tokenRaw !== "string") continue;
+    if (typeof tokenRaw !== "string") {
+      diagnostics.missingTokenAddress += 1;
+      continue;
+    }
     const tokenAddress = safeChecksum(tokenRaw);
-    const spenderAddress = spenderRaw ? topicToAddress(spenderRaw) : null;
-    if (!tokenAddress || !spenderAddress) continue;
-    pairs.push({ tokenAddress, spenderAddress });
+    if (!tokenAddress) {
+      diagnostics.invalidTokenAddress += 1;
+      continue;
+    }
+    if (!spenderRaw) {
+      diagnostics.missingSpenderTopic += 1;
+      continue;
+    }
+    const spenderAddress = topicToAddress(spenderRaw);
+    if (!spenderAddress) {
+      diagnostics.invalidSpenderTopic += 1;
+      continue;
+    }
+    const pair = { tokenAddress, spenderAddress };
+    diagnostics.decodedPairs += 1;
+    if (samplePairs.length < 3) samplePairs.push(pair);
+    pairs.push(pair);
   }
-  return pairs;
+  const deduped = dedupePairs(pairs);
+  diagnostics.uniquePairs = deduped.length;
+  return { pairs: deduped, diagnostics };
 }
 
 function extractNftApprovalForAll(
@@ -622,9 +686,11 @@ export function createBlockscoutDiscoverySource({
         limits,
         options?.signal,
       );
+      const parsed = extractErc20Pairs(logs);
       return {
-        pairs: dedupePairs(extractErc20Pairs(logs)),
+        pairs: parsed.pairs,
         source: meta,
+        erc20Parse: parsed.diagnostics,
         ...stats,
       };
     },

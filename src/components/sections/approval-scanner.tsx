@@ -403,7 +403,7 @@ function ScannerSummary({
       ? `${activeCount} active / ${candidateCount} checked`
       : status === "pending"
       ? "Searching wallet history"
-      : "No active ERC-20 approvals";
+      : "No active ERC-20/PRC-20 approvals";
 
   return (
     <div className="rounded-2xl border border-pulse-border bg-pulse-bg/55 p-4">
@@ -735,11 +735,11 @@ function ScanContent({
           Clear for now
         </p>
         <p className="mt-2 text-lg font-semibold text-pulse-text">
-          No active ERC-20 approvals found
+          No active ERC-20/PRC-20 approvals found
         </p>
         <p className="mt-2 max-w-2xl leading-6 text-pulse-muted">
           {scan.stats.candidates === 0
-            ? `We couldn't find any ERC-20 approval history for this wallet on ${
+            ? `We couldn't find any fungible token approval history for this wallet on ${
                 scan.sourceMeta?.name ?? chainConfig.discovery.name
               }. If you expect an approval is in place, verify directly on ${chainConfig.explorer.name}.`
             : `${scan.stats.candidates} historical approval${
@@ -863,7 +863,7 @@ function ScannerSkeleton({ candidates }: { candidates: number }) {
       ? `Re-validating ${candidates} historical approval candidate${
           candidates === 1 ? "" : "s"
         } with live on-chain reads.`
-      : "Searching explorer logs for ERC-20 approval history.";
+      : "Searching explorer logs for ERC-20/PRC-20-compatible approval history.";
 
   return (
     <div className="space-y-4">

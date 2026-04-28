@@ -35,27 +35,50 @@ export function ScannerDiagnosticsPanel({
 
   const explorerIssues = [
     erc20?.diagnostics.discoveryError
-      ? `ERC-20 discovery: ${erc20.diagnostics.discoveryError}`
+      ? `ERC-20/PRC-20 discovery: ${erc20.diagnostics.discoveryError}`
       : null,
     nft?.diagnostics.discoveryError
       ? `NFT discovery: ${nft.diagnostics.discoveryError}`
       : null,
-    erc20?.truncated ? "ERC-20 discovery reached the fetch cap." : null,
+    erc20?.truncated
+      ? "ERC-20/PRC-20 discovery reached the fetch cap."
+      : null,
     nft?.truncated ? "NFT discovery reached the fetch cap." : null,
   ].filter(Boolean);
+  const erc20Parse = erc20?.diagnostics.parse;
+  const erc20DecodeFailures = erc20Parse
+    ? erc20Parse.missingTopics +
+      erc20Parse.unsupportedTopicShape +
+      erc20Parse.missingTokenAddress +
+      erc20Parse.invalidTokenAddress +
+      erc20Parse.missingSpenderTopic +
+      erc20Parse.invalidSpenderTopic
+    : 0;
+  const erc20ShapeExplanation =
+    erc20Parse &&
+    erc20Parse.rawLogs > 0 &&
+    erc20Parse.uniquePairs === 0 &&
+    erc20Parse.erc20TopicShape === 0
+      ? "Raw Approval-topic logs were found, but none had the 3-topic ERC-20/PRC-20 fungible-token shape. These were ERC-721 token-specific approval logs and are handled by the NFT pipeline."
+      : null;
+  const nftReadFailures = nft?.diagnostics.liveReadFailures;
+  const nftFailureExplanation =
+    nft && nft.diagnostics.liveReadFailureCount > 0
+      ? "Some historical NFT approvals can fail live reads when a token was burned, a token ID no longer exists, a contract is nonstandard, or the RPC/multicall read returned an error. Review them, but they do not automatically mean the scanner is unsafe."
+      : null;
 
   const liveReadIssues = [
     erc20?.diagnostics.liveReadError
-      ? `ERC-20 live reads: ${erc20.diagnostics.liveReadError}`
+      ? `ERC-20/PRC-20 live reads: ${erc20.diagnostics.liveReadError}`
       : null,
     nft?.diagnostics.liveReadError
       ? `NFT live reads: ${nft.diagnostics.liveReadError}`
       : null,
     erc20 && erc20.diagnostics.liveReadFailureCount > 0
-      ? `ERC-20 read failures inside multicall: ${erc20.diagnostics.liveReadFailureCount}`
+      ? `ERC-20/PRC-20 read failures inside multicall: ${erc20.diagnostics.liveReadFailureCount}`
       : null,
     nft && nft.diagnostics.liveReadFailureCount > 0
-      ? `NFT read failures inside multicall: ${nft.diagnostics.liveReadFailureCount}`
+      ? `NFT read failures inside multicall: ${nft.diagnostics.liveReadFailureCount} (${formatNftFailureBreakdown(nft.diagnostics.liveReadFailures)})`
       : null,
   ].filter(Boolean);
 
@@ -106,16 +129,34 @@ export function ScannerDiagnosticsPanel({
           />
         </DiagnosticCard>
 
-        <DiagnosticCard title="ERC-20 pipeline">
+        <DiagnosticCard title="ERC-20 / PRC-20 pipeline">
           {erc20 ? (
             <DiagnosticRows
               rows={[
                 ["Status", erc20.status],
-                ["Raw approval logs", erc20.stats.rawCandidateLogs],
+                ["Raw shared Approval-topic logs", erc20.stats.rawCandidateLogs],
+                ["Decode attempts", erc20Parse?.decodeAttempts ?? 0],
+                [
+                  "ERC-20/PRC-20-shaped logs",
+                  erc20Parse?.erc20TopicShape ?? 0,
+                ],
+                [
+                  "ERC-721-shaped logs skipped",
+                  erc20Parse?.erc721TokenApprovalShape ?? 0,
+                ],
+                ["Other skipped logs", erc20DecodeFailures],
+                ["Decoded token/spender pairs", erc20Parse?.decodedPairs ?? 0],
                 ["Unique token/spender pairs", erc20.stats.candidates],
                 ["Unique tokens", erc20.stats.uniqueTokens],
                 ["Live allowances checked", erc20.stats.candidates],
                 ["Nonzero allowances returned", erc20.stats.active],
+                [
+                  "Sample decoded pairs",
+                  <SamplePairs
+                    key="erc20-samples"
+                    pairs={erc20Parse?.samplePairs ?? []}
+                  />,
+                ],
                 ["Explorer windows", erc20.stats.windows],
                 ["Explorer requests", erc20.stats.requests],
                 ["Fetch truncated", erc20.truncated ? "Yes" : "No"],
@@ -124,8 +165,21 @@ export function ScannerDiagnosticsPanel({
               ]}
             />
           ) : (
-            <p>Connect a supported wallet and network to start ERC-20 diagnostics.</p>
+            <p>
+              Connect a supported wallet and network to start ERC-20/PRC-20
+              diagnostics.
+            </p>
           )}
+          <p className="mt-3 leading-5">
+            PulseChain PRC-20 approvals use the same 3-topic,
+            ERC-20-compatible Approval log shape as fungible tokens on
+            Ethereum.
+          </p>
+          {erc20ShapeExplanation ? (
+            <p className="mt-3 rounded-lg border border-pulse-cyan/30 bg-pulse-cyan/5 p-2 leading-5 text-pulse-cyan">
+              {erc20ShapeExplanation}
+            </p>
+          ) : null}
         </DiagnosticCard>
 
         <DiagnosticCard title="NFT pipeline">
@@ -142,12 +196,35 @@ export function ScannerDiagnosticsPanel({
                 ["Explorer requests", nft.stats.requests],
                 ["Fetch truncated", nft.truncated ? "Yes" : "No"],
                 ["Live read failures", nft.diagnostics.liveReadFailureCount],
+                [
+                  "Failed supportsInterface reads",
+                  nftReadFailures?.supportsInterface ?? 0,
+                ],
+                ["Failed name reads", nftReadFailures?.name ?? 0],
+                [
+                  "Failed isApprovedForAll reads",
+                  nftReadFailures?.isApprovedForAll ?? 0,
+                ],
+                ["Failed getApproved reads", nftReadFailures?.getApproved ?? 0],
+                ["Other failed reads", nftReadFailures?.other ?? 0],
+                [
+                  "Sample failed reads",
+                  <NftFailureSamples
+                    key="nft-failure-samples"
+                    samples={nftReadFailures?.samples ?? []}
+                  />,
+                ],
                 ["Scan time", formatElapsed(nft.diagnostics.timing.elapsedMs)],
               ]}
             />
           ) : (
             <p>Connect a supported wallet and network to start NFT diagnostics.</p>
           )}
+          {nftFailureExplanation ? (
+            <p className="mt-3 rounded-lg border border-pulse-cyan/25 bg-pulse-cyan/5 p-2 leading-5 text-pulse-text">
+              {nftFailureExplanation}
+            </p>
+          ) : null}
         </DiagnosticCard>
       </div>
 
@@ -230,6 +307,77 @@ function IssueCard({
       )}
     </div>
   );
+}
+
+function SamplePairs({
+  pairs,
+}: {
+  pairs: readonly {
+    tokenAddress: `0x${string}`;
+    spenderAddress: `0x${string}`;
+  }[];
+}) {
+  if (pairs.length === 0) return "None decoded";
+
+  return (
+    <ul className="space-y-1">
+      {pairs.map((pair) => (
+        <li
+          key={`${pair.tokenAddress}-${pair.spenderAddress}`}
+          className="break-normal"
+        >
+          {shortenAddress(pair.tokenAddress)} /{" "}
+          {shortenAddress(pair.spenderAddress)}
+        </li>
+      ))}
+    </ul>
+  );
+}
+
+function NftFailureSamples({
+  samples,
+}: {
+  samples: readonly {
+    kind: string;
+    collectionAddress: `0x${string}`;
+    tokenId?: string;
+  }[];
+}) {
+  if (samples.length === 0) return "None";
+
+  return (
+    <ul className="space-y-1">
+      {samples.map((sample, index) => (
+        <li
+          key={`${sample.kind}-${sample.collectionAddress}-${sample.tokenId ?? index}`}
+          className="break-normal"
+        >
+          {sample.kind} {shortenAddress(sample.collectionAddress)}
+          {sample.tokenId ? ` #${sample.tokenId}` : ""}
+        </li>
+      ))}
+    </ul>
+  );
+}
+
+function formatNftFailureBreakdown(failures: {
+  supportsInterface: number;
+  name: number;
+  isApprovedForAll: number;
+  getApproved: number;
+  other: number;
+}) {
+  const parts = [
+    ["supportsInterface", failures.supportsInterface],
+    ["name", failures.name],
+    ["isApprovedForAll", failures.isApprovedForAll],
+    ["getApproved", failures.getApproved],
+    ["other", failures.other],
+  ]
+    .filter(([, count]) => Number(count) > 0)
+    .map(([label, count]) => `${label}: ${count}`);
+
+  return parts.length > 0 ? parts.join(", ") : "no failed read type reported";
 }
 
 function formatElapsed(ms: number | null) {
