@@ -25,8 +25,9 @@ does not mean a desktop release exists today.
   defaults are used.
 - `NEXT_PUBLIC_PULSECHAIN_EXPLORER_API` is optional. If unset, the PulseScan
   API default is used.
-- `NEXT_PUBLIC_MAINNET_EXPLORER_API` and `NEXT_PUBLIC_ETHERSCAN_API_KEY` are
-  optional Ethereum discovery overrides.
+- `NEXT_PUBLIC_MAINNET_EXPLORER_API` is an optional Ethereum discovery API
+  override. `NEXT_PUBLIC_ETHERSCAN_API_KEY` is required for Ethereum mainnet
+  discovery when using the default Etherscan v2 endpoint.
 
 Do not commit local `.env` files or release secrets.
 

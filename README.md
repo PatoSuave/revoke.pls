@@ -89,8 +89,9 @@ npm run typecheck  # tsc --noEmit
 
 This project is Vercel-ready. Import the repo at
 https://vercel.com/new and Vercel will auto-detect Next.js and use
-`npm run build`. No additional environment variables are required for
-the default public RPC.
+`npm run build`. PulseChain works with the default public RPC and
+PulseScan API. Ethereum mainnet discovery requires an Etherscan API key
+because Etherscan v2 rejects log-history requests without one.
 
 For the production domain `revoke.pls`, set `NEXT_PUBLIC_SITE_URL=https://revoke.pls`
 in your Vercel project environment so canonical URLs, Open Graph, and Twitter
@@ -124,7 +125,7 @@ Copy `.env.example` to `.env.local` if you want to override defaults.
 | `NEXT_PUBLIC_MAINNET_RPC_URL` | No | Override Ethereum mainnet RPC for wagmi/viem reads. Defaults to viem's mainnet transport; set a private RPC for higher reliability. |
 | `NEXT_PUBLIC_PULSECHAIN_EXPLORER_API` | No | Override the PulseChain discovery API (`https://api.scan.pulsechain.com/api`). Must support Etherscan-compatible `logs/getLogs` topic filters. |
 | `NEXT_PUBLIC_MAINNET_EXPLORER_API` | No | Override Ethereum discovery API (`https://api.etherscan.io/v2/api`). Must support Etherscan v2-style params including `chainid=1`. |
-| `NEXT_PUBLIC_ETHERSCAN_API_KEY` | No (recommended) | API key for Ethereum discovery. Strongly recommended in production to avoid rate-limit failures on large histories. |
+| `NEXT_PUBLIC_ETHERSCAN_API_KEY` | Yes for Ethereum discovery | API key for Ethereum mainnet discovery. Etherscan v2 rejects `logs/getLogs` requests without a valid key. |
 | `NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID` | No | Enables the WalletConnect option in the connect menu (QR pairing for mobile wallets). Obtain a free project ID at [cloud.reown.com](https://cloud.reown.com). When unset, only the injected wallet option is shown — the app still runs. |
 | `NEXT_PUBLIC_SITE_URL` | No | Canonical public URL used by SEO metadata, Open Graph, and Twitter cards. Defaults to `https://revoke.pls`. Set to your own origin for preview/staging deploys so previews do not advertise the production canonical. |
 
