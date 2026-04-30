@@ -1,6 +1,7 @@
 import type { UseApprovalDiscoveryResult } from "@/hooks/use-approval-discovery";
 import type { UseNftApprovalDiscoveryResult } from "@/hooks/use-nft-approval-discovery";
 import type { SupportedChainConfig } from "@/lib/chains";
+import { FUNGIBLE_APPROVAL_SHAPE_COPY } from "@/lib/diagnostic-copy";
 import { shortenAddress } from "@/lib/format";
 
 interface ScannerDiagnosticsPanelProps {
@@ -62,6 +63,7 @@ export function ScannerDiagnosticsPanel({
       ? "Raw Approval-topic logs were found, but none had the 3-topic ERC-20/PRC-20 fungible-token shape. These were ERC-721 token-specific approval logs and are handled by the NFT pipeline."
       : null;
   const nftReadFailures = nft?.diagnostics.liveReadFailures;
+  const erc20ReadFailures = erc20?.diagnostics.liveReadFailures;
   const nftFailureExplanation =
     nftReadFailures && nftReadFailures.getApproved > 0
       ? `${nftReadFailures.getApproved} historical ERC-721 token approval${
@@ -73,13 +75,13 @@ export function ScannerDiagnosticsPanel({
 
   const liveReadIssues = [
     erc20?.diagnostics.liveReadError
-      ? `ERC-20/PRC-20 live reads: ${erc20.diagnostics.liveReadError}`
+      ? `ERC-20/PRC-20 live reads failed globally: ${erc20.diagnostics.liveReadError}`
       : null,
     nft?.diagnostics.liveReadError
       ? `NFT live reads: ${nft.diagnostics.liveReadError}`
       : null,
     erc20 && erc20.diagnostics.liveReadFailureCount > 0
-      ? `ERC-20/PRC-20 read failures inside multicall: ${erc20.diagnostics.liveReadFailureCount}`
+      ? `ERC-20/PRC-20 read failures inside multicall: ${erc20.diagnostics.liveReadFailureCount} (${formatErc20FailureBreakdown(erc20.diagnostics.liveReadFailures)})`
       : null,
     nft && nft.diagnostics.liveReadFailureCount > 0
       ? `NFT read failures inside multicall: ${nft.diagnostics.liveReadFailureCount} (${formatNftFailureBreakdown(nft.diagnostics.liveReadFailures)})`
@@ -153,6 +155,10 @@ export function ScannerDiagnosticsPanel({
                 ["Unique token/spender pairs", erc20.stats.candidates],
                 ["Unique tokens", erc20.stats.uniqueTokens],
                 ["Live allowances checked", erc20.stats.candidates],
+                [
+                  "Allowance validation",
+                  formatAllowanceValidation(erc20.diagnostics.liveReadFailures),
+                ],
                 ["Nonzero allowances returned", erc20.stats.active],
                 [
                   "Sample decoded pairs",
@@ -165,6 +171,21 @@ export function ScannerDiagnosticsPanel({
                 ["Explorer requests", erc20.stats.requests],
                 ["Fetch truncated", erc20.truncated ? "Yes" : "No"],
                 ["Live read failures", erc20.diagnostics.liveReadFailureCount],
+                [
+                  "Failed allowance reads",
+                  erc20ReadFailures?.allowance ?? 0,
+                ],
+                ["Failed symbol reads", erc20ReadFailures?.symbol ?? 0],
+                ["Failed name reads", erc20ReadFailures?.name ?? 0],
+                ["Failed decimals reads", erc20ReadFailures?.decimals ?? 0],
+                ["Other failed reads", erc20ReadFailures?.other ?? 0],
+                [
+                  "Sample failed reads",
+                  <Erc20FailureSamples
+                    key="erc20-failure-samples"
+                    samples={erc20ReadFailures?.samples ?? []}
+                  />,
+                ],
                 ["Scan time", formatElapsed(erc20.diagnostics.timing.elapsedMs)],
               ]}
             />
@@ -175,9 +196,7 @@ export function ScannerDiagnosticsPanel({
             </p>
           )}
           <p className="mt-3 leading-5">
-            PulseChain PRC-20 approvals use the same 3-topic,
-            ERC-20-compatible Approval log shape as fungible tokens on
-            Ethereum.
+            {FUNGIBLE_APPROVAL_SHAPE_COPY}
           </p>
           {erc20ShapeExplanation ? (
             <p className="mt-3 rounded-lg border border-pulse-cyan/30 bg-pulse-cyan/5 p-2 leading-5 text-pulse-cyan">
@@ -362,6 +381,71 @@ function NftFailureSamples({
       ))}
     </ul>
   );
+}
+
+function Erc20FailureSamples({
+  samples,
+}: {
+  samples: readonly {
+    kind: string;
+    tokenAddress: `0x${string}`;
+    spenderAddress?: `0x${string}`;
+    error: string;
+  }[];
+}) {
+  if (samples.length === 0) return "None";
+
+  return (
+    <ul className="space-y-1">
+      {samples.map((sample, index) => (
+        <li
+          key={`${sample.kind}-${sample.tokenAddress}-${sample.spenderAddress ?? index}`}
+          className="break-normal"
+        >
+          {sample.kind} {shortenAddress(sample.tokenAddress)}
+          {sample.spenderAddress
+            ? ` / ${shortenAddress(sample.spenderAddress)}`
+            : ""}{" "}
+          ({sample.error})
+        </li>
+      ))}
+    </ul>
+  );
+}
+
+function formatAllowanceValidation(failures: {
+  allowanceSucceeded: number;
+  allowanceFailed: number;
+  allowanceTotal: number;
+}) {
+  if (failures.allowanceTotal === 0) return "Not run";
+  if (failures.allowanceFailed === 0) {
+    return `All ${failures.allowanceTotal} allowance reads succeeded`;
+  }
+  if (failures.allowanceFailed === failures.allowanceTotal) {
+    return `All ${failures.allowanceTotal} allowance reads failed`;
+  }
+  return `${failures.allowanceSucceeded}/${failures.allowanceTotal} allowance reads succeeded; ${failures.allowanceFailed} failed`;
+}
+
+function formatErc20FailureBreakdown(failures: {
+  allowance: number;
+  symbol: number;
+  name: number;
+  decimals: number;
+  other: number;
+}) {
+  const parts = [
+    ["allowance", failures.allowance],
+    ["symbol", failures.symbol],
+    ["name", failures.name],
+    ["decimals", failures.decimals],
+    ["other", failures.other],
+  ]
+    .filter(([, count]) => Number(count) > 0)
+    .map(([label, count]) => `${label}: ${count}`);
+
+  return parts.length > 0 ? parts.join(", ") : "no failed read type reported";
 }
 
 function formatNftFailureBreakdown(failures: {

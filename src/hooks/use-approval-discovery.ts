@@ -7,8 +7,11 @@ import { useReadContracts } from "wagmi";
 
 import {
   buildDiscoveryContracts,
+  collectDiscoveryReadFailures,
+  EMPTY_ERC20_LIVE_READ_FAILURES,
   parseDiscoveryResults,
   type Approval,
+  type Erc20LiveReadFailureDiagnostics,
 } from "@/lib/approvals";
 import type { SupportedChainId } from "@/lib/chains";
 import {
@@ -56,10 +59,6 @@ function errorMessage(error: unknown): string | null {
   if (!error) return null;
   if (error instanceof Error) return error.message;
   return String(error);
-}
-
-function countReadFailures(results: readonly { status: string }[] | undefined) {
-  return results?.filter((result) => result.status === "failure").length ?? 0;
 }
 
 function usePipelineTiming(status: DiscoveryStatus): PipelineTiming {
@@ -127,6 +126,7 @@ export interface UseApprovalDiscoveryResult {
     discoveryError: string | null;
     liveReadError: string | null;
     liveReadFailureCount: number;
+    liveReadFailures: Erc20LiveReadFailureDiagnostics;
     parse: Erc20ApprovalParseDiagnostics;
     timing: PipelineTiming;
   };
@@ -216,6 +216,17 @@ export function useApprovalDiscovery({
     return parseDiscoveryResults(reads.data, owner, chainId, pairs);
   }, [owner, chainId, reads.data, pairs]);
 
+  const readFailures = useMemo(
+    () =>
+      reads.data
+        ? collectDiscoveryReadFailures(reads.data, pairs, uniqueTokens)
+        : {
+            ...EMPTY_ERC20_LIVE_READ_FAILURES,
+            allowanceTotal: pairs.length,
+          },
+    [reads.data, pairs, uniqueTokens],
+  );
+
   const status: DiscoveryStatus = useMemo(() => {
     if (!discoveryEnabled) return "idle";
     if (discoveryQuery.status === "pending") return "pending";
@@ -291,7 +302,13 @@ export function useApprovalDiscovery({
     diagnostics: {
       discoveryError: errorMessage(discoveryQuery.error),
       liveReadError: errorMessage(reads.error),
-      liveReadFailureCount: countReadFailures(reads.data),
+      liveReadFailureCount:
+        readFailures.allowance +
+        readFailures.symbol +
+        readFailures.name +
+        readFailures.decimals +
+        readFailures.other,
+      liveReadFailures: readFailures,
       parse: discoveryQuery.data?.erc20Parse ?? EMPTY_ERC20_PARSE,
       timing,
     },
