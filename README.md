@@ -95,8 +95,11 @@ because Etherscan v2 rejects log-history requests without one.
 
 For the production domain `revoke.pls`, set `NEXT_PUBLIC_SITE_URL=https://revoke.pls`
 in your Vercel project environment so canonical URLs, Open Graph, and Twitter
-cards resolve against the real origin. Preview/staging deploys should set it
-to the preview origin to avoid advertising the production canonical.
+cards resolve against the real origin. The value should be a full `https://`
+URL; host-only values like `revoke-pls.vercel.app` are normalized defensively,
+but the environment should still be configured with the full origin.
+Preview/staging deploys should set it to the preview origin to avoid
+advertising the production canonical.
 
 ### Favicon, app icon, and Open Graph image
 
@@ -127,7 +130,7 @@ Copy `.env.example` to `.env.local` if you want to override defaults.
 | `NEXT_PUBLIC_MAINNET_EXPLORER_API` | No | Override Ethereum discovery API (`https://api.etherscan.io/v2/api`). Must support Etherscan v2-style params including `chainid=1`. |
 | `NEXT_PUBLIC_ETHERSCAN_API_KEY` | Yes for Ethereum discovery | API key for Ethereum mainnet discovery. Etherscan v2 rejects `logs/getLogs` requests without a valid key. |
 | `NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID` | No | Enables the WalletConnect option in the connect menu (QR pairing for mobile wallets). Obtain a free project ID at [cloud.reown.com](https://cloud.reown.com). When unset, only the injected wallet option is shown — the app still runs. |
-| `NEXT_PUBLIC_SITE_URL` | No | Canonical public URL used by SEO metadata, Open Graph, and Twitter cards. Defaults to `https://revoke.pls`. Set to your own origin for preview/staging deploys so previews do not advertise the production canonical. |
+| `NEXT_PUBLIC_SITE_URL` | No | Canonical public URL used by SEO metadata, Open Graph, and Twitter cards. Defaults to `https://revoke.pls`. Use a full `https://` URL such as `https://revoke-pls.vercel.app`; host-only values are normalized defensively. |
 
 ## Project Structure
 
@@ -189,7 +192,7 @@ production domain at a deploy.
 ### Environment
 
 - [ ] Set `NEXT_PUBLIC_SITE_URL=https://revoke.pls` in the production
-      Vercel project (and a matching origin in preview/staging).
+      Vercel project (and a matching full `https://` origin in preview/staging).
 - [ ] Set `NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID` if the WalletConnect
       option should appear in the connect menu.
 - [ ] Confirm `NEXT_PUBLIC_PULSECHAIN_RPC_URL` is either unset
