@@ -695,6 +695,7 @@ function ScanContent({
 }) {
   const batchActive = batch.state === "running" || batch.state === "stopping";
   const batchInteracting = batch.state !== "idle";
+  const failedAllowanceReads = scan.diagnostics.liveReadFailures.allowance;
   if (scan.status === "pending") {
     return <ScannerSkeleton candidates={scan.stats.candidates} />;
   }
@@ -749,6 +750,12 @@ function ScanContent({
             ? " A per-wallet fetch cap was reached; very old approvals may be missing."
             : ""}
         </p>
+        {failedAllowanceReads > 0 ? (
+          <AllowanceReadWarning
+            count={failedAllowanceReads}
+            explorerName={chainConfig.explorer.name}
+          />
+        ) : null}
         <div className="mt-4 grid gap-2 text-xs text-pulse-muted sm:grid-cols-3">
           <EmptyStateStep title="Check the network" body={chainConfig.displayName} />
           <EmptyStateStep title="Rescan later" body="Explorer APIs can lag." />
@@ -761,6 +768,13 @@ function ScanContent({
   return (
     <div className="space-y-4">
       <GuidancePanel />
+
+      {failedAllowanceReads > 0 ? (
+        <AllowanceReadWarning
+          count={failedAllowanceReads}
+          explorerName={chainConfig.explorer.name}
+        />
+      ) : null}
 
       <ApprovalFilters
         query={query}
@@ -844,6 +858,27 @@ function GuidancePanel() {
           review every spender before signing a revoke or leaving access open.
         </li>
       </ul>
+    </div>
+  );
+}
+
+function AllowanceReadWarning({
+  count,
+  explorerName,
+}: {
+  count: number;
+  explorerName: string;
+}) {
+  return (
+    <div className="rounded-2xl border border-pulse-red/40 bg-pulse-red/10 p-4 text-sm text-pulse-text">
+      <p className="font-semibold text-pulse-red">
+        {count} allowance read{count === 1 ? "" : "s"} could not be verified live.
+      </p>
+      <p className="mt-1 leading-6 text-pulse-muted">
+        Failed allowance reads are not counted as safe or cleared. Rescan with a
+        healthier RPC, or verify the affected token/spender pairs directly on{" "}
+        {explorerName}.
+      </p>
     </div>
   );
 }

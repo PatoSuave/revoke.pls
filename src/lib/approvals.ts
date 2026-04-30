@@ -26,7 +26,7 @@ export interface Approval {
   tokenAddress: Address;
   tokenSymbol: string;
   tokenName?: string;
-  tokenDecimals: number;
+  tokenDecimals: number | null;
   tokenCategory: TokenCategory;
   spenderAddress: Address;
   spenderLabel: string;
@@ -46,6 +46,7 @@ export interface Approval {
 }
 
 const METADATA_CALLS_PER_TOKEN = 3; // symbol, decimals, name
+const MAX_FAILURE_SAMPLES = 6;
 
 /**
  * Number of wagmi `useReadContracts` entries produced per token in the
@@ -98,9 +99,105 @@ export function buildScanContracts(
 /**
  * One entry of a wagmi `useReadContracts` result with `allowFailure: true`.
  */
-type ReadResult =
+export type ReadResult =
   | { status: "success"; result: unknown; error?: undefined }
   | { status: "failure"; error: Error; result?: undefined };
+
+export type Erc20LiveReadFailureKind =
+  | "allowance"
+  | "symbol"
+  | "name"
+  | "decimals"
+  | "other";
+
+export interface Erc20LiveReadFailureSample {
+  kind: Erc20LiveReadFailureKind;
+  tokenAddress: Address;
+  spenderAddress?: Address;
+  error: string;
+}
+
+export interface Erc20LiveReadFailureDiagnostics {
+  allowance: number;
+  symbol: number;
+  name: number;
+  decimals: number;
+  other: number;
+  allowanceSucceeded: number;
+  allowanceFailed: number;
+  allowanceTotal: number;
+  metadataFailed: number;
+  samples: readonly Erc20LiveReadFailureSample[];
+}
+
+export const EMPTY_ERC20_LIVE_READ_FAILURES: Erc20LiveReadFailureDiagnostics = {
+  allowance: 0,
+  symbol: 0,
+  name: 0,
+  decimals: 0,
+  other: 0,
+  allowanceSucceeded: 0,
+  allowanceFailed: 0,
+  allowanceTotal: 0,
+  metadataFailed: 0,
+  samples: [],
+};
+
+function readFailureCategory(error: unknown): string {
+  if (!error || typeof error !== "object") return "unknown";
+  const name =
+    "name" in error && typeof error.name === "string"
+      ? error.name.trim()
+      : "";
+  if (name) return name.slice(0, 80);
+  const code = "code" in error ? error.code : undefined;
+  if (typeof code === "string" || typeof code === "number") {
+    return `code ${String(code).slice(0, 48)}`;
+  }
+  return "Error";
+}
+
+function failedReadCategory(result: ReadResult | undefined): string {
+  if (!result) return "missing-result";
+  return result.status === "failure"
+    ? readFailureCategory(result.error)
+    : "unknown";
+}
+
+function addFailureSample(
+  samples: Erc20LiveReadFailureSample[],
+  sample: Erc20LiveReadFailureSample,
+) {
+  if (samples.length < MAX_FAILURE_SAMPLES) {
+    samples.push(sample);
+  }
+}
+
+function incrementFailure(
+  diagnostics: {
+    allowance: number;
+    symbol: number;
+    name: number;
+    decimals: number;
+    other: number;
+    samples: Erc20LiveReadFailureSample[];
+  },
+  kind: Erc20LiveReadFailureKind,
+) {
+  diagnostics[kind] += 1;
+}
+
+function formatValidatedAllowance(
+  raw: bigint,
+  decimals: number | undefined,
+  symbol: string,
+): string {
+  if (isUnlimitedAllowance(raw)) return "Unlimited";
+  if (typeof decimals === "number") {
+    return `${formatAllowance(raw, decimals)} ${symbol}`;
+  }
+  return `Raw allowance: ${raw.toString()} units`;
+}
 
 /**
  * Parse a wagmi `useReadContracts` result (with `allowFailure: true`) back
@@ -232,6 +329,73 @@ export function buildDiscoveryContracts(
   };
 }
 
+export function collectDiscoveryReadFailures(
+  results: readonly ReadResult[] | undefined,
+  pairs: readonly DiscoveredPair[],
+  tokens = uniqueTokenAddresses(pairs),
+): Erc20LiveReadFailureDiagnostics {
+  const diagnostics: {
+    allowance: number;
+    symbol: number;
+    name: number;
+    decimals: number;
+    other: number;
+    allowanceSucceeded: number;
+    allowanceFailed: number;
+    allowanceTotal: number;
+    metadataFailed: number;
+    samples: Erc20LiveReadFailureSample[];
+  } = {
+    ...EMPTY_ERC20_LIVE_READ_FAILURES,
+    samples: [],
+    allowanceTotal: pairs.length,
+  };
+
+  if (!results) return diagnostics;
+
+  tokens.forEach((address, tokenIdx) => {
+    const base = tokenIdx * METADATA_CALLS_PER_TOKEN;
+    const metadataReads: readonly [Erc20LiveReadFailureKind, number][] = [
+      ["symbol", base],
+      ["decimals", base + 1],
+      ["name", base + 2],
+    ];
+
+    metadataReads.forEach(([kind, index]) => {
+      const result = results[index];
+      if (result?.status !== "failure") return;
+
+      incrementFailure(diagnostics, kind);
+      diagnostics.metadataFailed += 1;
+      addFailureSample(diagnostics.samples, {
+        kind,
+        tokenAddress: address,
+        error: failedReadCategory(result),
+      });
+    });
+  });
+
+  const allowanceOffset = tokens.length * METADATA_CALLS_PER_TOKEN;
+  pairs.forEach((pair, pairIdx) => {
+    const result = results[allowanceOffset + pairIdx];
+    if (result?.status === "success") {
+      diagnostics.allowanceSucceeded += 1;
+      return;
+    }
+
+    diagnostics.allowance += 1;
+    diagnostics.allowanceFailed += 1;
+    addFailureSample(diagnostics.samples, {
+      kind: "allowance",
+      tokenAddress: pair.tokenAddress,
+      spenderAddress: pair.spenderAddress,
+      error: failedReadCategory(result),
+    });
+  });
+
+  return diagnostics;
+}
+
 export interface ParseDiscoveryStats {
   /** Number of `(token, spender)` pairs fed into the pipeline. */
   candidates: number;
@@ -252,7 +416,8 @@ export interface ParseDiscoveryOutput {
  *  - prefers on-chain metadata, falling back to registry fallbacks then to a
  *    short-address placeholder for tokens we have never seen before
  *  - drops zero allowances (including revoked-but-still-logged entries)
- *  - skips tokens with no decimals info (we won't mis-scale a number)
+ *  - uses raw-unit display when decimals metadata is unavailable, so a
+ *    successful nonzero allowance is never hidden by metadata-only failures
  *  - enriches spenders from the registry when a match exists; otherwise marks
  *    them untrusted with category `unknown` and does NOT fabricate a label
  */
@@ -264,11 +429,6 @@ export function parseDiscoveryResults(
 ): ParseDiscoveryOutput {
   void owner; // reserved for future multi-owner caching
   const tokens = uniqueTokenAddresses(pairs);
-  const tokenIndex = new Map<string, number>();
-  tokens.forEach((address, i) => {
-    tokenIndex.set(address.toLowerCase(), i);
-  });
-
   const tokenMetaOffset = 0;
   const allowanceOffset = tokens.length * METADATA_CALLS_PER_TOKEN;
 
@@ -320,7 +480,7 @@ export function parseDiscoveryResults(
     if (typeof raw !== "bigint" || raw === 0n) return;
 
     const meta = tokenMeta.get(pair.tokenAddress.toLowerCase());
-    if (!meta || typeof meta.decimals !== "number") return;
+    if (!meta) return;
 
     const unlimited = isUnlimitedAllowance(raw);
     const spenderEntry = getSpenderEntry(chainId, pair.spenderAddress);
@@ -332,7 +492,7 @@ export function parseDiscoveryResults(
       tokenAddress: pair.tokenAddress,
       tokenSymbol: meta.symbol,
       tokenName: meta.name,
-      tokenDecimals: meta.decimals,
+      tokenDecimals: meta.decimals ?? null,
       tokenCategory: meta.category,
       spenderAddress: pair.spenderAddress,
       spenderLabel: spenderEntry?.label ?? "Unknown spender",
@@ -343,9 +503,11 @@ export function parseDiscoveryResults(
       spenderNotes: spenderEntry?.notes,
       spenderVerificationMethod: spenderEntry?.verificationMethod,
       rawAllowance: raw,
-      formattedAllowance: unlimited
-        ? "Unlimited"
-        : `${formatAllowance(raw, meta.decimals)} ${meta.symbol}`,
+      formattedAllowance: formatValidatedAllowance(
+        raw,
+        meta.decimals,
+        meta.symbol,
+      ),
       unlimited,
     });
   });
