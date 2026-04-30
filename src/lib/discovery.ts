@@ -98,8 +98,10 @@ export interface DiscoverySource {
 
 interface BlockscoutLogEntry {
   address?: string;
-  topics?: readonly string[];
+  topics?: readonly (string | null | undefined)[];
   blockNumber?: string;
+  transactionHash?: string;
+  logIndex?: string;
 }
 
 export interface Erc20ApprovalParseDiagnostics {
@@ -140,6 +142,8 @@ export interface DiscoveryLimits {
   maxRequests: number;
   /** Upper bound on total raw log rows accumulated across windows. */
   maxRawLogs: number;
+  /** Per-request timeout for explorer/API fetches. */
+  requestTimeoutMs: number;
   /**
    * Blockscout's per-response row cap (getLogs truncation point). Responses
    * whose length meets or exceeds this value are treated as "may have more"
@@ -159,9 +163,12 @@ export const DEFAULT_DISCOVERY_LIMITS: DiscoveryLimits = {
   // approval histories across PulseChain/Ethereum.
   maxRequests: 120,
   maxRawLogs: 100_000,
+  requestTimeoutMs: 15_000,
   pageCap: 1000,
   minSplitSpan: 16,
 };
+
+const BIGINT_TWO = BigInt(2);
 
 function padTopicAddress(address: Address): string {
   // 20-byte address → 32-byte topic (left-pad with zeros, lowercase).
@@ -187,6 +194,22 @@ function topicToBigInt(topic: string): bigint | null {
   }
 }
 
+function normalizeTopics(
+  topics: readonly (string | null | undefined)[] | undefined,
+): string[] | null {
+  if (!topics) return null;
+  const normalized = [...topics];
+  while (
+    normalized.length > 0 &&
+    (normalized[normalized.length - 1] === null ||
+      normalized[normalized.length - 1] === undefined)
+  ) {
+    normalized.pop();
+  }
+  if (normalized.some((topic) => typeof topic !== "string")) return null;
+  return normalized as string[];
+}
+
 function safeChecksum(address: string): Address | null {
   try {
     return getAddress(address);
@@ -198,10 +221,23 @@ function safeChecksum(address: string): Address | null {
 function parseHexNumber(value: string | undefined): bigint | null {
   if (!value || typeof value !== "string") return null;
   try {
+    if (/^[0-9a-fA-F]+$/.test(value) && /[a-fA-F]/.test(value)) {
+      return BigInt(`0x${value}`);
+    }
     return BigInt(value);
   } catch {
     return null;
   }
+}
+
+function logIdentity(log: BlockscoutLogEntry): string {
+  return [
+    log.transactionHash ?? "",
+    log.logIndex ?? "",
+    log.blockNumber ?? "",
+    log.address ?? "",
+    normalizeTopics(log.topics)?.join(",") ?? "",
+  ].join(":");
 }
 
 function dedupePairs(pairs: DiscoveredPair[]): DiscoveredPair[] {
@@ -260,6 +296,48 @@ function buildLogsUrl(
   return `${apiUrl}?${params.toString()}`;
 }
 
+async function fetchDiscovery(
+  url: string,
+  signal: AbortSignal | undefined,
+  timeoutMs: number,
+): Promise<Response> {
+  const controller = new AbortController();
+  let didTimeout = false;
+  const timeout =
+    timeoutMs > 0
+      ? setTimeout(() => {
+          didTimeout = true;
+          controller.abort();
+        }, timeoutMs)
+      : undefined;
+
+  const abortFromParent = () => controller.abort();
+  if (signal) {
+    if (signal.aborted) {
+      controller.abort();
+    } else {
+      signal.addEventListener("abort", abortFromParent, { once: true });
+    }
+  }
+
+  try {
+    return await fetch(url, {
+      signal: controller.signal,
+      headers: { accept: "application/json" },
+    });
+  } catch (error) {
+    if (didTimeout) {
+      throw new Error(
+        `Discovery source timed out after ${Math.round(timeoutMs / 1000)}s`,
+      );
+    }
+    throw error;
+  } finally {
+    if (timeout) clearTimeout(timeout);
+    if (signal) signal.removeEventListener("abort", abortFromParent);
+  }
+}
+
 async function fetchLogsPage(
   apiUrl: string,
   apiKey: string | undefined,
@@ -270,6 +348,7 @@ async function fetchLogsPage(
   toBlock: string,
   page: number,
   offset: number,
+  timeoutMs: number,
   signal: AbortSignal | undefined,
 ): Promise<BlockscoutLogEntry[]> {
   const url = buildLogsUrl(
@@ -283,10 +362,7 @@ async function fetchLogsPage(
     page,
     offset,
   );
-  const res = await fetch(url, {
-    signal,
-    headers: { accept: "application/json" },
-  });
+  const res = await fetchDiscovery(url, signal, timeoutMs);
   if (!res.ok) {
     throw new Error(
       `Discovery source returned HTTP ${res.status} ${res.statusText}`,
@@ -316,6 +392,7 @@ async function fetchBlockTip(
   apiUrl: string,
   apiKey: string | undefined,
   queryParams: Record<string, string> | undefined,
+  timeoutMs: number,
   signal: AbortSignal | undefined,
 ): Promise<bigint | null> {
   const params = new URLSearchParams({
@@ -327,10 +404,11 @@ async function fetchBlockTip(
   }
   if (apiKey) params.set("apikey", apiKey);
   try {
-    const res = await fetch(`${apiUrl}?${params.toString()}`, {
+    const res = await fetchDiscovery(
+      `${apiUrl}?${params.toString()}`,
       signal,
-      headers: { accept: "application/json" },
-    });
+      timeoutMs,
+    );
     if (!res.ok) return null;
     const body = (await res.json()) as BlockscoutNumberResponse;
     return parseHexNumber(body.result);
@@ -376,6 +454,7 @@ async function windowedFetchLogs(
     "latest",
     1,
     limits.pageCap,
+    limits.requestTimeoutMs,
     signal,
   );
   let requests = 1;
@@ -394,7 +473,13 @@ async function windowedFetchLogs(
   }
 
   // Capped. Get the chain tip once so we can split the range.
-  let tip = await fetchBlockTip(apiUrl, apiKey, queryParams, signal);
+  let tip = await fetchBlockTip(
+    apiUrl,
+    apiKey,
+    queryParams,
+    limits.requestTimeoutMs,
+    signal,
+  );
   requests += 1;
   if (tip === null) tip = maxBlockFrom(initial);
   if (tip === null) {
@@ -411,9 +496,15 @@ async function windowedFetchLogs(
 
   const collected: BlockscoutLogEntry[] = [];
   let truncated = false;
-  const stack: Array<{ from: bigint; to: bigint }> = [
-    { from: 0n, to: tip },
-  ];
+  const stack: Array<{ from: bigint; to: bigint }> = [];
+  const initialSpan = tip;
+  if (initialSpan > BigInt(limits.minSplitSpan)) {
+    const mid = initialSpan / BIGINT_TWO;
+    stack.push({ from: mid + 1n, to: tip });
+    stack.push({ from: 0n, to: mid });
+  } else {
+    stack.push({ from: 0n, to: tip });
+  }
 
   while (stack.length > 0) {
     if (requests >= limits.maxRequests) {
@@ -436,6 +527,7 @@ async function windowedFetchLogs(
       range.to.toString(),
       1,
       limits.pageCap,
+      limits.requestTimeoutMs,
       signal,
     );
     requests += 1;
@@ -443,7 +535,7 @@ async function windowedFetchLogs(
 
     const span = range.to - range.from;
     if (logs.length >= limits.pageCap && span > BigInt(limits.minSplitSpan)) {
-      const mid = range.from + span / 2n;
+      const mid = range.from + span / BIGINT_TWO;
       stack.push({ from: mid + 1n, to: range.to });
       stack.push({ from: range.from, to: mid });
       continue;
@@ -453,6 +545,7 @@ async function windowedFetchLogs(
     // further, page through this exact range to pull additional rows.
     if (logs.length >= limits.pageCap) {
       let page = 2;
+      const pageSeen = new Set(logs.map(logIdentity));
       while (requests < limits.maxRequests && collected.length < limits.maxRawLogs) {
         const paged = await fetchLogsPage(
           apiUrl,
@@ -464,18 +557,30 @@ async function windowedFetchLogs(
           range.to.toString(),
           page,
           limits.pageCap,
+          limits.requestTimeoutMs,
           signal,
         );
         requests += 1;
         if (paged.length === 0) break;
 
-        const remaining = limits.maxRawLogs - collected.length;
-        if (paged.length > remaining) {
-          collected.push(...paged.slice(0, remaining));
+        const newLogs = paged.filter((log) => {
+          const key = logIdentity(log);
+          if (pageSeen.has(key)) return false;
+          pageSeen.add(key);
+          return true;
+        });
+        if (newLogs.length === 0) {
           truncated = true;
           break;
         }
-        collected.push(...paged);
+
+        const remaining = limits.maxRawLogs - collected.length;
+        if (newLogs.length > remaining) {
+          collected.push(...newLogs.slice(0, remaining));
+          truncated = true;
+          break;
+        }
+        collected.push(...newLogs);
 
         if (paged.length < limits.pageCap) break;
         page += 1;
@@ -529,7 +634,7 @@ function extractErc20Pairs(
     samplePairs,
   };
   for (const log of logs) {
-    const topics = log.topics;
+    const topics = normalizeTopics(log.topics);
     // ERC-20 Approval: 3 topics. ERC-721's per-token Approval shares the same
     // topic0 but ships 4 topics; drop those here — they're picked up by the
     // NFT pipeline instead.
@@ -581,7 +686,7 @@ function extractNftApprovalForAll(
 ): NftDiscoveredApproval[] {
   const out: NftDiscoveredApproval[] = [];
   for (const log of logs) {
-    const topics = log.topics;
+    const topics = normalizeTopics(log.topics);
     // ApprovalForAll: 3 indexed topics (sig + owner + operator). We don't
     // distinguish `approved=true` vs `approved=false` here — the live
     // `isApprovedForAll` check filters inactive ones downstream.
@@ -606,7 +711,7 @@ function extractErc721TokenApprovals(
 ): NftDiscoveredApproval[] {
   const out: NftDiscoveredApproval[] = [];
   for (const log of logs) {
-    const topics = log.topics;
+    const topics = normalizeTopics(log.topics);
     // ERC-721 per-token Approval: 4 topics (sig + owner + approved + tokenId).
     if (!topics || topics.length !== 4) continue;
     const collectionRaw = log.address;
@@ -673,9 +778,18 @@ export function createBlockscoutDiscoverySource({
   const { apiUrl, apiKey } = source;
   const queryParams = source.queryParams;
 
+  const assertReady = () => {
+    if (source.requiresApiKey && !apiKey) {
+      throw new Error(
+        `${source.name} discovery requires an API key. Set NEXT_PUBLIC_ETHERSCAN_API_KEY for Ethereum mainnet discovery, or configure NEXT_PUBLIC_MAINNET_EXPLORER_API with a compatible keyed endpoint.`,
+      );
+    }
+  };
+
   return {
     meta,
     async discover(owner, options) {
+      assertReady();
       const padded = padTopicAddress(owner);
       const { logs, stats } = await windowedFetchLogs(
         apiUrl,
@@ -696,6 +810,7 @@ export function createBlockscoutDiscoverySource({
     },
 
     async discoverNftApprovals(owner, options) {
+      assertReady();
       const padded = padTopicAddress(owner);
       const [forAll, perToken] = await Promise.all([
         windowedFetchLogs(
