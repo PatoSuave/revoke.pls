@@ -15,22 +15,86 @@
  * superlatives, no fabricated audit claims.
  */
 
-const DEFAULT_SITE_URL = "https://revoke.pls";
+export const DEFAULT_SITE_URL = "https://revoke.pls";
 
-function normalizeUrl(input: string | undefined): string {
-  const raw = (input ?? DEFAULT_SITE_URL).trim();
-  return raw.endsWith("/") ? raw.slice(0, -1) : raw;
+export interface SiteUrlResolution {
+  url: string;
+  usedFallback: boolean;
+  issue: "invalid" | null;
 }
 
-function hostFromUrl(input: string): string {
+function parseSiteUrl(input: string): string | null {
+  const trimmed = input.trim();
+  if (!trimmed) return null;
+
+  const candidate = trimmed.includes("://") ? trimmed : `https://${trimmed}`;
+
   try {
-    return new URL(input).host;
+    const parsed = new URL(candidate);
+    const rootOnly = /^\/*$/.test(parsed.pathname);
+    const httpProtocol = parsed.protocol === "https:" || parsed.protocol === "http:";
+
+    if (
+      !httpProtocol ||
+      !parsed.hostname ||
+      parsed.username ||
+      parsed.password ||
+      !rootOnly ||
+      parsed.search ||
+      parsed.hash
+    ) {
+      return null;
+    }
+
+    return parsed.origin;
   } catch {
-    return input.replace(/^https?:\/\//, "").replace(/\/$/, "");
+    return null;
   }
 }
 
-const resolvedUrl = normalizeUrl(process.env.NEXT_PUBLIC_SITE_URL);
+export function resolveSiteUrl(
+  input: string | undefined,
+  fallback = DEFAULT_SITE_URL,
+): SiteUrlResolution {
+  const raw = input?.trim();
+  const fallbackUrl = parseSiteUrl(fallback);
+
+  if (!fallbackUrl) {
+    throw new Error("Invalid built-in site URL fallback configuration.");
+  }
+
+  if (!raw) {
+    return { url: fallbackUrl, usedFallback: true, issue: null };
+  }
+
+  const url = parseSiteUrl(raw);
+  if (url) {
+    return { url, usedFallback: false, issue: null };
+  }
+
+  return { url: fallbackUrl, usedFallback: true, issue: "invalid" };
+}
+
+export function normalizeSiteUrl(
+  input: string | undefined,
+  fallback = DEFAULT_SITE_URL,
+): string {
+  return resolveSiteUrl(input, fallback).url;
+}
+
+function hostFromUrl(input: string): string {
+  return new URL(input).host;
+}
+
+const siteUrlResolution = resolveSiteUrl(process.env.NEXT_PUBLIC_SITE_URL);
+
+if (siteUrlResolution.issue) {
+  console.warn(
+    "Invalid NEXT_PUBLIC_SITE_URL; using the default site URL. Expected an http(s) URL or bare hostname with no path, search, hash, username, or password.",
+  );
+}
+
+const resolvedUrl = siteUrlResolution.url;
 
 export const siteConfig = {
   /** Public-facing product name. */
