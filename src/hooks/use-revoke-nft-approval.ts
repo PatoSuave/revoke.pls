@@ -1,7 +1,9 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef } from "react";
-import { useWaitForTransactionReceipt, useWriteContract } from "wagmi";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { getPublicClient } from "@wagmi/core";
+import { useConfig, useWaitForTransactionReceipt, useWriteContract } from "wagmi";
+import type { Address } from "viem";
 
 import type { SupportedChainId } from "@/lib/chains";
 import { normalizeRevokeError } from "@/lib/errors";
@@ -10,6 +12,12 @@ import {
   buildSetApprovalForAllRevoke,
 } from "@/lib/nft-approvals";
 import type { NftApproval } from "@/lib/nft-approvals";
+import {
+  buildNftPreflightRead,
+  evaluateNftApprovalPreflight,
+  failedNftPreflight,
+  type NftPreflightResult,
+} from "@/lib/preflight";
 import { trackEvent } from "@/lib/telemetry";
 
 import type { RevokeStatus } from "@/hooks/use-revoke-approval";
@@ -18,13 +26,17 @@ export interface UseRevokeNftApprovalResult {
   status: RevokeStatus;
   hash?: `0x${string}`;
   errorMessage?: string;
+  preflight: NftPreflightResult | null;
   isBusy: boolean;
-  revoke: () => void;
+  isRefreshingApproval: boolean;
+  refreshPreflight: () => Promise<NftPreflightResult>;
+  revoke: () => Promise<void>;
   reset: () => void;
 }
 
 export interface UseRevokeNftApprovalOptions {
   target: NftApproval;
+  ownerAddress: Address;
   onSuccess?: (hash: `0x${string}`) => void;
 }
 
@@ -39,9 +51,13 @@ export interface UseRevokeNftApprovalOptions {
  */
 export function useRevokeNftApproval({
   target,
+  ownerAddress,
   onSuccess,
 }: UseRevokeNftApprovalOptions): UseRevokeNftApprovalResult {
+  const config = useConfig();
   const write = useWriteContract();
+  const [preflight, setPreflight] = useState<NftPreflightResult | null>(null);
+  const [isRefreshingApproval, setIsRefreshingApproval] = useState(false);
   const wait = useWaitForTransactionReceipt({
     hash: write.data,
     chainId: target.chainId as SupportedChainId,
@@ -49,6 +65,7 @@ export function useRevokeNftApproval({
   });
 
   const status: RevokeStatus = useMemo(() => {
+    if (isRefreshingApproval) return "refreshing";
     if (write.status === "pending") return "wallet";
     if (write.status === "error") {
       return normalizeRevokeError(write.error).rejected ? "rejected" : "error";
@@ -61,7 +78,14 @@ export function useRevokeNftApproval({
       return "pending";
     }
     return "idle";
-  }, [write.status, write.error, write.data, wait.status, wait.data]);
+  }, [
+    isRefreshingApproval,
+    write.status,
+    write.error,
+    write.data,
+    wait.status,
+    wait.data,
+  ]);
 
   const errorMessage = useMemo(() => {
     if (write.status === "error") {
@@ -116,8 +140,32 @@ export function useRevokeNftApproval({
     }
   }, [status, telemetryKind, target.chainId]);
 
-  const revoke = useCallback(() => {
+  const refreshPreflight = useCallback(async () => {
+    setIsRefreshingApproval(true);
+    try {
+      const client = getPublicClient(config, {
+        chainId: target.chainId as SupportedChainId,
+      });
+      if (!client) throw new Error(`No public client for chain ${target.chainId}`);
+      const raw = await client.readContract(
+        buildNftPreflightRead(ownerAddress, target),
+      );
+      const next = evaluateNftApprovalPreflight(raw, target);
+      setPreflight(next);
+      return next;
+    } catch (error) {
+      const next = failedNftPreflight(error, target);
+      setPreflight(next);
+      return next;
+    } finally {
+      setIsRefreshingApproval(false);
+    }
+  }, [config, ownerAddress, target]);
+
+  const revoke = useCallback(async () => {
     notifiedHashRef.current = null;
+    const latest = await refreshPreflight();
+    if (latest.status !== "active") return;
     trackEvent("revoke_submitted", {
       kind: telemetryKind,
       chainId: target.chainId,
@@ -136,10 +184,11 @@ export function useRevokeNftApproval({
       ...call,
       chainId: target.chainId as SupportedChainId,
     });
-  }, [target, write, telemetryKind]);
+  }, [refreshPreflight, target, write, telemetryKind]);
 
   const reset = useCallback(() => {
     notifiedHashRef.current = null;
+    setPreflight(null);
     write.reset();
   }, [write]);
 
@@ -147,7 +196,11 @@ export function useRevokeNftApproval({
     status,
     hash: write.data,
     errorMessage,
-    isBusy: status === "wallet" || status === "pending",
+    preflight,
+    isBusy:
+      status === "refreshing" || status === "wallet" || status === "pending",
+    isRefreshingApproval,
+    refreshPreflight,
     revoke,
     reset,
   };

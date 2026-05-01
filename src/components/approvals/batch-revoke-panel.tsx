@@ -103,6 +103,10 @@ export function BatchActionBar({
 export function BatchRevokePanel({ batch }: { batch: UseBatchRevokeResult }) {
   if (batch.state === "idle") return null;
 
+  if (batch.state === "refreshing") {
+    return <RefreshingCard batch={batch} />;
+  }
+
   if (batch.state === "confirming") {
     return <ConfirmingCard batch={batch} />;
   }
@@ -114,16 +118,37 @@ export function BatchRevokePanel({ batch }: { batch: UseBatchRevokeResult }) {
   return <CompleteCard batch={batch} />;
 }
 
+function RefreshingCard({ batch }: { batch: UseBatchRevokeResult }) {
+  return (
+    <div className="rounded-2xl border border-pulse-cyan/40 bg-pulse-cyan/5 p-5">
+      <p className="text-xs font-semibold uppercase tracking-[0.18em] text-pulse-cyan">
+        Batch review
+      </p>
+      <h3 className="mt-1 text-lg font-semibold text-pulse-text">
+        Refreshing current approval...
+      </h3>
+      <p className="mt-2 max-w-2xl text-xs leading-5 text-pulse-muted">
+        Checking {batch.items.length} selected approval
+        {batch.items.length === 1 ? "" : "s"} live on-chain before any wallet
+        prompt opens.
+      </p>
+    </div>
+  );
+}
+
 function ConfirmingCard({ batch }: { batch: UseBatchRevokeResult }) {
   const highRisk = batch.items.filter((a) => {
     const approval = a as ScoredApproval;
     return approval.risk?.level === "high";
   }).length;
   const unlimited = batch.items.filter((a) => a.unlimited).length;
+  const ready = batch.counts.ready;
+  const cleared = batch.counts.cleared;
+  const unverified = batch.counts.unverified;
   const chainConfig = getChainConfig(batch.items[0]?.chainId);
   const gasLabel = chainConfig
-    ? `${batch.items.length} ${chainConfig.nativeSymbol} gas fees`
-    : `${batch.items.length} gas fees`;
+    ? `${ready} ${chainConfig.nativeSymbol} gas fees`
+    : `${ready} gas fees`;
 
   return (
     <div className="rounded-2xl border border-pulse-purple/40 bg-pulse-purple/5 p-5">
@@ -131,11 +156,17 @@ function ConfirmingCard({ batch }: { batch: UseBatchRevokeResult }) {
         Batch review
       </p>
       <h3 className="mt-1 text-lg font-semibold text-pulse-text">
-        Revoke {batch.items.length}{" "}
-        {batch.items.length === 1 ? "approval" : "approvals"} sequentially
+        Revoke {ready} active {ready === 1 ? "approval" : "approvals"}
         {chainConfig ? ` on ${chainConfig.displayName}` : ""}
       </h3>
       <ul className="mt-3 flex flex-wrap gap-1.5 text-xs text-pulse-muted">
+        <Pill tone="green">{ready} ready to revoke</Pill>
+        {cleared > 0 ? (
+          <Pill tone="muted">{cleared} already cleared</Pill>
+        ) : null}
+        {unverified > 0 ? (
+          <Pill tone="red">{unverified} unverified</Pill>
+        ) : null}
         {highRisk > 0 ? (
           <Pill tone="red">{highRisk} high-risk</Pill>
         ) : null}
@@ -152,8 +183,13 @@ function ConfirmingCard({ batch }: { batch: UseBatchRevokeResult }) {
         signs for you. Your wallet prompts once per approval.
       </p>
       <p className="mt-2 text-xs leading-5 text-pulse-muted">
-        You can stop between transactions. A transaction already submitted to
-        the wallet or chain must finish, fail, or be rejected there.
+        Already-cleared approvals are skipped. Unverified approvals are not
+        submitted from this batch.
+      </p>
+      <p className="mt-1 text-xs leading-5 text-pulse-muted">
+        Preflight reads: {batch.preflightSummary.attempted} attempted,{" "}
+        {batch.preflightSummary.succeeded} succeeded,{" "}
+        {batch.preflightSummary.failed} failed.
       </p>
 
       <div className="mt-4 max-h-56 overflow-y-auto rounded-xl border border-pulse-border/60 bg-pulse-bg/40">
@@ -173,7 +209,11 @@ function ConfirmingCard({ batch }: { batch: UseBatchRevokeResult }) {
                 <span className="text-pulse-muted">-&gt; {item.spenderLabel}</span>
               </span>
               <span className="font-mono text-[11px] text-pulse-muted">
-                {item.unlimited ? "Unlimited" : item.formattedAllowance}
+                {batch.results[item.key]?.preflight?.currentLabel ??
+                  (item.unlimited ? "Unlimited" : item.formattedAllowance)}
+              </span>
+              <span className="text-[11px] font-semibold text-pulse-muted">
+                {STATUS_LABEL[batch.results[item.key]?.status ?? "queued"]}
               </span>
             </li>
           ))}
@@ -191,9 +231,10 @@ function ConfirmingCard({ batch }: { batch: UseBatchRevokeResult }) {
         <button
           type="button"
           onClick={() => void batch.start()}
-          className="rounded-xl bg-pulse-gradient px-3 py-2 text-xs font-semibold text-pulse-bg shadow-glow transition hover:brightness-110"
+          disabled={ready === 0}
+          className="rounded-xl bg-pulse-gradient px-3 py-2 text-xs font-semibold text-pulse-bg shadow-glow transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-60"
         >
-          Start wallet prompts
+          {ready === 0 ? "No active approvals" : "Start wallet prompts"}
         </button>
       </div>
     </div>
@@ -257,7 +298,8 @@ function RunningCard({ batch }: { batch: UseBatchRevokeResult }) {
 }
 
 function CompleteCard({ batch }: { batch: UseBatchRevokeResult }) {
-  const { success, failed, rejected, skipped, total } = batch.counts;
+  const { success, failed, rejected, skipped, cleared, unverified, total } =
+    batch.counts;
   const stoppedByRejection = rejected > 0 && skipped > 0;
 
   return (
@@ -270,7 +312,7 @@ function CompleteCard({ batch }: { batch: UseBatchRevokeResult }) {
       </h3>
       <p className="mt-1 text-xs leading-5 text-pulse-muted">
         Completed items have confirmed on-chain. Any failed, rejected, or
-        skipped approvals remain unchanged and can be reviewed again.
+        unverified approvals remain unchanged and can be reviewed again.
       </p>
 
       {stoppedByRejection ? (
@@ -285,6 +327,8 @@ function CompleteCard({ batch }: { batch: UseBatchRevokeResult }) {
         {failed > 0 ? <Pill tone="red">{failed} failed</Pill> : null}
         {rejected > 0 ? <Pill tone="muted">{rejected} rejected</Pill> : null}
         {skipped > 0 ? <Pill tone="muted">{skipped} skipped</Pill> : null}
+        {cleared > 0 ? <Pill tone="green">{cleared} already cleared</Pill> : null}
+        {unverified > 0 ? <Pill tone="red">{unverified} unverified</Pill> : null}
       </ul>
 
       <ul className="mt-4 max-h-72 space-y-1 overflow-y-auto pr-1">
@@ -314,12 +358,15 @@ function CompleteCard({ batch }: { batch: UseBatchRevokeResult }) {
 
 const STATUS_LABEL: Record<BatchItemStatus, string> = {
   queued: "Queued",
+  refreshing: "Refreshing",
   wallet: "Confirm in wallet...",
   submitted: "Confirming...",
   success: "Revoked",
   failed: "Failed",
   rejected: "Rejected",
   skipped: "Skipped",
+  cleared: "Already cleared",
+  unverified: "Unverified",
 };
 
 const STATUS_TONE: Record<
@@ -327,12 +374,15 @@ const STATUS_TONE: Record<
   "muted" | "info" | "success" | "red"
 > = {
   queued: "muted",
+  refreshing: "info",
   wallet: "info",
   submitted: "info",
   success: "success",
   failed: "red",
   rejected: "muted",
   skipped: "muted",
+  cleared: "success",
+  unverified: "red",
 };
 
 function BatchProgressRow({

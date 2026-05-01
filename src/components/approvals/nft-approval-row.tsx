@@ -1,26 +1,41 @@
 "use client";
 
 import { useState } from "react";
+import type { Address } from "viem";
 
 import { useRevokeNftApproval } from "@/hooks/use-revoke-nft-approval";
 import { getChainConfig } from "@/lib/chains";
 import { explorerAddressUrl, explorerTxUrl } from "@/lib/explorer";
 import { shortenAddress } from "@/lib/format";
 import type { NftApproval, NftStandard } from "@/lib/nft-approvals";
+import type { NftPreflightResult } from "@/lib/preflight";
 import type { RiskLevel } from "@/lib/risk";
 
 export function NftApprovalRow({
   approval,
+  ownerAddress,
   onRevoked,
 }: {
   approval: NftApproval;
+  ownerAddress: Address;
   onRevoked?: (hash: `0x${string}`) => void;
 }) {
   const [confirming, setConfirming] = useState(false);
 
-  const { status, hash, errorMessage, isBusy, revoke, reset } =
+  const {
+    status,
+    hash,
+    errorMessage,
+    isBusy,
+    preflight,
+    isRefreshingApproval,
+    refreshPreflight,
+    revoke,
+    reset,
+  } =
     useRevokeNftApproval({
       target: approval,
+      ownerAddress,
       onSuccess: (h) => {
         setConfirming(false);
         onRevoked?.(h);
@@ -30,8 +45,9 @@ export function NftApprovalRow({
   const chainId = approval.chainId;
   const chainConfig = getChainConfig(chainId);
   const chainName = chainConfig?.displayName ?? "the network";
-  const showConfirm = confirming && status === "idle";
-  const showStatus = status !== "idle";
+  const showConfirm =
+    confirming && (status === "idle" || status === "refreshing");
+  const showStatus = status !== "idle" && status !== "refreshing";
 
   const tokenIdLabel =
     approval.kind === "tokenApproval" && approval.tokenId !== undefined
@@ -100,11 +116,15 @@ export function NftApprovalRow({
             chainId={chainId}
             isBusy={isBusy}
             confirming={confirming}
-            onConfirmClick={() => setConfirming(true)}
+            onConfirmClick={() => {
+              setConfirming(true);
+              void refreshPreflight();
+            }}
             onCancel={() => setConfirming(false)}
             onRetry={() => {
               reset();
               setConfirming(true);
+              void refreshPreflight();
             }}
           />
         </div>
@@ -116,7 +136,10 @@ export function NftApprovalRow({
           chainName={chainName}
           nativeSymbol={chainConfig?.nativeSymbol}
           onCancel={() => setConfirming(false)}
-          onConfirm={() => revoke()}
+          preflight={preflight}
+          isRefreshingApproval={isRefreshingApproval}
+          onRefresh={() => void refreshPreflight()}
+          onConfirm={() => void revoke()}
         />
       ) : null}
 
@@ -264,6 +287,16 @@ function RowAction({
   const base =
     "inline-flex w-full items-center justify-center gap-2 rounded-xl px-3 py-2 text-xs font-semibold transition disabled:cursor-not-allowed sm:w-auto";
 
+  if (status === "refreshing") {
+    return (
+      <span
+        className={`${base} border border-pulse-cyan/40 bg-pulse-cyan/10 text-pulse-cyan`}
+      >
+        <Spinner /> Refreshing...
+      </span>
+    );
+  }
+
   if (status === "wallet") {
     return (
       <span
@@ -343,15 +376,22 @@ function ConfirmPanel({
   chainName,
   nativeSymbol,
   onCancel,
+  preflight,
+  isRefreshingApproval,
+  onRefresh,
   onConfirm,
 }: {
   approval: NftApproval;
   chainName: string;
   nativeSymbol?: string;
   onCancel: () => void;
+  preflight: NftPreflightResult | null;
+  isRefreshingApproval: boolean;
+  onRefresh: () => void;
   onConfirm: () => void;
 }) {
   const gas = nativeSymbol ? `Paid in ${nativeSymbol} gas.` : "Gas fees apply.";
+  const canConfirm = preflight?.status === "active" && !isRefreshingApproval;
   const summary =
     approval.kind === "approvalForAll"
       ? `Sends setApprovalForAll(${shortenAddress(
@@ -379,6 +419,11 @@ function ConfirmPanel({
             Revoke.PLS cannot transfer NFTs. Your wallet shows the final
             transaction before you sign.
           </p>
+          <NftPreflightNotice
+            approval={approval}
+            preflight={preflight}
+            isRefreshingApproval={isRefreshingApproval}
+          />
           <p className="mt-2 rounded-xl border border-pulse-border/70 bg-pulse-panel/45 p-3 text-xs leading-5 text-pulse-muted">
             {approval.risk.reason}
           </p>
@@ -391,16 +436,102 @@ function ConfirmPanel({
           >
             Cancel
           </button>
+          {canConfirm ? null : (
+            <button
+              type="button"
+              onClick={onRefresh}
+              disabled={isRefreshingApproval}
+              className="flex-1 rounded-xl border border-pulse-cyan/35 bg-pulse-cyan/10 px-3 py-2 text-xs font-semibold text-pulse-cyan transition hover:bg-pulse-cyan/15 disabled:cursor-not-allowed disabled:opacity-60 sm:flex-none"
+            >
+              {isRefreshingApproval ? "Refreshing..." : "Refresh"}
+            </button>
+          )}
           <button
             type="button"
             onClick={onConfirm}
-            className="flex-1 rounded-xl bg-pulse-gradient px-3 py-2 text-xs font-semibold text-pulse-bg shadow-glow transition hover:brightness-110 sm:flex-none"
+            disabled={!canConfirm}
+            className="flex-1 rounded-xl bg-pulse-gradient px-3 py-2 text-xs font-semibold text-pulse-bg shadow-glow transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-60 sm:flex-none"
           >
             Confirm revoke
           </button>
         </div>
       </div>
     </div>
+  );
+}
+
+function NftPreflightNotice({
+  approval,
+  preflight,
+  isRefreshingApproval,
+}: {
+  approval: NftApproval;
+  preflight: NftPreflightResult | null;
+  isRefreshingApproval: boolean;
+}) {
+  if (isRefreshingApproval) {
+    return (
+      <PreflightBox tone="info">
+        <Spinner /> Refreshing current approval...
+      </PreflightBox>
+    );
+  }
+
+  if (!preflight) {
+    return (
+      <PreflightBox tone="info">
+        Refreshing current approval before the wallet opens.
+      </PreflightBox>
+    );
+  }
+
+  if (preflight.status === "active") {
+    return (
+      <PreflightBox tone="success">
+        Current approval is still active.
+      </PreflightBox>
+    );
+  }
+
+  if (preflight.status === "cleared") {
+    return (
+      <PreflightBox tone="success">
+        Already cleared.{" "}
+        {approval.kind === "approvalForAll"
+          ? "The operator is no longer approved for the collection."
+          : "The token approval no longer points to this operator."}
+      </PreflightBox>
+    );
+  }
+
+  return (
+    <PreflightBox tone="warning">
+      Could not verify the current approval
+      {preflight.error ? ` (${preflight.error})` : ""}. No revoke transaction
+      will be sent from this prompt.
+    </PreflightBox>
+  );
+}
+
+function PreflightBox({
+  children,
+  tone,
+}: {
+  children: React.ReactNode;
+  tone: "info" | "success" | "warning";
+}) {
+  const toneClass = {
+    info: "border-pulse-cyan/35 bg-pulse-cyan/10 text-pulse-cyan",
+    success: "border-pulse-green/40 bg-pulse-green/10 text-pulse-green",
+    warning: "border-amber-400/40 bg-amber-400/10 text-amber-200",
+  }[tone];
+
+  return (
+    <p
+      className={`mt-3 flex items-center gap-2 rounded-xl border p-3 text-xs leading-5 ${toneClass}`}
+    >
+      {children}
+    </p>
   );
 }
 

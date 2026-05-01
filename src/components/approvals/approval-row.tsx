@@ -1,16 +1,19 @@
 "use client";
 
 import { useState } from "react";
+import type { Address } from "viem";
 
 import type { BatchItemResult } from "@/hooks/use-batch-revoke";
 import { useRevokeApproval } from "@/hooks/use-revoke-approval";
 import { getChainConfig } from "@/lib/chains";
 import { explorerAddressUrl, explorerTxUrl } from "@/lib/explorer";
 import { shortenAddress } from "@/lib/format";
+import type { Erc20PreflightResult } from "@/lib/preflight";
 import type { RiskLevel, ScoredApproval } from "@/lib/risk";
 
 export function ApprovalRow({
   approval,
+  ownerAddress,
   onRevoked,
   selected = false,
   onToggleSelect,
@@ -19,6 +22,7 @@ export function ApprovalRow({
   batchResult,
 }: {
   approval: ScoredApproval;
+  ownerAddress: Address;
   onRevoked?: (hash: `0x${string}`) => void;
   selected?: boolean;
   onToggleSelect?: (key: string) => void;
@@ -33,6 +37,9 @@ export function ApprovalRow({
     hash,
     errorMessage,
     isBusy,
+    preflight,
+    isRefreshingApproval,
+    refreshPreflight,
     revoke,
     reset,
   } = useRevokeApproval({
@@ -41,6 +48,9 @@ export function ApprovalRow({
       tokenAddress: approval.tokenAddress,
       spenderAddress: approval.spenderAddress,
     },
+    ownerAddress,
+    tokenSymbol: approval.tokenSymbol,
+    tokenDecimals: approval.tokenDecimals,
     onSuccess: (h) => {
       setConfirming(false);
       onRevoked?.(h);
@@ -49,8 +59,10 @@ export function ApprovalRow({
 
   const chainConfig = getChainConfig(approval.chainId);
   const chainId = approval.chainId;
-  const showConfirm = confirming && status === "idle" && !batchActive;
-  const showStatus = status !== "idle" && !batchActive;
+  const showConfirm =
+    confirming && (status === "idle" || status === "refreshing") && !batchActive;
+  const showStatus =
+    status !== "idle" && status !== "refreshing" && !batchActive;
 
   return (
     <li
@@ -145,11 +157,15 @@ export function ApprovalRow({
               chainId={chainId}
               isBusy={isBusy || batchActive}
               confirming={confirming}
-              onConfirmClick={() => setConfirming(true)}
+              onConfirmClick={() => {
+                setConfirming(true);
+                void refreshPreflight();
+              }}
               onCancel={() => setConfirming(false)}
               onRetry={() => {
                 reset();
                 setConfirming(true);
+                void refreshPreflight();
               }}
             />
           )}
@@ -162,8 +178,11 @@ export function ApprovalRow({
           chainName={chainConfig?.displayName ?? "the network"}
           nativeSymbol={chainConfig?.nativeSymbol}
           onCancel={() => setConfirming(false)}
+          preflight={preflight}
+          isRefreshingApproval={isRefreshingApproval}
+          onRefresh={() => void refreshPreflight()}
           onConfirm={() => {
-            revoke();
+            void revoke();
           }}
         />
       ) : null}
@@ -321,6 +340,16 @@ function RowAction({
   const base =
     "inline-flex w-full items-center justify-center gap-2 rounded-xl px-3 py-2 text-xs font-semibold transition disabled:cursor-not-allowed sm:w-auto";
 
+  if (status === "refreshing") {
+    return (
+      <span
+        className={`${base} border border-pulse-cyan/40 bg-pulse-cyan/10 text-pulse-cyan`}
+      >
+        <Spinner /> Refreshing...
+      </span>
+    );
+  }
+
   if (status === "wallet") {
     return (
       <span
@@ -406,14 +435,22 @@ function ConfirmPanel({
   chainName,
   nativeSymbol,
   onCancel,
+  preflight,
+  isRefreshingApproval,
+  onRefresh,
   onConfirm,
 }: {
   approval: ScoredApproval;
   chainName: string;
   nativeSymbol?: string;
   onCancel: () => void;
+  preflight: Erc20PreflightResult | null;
+  isRefreshingApproval: boolean;
+  onRefresh: () => void;
   onConfirm: () => void;
 }) {
+  const canConfirm = preflight?.status === "active" && !isRefreshingApproval;
+
   return (
     <div className="border-t border-pulse-border/60 bg-pulse-bg/50 px-4 py-4 sm:px-6">
       <div className="grid gap-4 lg:grid-cols-[1fr_auto] lg:items-center">
@@ -440,6 +477,10 @@ function ConfirmPanel({
             Revoke.PLS cannot move funds. Your wallet shows the final
             transaction before you sign.
           </p>
+          <PreflightNotice
+            preflight={preflight}
+            isRefreshingApproval={isRefreshingApproval}
+          />
           <p className="mt-2 rounded-xl border border-pulse-border/70 bg-pulse-panel/45 p-3 text-xs leading-5 text-pulse-muted">
             {approval.risk.reason}
           </p>
@@ -452,16 +493,102 @@ function ConfirmPanel({
           >
             Cancel
           </button>
+          {canConfirm ? null : (
+            <button
+              type="button"
+              onClick={onRefresh}
+              disabled={isRefreshingApproval}
+              className="flex-1 rounded-xl border border-pulse-cyan/35 bg-pulse-cyan/10 px-3 py-2 text-xs font-semibold text-pulse-cyan transition hover:bg-pulse-cyan/15 disabled:cursor-not-allowed disabled:opacity-60 sm:flex-none"
+            >
+              {isRefreshingApproval ? "Refreshing..." : "Refresh"}
+            </button>
+          )}
           <button
             type="button"
             onClick={onConfirm}
-            className="flex-1 rounded-xl bg-pulse-gradient px-3 py-2 text-xs font-semibold text-pulse-bg shadow-glow transition hover:brightness-110 sm:flex-none"
+            disabled={!canConfirm}
+            className="flex-1 rounded-xl bg-pulse-gradient px-3 py-2 text-xs font-semibold text-pulse-bg shadow-glow transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-60 sm:flex-none"
           >
             Confirm revoke
           </button>
         </div>
       </div>
     </div>
+  );
+}
+
+function PreflightNotice({
+  preflight,
+  isRefreshingApproval,
+}: {
+  preflight: Erc20PreflightResult | null;
+  isRefreshingApproval: boolean;
+}) {
+  if (isRefreshingApproval) {
+    return (
+      <PreflightBox tone="info">
+        <Spinner /> Refreshing current approval...
+      </PreflightBox>
+    );
+  }
+
+  if (!preflight) {
+    return (
+      <PreflightBox tone="info">
+        Refreshing current approval before the wallet opens.
+      </PreflightBox>
+    );
+  }
+
+  if (preflight.status === "active") {
+    return (
+      <PreflightBox tone="success">
+        Current allowance:{" "}
+        <span className="font-mono text-pulse-text">
+          {preflight.currentLabel ?? "active"}
+        </span>
+        . This approval is still active.
+      </PreflightBox>
+    );
+  }
+
+  if (preflight.status === "cleared") {
+    return (
+      <PreflightBox tone="success">
+        Already cleared. Current allowance is zero, so no revoke transaction is
+        needed.
+      </PreflightBox>
+    );
+  }
+
+  return (
+    <PreflightBox tone="warning">
+      Could not verify the current allowance
+      {preflight.error ? ` (${preflight.error})` : ""}. No revoke transaction
+      will be sent from this prompt.
+    </PreflightBox>
+  );
+}
+
+function PreflightBox({
+  children,
+  tone,
+}: {
+  children: React.ReactNode;
+  tone: "info" | "success" | "warning";
+}) {
+  const toneClass = {
+    info: "border-pulse-cyan/35 bg-pulse-cyan/10 text-pulse-cyan",
+    success: "border-pulse-green/40 bg-pulse-green/10 text-pulse-green",
+    warning: "border-amber-400/40 bg-amber-400/10 text-amber-200",
+  }[tone];
+
+  return (
+    <p
+      className={`mt-3 flex items-center gap-2 rounded-xl border p-3 text-xs leading-5 ${toneClass}`}
+    >
+      {children}
+    </p>
   );
 }
 
@@ -589,6 +716,16 @@ function BatchStatusPill({
     );
   }
 
+  if (result.status === "refreshing") {
+    return (
+      <span
+        className={`${base} border border-pulse-cyan/40 bg-pulse-cyan/10 text-pulse-cyan`}
+      >
+        <Spinner /> Refreshing
+      </span>
+    );
+  }
+
   if (result.status === "wallet") {
     return (
       <span
@@ -639,6 +776,27 @@ function BatchStatusPill({
         className={`${base} border border-pulse-border bg-white/5 text-pulse-muted`}
       >
         Skipped
+      </span>
+    );
+  }
+
+  if (result.status === "cleared") {
+    return (
+      <span
+        className={`${base} border border-pulse-green/40 bg-pulse-green/10 text-pulse-green`}
+      >
+        Already cleared
+      </span>
+    );
+  }
+
+  if (result.status === "unverified") {
+    return (
+      <span
+        className={`${base} border border-amber-400/40 bg-amber-400/10 text-amber-200`}
+        title={result.error}
+      >
+        Unverified
       </span>
     );
   }
