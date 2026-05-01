@@ -1,6 +1,6 @@
 # Desktop Release Checklist
 
-This checklist prepares Revoke.PLS for a future local desktop executable. It
+This checklist prepares Pulse Revoke for a future local desktop executable. It
 does not mean a desktop release exists today.
 
 ## Windows prerequisites
@@ -76,7 +76,7 @@ prerequisites or incomplete release metadata.
 
 ## Security notes
 
-- Revoke.PLS is non-custodial and must never ask for seed phrases or private
+- Pulse Revoke is non-custodial and must never ask for seed phrases or private
   keys.
 - Users approve every revoke transaction in their own wallet.
 - The scanner should stay read-only until the user clicks a revoke action.

@@ -416,7 +416,7 @@ function ConfirmPanel({
           </p>
           <p className="mt-2 text-xs leading-5 text-pulse-muted">{summary}</p>
           <p className="mt-1 text-xs leading-5 text-pulse-muted">
-            Revoke.PLS cannot transfer NFTs. Your wallet shows the final
+            Pulse Revoke cannot transfer NFTs. Your wallet shows the final
             transaction before you sign.
           </p>
           <NftPreflightNotice

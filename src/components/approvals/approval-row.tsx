@@ -474,7 +474,7 @@ function ConfirmPanel({
             {nativeSymbol ? `. Paid in ${nativeSymbol} gas.` : ". Gas fees apply."}
           </p>
           <p className="mt-1 text-xs leading-5 text-pulse-muted">
-            Revoke.PLS cannot move funds. Your wallet shows the final
+            Pulse Revoke cannot move funds. Your wallet shows the final
             transaction before you sign.
           </p>
           <PreflightNotice

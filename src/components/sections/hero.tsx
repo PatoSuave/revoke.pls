@@ -29,7 +29,7 @@ export function Hero() {
           </h1>
 
           <p className="mt-4 text-base leading-7 text-pulse-muted sm:text-lg">
-            Revoke.PLS checks your public wallet history, verifies active
+            Pulse Revoke checks your public wallet history, verifies active
             allowances live on-chain, and helps you clear permissions you no
             longer need. You approve every revoke in your own wallet.
           </p>
