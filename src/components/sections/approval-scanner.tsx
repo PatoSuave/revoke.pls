@@ -30,6 +30,7 @@ import {
   type ApprovalSort,
   type ScoredApproval,
 } from "@/lib/risk";
+import { getErc20ResultState } from "@/lib/scanner-result-state";
 
 /**
  * Connected-wallet approval scanner (PulseChain + Ethereum).
@@ -709,6 +710,11 @@ function ScanContent({
   const batchActive = batch.state === "running" || batch.state === "stopping";
   const batchInteracting = batch.state !== "idle";
   const failedAllowanceReads = scan.diagnostics.liveReadFailures.allowance;
+  const resultState = getErc20ResultState({
+    activeApprovals: scored.length,
+    failedAllowanceReads,
+    discoveredPairs: scan.stats.candidates,
+  });
   if (scan.status === "pending") {
     return <ScannerSkeleton candidates={scan.stats.candidates} />;
   }
@@ -742,17 +748,30 @@ function ScanContent({
     );
   }
 
-  if (scored.length === 0) {
+  if (resultState === "verification-incomplete") {
+    return (
+      <VerificationIncompleteState
+        failedAllowanceReads={failedAllowanceReads}
+        chainName={chainConfig.displayName}
+        explorerName={chainConfig.explorer.name}
+      />
+    );
+  }
+
+  if (resultState === "clear" || resultState === "no-history") {
+    const noHistory = resultState === "no-history";
     return (
       <div className="rounded-2xl border border-dashed border-pulse-border/80 bg-pulse-bg/45 p-6 text-sm">
         <p className="text-xs font-semibold uppercase tracking-[0.18em] text-pulse-green">
-          Clear for now
+          {noHistory ? "No history found" : "Clear for now"}
         </p>
         <p className="mt-2 text-lg font-semibold text-pulse-text">
-          No active ERC-20/PRC-20 approvals found
+          {noHistory
+            ? "No ERC-20/PRC-20 approval history found"
+            : "No active ERC-20/PRC-20 approvals found"}
         </p>
         <p className="mt-2 max-w-2xl leading-6 text-pulse-muted">
-          {scan.stats.candidates === 0
+          {noHistory
             ? `We couldn't find any fungible token approval history for this wallet on ${
                 scan.sourceMeta?.name ?? chainConfig.discovery.name
               }. If you expect an approval is in place, verify directly on ${chainConfig.explorer.name}.`
@@ -763,12 +782,6 @@ function ScanContent({
             ? " A per-wallet fetch cap was reached; very old approvals may be missing."
             : ""}
         </p>
-        {failedAllowanceReads > 0 ? (
-          <AllowanceReadWarning
-            count={failedAllowanceReads}
-            explorerName={chainConfig.explorer.name}
-          />
-        ) : null}
         <div className="mt-4 grid gap-2 text-xs text-pulse-muted sm:grid-cols-3">
           <EmptyStateStep title="Check the network" body={chainConfig.displayName} />
           <EmptyStateStep title="Rescan later" body="Explorer APIs can lag." />
@@ -893,6 +906,49 @@ function AllowanceReadWarning({
         healthier RPC, or verify the affected token/spender pairs directly on{" "}
         {explorerName}.
       </p>
+    </div>
+  );
+}
+
+function VerificationIncompleteState({
+  failedAllowanceReads,
+  chainName,
+  explorerName,
+}: {
+  failedAllowanceReads: number;
+  chainName: string;
+  explorerName: string;
+}) {
+  return (
+    <div className="rounded-2xl border border-amber-400/45 bg-amber-400/10 p-6 text-sm">
+      <p className="text-xs font-semibold uppercase tracking-[0.18em] text-amber-300">
+        Verification incomplete
+      </p>
+      <p className="mt-2 text-lg font-semibold text-pulse-text">
+        No verified active ERC-20/PRC-20 approvals were found.
+      </p>
+      <p className="mt-2 max-w-2xl leading-6 text-pulse-muted">
+        Some allowance reads could not be verified live. Failed allowance reads
+        are not counted as safe or cleared.
+      </p>
+      <p className="mt-2 max-w-2xl leading-6 text-pulse-muted">
+        Rescan with a healthier {chainName} RPC, or verify the affected
+        token/spender pairs directly on {explorerName}.
+      </p>
+      <div className="mt-4">
+        <AllowanceReadWarning
+          count={failedAllowanceReads}
+          explorerName={explorerName}
+        />
+      </div>
+      <div className="mt-4 grid gap-2 text-xs text-pulse-muted sm:grid-cols-3">
+        <EmptyStateStep
+          title="Live reads failed"
+          body={`${failedAllowanceReads} unverified`}
+        />
+        <EmptyStateStep title="Not marked clear" body="Failed reads stay separate." />
+        <EmptyStateStep title="Next step" body={`Retry RPC or check ${explorerName}.`} />
+      </div>
     </div>
   );
 }
