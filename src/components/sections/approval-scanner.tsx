@@ -302,7 +302,7 @@ function ConnectedScanner({
     });
   }, [visibleApprovals, allVisibleSelected]);
 
-  const batch = useBatchRevoke({ onComplete: scan.refetch });
+  const batch = useBatchRevoke({ ownerAddress: owner, onComplete: scan.refetch });
   const batchActive =
     batch.state === "running" || batch.state === "stopping";
 
@@ -340,6 +340,7 @@ function ConnectedScanner({
 
       <ScanContent
         scan={scan}
+        owner={owner}
         chainConfig={chainConfig}
         scored={scored}
         visibleApprovals={visibleApprovals}
@@ -372,7 +373,7 @@ function ConnectedScanner({
         nft={nft}
       />
 
-      <NftSection nft={nft} chainConfig={chainConfig} />
+      <NftSection nft={nft} owner={owner} chainConfig={chainConfig} />
     </div>
   );
 }
@@ -450,9 +451,11 @@ function ScannerSummary({
 
 function NftSection({
   nft,
+  owner,
   chainConfig,
 }: {
   nft: ReturnType<typeof useNftApprovalDiscovery>;
+  owner: `0x${string}`;
   chainConfig: SupportedChainConfig;
 }) {
   const sorted = useMemo(() => sortNftApprovals(nft.approvals), [nft.approvals]);
@@ -495,7 +498,12 @@ function NftSection({
         </div>
       </header>
 
-      <NftSectionBody nft={nft} sorted={sorted} chainConfig={chainConfig} />
+      <NftSectionBody
+        nft={nft}
+        owner={owner}
+        sorted={sorted}
+        chainConfig={chainConfig}
+      />
 
       <p className="text-xs text-pulse-muted">
         Collection-wide operator approvals expose every NFT in the collection.
@@ -517,10 +525,12 @@ function NftSection({
 
 function NftSectionBody({
   nft,
+  owner,
   sorted,
   chainConfig,
 }: {
   nft: ReturnType<typeof useNftApprovalDiscovery>;
+  owner: `0x${string}`;
   sorted: NftApproval[];
   chainConfig: SupportedChainConfig;
 }) {
@@ -599,6 +609,7 @@ function NftSectionBody({
           <NftApprovalRow
             key={approval.key}
             approval={approval}
+            ownerAddress={owner}
             onRevoked={nft.refetch}
           />
         ))}
@@ -654,6 +665,7 @@ function CoverageNote({
 
 function ScanContent({
   scan,
+  owner,
   chainConfig,
   scored,
   visibleApprovals,
@@ -674,6 +686,7 @@ function ScanContent({
   batch,
 }: {
   scan: ReturnType<typeof useApprovalDiscovery>;
+  owner: `0x${string}`;
   chainConfig: SupportedChainConfig;
   scored: readonly ScoredApproval[];
   visibleApprovals: readonly ScoredApproval[];
@@ -820,6 +833,7 @@ function ScanContent({
               <ApprovalRow
                 key={approval.key}
                 approval={approval}
+                ownerAddress={owner}
                 onRevoked={scan.refetch}
                 selected={selected.has(approval.key)}
                 onToggleSelect={onToggleSelect}
