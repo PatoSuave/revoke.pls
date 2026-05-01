@@ -1,6 +1,6 @@
 # Scanner QA Checklist
 
-Use this checklist to verify that Revoke.PLS is reading approval state correctly
+Use this checklist to verify that Pulse Revoke is reading approval state correctly
 on Ethereum mainnet and PulseChain mainnet. Keep all testing low-risk and
 manual.
 
@@ -8,7 +8,7 @@ manual.
 
 - Use a burner wallet or another low-risk wallet.
 - Do not use a wallet holding meaningful funds or valuable NFTs.
-- Never enter a seed phrase into Revoke.PLS or any test page.
+- Never enter a seed phrase into Pulse Revoke or any test page.
 - Keep enough native gas token for approval, revoke, and rescan testing.
 - Open the scanner diagnostics with `/app?debug=1` during QA.
 

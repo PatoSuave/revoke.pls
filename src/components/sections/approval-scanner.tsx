@@ -199,7 +199,7 @@ function ScannerBody({
           tone="warning"
           eyebrow="Unsupported network"
           title={`Switch to ${names}`}
-          body={`Revoke.PLS supports ${names}. Switch networks in your wallet to continue. Your wallet stays connected, and no transaction is requested.`}
+          body={`Pulse Revoke supports ${names}. Switch networks in your wallet to continue. Your wallet stays connected, and no transaction is requested.`}
           action={<ConnectWalletButton variant="ghost" />}
         />
         <ScannerDiagnosticsPanel

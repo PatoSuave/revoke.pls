@@ -179,7 +179,7 @@ function ConfirmingCard({ batch }: { batch: UseBatchRevokeResult }) {
       </ul>
       <p className="mt-3 max-w-2xl text-xs leading-5 text-pulse-muted">
         Each revoke is a normal token approval reset submitted one at a time.
-        Revoke.PLS never batches funds, never uses a proxy contract, and never
+        Pulse Revoke never batches funds, never uses a proxy contract, and never
         signs for you. Your wallet prompts once per approval.
       </p>
       <p className="mt-2 text-xs leading-5 text-pulse-muted">

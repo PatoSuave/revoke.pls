@@ -12,10 +12,10 @@ import {
 } from "@/lib/release";
 import { absoluteUrl, siteConfig } from "@/lib/site";
 
-const productName = "Revoke.PLS";
+const productName = "Pulse Revoke";
 const launcherTitle = `${productName} - PulseChain approval safety`;
 const launcherDescription =
-  "Launch the Revoke.PLS scanner or track desktop release status. Review and revoke token approvals on PulseChain and Ethereum without custody.";
+  "Launch the Pulse Revoke scanner or track desktop release status. Review and revoke token approvals on PulseChain and Ethereum without custody.";
 
 export const metadata: Metadata = {
   title: launcherTitle,
@@ -39,7 +39,7 @@ export const metadata: Metadata = {
 const TRUST_POINTS = [
   {
     title: "Non-custodial",
-    body: "Revoke.PLS never holds wallet funds.",
+    body: "Pulse Revoke never holds wallet funds.",
   },
   {
     title: "User-signed",
@@ -81,9 +81,9 @@ const HOW_IT_WORKS = [
 
 const FAQ_ITEMS = [
   {
-    question: "Does Revoke.PLS custody funds?",
+    question: "Does Pulse Revoke custody funds?",
     answer:
-      "No. Revoke.PLS reads public wallet and chain data. Your funds stay in your wallet at all times.",
+      "No. Pulse Revoke reads public wallet and chain data. Your funds stay in your wallet at all times.",
   },
   {
     question: "Can it move my tokens?",
@@ -146,7 +146,7 @@ function SiteHeader({ desktopReady }: { desktopReady: boolean }) {
         >
           <PulseMark className="h-8 w-8" />
           <span className="text-sm font-semibold tracking-tight sm:text-base">
-            Revoke<span className="text-gradient-pulse">.PLS</span>
+            Pulse <span className="text-gradient-pulse">Revoke</span>
           </span>
         </Link>
 
@@ -201,7 +201,7 @@ function Hero({ desktopReady }: { desktopReady: boolean }) {
           </div>
 
           <h1 className="mt-5 text-5xl font-bold tracking-tight sm:text-7xl">
-            Revoke<span className="text-gradient-pulse">.PLS</span>
+            Pulse <span className="text-gradient-pulse">Revoke</span>
           </h1>
 
           <p className="mt-5 max-w-2xl text-xl font-semibold leading-8 text-pulse-text sm:text-2xl">
