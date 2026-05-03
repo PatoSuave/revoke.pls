@@ -62,6 +62,7 @@ describe("supported chain config", () => {
       nft: "BEP-721",
       multiToken: "BEP-1155",
     });
+    expect(config?.discovery.apiProviderKind).toBe("etherscan-v2");
     expect(config?.discovery.apiProviderName).toBe("Etherscan API V2");
     expect(config?.explorer.baseUrl).toBe("https://bscscan.com");
     expect(config?.explorer.name).toBe("BscScan");
@@ -187,6 +188,26 @@ describe("supported chain config", () => {
         delete process.env.NEXT_PUBLIC_BSC_EXPLORER_API_URL;
       } else {
         process.env.NEXT_PUBLIC_BSC_EXPLORER_API_URL = original;
+      }
+      vi.resetModules();
+    }
+  });
+
+  it("defaults the BSC explorer API chain ID to 56 when the env var is absent", async () => {
+    const original = process.env.NEXT_PUBLIC_BSC_EXPLORER_CHAIN_ID;
+    delete process.env.NEXT_PUBLIC_BSC_EXPLORER_CHAIN_ID;
+    vi.resetModules();
+
+    try {
+      const chains = await import("./chains");
+      const config = chains.getChainConfig(chains.BSC_CHAIN_ID);
+
+      expect(config?.discovery.apiProviderKind).toBe("etherscan-v2");
+      expect(config?.discovery.apiChainId).toBe("56");
+      expect(config?.discovery.queryParams).toMatchObject({ chainid: "56" });
+    } finally {
+      if (original !== undefined) {
+        process.env.NEXT_PUBLIC_BSC_EXPLORER_CHAIN_ID = original;
       }
       vi.resetModules();
     }
