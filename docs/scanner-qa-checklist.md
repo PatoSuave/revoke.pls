@@ -25,7 +25,8 @@ For each chain, confirm diagnostics show:
 - Expected explorer/log source.
 - RPC env status without printing URL secrets.
 - Explorer API env status.
-- BscScan API key presence as configured/missing, never the key value.
+- Etherscan API V2 key presence as configured/missing, never the key value.
+- BSC API chain ID `56` when testing BNB Smart Chain.
 - Fungible token and NFT scan status.
 - Explorer request/window counts.
 - Any truncation, explorer/API error, or RPC/live-read error.
@@ -33,11 +34,18 @@ For each chain, confirm diagnostics show:
 ## BSC Discovery Checks
 
 - `NEXT_PUBLIC_BSC_EXPLORER_API_URL` is either unset or points to a
-  BscScan-compatible logs endpoint.
-- `NEXT_PUBLIC_BSCSCAN_API_KEY` is set for BSC discovery.
-- BSC scans use BscScan logs API for historical approval discovery.
+  compatible Etherscan API V2 endpoint. The default is
+  `https://api.etherscan.io/v2/api`.
+- `NEXT_PUBLIC_BSC_EXPLORER_CHAIN_ID` is unset or set to `56`.
+- `NEXT_PUBLIC_BSC_EXPLORER_API_KEY` is set to an Etherscan API V2 key with
+  BNB Smart Chain access. `NEXT_PUBLIC_BSCSCAN_API_KEY` is only a deprecated
+  fallback key name.
+- BSC scans use Etherscan API V2 logs with `chainid=56` for historical approval
+  discovery.
 - The app does not rely on public BSC RPC `eth_getLogs` for historical
   approval discovery.
+- If the deprecated BscScan V1 endpoint `https://api.bscscan.com/api` is
+  configured or returned, diagnostics show an actionable migration warning.
 - Rate limits, malformed responses, missing API keys, and capped responses are
   shown as incomplete/error states, not as "clear".
 
@@ -111,4 +119,5 @@ For per-token approvals:
   chain.
 - Wallet with historical approvals that validate to zero shows a clear state.
 - Failed live reads show verification incomplete, not clear.
-- BscScan rate limits or missing API key show an actionable error.
+- Etherscan API V2 rate limits, the BscScan V1 deprecation error, or a missing
+  BSC API key show an actionable error.

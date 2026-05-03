@@ -21,7 +21,10 @@ const BSC_EXPLORER_BASE_URL = "https://bscscan.com";
 
 export const PULSECHAIN_EXPLORER_API_DEFAULT =
   "https://api.scan.pulsechain.com/api";
-export const BSC_EXPLORER_API_DEFAULT = "https://api.bscscan.com/api";
+export const BSC_EXPLORER_API_DEFAULT = "https://api.etherscan.io/v2/api";
+export const BSC_DEPRECATED_V1_EXPLORER_API_URL =
+  "https://api.bscscan.com/api";
+export const BSC_EXPLORER_CHAIN_ID_DEFAULT = BSC_CHAIN_ID.toString();
 
 export type SupportedChainKey = "pulsechain" | "bsc";
 
@@ -34,11 +37,20 @@ function cleanApiKey(value: string | undefined): string | undefined {
   const cleaned = cleanEnv(value);
   if (!cleaned) return undefined;
   if (cleaned === "PASTE_YOUR_BSCSCAN_KEY_HERE") return undefined;
+  if (cleaned === "PASTE_YOUR_ETHERSCAN_V2_KEY_HERE") return undefined;
+  if (cleaned === "your_bscscan_key") return undefined;
   return cleaned;
 }
 
 function withNoTrailingSlash(value: string): string {
   return value.replace(/\/$/, "");
+}
+
+function isDeprecatedBscV1ApiUrl(value: string | undefined): boolean {
+  return (
+    withNoTrailingSlash(value ?? "").toLowerCase() ===
+    BSC_DEPRECATED_V1_EXPLORER_API_URL
+  );
 }
 
 const pulsechainRpcEnv = cleanEnv(process.env.NEXT_PUBLIC_PULSECHAIN_RPC_URL);
@@ -49,7 +61,31 @@ const pulsechainExplorerApiEnv = cleanEnv(
 const bscExplorerApiEnv = cleanEnv(
   process.env.NEXT_PUBLIC_BSC_EXPLORER_API_URL,
 );
+const bscExplorerChainIdEnv = cleanEnv(
+  process.env.NEXT_PUBLIC_BSC_EXPLORER_CHAIN_ID,
+);
+const bscPreferredApiKeyEnv = cleanApiKey(
+  process.env.NEXT_PUBLIC_BSC_EXPLORER_API_KEY,
+);
 const bscScanApiKeyEnv = cleanApiKey(process.env.NEXT_PUBLIC_BSCSCAN_API_KEY);
+const bscDeprecatedV1ApiConfigured = isDeprecatedBscV1ApiUrl(bscExplorerApiEnv);
+const bscExplorerChainId =
+  bscExplorerChainIdEnv === BSC_EXPLORER_CHAIN_ID_DEFAULT
+    ? bscExplorerChainIdEnv
+    : BSC_EXPLORER_CHAIN_ID_DEFAULT;
+const bscExplorerApiKeyEnv = bscPreferredApiKeyEnv ?? bscScanApiKeyEnv;
+const bscDiscoveryWarnings = [
+  bscDeprecatedV1ApiConfigured
+    ? `NEXT_PUBLIC_BSC_EXPLORER_API_URL is set to the deprecated BscScan V1 endpoint (${BSC_DEPRECATED_V1_EXPLORER_API_URL}). BSC historical discovery uses ${BSC_EXPLORER_API_DEFAULT} with chainid=${BSC_EXPLORER_CHAIN_ID_DEFAULT}; update the Vercel env var to avoid confusion.`
+    : null,
+  bscExplorerChainIdEnv &&
+  bscExplorerChainIdEnv !== BSC_EXPLORER_CHAIN_ID_DEFAULT
+    ? `NEXT_PUBLIC_BSC_EXPLORER_CHAIN_ID must be ${BSC_EXPLORER_CHAIN_ID_DEFAULT} for BNB Smart Chain. The app is using chainid=${BSC_EXPLORER_CHAIN_ID_DEFAULT}.`
+    : null,
+  !bscPreferredApiKeyEnv && bscScanApiKeyEnv
+    ? "Using deprecated fallback NEXT_PUBLIC_BSCSCAN_API_KEY. Prefer NEXT_PUBLIC_BSC_EXPLORER_API_KEY for the Etherscan API V2 key."
+    : null,
+].filter((warning): warning is string => Boolean(warning));
 
 export const pulsechain = defineChain({
   id: PULSECHAIN_CHAIN_ID,
@@ -110,16 +146,24 @@ export interface DiscoverySourceConfig {
   id: string;
   /** Human-readable source name shown in coverage copy. */
   name: string;
+  /** API provider shown in diagnostics when it differs from explorer links. */
+  apiProviderName?: string;
   /** Base URL the user can visit to learn more about the source. */
   url: string;
   /** Etherscan-compatible logs endpoint base URL. */
   apiUrl: string;
   /** Name of the public env var that can override `apiUrl`. */
   apiUrlEnvVar: string;
+  /** Fixed Etherscan V2 chain ID query value for this discovery source. */
+  apiChainId?: string;
+  /** Env var name that can configure the explorer API chain ID. */
+  apiChainIdEnvVar?: string;
   /** Public API key appended as `apikey` when configured. */
   apiKey?: string;
   /** Name of the public env var that contains the explorer API key. */
   apiKeyEnvVar?: string;
+  /** Accepted API-key env vars in preference order. */
+  apiKeyEnvVars?: readonly string[];
   /** Whether useful historical discovery requires an API key. */
   requiresApiKey?: boolean;
   /** Privacy-safe presence flag for diagnostics. Never print the key itself. */
@@ -137,6 +181,8 @@ export interface DiscoverySourceConfig {
   limitations: string;
   /** Source-specific API-key error. */
   missingApiKeyMessage?: string;
+  /** Privacy-safe configuration warnings surfaced in diagnostics. */
+  warnings?: readonly string[];
 }
 
 export interface ExplorerUrlBuilders {
@@ -224,14 +270,19 @@ function buildRpcConfig(
 function buildDiscoveryConfig(args: {
   id: string;
   name: string;
+  apiProviderName?: string;
   url: string;
   apiUrlEnvVar: string;
   apiUrlDefault: string;
+  apiChainId?: string;
+  apiChainIdEnvVar?: string;
   apiKeyEnvVar?: string;
+  apiKeyEnvVars?: readonly string[];
   requiresApiKey?: boolean;
   queryParams?: Record<string, string>;
   limitations: string;
   missingApiKeyMessage?: string;
+  warnings?: readonly string[];
   apiUrlEnv?: string;
   apiKeyEnv?: string;
 }): DiscoverySourceConfig {
@@ -241,11 +292,15 @@ function buildDiscoveryConfig(args: {
   return {
     id: args.id,
     name: args.name,
+    apiProviderName: args.apiProviderName,
     url: args.url,
     apiUrl,
     apiUrlEnvVar: args.apiUrlEnvVar,
+    apiChainId: args.apiChainId,
+    apiChainIdEnvVar: args.apiChainIdEnvVar,
     apiKey,
     apiKeyEnvVar: args.apiKeyEnvVar,
+    apiKeyEnvVars: args.apiKeyEnvVars,
     requiresApiKey: args.requiresApiKey,
     hasApiKey: Boolean(apiKey),
     hasApiUrl: Boolean(apiUrl),
@@ -253,6 +308,7 @@ function buildDiscoveryConfig(args: {
     queryParams: args.queryParams,
     limitations: args.limitations,
     missingApiKeyMessage: args.missingApiKeyMessage,
+    warnings: args.warnings,
   };
 }
 
@@ -279,19 +335,30 @@ const pulsechainDiscovery = buildDiscoveryConfig({
 });
 
 const bscDiscovery = buildDiscoveryConfig({
-  id: "bscscan-mainnet",
-  name: "BscScan",
+  id: "etherscan-v2-bsc",
+  name: "Etherscan API V2 (BSC logs)",
+  apiProviderName: "Etherscan API V2",
   url: BSC_EXPLORER_BASE_URL,
   apiUrlEnvVar: "NEXT_PUBLIC_BSC_EXPLORER_API_URL",
   apiUrlDefault: BSC_EXPLORER_API_DEFAULT,
-  apiKeyEnvVar: "NEXT_PUBLIC_BSCSCAN_API_KEY",
-  apiUrlEnv: bscExplorerApiEnv,
-  apiKeyEnv: bscScanApiKeyEnv,
+  apiChainId: bscExplorerChainId,
+  apiChainIdEnvVar: "NEXT_PUBLIC_BSC_EXPLORER_CHAIN_ID",
+  apiKeyEnvVar: "NEXT_PUBLIC_BSC_EXPLORER_API_KEY",
+  apiKeyEnvVars: [
+    "NEXT_PUBLIC_BSC_EXPLORER_API_KEY",
+    "NEXT_PUBLIC_BSCSCAN_API_KEY",
+  ],
+  apiUrlEnv: bscDeprecatedV1ApiConfigured ? undefined : bscExplorerApiEnv,
+  apiKeyEnv: bscExplorerApiKeyEnv,
   requiresApiKey: true,
+  queryParams: {
+    chainid: bscExplorerChainId,
+  },
   limitations:
-    "BscScan free/public API plans can rate-limit, cap responses, or require smaller block windows.",
+    "Etherscan API V2 can rate-limit, cap responses, or require smaller block windows for BNB Smart Chain logs.",
   missingApiKeyMessage:
-    "BscScan discovery requires an API key. Set NEXT_PUBLIC_BSCSCAN_API_KEY so Pulse Revoke can query historical BSC approval logs without using public RPC eth_getLogs.",
+    "BSC historical discovery uses Etherscan API V2. Set NEXT_PUBLIC_BSC_EXPLORER_API_KEY to an Etherscan V2 API key with BNB Smart Chain access. NEXT_PUBLIC_BSCSCAN_API_KEY is only a deprecated fallback.",
+  warnings: bscDiscoveryWarnings,
 });
 
 export const supportedChainConfigs = {
@@ -348,14 +415,14 @@ export const supportedChainConfigs = {
     discovery: bscDiscovery,
     discoverySettings: {
       sourceKind: "explorer-logs",
-      providerName: "BscScan",
+      providerName: "Etherscan API V2",
       approvalEventTopicMode: "topic0-topic1-owner",
       defaultFromBlock: "0",
       defaultToBlock: "latest",
       pageSize: 1000,
       historicalRpcLogs: "disabled",
       capWarning:
-        "BscScan may rate-limit, cap pages, or require smaller windows; incomplete discovery is surfaced to the user.",
+        "Etherscan API V2 may rate-limit, cap pages, or require smaller windows for BSC logs; incomplete discovery is surfaced to the user.",
     },
     standardLabels: {
       fungible: "BEP-20",

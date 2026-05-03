@@ -25,9 +25,15 @@ does not mean a desktop release exists today.
   from `src/lib/chains.ts` is used.
 - `NEXT_PUBLIC_PULSECHAIN_EXPLORER_API` is optional. If unset, the PulseScan
   API default is used.
-- `NEXT_PUBLIC_BSC_EXPLORER_API_URL` is an optional BscScan discovery API
-  override. `NEXT_PUBLIC_BSCSCAN_API_KEY` is required for BSC discovery when
-  using the default BscScan endpoint.
+- `NEXT_PUBLIC_BSC_EXPLORER_API_URL` is an optional BSC historical logs API
+  override. It defaults to Etherscan API V2 at
+  `https://api.etherscan.io/v2/api`; the old BscScan V1 endpoint is deprecated
+  for this logs flow.
+- `NEXT_PUBLIC_BSC_EXPLORER_CHAIN_ID` should be unset or set to `56`.
+- `NEXT_PUBLIC_BSC_EXPLORER_API_KEY` is required for BSC discovery. It should
+  be an Etherscan API V2 key with BNB Smart Chain access.
+- `NEXT_PUBLIC_BSCSCAN_API_KEY` remains a deprecated fallback key name for older
+  deploys.
 
 Do not commit local `.env` files or release secrets.
 

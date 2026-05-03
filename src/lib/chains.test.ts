@@ -1,8 +1,10 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import { parseDiscoveryResults, type ReadResult } from "./approvals";
 import {
   BSC_CHAIN_ID,
+  BSC_DEPRECATED_V1_EXPLORER_API_URL,
+  BSC_EXPLORER_CHAIN_ID_DEFAULT,
   BSC_EXPLORER_API_DEFAULT,
   PULSECHAIN_CHAIN_ID,
   bsc,
@@ -60,8 +62,25 @@ describe("supported chain config", () => {
       nft: "BEP-721",
       multiToken: "BEP-1155",
     });
+    expect(config?.discovery.apiProviderName).toBe("Etherscan API V2");
     expect(config?.explorer.baseUrl).toBe("https://bscscan.com");
+    expect(config?.explorer.name).toBe("BscScan");
     expect(config?.discovery.apiUrl).toBe(BSC_EXPLORER_API_DEFAULT);
+    expect(config?.discovery.apiChainId).toBe(BSC_EXPLORER_CHAIN_ID_DEFAULT);
+    expect(config?.discovery.queryParams).toMatchObject({ chainid: "56" });
+    expect(config?.discovery.apiUrlEnvVar).toBe(
+      "NEXT_PUBLIC_BSC_EXPLORER_API_URL",
+    );
+    expect(config?.discovery.apiChainIdEnvVar).toBe(
+      "NEXT_PUBLIC_BSC_EXPLORER_CHAIN_ID",
+    );
+    expect(config?.discovery.apiKeyEnvVar).toBe(
+      "NEXT_PUBLIC_BSC_EXPLORER_API_KEY",
+    );
+    expect(config?.discovery.apiKeyEnvVars).toEqual([
+      "NEXT_PUBLIC_BSC_EXPLORER_API_KEY",
+      "NEXT_PUBLIC_BSCSCAN_API_KEY",
+    ]);
     expect(bsc.id).toBe(56);
     expect(bsc.nativeCurrency.symbol).toBe("BNB");
   });
@@ -147,5 +166,29 @@ describe("supported chain config", () => {
     expect(copy).toContain("BSC");
     expect(copy).not.toContain("Ethereum");
     expect(copy).not.toContain("Etherscan");
+  });
+
+  it("warns and falls back when the deprecated BscScan V1 API URL is configured", async () => {
+    const original = process.env.NEXT_PUBLIC_BSC_EXPLORER_API_URL;
+    process.env.NEXT_PUBLIC_BSC_EXPLORER_API_URL =
+      BSC_DEPRECATED_V1_EXPLORER_API_URL;
+    vi.resetModules();
+
+    try {
+      const chains = await import("./chains");
+      const config = chains.getChainConfig(chains.BSC_CHAIN_ID);
+
+      expect(config?.discovery.apiUrl).toBe(chains.BSC_EXPLORER_API_DEFAULT);
+      expect(config?.discovery.warnings?.join(" ")).toContain(
+        "deprecated BscScan V1 endpoint",
+      );
+    } finally {
+      if (original === undefined) {
+        delete process.env.NEXT_PUBLIC_BSC_EXPLORER_API_URL;
+      } else {
+        process.env.NEXT_PUBLIC_BSC_EXPLORER_API_URL = original;
+      }
+      vi.resetModules();
+    }
   });
 });
