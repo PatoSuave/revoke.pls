@@ -7,6 +7,7 @@ import type {
 } from "@/hooks/use-batch-revoke";
 import { getChainConfig } from "@/lib/chains";
 import { explorerTxUrl } from "@/lib/explorer";
+import { BSC_GAS_CAP_TITLE } from "@/lib/preflight";
 import type { ScoredApproval } from "@/lib/risk";
 
 /**
@@ -199,29 +200,34 @@ function ConfirmingCard({ batch }: { batch: UseBatchRevokeResult }) {
 
       <div className="mt-4 max-h-56 overflow-y-auto rounded-xl border border-pulse-border/60 bg-pulse-bg/40">
         <ul className="divide-y divide-pulse-border/60">
-          {batch.items.map((item, i) => (
-            <li
-              key={item.key}
-              className="flex items-center justify-between gap-3 px-3 py-2 text-xs"
-            >
-              <span className="flex items-baseline gap-2">
-                <span className="font-mono text-pulse-muted">
-                  {String(i + 1).padStart(2, "0")}
+          {batch.items.map((item, i) => {
+            const result = batch.results[item.key];
+            return (
+              <li
+                key={item.key}
+                className="grid gap-1 px-3 py-2 text-xs sm:grid-cols-[1fr_auto_auto] sm:items-center sm:gap-3"
+                title={result?.error}
+              >
+                <span className="flex min-w-0 items-baseline gap-2">
+                  <span className="font-mono text-pulse-muted">
+                    {String(i + 1).padStart(2, "0")}
+                  </span>
+                  <span className="font-semibold text-pulse-text">
+                    {item.tokenSymbol}
+                  </span>
+                  <span className="truncate text-pulse-muted">
+                    -&gt; {item.spenderLabel}
+                  </span>
                 </span>
-                <span className="font-semibold text-pulse-text">
-                  {item.tokenSymbol}
+                <span className="font-mono text-[11px] text-pulse-muted">
+                  {formatBatchPreflightDetail(result, item)}
                 </span>
-                <span className="text-pulse-muted">-&gt; {item.spenderLabel}</span>
-              </span>
-              <span className="font-mono text-[11px] text-pulse-muted">
-                {batch.results[item.key]?.preflight?.currentLabel ??
-                  (item.unlimited ? "Unlimited" : item.formattedAllowance)}
-              </span>
-              <span className="text-[11px] font-semibold text-pulse-muted">
-                {STATUS_LABEL[batch.results[item.key]?.status ?? "queued"]}
-              </span>
-            </li>
-          ))}
+                <span className="text-[11px] font-semibold text-pulse-muted">
+                  {STATUS_LABEL[result?.status ?? "queued"]}
+                </span>
+              </li>
+            );
+          })}
         </ul>
       </div>
 
@@ -414,6 +420,7 @@ function BatchProgressRow({
 
   return (
     <li
+      title={result?.error}
       className={`flex items-center justify-between gap-3 rounded-lg border px-3 py-2 text-xs ${
         current
           ? "border-pulse-cyan/50 bg-pulse-cyan/5"
@@ -441,8 +448,31 @@ function BatchProgressRow({
           </a>
         ) : null}
       </span>
+      {result?.preflight?.gasCapExceeded ? (
+        <span className="sr-only">{BSC_GAS_CAP_TITLE}</span>
+      ) : null}
     </li>
   );
+}
+
+function formatBatchPreflightDetail(
+  result: BatchItemResult | undefined,
+  item: Pick<ScoredApproval, "unlimited" | "formattedAllowance">,
+): string {
+  const preflight = result?.preflight;
+  if (preflight?.gasCapExceeded) {
+    return `${BSC_GAS_CAP_TITLE}: ${formatGasAmount(
+      preflight.estimatedGas ?? 0n,
+    )} / ${formatGasAmount(preflight.maxTransactionGas ?? 0n)}`;
+  }
+  return (
+    preflight?.currentLabel ??
+    (item.unlimited ? "Unlimited" : item.formattedAllowance)
+  );
+}
+
+function formatGasAmount(value: bigint): string {
+  return value.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
 }
 
 function Pill({

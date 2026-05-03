@@ -12,7 +12,12 @@ import {
   explorerTxUrl,
 } from "@/lib/explorer";
 import { shortenAddress } from "@/lib/format";
-import type { Erc20PreflightResult } from "@/lib/preflight";
+import {
+  BSC_GAS_CAP_BODY,
+  BSC_GAS_CAP_HELPER,
+  BSC_GAS_CAP_TITLE,
+  type Erc20PreflightResult,
+} from "@/lib/preflight";
 import type { RiskLevel, ScoredApproval } from "@/lib/risk";
 
 export function ApprovalRow({
@@ -532,7 +537,9 @@ function PreflightNotice({
   if (isRefreshingApproval) {
     return (
       <PreflightBox tone="info">
-        <Spinner /> Refreshing current approval...
+        <span className="flex items-center gap-2">
+          <Spinner /> Refreshing current approval...
+        </span>
       </PreflightBox>
     );
   }
@@ -548,11 +555,14 @@ function PreflightNotice({
   if (preflight.status === "active") {
     return (
       <PreflightBox tone="success">
-        Current allowance:{" "}
-        <span className="font-mono text-pulse-text">
-          {preflight.currentLabel ?? "active"}
+        <span>
+          Current allowance:{" "}
+          <span className="font-mono text-pulse-text">
+            {preflight.currentLabel ?? "active"}
+          </span>
+          . This approval is still active.
         </span>
-        . This approval is still active.
+        <GasDiagnostics preflight={preflight} />
       </PreflightBox>
     );
   }
@@ -562,6 +572,19 @@ function PreflightNotice({
       <PreflightBox tone="success">
         Already cleared. Current allowance is zero, so no revoke transaction is
         needed.
+      </PreflightBox>
+    );
+  }
+
+  if (preflight.gasCapExceeded) {
+    return (
+      <PreflightBox tone="warning">
+        <span className="font-semibold text-pulse-text">
+          {BSC_GAS_CAP_TITLE}
+        </span>
+        <span>{BSC_GAS_CAP_BODY}</span>
+        <GasDiagnostics preflight={preflight} />
+        <span>{BSC_GAS_CAP_HELPER}</span>
       </PreflightBox>
     );
   }
@@ -589,12 +612,38 @@ function PreflightBox({
   }[tone];
 
   return (
-    <p
-      className={`mt-3 flex items-center gap-2 rounded-xl border p-3 text-xs leading-5 ${toneClass}`}
+    <div
+      className={`mt-3 flex flex-col gap-1.5 rounded-xl border p-3 text-xs leading-5 ${toneClass}`}
     >
       {children}
-    </p>
+    </div>
   );
+}
+
+function GasDiagnostics({
+  preflight,
+}: {
+  preflight: Pick<
+    Erc20PreflightResult,
+    "estimatedGas" | "maxTransactionGas" | "gasCapExceeded"
+  >;
+}) {
+  if (!preflight.estimatedGas) return null;
+  return (
+    <span className="font-mono text-[11px] text-pulse-muted">
+      Estimated gas: {formatGasAmount(preflight.estimatedGas)}
+      {preflight.maxTransactionGas
+        ? ` / BSC max transaction gas: ${formatGasAmount(
+            preflight.maxTransactionGas,
+          )}`
+        : ""}
+      {preflight.gasCapExceeded === false ? " / gas cap preflight passed" : ""}
+    </span>
+  );
+}
+
+function formatGasAmount(value: bigint): string {
+  return value.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
 }
 
 function StatusPanel({

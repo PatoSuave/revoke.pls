@@ -8,7 +8,12 @@ import { getChainConfig, type SupportedChainConfig } from "@/lib/chains";
 import { explorerAddressUrl, explorerTxUrl } from "@/lib/explorer";
 import { shortenAddress } from "@/lib/format";
 import type { NftApproval, NftStandard } from "@/lib/nft-approvals";
-import type { NftPreflightResult } from "@/lib/preflight";
+import {
+  BSC_GAS_CAP_BODY,
+  BSC_GAS_CAP_HELPER,
+  BSC_GAS_CAP_TITLE,
+  type NftPreflightResult,
+} from "@/lib/preflight";
 import type { RiskLevel } from "@/lib/risk";
 
 export function NftApprovalRow({
@@ -478,7 +483,9 @@ function NftPreflightNotice({
   if (isRefreshingApproval) {
     return (
       <PreflightBox tone="info">
-        <Spinner /> Refreshing current approval...
+        <span className="flex items-center gap-2">
+          <Spinner /> Refreshing current approval...
+        </span>
       </PreflightBox>
     );
   }
@@ -494,7 +501,8 @@ function NftPreflightNotice({
   if (preflight.status === "active") {
     return (
       <PreflightBox tone="success">
-        Current approval is still active.
+        <span>Current approval is still active.</span>
+        <GasDiagnostics preflight={preflight} />
       </PreflightBox>
     );
   }
@@ -506,6 +514,19 @@ function NftPreflightNotice({
         {approval.kind === "approvalForAll"
           ? "The operator is no longer approved for the collection."
           : "The token approval no longer points to this operator."}
+      </PreflightBox>
+    );
+  }
+
+  if (preflight.gasCapExceeded) {
+    return (
+      <PreflightBox tone="warning">
+        <span className="font-semibold text-pulse-text">
+          {BSC_GAS_CAP_TITLE}
+        </span>
+        <span>{BSC_GAS_CAP_BODY}</span>
+        <GasDiagnostics preflight={preflight} />
+        <span>{BSC_GAS_CAP_HELPER}</span>
       </PreflightBox>
     );
   }
@@ -533,12 +554,38 @@ function PreflightBox({
   }[tone];
 
   return (
-    <p
-      className={`mt-3 flex items-center gap-2 rounded-xl border p-3 text-xs leading-5 ${toneClass}`}
+    <div
+      className={`mt-3 flex flex-col gap-1.5 rounded-xl border p-3 text-xs leading-5 ${toneClass}`}
     >
       {children}
-    </p>
+    </div>
   );
+}
+
+function GasDiagnostics({
+  preflight,
+}: {
+  preflight: Pick<
+    NftPreflightResult,
+    "estimatedGas" | "maxTransactionGas" | "gasCapExceeded"
+  >;
+}) {
+  if (!preflight.estimatedGas) return null;
+  return (
+    <span className="font-mono text-[11px] text-pulse-muted">
+      Estimated gas: {formatGasAmount(preflight.estimatedGas)}
+      {preflight.maxTransactionGas
+        ? ` / BSC max transaction gas: ${formatGasAmount(
+            preflight.maxTransactionGas,
+          )}`
+        : ""}
+      {preflight.gasCapExceeded === false ? " / gas cap preflight passed" : ""}
+    </span>
+  );
+}
+
+function formatGasAmount(value: bigint): string {
+  return value.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
 }
 
 function StatusPanel({

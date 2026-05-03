@@ -5,7 +5,7 @@ import { getPublicClient } from "@wagmi/core";
 import { useConfig, useWaitForTransactionReceipt, useWriteContract } from "wagmi";
 import type { Address } from "viem";
 
-import type { SupportedChainId } from "@/lib/chains";
+import { getChainConfig, type SupportedChainId } from "@/lib/chains";
 import { normalizeRevokeError } from "@/lib/errors";
 import {
   buildErc721TokenRevoke,
@@ -13,9 +13,11 @@ import {
 } from "@/lib/nft-approvals";
 import type { NftApproval } from "@/lib/nft-approvals";
 import {
+  applyGasEstimateToPreflight,
   buildNftPreflightRead,
   evaluateNftApprovalPreflight,
   failedNftPreflight,
+  gasForRevokeRequest,
   type NftPreflightResult,
 } from "@/lib/preflight";
 import { trackEvent } from "@/lib/telemetry";
@@ -150,7 +152,27 @@ export function useRevokeNftApproval({
       const raw = await client.readContract(
         buildNftPreflightRead(ownerAddress, target),
       );
-      const next = evaluateNftApprovalPreflight(raw, target);
+      const approvalPreflight = evaluateNftApprovalPreflight(raw, target);
+      if (approvalPreflight.status !== "active") {
+        setPreflight(approvalPreflight);
+        return approvalPreflight;
+      }
+
+      const chainConfig = getChainConfig(target.chainId);
+      const revokeCall = buildNftRevokeCall(target);
+      const estimatedGas = chainConfig?.maxTransactionGas
+        ? await client.estimateContractGas({
+            ...revokeCall,
+            account: ownerAddress,
+          })
+        : undefined;
+      const next = estimatedGas
+        ? applyGasEstimateToPreflight(
+            approvalPreflight,
+            estimatedGas,
+            chainConfig?.maxTransactionGas,
+          )
+        : approvalPreflight;
       setPreflight(next);
       return next;
     } catch (error) {
@@ -170,19 +192,12 @@ export function useRevokeNftApproval({
       kind: telemetryKind,
       chainId: target.chainId,
     });
-    const call =
-      target.kind === "approvalForAll"
-        ? buildSetApprovalForAllRevoke({
-            collectionAddress: target.collectionAddress,
-            operatorAddress: target.operatorAddress,
-          })
-        : buildErc721TokenRevoke({
-            collectionAddress: target.collectionAddress,
-            tokenId: target.tokenId!,
-          });
+    const call = buildNftRevokeCall(target);
+    const gas = gasForRevokeRequest(latest);
     write.writeContract({
       ...call,
       chainId: target.chainId as SupportedChainId,
+      ...(gas ? { gas } : {}),
     });
   }, [refreshPreflight, target, write, telemetryKind]);
 
@@ -204,4 +219,16 @@ export function useRevokeNftApproval({
     revoke,
     reset,
   };
+}
+
+function buildNftRevokeCall(target: NftApproval) {
+  return target.kind === "approvalForAll"
+    ? buildSetApprovalForAllRevoke({
+        collectionAddress: target.collectionAddress,
+        operatorAddress: target.operatorAddress,
+      })
+    : buildErc721TokenRevoke({
+        collectionAddress: target.collectionAddress,
+        tokenId: target.tokenId!,
+      });
 }
