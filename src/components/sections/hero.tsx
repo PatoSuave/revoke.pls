@@ -20,7 +20,7 @@ export function Hero() {
               className="h-1.5 w-1.5 rounded-full bg-pulse-green"
               aria-hidden
             />
-            PulseChain and Ethereum approval safety
+            PulseChain and BSC approval safety
           </span>
 
           <h1 className="mt-5 text-3xl font-bold tracking-tight sm:text-5xl">

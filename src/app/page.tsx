@@ -15,7 +15,7 @@ import { absoluteUrl, siteConfig } from "@/lib/site";
 const productName = "Pulse Revoke";
 const launcherTitle = `${productName} - PulseChain approval safety`;
 const launcherDescription =
-  "Launch the Pulse Revoke scanner or track desktop release status. Review and revoke token approvals on PulseChain and Ethereum without custody.";
+  "Launch the Pulse Revoke scanner or track desktop release status. Review and revoke token approvals on PulseChain and BSC without custody.";
 
 export const metadata: Metadata = {
   title: launcherTitle,
@@ -56,7 +56,7 @@ const TRUST_POINTS = [
 ] as const;
 
 const HERO_STATS = [
-  { label: "Primary chain", value: "PulseChain" },
+  { label: "Supported chains", value: "PulseChain + BSC" },
   { label: "Scanner", value: "Live at /app" },
   { label: "Desktop", value: "Pending release" },
 ] as const;
@@ -70,7 +70,7 @@ const HOW_IT_WORKS = [
   {
     step: "02",
     title: "Review approvals",
-    body: "See active ERC-20 allowances and NFT operator approvals, with risk cues and spender labels.",
+    body: "See active token allowances and NFT operator approvals, with risk cues and spender labels.",
   },
   {
     step: "03",
@@ -98,7 +98,7 @@ const FAQ_ITEMS = [
   {
     question: "What does revoking do?",
     answer:
-      "For ERC-20s, revoking sets the spender allowance to zero. For NFTs, it clears the relevant operator or per-token approval.",
+      "For BEP-20 and PRC-20 tokens, revoking sets the spender allowance to zero. For NFTs, it clears the relevant operator or per-token approval.",
   },
   {
     question: "Is the desktop app available yet?",
@@ -108,7 +108,7 @@ const FAQ_ITEMS = [
   {
     question: "What chains are supported?",
     answer:
-      "PulseChain mainnet (369) and Ethereum mainnet (1). Results should still be checked on PulseScan or Etherscan before signing.",
+      "PulseChain mainnet (369) and BSC / BNB Smart Chain (56). Results should still be checked on PulseScan or BscScan before signing.",
   },
 ] as const;
 
@@ -210,7 +210,7 @@ function Hero({ desktopReady }: { desktopReady: boolean }) {
           </p>
 
           <p className="mt-4 max-w-2xl text-base leading-7 text-pulse-muted">
-            Review ERC-20 allowances and NFT operator approvals, then clear the
+            Review token allowances and NFT operator approvals, then clear the
             permissions you do not trust. The app stays read-only until you
             choose a revoke action and confirm it in your own wallet.
           </p>
@@ -249,7 +249,7 @@ function Hero({ desktopReady }: { desktopReady: boolean }) {
           </dl>
 
           <p className="mt-5 max-w-xl text-xs leading-5 text-pulse-muted">
-            Always verify spender addresses on PulseScan or Etherscan before
+            Always verify spender addresses on PulseScan or BscScan before
             signing. Registry labels are curated, not a guarantee of safety.
           </p>
         </div>

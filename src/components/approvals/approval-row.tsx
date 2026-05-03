@@ -6,7 +6,11 @@ import type { Address } from "viem";
 import type { BatchItemResult } from "@/hooks/use-batch-revoke";
 import { useRevokeApproval } from "@/hooks/use-revoke-approval";
 import { getChainConfig } from "@/lib/chains";
-import { explorerAddressUrl, explorerTxUrl } from "@/lib/explorer";
+import {
+  explorerAddressUrl,
+  explorerTokenUrl,
+  explorerTxUrl,
+} from "@/lib/explorer";
 import { shortenAddress } from "@/lib/format";
 import type { Erc20PreflightResult } from "@/lib/preflight";
 import type { RiskLevel, ScoredApproval } from "@/lib/risk";
@@ -94,6 +98,7 @@ export function ApprovalRow({
               chainId={chainId}
               address={approval.tokenAddress}
               label={approval.tokenName}
+              kind="token"
             />
           </div>
         </div>
@@ -862,18 +867,24 @@ function ExplorerLink({
   address,
   label,
   inline,
+  kind = "address",
 }: {
   chainId: number;
   address: string;
   label?: string;
   inline?: boolean;
+  kind?: "address" | "token";
 }) {
   const text = label ?? shortenAddress(address);
+  const href =
+    kind === "token"
+      ? explorerTokenUrl(chainId, address)
+      : explorerAddressUrl(chainId, address);
   const base =
     "text-xs text-pulse-muted hover:text-pulse-cyan hover:underline underline-offset-2";
   return (
     <a
-      href={explorerAddressUrl(chainId, address)}
+      href={href}
       target="_blank"
       rel="noopener noreferrer"
       className={inline ? `${base} font-mono` : `truncate ${base}`}

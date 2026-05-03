@@ -1,69 +1,79 @@
 # Pulse Revoke
 
-A PulseChain-themed token approval management app inspired by the revoke approval workflow used across EVM chains.
-
-## Purpose
-
-Pulse Revoke helps users:
-
-- Connect their wallet
-- Detect ERC-20 token approvals
-- View spender contracts
-- Review allowance amounts
-- Revoke or reduce token approvals safely
-- Understand approval risk before signing transactions
+Pulse Revoke is a non-custodial approval scanner and revoker for PulseChain and
+BSC / BNB Smart Chain. The working app is at `/app`; `/` is the launcher and
+trust/distribution page.
 
 ## Scope
 
-Pulse Revoke currently covers:
+Active supported chains:
 
-- PulseChain mainnet (chainId 369)
-- Ethereum mainnet (chainId 1)
-- ERC-20 approval discovery, risk scoring, and single / batch revoke
-- NFT approval discovery for ERC-721 and ERC-1155 (`ApprovalForAll`
-  plus ERC-721 per-token approvals), with single revoke
-- Discovery-first pipeline over a Blockscout-compatible explorer API,
-  with live on-chain re-validation via Multicall3
-- Curated registry enrichment for known spenders and operators
-- Injected wallets + optional WalletConnect v2 connector
+- PulseChain mainnet, chain ID `369`, gas token `PLS`, explorer `PulseScan`
+- BSC / BNB Smart Chain, chain ID `56`, gas token `BNB`, explorer `BscScan`
 
-Out of scope for the current release:
+Supported approval flows:
 
-- Backend, database, or analytics
+- PulseChain fungible token approvals (`PRC-20` user-facing label)
+- BSC fungible token approvals (`BEP-20` user-facing label)
+- NFT operator approvals and per-token approvals where supported
+- BSC NFT copy uses `BEP-721` and `BEP-1155`
+- Single revoke for fungible token approvals and NFT approvals
+- Sequential batch revoke for fungible token approvals
+
+Out of scope for this release:
+
+- Ethereum as an active supported chain
+- Backend, database, or indexer
+- Desktop binaries
+- IPFS or Pinata publishing work
 - Batch revoke for NFTs
-- Historical activity feeds beyond what the explorer surfaces
+- Historical activity feeds beyond explorer log discovery
 
-## Tech Stack
+## How It Works
 
-- Next.js
-- TypeScript
-- React
-- viem
-- wagmi
-- WalletConnect / injected wallets
-- Tailwind CSS
-- Vercel deployment
+1. User connects a wallet on PulseChain or BSC.
+2. The app fetches historical approval logs from the chain's explorer API.
+3. Raw candidates are deduped by chain, token/collection, spender/operator, and
+   approval type.
+4. Every candidate is re-validated live on the same chain via RPC and
+   Multicall3 before display.
+5. Known tokens and spenders are enriched from a chain-scoped registry.
+6. Revokes are submitted directly from the user's wallet.
 
-## Core User Flow
+BSC discovery uses the BscScan logs API by default. It does not rely on public
+BSC RPC `eth_getLogs` for historical approval discovery.
 
-1. User connects a wallet on PulseChain or Ethereum
-2. App discovers ERC-20 `Approval` and NFT `ApprovalForAll` / per-token
-   `Approval` events from the wallet's on-chain history
-3. App re-validates every candidate live via Multicall3 and enriches
-   known spenders/operators from the curated registry
-4. App displays token/collection, spender/operator, allowance or
-   approval type, and a three-tier risk assessment
-5. User picks a single revoke or a sequential ERC-20 batch revoke
-6. Wallet prompts once per revoke; allowances are set to zero and
-   NFT operators are cleared on-chain
+## BSC Discovery
 
-## Safety Notes
+BSC approval discovery uses:
 
-- This app does not custody funds
-- Revoking approvals requires on-chain transactions
-- Gas fees apply
-- Users should verify spender addresses before signing
-- This tool is informational and transactional, not financial advice
+- API URL: `https://api.bscscan.com/api`
+- Module/action: `module=logs&action=getLogs`
+- Topics: approval event topic in `topic0`, owner address padded into `topic1`
+- Pagination: `page` and `offset`
+- API key env var: `NEXT_PUBLIC_BSCSCAN_API_KEY`
+
+BscScan free/public API plans can rate-limit, cap responses, or require smaller
+block windows. The scanner reports incomplete discovery or validation instead
+of showing a false "clear" state.
+
+## Revoke Behavior
+
+Fungible token revoke:
+
+- Uses `approve(spender, 0)`
+- Sends on the approval's own chain ID
+- Uses PLS gas wording on PulseChain
+- Uses BNB gas wording on BSC
+- Links transactions to PulseScan or BscScan
+
+NFT revoke:
+
+- Collection-wide approvals use `setApprovalForAll(operator, false)`
+- Per-token BEP-721/ERC-721-compatible approvals use `approve(address(0), tokenId)`
+
+Batch revoke remains sequential and chain-safe. Selected approvals are expected
+to come from one active chain; mixed-chain batches are blocked.
 
 ## Development
 
@@ -74,49 +84,16 @@ npm install
 npm run dev
 ```
 
-Then open http://localhost:3000.
+Then open `http://localhost:3000`.
 
-Other scripts:
+Useful scripts:
 
 ```bash
-npm run build      # production build
-npm run start      # run the production build
-npm run lint       # next lint
-npm run typecheck  # tsc --noEmit
+npm run typecheck
+npx vitest run
+npm run lint
+npm run build
 ```
-
-## Deployment
-
-This project is Vercel-ready. Import the repo at
-https://vercel.com/new and Vercel will auto-detect Next.js and use
-`npm run build`. PulseChain works with the default public RPC and
-PulseScan API. Ethereum mainnet discovery requires an Etherscan API key
-because Etherscan v2 rejects log-history requests without one.
-
-For the production domain `revoke.pls`, set `NEXT_PUBLIC_SITE_URL=https://revoke.pls`
-in your Vercel project environment so canonical URLs, Open Graph, and Twitter
-cards resolve against the real origin. The value should be a full `https://`
-URL; host-only values like `revoke-pls.vercel.app` are normalized defensively,
-but the environment should still be configured with the full origin.
-Preview/staging deploys should set it to the preview origin to avoid
-advertising the production canonical.
-
-### Favicon, app icon, and Open Graph image
-
-The favicon, Apple touch icon, and Open Graph image are generated at runtime
-via Next.js file-based metadata routes, backed by `next/og` `ImageResponse`:
-
-- `src/app/icon.tsx` → `/icon` (32×32 favicon)
-- `src/app/apple-icon.tsx` → `/apple-icon` (180×180 touch icon)
-- `src/app/opengraph-image.tsx` → `/opengraph-image` (1200×630 social card)
-
-All three read brand colors from `siteConfig.brandColors` in `src/lib/site.ts`,
-so brand updates happen in one place. No static assets need to be placed in
-`public/` for these to work.
-
-If you'd rather override with a static PNG, drop files at `public/icon.png`,
-`public/apple-icon.png`, and `public/opengraph-image.png` — Next.js will prefer
-the static file over the route when both exist.
 
 ## Environment
 
@@ -124,129 +101,55 @@ Copy `.env.example` to `.env.local` if you want to override defaults.
 
 | Variable | Required | Purpose |
 | --- | --- | --- |
-| `NEXT_PUBLIC_PULSECHAIN_RPC_URL` | No | Override the default PulseChain RPC (`https://rpc.pulsechain.com`) for both viem reads and the wagmi transport. |
-| `NEXT_PUBLIC_MAINNET_RPC_URL` | No | Override Ethereum mainnet RPC for wagmi/viem reads. Defaults to viem's mainnet transport; set a private RPC for higher reliability. |
-| `NEXT_PUBLIC_PULSECHAIN_EXPLORER_API` | No | Override the PulseChain discovery API (`https://api.scan.pulsechain.com/api`). Must support Etherscan-compatible `logs/getLogs` topic filters. |
-| `NEXT_PUBLIC_MAINNET_EXPLORER_API` | No | Override Ethereum discovery API (`https://api.etherscan.io/v2/api`). Must support Etherscan v2-style params including `chainid=1`. |
-| `NEXT_PUBLIC_ETHERSCAN_API_KEY` | Yes for Ethereum discovery | API key for Ethereum mainnet discovery. Etherscan v2 rejects `logs/getLogs` requests without a valid key. |
-| `NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID` | No | Enables the WalletConnect option in the connect menu (QR pairing for mobile wallets). Obtain a free project ID at [cloud.reown.com](https://cloud.reown.com). When unset, only the injected wallet option is shown — the app still runs. |
-| `NEXT_PUBLIC_SITE_URL` | No | Canonical public URL used by SEO metadata, Open Graph, and Twitter cards. Defaults to `https://revoke.pls`. Use a full `https://` URL such as `https://revoke-pls.vercel.app`; host-only values are normalized defensively. |
+| `NEXT_PUBLIC_PULSECHAIN_RPC_URL` | No | Override PulseChain RPC. Defaults to `https://rpc.pulsechain.com`. |
+| `NEXT_PUBLIC_BSC_RPC_URL` | No | Override BSC RPC. Defaults to `https://bsc-dataseed.bnbchain.org`. Use a private RPC for production reliability. |
+| `NEXT_PUBLIC_PULSECHAIN_EXPLORER_API` | No | Override PulseChain discovery API. Defaults to `https://api.scan.pulsechain.com/api`. |
+| `NEXT_PUBLIC_BSC_EXPLORER_API_URL` | No | Override BscScan discovery API. Defaults to `https://api.bscscan.com/api`. |
+| `NEXT_PUBLIC_BSCSCAN_API_KEY` | Yes for BSC discovery | API key for BscScan logs API. Do not commit real keys. |
+| `NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID` | No | Enables WalletConnect QR pairing. |
+| `NEXT_PUBLIC_SITE_URL` | No | Canonical public URL used by metadata and generated social images. |
 
 ## Project Structure
 
-```
+```text
 src/
   app/
-    layout.tsx            # root layout + metadata (title, OG, Twitter, canonical)
-    page.tsx              # homepage: Hero → Scanner → How it works → Safety → FAQ
-    globals.css           # Tailwind layers + pulse utilities
-    icon.tsx              # 32×32 favicon (ImageResponse)
-    apple-icon.tsx        # 180×180 Apple touch icon (ImageResponse)
-    opengraph-image.tsx   # 1200×630 social card (ImageResponse)
-    robots.ts             # /robots.txt generated from siteConfig
-    sitemap.ts            # /sitemap.xml generated from siteConfig
+    page.tsx              # launcher / trust page
+    app/page.tsx          # working scanner route
   components/
-    providers.tsx            # wagmi + react-query providers
-    connect-wallet-button.tsx # connect menu (injected + optional WalletConnect)
-    pulse-mark.tsx
+    connect-wallet-button.tsx
     approvals/
-      approval-row.tsx       # ERC-20 row: risk, revoke, confirm, status
-      approval-filters.tsx   # search, sort, and filter controls
-      batch-revoke-panel.tsx # confirm / running / complete UI for batch
-      nft-approval-row.tsx   # NFT row: operator or per-token revoke
+      approval-row.tsx
+      batch-revoke-panel.tsx
+      nft-approval-row.tsx
     sections/
-      site-header.tsx
-      hero.tsx
-      approval-scanner.tsx   # ERC-20 + NFT scanner surface
-      how-it-works.tsx
-      trust-safety.tsx
-      faq.tsx
-      site-footer.tsx
+      approval-scanner.tsx
+      scanner-diagnostics.tsx
   hooks/
-    use-approval-discovery.ts      # ERC-20 discover → validate → enrich pipeline
-    use-approval-scan.ts           # registry-only fallback scanner (secondary)
-    use-nft-approval-discovery.ts  # NFT version of the pipeline
-    use-revoke-approval.ts         # per-row ERC-20 revoke state machine
-    use-revoke-nft-approval.ts     # per-row NFT revoke state machine
-    use-batch-revoke.ts            # sequential ERC-20 batch coordinator
+    use-approval-discovery.ts
+    use-nft-approval-discovery.ts
+    use-revoke-approval.ts
+    use-revoke-nft-approval.ts
+    use-batch-revoke.ts
   lib/
-    chains.ts          # PulseChain + Ethereum chain definitions/config
-    wagmi.ts           # wagmi config (PulseChain + Ethereum + connectors)
-    discovery.ts       # windowed Blockscout log fetcher; ERC-20 + NFT sources
-    approvals.ts       # ERC-20 validation build/parse + types
-    nft-approvals.ts   # NFT ABIs, validation, risk, revoke call builders
-    registry/          # curated tokens + spenders/operators (read-only)
-    risk.ts            # scoring, filters, sort
-    revoke.ts          # ERC-20 revoke call builder
-    errors.ts          # wagmi/viem error normalization
-    explorer.ts        # PulseScan URL builders
-    format.ts          # small formatting helpers
-    site.ts            # single source of truth for brand, URLs, metadata
+    chains.ts             # active PulseChain + BSC config
+    wagmi.ts              # wagmi config and transports
+    discovery.ts          # windowed explorer log discovery
+    approvals.ts          # fungible approval validation/enrichment
+    nft-approvals.ts      # NFT validation and revoke calls
+    registry/             # chain-scoped enrichment registry
+    explorer.ts           # explorer URL builders
+    telemetry.ts          # privacy-safe product-health events
 ```
 
-## Launch Checklist
+## Security Notes
 
-Production deploy readiness. Work top-to-bottom before pointing the
-production domain at a deploy.
+- No seed phrase entry
+- No custody
+- No hidden write calls
+- No backend/indexer in the approval path
+- No third-party analytics SDKs
+- Telemetry must not include wallet addresses, token addresses, spender
+  addresses, transaction hashes, balances, token amounts, or fingerprints
 
-### Environment
-
-- [ ] Set `NEXT_PUBLIC_SITE_URL=https://revoke.pls` in the production
-      Vercel project (and a matching full `https://` origin in preview/staging).
-- [ ] Set `NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID` if the WalletConnect
-      option should appear in the connect menu.
-- [ ] Confirm `NEXT_PUBLIC_PULSECHAIN_RPC_URL` is either unset
-      (default public RPC) or points at a trusted endpoint.
-- [ ] Confirm `NEXT_PUBLIC_PULSECHAIN_EXPLORER_API` is unset (uses
-      `api.scan.pulsechain.com`) or points at a Blockscout-compatible
-      mirror.
-
-### Branding and metadata
-
-- [ ] `/icon`, `/apple-icon`, `/opengraph-image` render correctly in a
-      fresh production build (`npm run build` then visit the three
-      routes via `npm run start`).
-- [ ] `/robots.txt` and `/sitemap.xml` reference the production origin.
-- [ ] View-source on the homepage shows the expected `<title>`,
-      `og:title`, `og:image`, `twitter:card` tags.
-- [ ] Optional: drop static overrides at `public/icon.png`,
-      `public/apple-icon.png`, `public/opengraph-image.png` if you
-      prefer hand-authored PNGs. Next.js uses them in preference to
-      the `ImageResponse` routes.
-
-### Functional smoke test
-
-- [ ] Home loads on desktop and mobile without layout shift.
-- [ ] Header nav anchors scroll to Scanner / How it works / Safety / FAQ.
-- [ ] Connect wallet menu shows exactly one Browser wallet row, plus
-      WalletConnect when enabled.
-- [ ] Wrong-chain prompt appears when a non-supported wallet network is
-      connected, and switches back with one click.
-- [ ] ERC-20 scan shows approvals, filters/sort/search work, single
-      revoke lands and the row disappears after confirmation.
-- [ ] Batch revoke: select → review → start → stop-after-current →
-      summary → rescan flow all work as described in the UI.
-- [ ] NFT scan shows operator and per-token approvals (if any),
-      single revoke works for both kinds.
-- [ ] Rescan is disabled while a scan or batch is in flight and becomes
-      clickable again once idle.
-
-### Accessibility and polish
-
-- [ ] Keyboard-only: Tab reaches the Connect button, menu items, and
-      each row's action; Esc closes the connect menu.
-- [ ] Lighthouse mobile audit passes Performance + Best Practices + SEO
-      above 90 on a fresh build.
-- [ ] No placeholder / `lorem`-style copy remains anywhere on the page.
-
-### Final gates
-
-- [ ] `npm run typecheck` ✓
-- [ ] `npm run lint` ✓
-- [ ] `npm run build` ✓
-- [ ] Production DNS for `revoke.pls` points at the Vercel deploy only
-      after the checklist above is green.
-
-## License
-
-MIT
+Always verify spender addresses on PulseScan or BscScan before signing.

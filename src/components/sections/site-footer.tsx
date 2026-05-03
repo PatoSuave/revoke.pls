@@ -52,12 +52,12 @@ export function SiteFooter() {
             PulseScan
           </a>
           <a
-            href={siteConfig.links.etherscan}
+            href={siteConfig.links.bscscan}
             target="_blank"
             rel="noopener noreferrer"
             className="transition hover:text-pulse-text"
           >
-            Etherscan
+            BscScan
           </a>
         </nav>
 
@@ -75,12 +75,12 @@ export function SiteFooter() {
             </a>{" "}
             or{" "}
             <a
-              href={siteConfig.links.etherscan}
+              href={siteConfig.links.bscscan}
               target="_blank"
               rel="noopener noreferrer"
               className="text-pulse-text underline underline-offset-2 hover:text-pulse-cyan"
             >
-              Etherscan
+              BscScan
             </a>{" "}
             before signing.
           </p>

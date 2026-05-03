@@ -182,6 +182,11 @@ function ConfirmingCard({ batch }: { batch: UseBatchRevokeResult }) {
         Pulse Revoke never batches funds, never uses a proxy contract, and never
         signs for you. Your wallet prompts once per approval.
       </p>
+      {batch.blockedReason ? (
+        <p className="mt-2 rounded-xl border border-amber-400/40 bg-amber-400/10 p-3 text-xs leading-5 text-amber-200">
+          {batch.blockedReason}
+        </p>
+      ) : null}
       <p className="mt-2 text-xs leading-5 text-pulse-muted">
         Already-cleared approvals are skipped. Unverified approvals are not
         submitted from this batch.

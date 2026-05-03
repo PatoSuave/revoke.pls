@@ -1,14 +1,16 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import type { Address } from "viem";
+import { getAddress, type Address } from "viem";
 
 import {
   createBlockscoutDiscoverySource,
   DEFAULT_DISCOVERY_LIMITS,
+  discoveredPairDedupeKey,
   ERC20_APPROVAL_TOPIC0,
   ERC_APPROVAL_FOR_ALL_TOPIC0,
 } from "./discovery";
 
 const OWNER = "0xcae394005c9c4c309621c53d53db9ceb701fc8d8" as Address;
+const CHECKSUM_OWNER = getAddress(OWNER);
 const SPENDER = "0x165C3410fC91EF562C50559f7d2289fEbed552d9" as Address;
 const TOKEN = "0xA1077a294dDE1B09bB078844df40758a5D0f9a27" as Address;
 const COLLECTION = "0x95B303987A60C71504D99Aa1b13B4DA07b0790ab" as Address;
@@ -36,8 +38,14 @@ function source(options?: {
       name: "TestSource",
       url: "https://example.test",
       apiUrl: "https://example.test/api",
+      apiUrlEnvVar: "NEXT_PUBLIC_TEST_EXPLORER_API",
       apiKey: options?.apiKey,
+      apiKeyEnvVar: "NEXT_PUBLIC_TEST_API_KEY",
       requiresApiKey: options?.requiresApiKey,
+      hasApiKey: Boolean(options?.apiKey),
+      hasApiUrl: true,
+      usesDefaultApiUrl: true,
+      limitations: "test source",
     },
     limits: {
       ...DEFAULT_DISCOVERY_LIMITS,
@@ -63,6 +71,7 @@ describe("createBlockscoutDiscoverySource", () => {
           result: [
             {
               address: TOKEN,
+              data: "0x7b",
               blockNumber: "0x1",
               transactionHash: "0x1",
               logIndex: "0x0",
@@ -76,7 +85,16 @@ describe("createBlockscoutDiscoverySource", () => {
     const result = await source().discover(OWNER);
 
     expect(result.pairs).toEqual([
-      { tokenAddress: TOKEN, spenderAddress: SPENDER },
+      expect.objectContaining({
+        chainId: 369,
+        approvalType: "fungible",
+        tokenAddress: TOKEN,
+        ownerAddress: CHECKSUM_OWNER,
+        spenderAddress: SPENDER,
+        rawApprovalValue: 123n,
+        blockNumber: 1n,
+        transactionHash: "0x1",
+      }),
     ]);
     expect(result.erc20Parse.erc20TopicShape).toBe(1);
     expect(result.erc20Parse.erc721TokenApprovalShape).toBe(0);
@@ -116,11 +134,13 @@ describe("createBlockscoutDiscoverySource", () => {
     const result = await source().discoverNftApprovals(OWNER);
 
     expect(result.approvals).toEqual([
-      {
+      expect.objectContaining({
+        chainId: 369,
         kind: "approvalForAll",
         collectionAddress: COLLECTION,
+        ownerAddress: CHECKSUM_OWNER,
         operatorAddress: SPENDER,
-      },
+      }),
     ]);
   });
 
@@ -159,5 +179,17 @@ describe("createBlockscoutDiscoverySource", () => {
       source({ requiresApiKey: true }).discover(OWNER),
     ).rejects.toThrow("requires an API key");
     expect(fetch).not.toHaveBeenCalled();
+  });
+
+  it("includes chain ID in fungible approval dedupe keys", () => {
+    const base = {
+      approvalType: "fungible" as const,
+      tokenAddress: TOKEN,
+      spenderAddress: SPENDER,
+    };
+
+    expect(discoveredPairDedupeKey({ ...base, chainId: 369 })).not.toBe(
+      discoveredPairDedupeKey({ ...base, chainId: 56 }),
+    );
   });
 });

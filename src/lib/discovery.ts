@@ -32,8 +32,15 @@ export const ERC_APPROVAL_FOR_ALL_TOPIC0 =
  * `allowance(owner, spender)` validation happens downstream.
  */
 export interface DiscoveredPair {
+  chainId: number;
+  approvalType: "fungible";
   tokenAddress: Address;
+  ownerAddress: Address;
   spenderAddress: Address;
+  rawApprovalValue?: bigint;
+  blockNumber?: bigint;
+  transactionHash?: `0x${string}`;
+  logIndex?: string;
 }
 
 export type NftApprovalKind = "approvalForAll" | "tokenApproval";
@@ -45,11 +52,16 @@ export type NftApprovalKind = "approvalForAll" | "tokenApproval";
  * happens downstream in `@/lib/nft-approvals`.
  */
 export interface NftDiscoveredApproval {
+  chainId: number;
   kind: NftApprovalKind;
   collectionAddress: Address;
+  ownerAddress: Address;
   operatorAddress: Address;
   /** Present only for per-token ERC-721 approvals (`kind === "tokenApproval"`). */
   tokenId?: bigint;
+  blockNumber?: bigint;
+  transactionHash?: `0x${string}`;
+  logIndex?: string;
 }
 
 export interface DiscoverySourceMeta {
@@ -99,6 +111,7 @@ export interface DiscoverySource {
 interface BlockscoutLogEntry {
   address?: string;
   topics?: readonly (string | null | undefined)[];
+  data?: string;
   blockNumber?: string;
   transactionHash?: string;
   logIndex?: string;
@@ -160,7 +173,7 @@ export interface DiscoveryLimits {
 
 export const DEFAULT_DISCOVERY_LIMITS: DiscoveryLimits = {
   // Increased to reduce false negatives for long-lived wallets with large
-  // approval histories across PulseChain/Ethereum.
+  // approval histories across PulseChain/BSC.
   maxRequests: 120,
   maxRawLogs: 100_000,
   requestTimeoutMs: 15_000,
@@ -221,6 +234,9 @@ function safeChecksum(address: string): Address | null {
 function parseHexNumber(value: string | undefined): bigint | null {
   if (!value || typeof value !== "string") return null;
   try {
+    if (value.startsWith("0x") || value.startsWith("0X")) {
+      return BigInt(value);
+    }
     if (/^[0-9a-fA-F]+$/.test(value) && /[a-fA-F]/.test(value)) {
       return BigInt(`0x${value}`);
     }
@@ -228,6 +244,16 @@ function parseHexNumber(value: string | undefined): bigint | null {
   } catch {
     return null;
   }
+}
+
+function safeTransactionHash(value: string | undefined): `0x${string}` | undefined {
+  if (!value || typeof value !== "string") return undefined;
+  if (!value.startsWith("0x")) return undefined;
+  return value as `0x${string}`;
+}
+
+function optionalNumber(value: string | undefined): bigint | undefined {
+  return parseHexNumber(value) ?? undefined;
 }
 
 function logIdentity(log: BlockscoutLogEntry): string {
@@ -240,11 +266,25 @@ function logIdentity(log: BlockscoutLogEntry): string {
   ].join(":");
 }
 
+export function discoveredPairDedupeKey(
+  pair: Pick<
+    DiscoveredPair,
+    "approvalType" | "chainId" | "spenderAddress" | "tokenAddress"
+  >,
+): string {
+  return [
+    pair.chainId,
+    pair.approvalType,
+    pair.tokenAddress.toLowerCase(),
+    pair.spenderAddress.toLowerCase(),
+  ].join(":");
+}
+
 function dedupePairs(pairs: DiscoveredPair[]): DiscoveredPair[] {
   const seen = new Set<string>();
   const out: DiscoveredPair[] = [];
   for (const p of pairs) {
-    const key = `${p.tokenAddress.toLowerCase()}-${p.spenderAddress.toLowerCase()}`;
+    const key = discoveredPairDedupeKey(p);
     if (seen.has(key)) continue;
     seen.add(key);
     out.push(p);
@@ -259,7 +299,7 @@ function dedupeNftApprovals(
   const out: NftDiscoveredApproval[] = [];
   for (const a of items) {
     const idPart = a.kind === "tokenApproval" ? a.tokenId?.toString() : "all";
-    const key = `${a.kind}:${a.collectionAddress.toLowerCase()}:${a.operatorAddress.toLowerCase()}:${idPart}`;
+    const key = `${a.chainId}:${a.kind}:${a.collectionAddress.toLowerCase()}:${a.operatorAddress.toLowerCase()}:${idPart}`;
     if (seen.has(key)) continue;
     seen.add(key);
     out.push(a);
@@ -368,7 +408,12 @@ async function fetchLogsPage(
       `Discovery source returned HTTP ${res.status} ${res.statusText}`,
     );
   }
-  const body = (await res.json()) as BlockscoutLogsResponse;
+  let body: BlockscoutLogsResponse;
+  try {
+    body = (await res.json()) as BlockscoutLogsResponse;
+  } catch {
+    throw new Error("Discovery source returned malformed JSON.");
+  }
   if (Array.isArray(body.result)) return body.result;
 
   const message = typeof body.result === "string" ? body.result : body.message;
@@ -615,6 +660,7 @@ async function windowedFetchLogs(
 
 function extractErc20Pairs(
   logs: readonly BlockscoutLogEntry[],
+  chainId: number,
 ): { pairs: DiscoveredPair[]; diagnostics: Erc20ApprovalParseDiagnostics } {
   const pairs: DiscoveredPair[] = [];
   const samplePairs: DiscoveredPair[] = [];
@@ -652,6 +698,7 @@ function extractErc20Pairs(
     }
     diagnostics.erc20TopicShape += 1;
     const tokenRaw = log.address;
+    const ownerRaw = topics[1];
     const spenderRaw = topics[2];
     if (typeof tokenRaw !== "string") {
       diagnostics.missingTokenAddress += 1;
@@ -666,12 +713,23 @@ function extractErc20Pairs(
       diagnostics.missingSpenderTopic += 1;
       continue;
     }
+    const ownerAddress = ownerRaw ? topicToAddress(ownerRaw) : null;
     const spenderAddress = topicToAddress(spenderRaw);
-    if (!spenderAddress) {
+    if (!ownerAddress || !spenderAddress) {
       diagnostics.invalidSpenderTopic += 1;
       continue;
     }
-    const pair = { tokenAddress, spenderAddress };
+    const pair = {
+      chainId,
+      approvalType: "fungible" as const,
+      tokenAddress,
+      ownerAddress,
+      spenderAddress,
+      rawApprovalValue: optionalNumber(log.data),
+      blockNumber: optionalNumber(log.blockNumber),
+      transactionHash: safeTransactionHash(log.transactionHash),
+      logIndex: log.logIndex,
+    };
     diagnostics.decodedPairs += 1;
     if (samplePairs.length < 3) samplePairs.push(pair);
     pairs.push(pair);
@@ -683,6 +741,7 @@ function extractErc20Pairs(
 
 function extractNftApprovalForAll(
   logs: readonly BlockscoutLogEntry[],
+  chainId: number,
 ): NftDiscoveredApproval[] {
   const out: NftDiscoveredApproval[] = [];
   for (const log of logs) {
@@ -692,15 +751,22 @@ function extractNftApprovalForAll(
     // `isApprovedForAll` check filters inactive ones downstream.
     if (!topics || topics.length !== 3) continue;
     const collectionRaw = log.address;
+    const ownerRaw = topics[1];
     const operatorRaw = topics[2];
     if (typeof collectionRaw !== "string") continue;
     const collectionAddress = safeChecksum(collectionRaw);
+    const ownerAddress = ownerRaw ? topicToAddress(ownerRaw) : null;
     const operatorAddress = operatorRaw ? topicToAddress(operatorRaw) : null;
-    if (!collectionAddress || !operatorAddress) continue;
+    if (!collectionAddress || !ownerAddress || !operatorAddress) continue;
     out.push({
+      chainId,
       kind: "approvalForAll",
       collectionAddress,
+      ownerAddress,
       operatorAddress,
+      blockNumber: optionalNumber(log.blockNumber),
+      transactionHash: safeTransactionHash(log.transactionHash),
+      logIndex: log.logIndex,
     });
   }
   return out;
@@ -708,6 +774,7 @@ function extractNftApprovalForAll(
 
 function extractErc721TokenApprovals(
   logs: readonly BlockscoutLogEntry[],
+  chainId: number,
 ): NftDiscoveredApproval[] {
   const out: NftDiscoveredApproval[] = [];
   for (const log of logs) {
@@ -715,18 +782,27 @@ function extractErc721TokenApprovals(
     // ERC-721 per-token Approval: 4 topics (sig + owner + approved + tokenId).
     if (!topics || topics.length !== 4) continue;
     const collectionRaw = log.address;
+    const ownerRaw = topics[1];
     const operatorRaw = topics[2];
     const tokenIdRaw = topics[3];
     if (typeof collectionRaw !== "string") continue;
     const collectionAddress = safeChecksum(collectionRaw);
+    const ownerAddress = ownerRaw ? topicToAddress(ownerRaw) : null;
     const operatorAddress = operatorRaw ? topicToAddress(operatorRaw) : null;
     const tokenId = tokenIdRaw ? topicToBigInt(tokenIdRaw) : null;
-    if (!collectionAddress || !operatorAddress || tokenId === null) continue;
+    if (!collectionAddress || !ownerAddress || !operatorAddress || tokenId === null) {
+      continue;
+    }
     out.push({
+      chainId,
       kind: "tokenApproval",
       collectionAddress,
+      ownerAddress,
       operatorAddress,
       tokenId,
+      blockNumber: optionalNumber(log.blockNumber),
+      transactionHash: safeTransactionHash(log.transactionHash),
+      logIndex: log.logIndex,
     });
   }
   return out;
@@ -779,9 +855,15 @@ export function createBlockscoutDiscoverySource({
   const queryParams = source.queryParams;
 
   const assertReady = () => {
+    if (!apiUrl) {
+      throw new Error(
+        `${source.name} discovery is missing an explorer API URL. Set ${source.apiUrlEnvVar} or use the documented default endpoint.`,
+      );
+    }
     if (source.requiresApiKey && !apiKey) {
       throw new Error(
-        `${source.name} discovery requires an API key. Set NEXT_PUBLIC_ETHERSCAN_API_KEY for Ethereum mainnet discovery, or configure NEXT_PUBLIC_MAINNET_EXPLORER_API with a compatible keyed endpoint.`,
+        source.missingApiKeyMessage ??
+          `${source.name} discovery requires an API key. Set ${source.apiKeyEnvVar ?? "the configured API key env var"}.`,
       );
     }
   };
@@ -800,7 +882,7 @@ export function createBlockscoutDiscoverySource({
         limits,
         options?.signal,
       );
-      const parsed = extractErc20Pairs(logs);
+      const parsed = extractErc20Pairs(logs, chainId);
       return {
         pairs: parsed.pairs,
         source: meta,
@@ -834,8 +916,8 @@ export function createBlockscoutDiscoverySource({
       ]);
 
       const candidates: NftDiscoveredApproval[] = [
-        ...extractNftApprovalForAll(forAll.logs),
-        ...extractErc721TokenApprovals(perToken.logs),
+        ...extractNftApprovalForAll(forAll.logs, chainId),
+        ...extractErc721TokenApprovals(perToken.logs, chainId),
       ];
 
       return {

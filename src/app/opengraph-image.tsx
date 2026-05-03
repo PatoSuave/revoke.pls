@@ -134,7 +134,7 @@ export default function OpengraphImage() {
             color: muted,
           }}
         >
-          <span>Non-custodial · Open source · PulseChain mainnet</span>
+          <span>Non-custodial · Open source · PulseChain + BSC</span>
           <span
             style={{
               background: gradient,

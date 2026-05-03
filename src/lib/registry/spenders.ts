@@ -1,6 +1,6 @@
 import type { Address } from "viem";
 
-import { mainnet, pulsechain } from "@/lib/chains";
+import { pulsechain } from "@/lib/chains";
 
 import { validateAddresses, validateRequiredStrings } from "./validate";
 
@@ -32,7 +32,7 @@ export type SpenderCategory =
  *
  * Entries are keyed by `(chainId, address)` so the same address can refer
  * to different spenders on different chains. Do not reuse a PulseChain entry
- * to label a look-alike Ethereum spender or vice versa without explicit
+ * to label a look-alike spender on another chain without explicit
  * verification on each chain.
  *
  * `label` is the display name for a specific contract (e.g. "PulseX Router v2").
@@ -107,15 +107,17 @@ export const PULSECHAIN_SPENDER_REGISTRY: readonly SpenderEntry[] = [
   },
 ] as const;
 
+/** BSC spender labels start empty by design. Add only manually verified entries. */
+export const BSC_SPENDER_REGISTRY: readonly SpenderEntry[] = [] as const;
+
 /**
- * Curated Ethereum mainnet spender registry. Focuses on the highest-volume
- * approval targets: Uniswap V2/V3 routers, the canonical Permit2, and
- * Uniswap's Universal Router. Each entry is cross-checked on Etherscan
- * against the protocol's official docs.
+ * Dormant Ethereum mainnet spender registry retained from the earlier app
+ * scaffold. Ethereum is not an active supported chain in Pulse Revoke.
  */
+const DORMANT_MAINNET_CHAIN_ID = 1;
 export const MAINNET_SPENDER_REGISTRY: readonly SpenderEntry[] = [
   {
-    chainId: mainnet.id,
+    chainId: DORMANT_MAINNET_CHAIN_ID,
     address: "0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D",
     label: "Uniswap V2 Router 02",
     protocol: "Uniswap",
@@ -129,7 +131,7 @@ export const MAINNET_SPENDER_REGISTRY: readonly SpenderEntry[] = [
     source: "https://docs.uniswap.org",
   },
   {
-    chainId: mainnet.id,
+    chainId: DORMANT_MAINNET_CHAIN_ID,
     address: "0xE592427A0AEce92De3Edee1F18E0157C05861564",
     label: "Uniswap V3 SwapRouter",
     protocol: "Uniswap",
@@ -143,7 +145,7 @@ export const MAINNET_SPENDER_REGISTRY: readonly SpenderEntry[] = [
     source: "https://docs.uniswap.org",
   },
   {
-    chainId: mainnet.id,
+    chainId: DORMANT_MAINNET_CHAIN_ID,
     address: "0x68b3465833fb72A70ecDF485E0e4C7bD8665Fc45",
     label: "Uniswap V3 SwapRouter02",
     protocol: "Uniswap",
@@ -158,7 +160,7 @@ export const MAINNET_SPENDER_REGISTRY: readonly SpenderEntry[] = [
     source: "https://docs.uniswap.org",
   },
   {
-    chainId: mainnet.id,
+    chainId: DORMANT_MAINNET_CHAIN_ID,
     address: "0x000000000022D473030F116dDEE9F6B43aC78BA3",
     label: "Permit2",
     protocol: "Uniswap",
@@ -173,7 +175,7 @@ export const MAINNET_SPENDER_REGISTRY: readonly SpenderEntry[] = [
     source: "https://docs.uniswap.org",
   },
   {
-    chainId: mainnet.id,
+    chainId: DORMANT_MAINNET_CHAIN_ID,
     address: "0xC36442b4a4522E871399CD717aBDD847Ab11FE88",
     label: "Uniswap V3 NonfungiblePositionManager",
     protocol: "Uniswap",
@@ -189,15 +191,17 @@ export const MAINNET_SPENDER_REGISTRY: readonly SpenderEntry[] = [
   },
 ] as const;
 
-/** Combined flat view across every supported chain. */
+/** Combined flat view used for chain-scoped lookup. Includes dormant entries. */
 export const SPENDER_REGISTRY: readonly SpenderEntry[] = [
   ...PULSECHAIN_SPENDER_REGISTRY,
+  ...BSC_SPENDER_REGISTRY,
   ...MAINNET_SPENDER_REGISTRY,
 ] as const;
 
 // Dev-time sanity checks. Scoped per chain so that the same address appearing
 // on two chains (legitimate) does not trip the duplicate-address check.
 validateAddresses(PULSECHAIN_SPENDER_REGISTRY, "SPENDER_REGISTRY[pulsechain]");
+validateAddresses(BSC_SPENDER_REGISTRY, "SPENDER_REGISTRY[bsc]");
 validateAddresses(MAINNET_SPENDER_REGISTRY, "SPENDER_REGISTRY[mainnet]");
 for (const s of SPENDER_REGISTRY) {
   validateRequiredStrings(

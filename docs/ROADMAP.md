@@ -8,7 +8,7 @@
 - Explorer links
 - Token/spender registry format
 
-## Phase 2: ERC-20 Approval MVP
+## Phase 2: Fungible Token Approval MVP
 - Known token list
 - Known spender list
 - Allowance lookup
@@ -34,4 +34,4 @@
 - Transaction simulation
 - Historical approval review
 - Multi-wallet profiles
-- Cross-chain expansion
+- Additional explicitly reviewed chain support

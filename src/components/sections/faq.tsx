@@ -3,10 +3,11 @@ const QUESTIONS: ReadonlyArray<{ q: string; a: React.ReactNode }> = [
     q: "What is a token approval?",
     a: (
       <>
-        An approval is an on-chain permission that lets a specific contract —
-        a DEX router, a bridge, a staking pool — move an ERC-20 token on your
-        behalf. You grant it once when you first interact with the contract,
-        and it remains active until you change or revoke it.
+        An approval is an on-chain permission that lets a specific contract, such
+        as a DEX router, bridge, or staking pool, move a fungible token on your
+        behalf. On BSC these are BEP-20 approvals. You grant it once when you
+        first interact with the contract, and it remains active until you change
+        or revoke it.
       </>
     ),
   },
@@ -14,11 +15,11 @@ const QUESTIONS: ReadonlyArray<{ q: string; a: React.ReactNode }> = [
     q: "Why are unlimited approvals riskier?",
     a: (
       <>
-        An unlimited approval lets a contract transfer every token of that
-        type your wallet holds, now and in the future. If the contract is
-        ever exploited or replaced with a malicious implementation, the
-        attacker can drain the entire balance. A bounded approval caps the
-        damage to whatever amount you originally granted.
+        An unlimited approval lets a contract transfer every token of that type
+        your wallet holds, now and in the future. If the contract is ever
+        exploited or replaced with a malicious implementation, the attacker can
+        drain the entire balance. A bounded approval caps the damage to whatever
+        amount you originally granted.
       </>
     ),
   },
@@ -26,10 +27,10 @@ const QUESTIONS: ReadonlyArray<{ q: string; a: React.ReactNode }> = [
     q: "Does Pulse Revoke control my funds?",
     a: (
       <>
-        No. Pulse Revoke is entirely non-custodial. It reads allowances from
-        the chain using your public address, and every revoke is a
-        transaction signed by your wallet. There is no server holding keys,
-        no backend with transfer permissions, and no custody layer.
+        No. Pulse Revoke is entirely non-custodial. It reads allowances from the
+        chain using your public address, and every revoke is a transaction
+        signed by your wallet. There is no server holding keys, no backend with
+        transfer permissions, and no custody layer.
       </>
     ),
   },
@@ -37,11 +38,10 @@ const QUESTIONS: ReadonlyArray<{ q: string; a: React.ReactNode }> = [
     q: "Why does revoking cost gas?",
     a: (
       <>
-        Revoking is an on-chain state change: it writes a new allowance
-        value to the token contract. Every state change requires a
-        transaction, paid in the chain&rsquo;s native gas token (PLS on
-        PulseChain, ETH on Ethereum). Pulse Revoke does not take a fee —
-        you pay only the network cost.
+        Revoking is an on-chain state change: it writes a new allowance value to
+        the token contract. Every state change requires a transaction, paid in
+        the chain&apos;s native gas token (PLS on PulseChain, BNB on BSC). Pulse
+        Revoke does not take a fee; you pay only the network cost.
       </>
     ),
   },
@@ -49,21 +49,20 @@ const QUESTIONS: ReadonlyArray<{ q: string; a: React.ReactNode }> = [
     q: "What chains and tokens are supported?",
     a: (
       <>
-        PulseChain mainnet (chainId 369) and Ethereum mainnet (chainId 1).
-        Discovery uses each chain&rsquo;s explorer API — PulseScan on
-        PulseChain and{" "}
+        PulseChain mainnet (chainId 369) and BSC / BNB Smart Chain (chainId 56).
+        Discovery uses each chain&apos;s explorer API, PulseScan on PulseChain and{" "}
         <a
           className="underline underline-offset-2 hover:text-pulse-cyan"
-          href="https://etherscan.io"
+          href="https://bscscan.com"
           target="_blank"
           rel="noopener noreferrer"
         >
-          Etherscan
+          BscScan
         </a>{" "}
-        on Ethereum — and every discovered allowance is re-verified live
-        on-chain before display. Known protocol labels come from a
-        chain-scoped curated registry, so an Ethereum address is never
-        mislabeled from a PulseChain entry or vice versa.
+        on BSC, and every discovered allowance is re-verified live on-chain
+        before display. Known protocol labels come from a chain-scoped curated
+        registry, so a PulseChain address is never mislabeled from a BSC entry
+        or vice versa.
       </>
     ),
   },

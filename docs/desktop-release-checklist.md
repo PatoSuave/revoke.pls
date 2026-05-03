@@ -21,13 +21,13 @@ does not mean a desktop release exists today.
   the Tauri WebView.
 - `NEXT_PUBLIC_PULSECHAIN_RPC_URL` is optional. If unset, the PulseChain
   default RPC from `src/lib/chains.ts` is used.
-- `NEXT_PUBLIC_MAINNET_RPC_URL` is optional. If unset, viem's Ethereum mainnet
-  defaults are used.
+- `NEXT_PUBLIC_BSC_RPC_URL` is optional. If unset, the BSC public fallback RPC
+  from `src/lib/chains.ts` is used.
 - `NEXT_PUBLIC_PULSECHAIN_EXPLORER_API` is optional. If unset, the PulseScan
   API default is used.
-- `NEXT_PUBLIC_MAINNET_EXPLORER_API` is an optional Ethereum discovery API
-  override. `NEXT_PUBLIC_ETHERSCAN_API_KEY` is required for Ethereum mainnet
-  discovery when using the default Etherscan v2 endpoint.
+- `NEXT_PUBLIC_BSC_EXPLORER_API_URL` is an optional BscScan discovery API
+  override. `NEXT_PUBLIC_BSCSCAN_API_KEY` is required for BSC discovery when
+  using the default BscScan endpoint.
 
 Do not commit local `.env` files or release secrets.
 
