@@ -1,12 +1,14 @@
 # Registry review workflow
 
-This folder is the canonical source of truth for every token and spender
-that Pulse Revoke scans. It is intentionally small, deliberately curated,
-and reviewed by hand. Do **not** auto-generate entries from web scraping,
-explorer tag exports, or unverified token lists.
+This folder is the curated enrichment registry for labels and fallback token
+metadata. It is intentionally small, deliberately curated, and reviewed by
+hand. Do **not** auto-generate entries from web scraping, explorer tag exports,
+or unverified token lists.
 
-The scanner reads only what lives here, so a bad entry becomes a user-
-facing mistake. Favor correctness over coverage.
+The discovery-first scanner does not depend on this registry for coverage. A
+bad entry still becomes a user-facing labeling mistake, so favor correctness
+over coverage. BSC registries start empty; add BSC labels only after explicit
+BscScan/source verification.
 
 ## File layout
 
@@ -26,8 +28,8 @@ loud failures at dev time and graceful failures at runtime.
 
 ## Adding a token
 
-1. Cross-check the contract address on https://scan.pulsechain.com.
-2. Confirm `symbol`, `name`, and `decimals` match the ERC-20's on-chain
+1. Cross-check the contract address on the active chain explorer.
+2. Confirm `symbol`, `name`, and `decimals` match the token's on-chain
    metadata. (These are fallbacks — the scanner still reads live metadata
    when possible.)
 3. Pick a `category`:
@@ -43,7 +45,7 @@ loud failures at dev time and graceful failures at runtime.
 
 ## Adding a spender
 
-1. Cross-check the contract address on https://scan.pulsechain.com.
+1. Cross-check the contract address on the active chain explorer.
 2. Confirm the contract is the *canonical* instance of the protocol
    component you are labeling. A proxy, a clone, or an older deployment
    is not the same entry.
@@ -73,7 +75,7 @@ loud failures at dev time and graceful failures at runtime.
 
 Before merging a registry change:
 
-- [ ] Address checked on PulseScan
+- [ ] Address checked on PulseScan or BscScan
 - [ ] Address sourced from an official doc / site / repo (linked in `source`)
 - [ ] Category set accurately, or `unknown`
 - [ ] `isTrusted` set conservatively
@@ -83,7 +85,7 @@ Before merging a registry change:
 ## What belongs here, what does not
 
 **In scope**
-- Tokens with live circulating supply on PulseChain
+- Tokens with live circulating supply on PulseChain or verified BSC tokens
 - Spenders that commonly hold user approvals (routers, farms, bridges)
 - Entries we can verify from public documentation
 

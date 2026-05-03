@@ -1,18 +1,8 @@
 /**
  * Single source of truth for branding, metadata, and public URLs.
  *
- * Any change to brand name, tagline, domain, social copy, or nav should
- * happen here — no other module is allowed to hardcode the brand. When
- * the production domain is configured, set `NEXT_PUBLIC_SITE_URL` in the
- * deployment environment and the rest of the app follows automatically:
- *
- *   - `layout.tsx` feeds this into `metadataBase`, OG, Twitter, canonical
- *   - `icon.tsx` / `apple-icon.tsx` / `opengraph-image.tsx` read the brand
- *     values from here when generating image assets at build time
- *   - the site header/footer render nav + brand text from here
- *
- * Values here are deliberately conservative: no testimonials, no
- * superlatives, no fabricated audit claims.
+ * Any change to brand name, tagline, domain, social copy, or nav should happen
+ * here so routes, metadata, generated images, and footer copy stay consistent.
  */
 
 export const DEFAULT_SITE_URL = "https://revoke.pls";
@@ -32,7 +22,8 @@ function parseSiteUrl(input: string): string | null {
   try {
     const parsed = new URL(candidate);
     const rootOnly = /^\/*$/.test(parsed.pathname);
-    const httpProtocol = parsed.protocol === "https:" || parsed.protocol === "http:";
+    const httpProtocol =
+      parsed.protocol === "https:" || parsed.protocol === "http:";
 
     if (
       !httpProtocol ||
@@ -101,30 +92,29 @@ export const siteConfig = {
   name: "Pulse Revoke",
   /** Short product name without marketing suffix (for tab titles, nav). */
   shortName: "Pulse Revoke",
-  /** Production domain, without protocol. Matches `url` when
-   *  `NEXT_PUBLIC_SITE_URL` is set; useful for plain-text footer display
-   *  and OG image rendering. */
+  /** Production domain, without protocol. */
   domain: hostFromUrl(resolvedUrl),
   /** One-line tagline. */
-  tagline: "Manage PulseChain and Ethereum token approvals",
+  tagline: "Manage PulseChain and BSC token approvals",
   /** Single-sentence meta description (used for SEO + OG). */
   description:
-    "Pulse Revoke is a non-custodial tool to review and revoke ERC-20 and NFT approvals on PulseChain and Ethereum. Open source, read-only until you sign.",
+    "Pulse Revoke is a non-custodial tool to review and revoke token and NFT approvals on PulseChain and BSC. Open source, read-only until you sign.",
   /** Longer paragraph for hero copy and social previews. */
   longDescription:
-    "Review every ERC-20 allowance and NFT operator approval your wallet has granted on PulseChain or Ethereum, understand the risk, and revoke the ones you no longer need — one signature at a time.",
+    "Review every token allowance and NFT operator approval your wallet has granted on PulseChain or BSC, understand the risk, and revoke the ones you no longer need one signature at a time.",
   /** Canonical public URL. Override at build time with NEXT_PUBLIC_SITE_URL. */
   url: resolvedUrl,
   /** Keywords for search engines. Keep conservative and factual. */
   keywords: [
     "PulseChain",
-    "Ethereum",
+    "BSC",
+    "BNB Smart Chain",
     "PulseChain approvals",
-    "Ethereum approvals",
+    "BSC approvals",
     "Pulse Revoke",
     "revoke approvals",
     "token allowance",
-    "ERC-20 allowance",
+    "BEP-20 allowance",
     "NFT approvals",
     "ApprovalForAll",
     "wallet security",
@@ -140,17 +130,13 @@ export const siteConfig = {
   /** External / utility links. */
   links: {
     explorer: "https://scan.pulsechain.com",
-    etherscan: "https://etherscan.io",
+    bscscan: "https://bscscan.com",
     pulsex: "https://pulsex.com",
     walletConnect: "https://cloud.reown.com",
     github: "https://github.com/PatoSuave/revoke.pls",
   },
   /** Short attribution line shown in the footer. */
-  attribution: "Built for the PulseChain community.",
-  /**
-   * Launcher release metadata (downloads, IPFS, checksums) lives in
-   * `./release.ts` — keep this file focused on branding and metadata.
-   */
+  attribution: "Built for the PulseChain and BSC communities.",
   /** Brand accent colors used by the OG image and icon renderers. */
   brandColors: {
     background: "#07070b",

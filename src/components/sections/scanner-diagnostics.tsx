@@ -33,16 +33,18 @@ export function ScannerDiagnosticsPanel({
     erc20?.sourceMeta?.id ?? nft?.sourceMeta?.id ?? chainConfig?.discovery.id;
   const sourceUrl =
     erc20?.sourceMeta?.url ?? nft?.sourceMeta?.url ?? chainConfig?.discovery.url;
+  const fungibleLabel = chainConfig?.standardLabels.fungible ?? "fungible token";
+  const nftLabel = chainConfig?.standardLabels.nft ?? "NFT";
 
   const explorerIssues = [
     erc20?.diagnostics.discoveryError
-      ? `ERC-20/PRC-20 discovery: ${erc20.diagnostics.discoveryError}`
+      ? `${fungibleLabel} discovery: ${erc20.diagnostics.discoveryError}`
       : null,
     nft?.diagnostics.discoveryError
       ? `NFT discovery: ${nft.diagnostics.discoveryError}`
       : null,
     erc20?.truncated
-      ? "ERC-20/PRC-20 discovery reached the fetch cap."
+      ? `${fungibleLabel} discovery reached the fetch cap.`
       : null,
     nft?.truncated ? "NFT discovery reached the fetch cap." : null,
   ].filter(Boolean);
@@ -60,13 +62,13 @@ export function ScannerDiagnosticsPanel({
     erc20Parse.rawLogs > 0 &&
     erc20Parse.uniquePairs === 0 &&
     erc20Parse.erc20TopicShape === 0
-      ? "Raw Approval-topic logs were found, but none had the 3-topic ERC-20/PRC-20 fungible-token shape. These were ERC-721 token-specific approval logs and are handled by the NFT pipeline."
+      ? `Raw Approval-topic logs were found, but none had the 3-topic ${fungibleLabel} fungible-token shape. These were ${nftLabel} token-specific approval logs and are handled by the NFT pipeline.`
       : null;
   const nftReadFailures = nft?.diagnostics.liveReadFailures;
   const erc20ReadFailures = erc20?.diagnostics.liveReadFailures;
   const nftFailureExplanation =
     nftReadFailures && nftReadFailures.getApproved > 0
-      ? `${nftReadFailures.getApproved} historical ERC-721 token approval${
+      ? `${nftReadFailures.getApproved} historical ${nftLabel} token approval${
           nftReadFailures.getApproved === 1 ? "" : "s"
         } could not be verified with getApproved(tokenId). This can happen when a token was burned, no longer exists, uses a nonstandard contract, or the RPC/multicall read failed. These are not counted as validated live approvals.`
       : nft && nft.diagnostics.liveReadFailureCount > 0
@@ -75,13 +77,13 @@ export function ScannerDiagnosticsPanel({
 
   const liveReadIssues = [
     erc20?.diagnostics.liveReadError
-      ? `ERC-20/PRC-20 live reads failed globally: ${erc20.diagnostics.liveReadError}`
+      ? `${fungibleLabel} live reads failed globally: ${erc20.diagnostics.liveReadError}`
       : null,
     nft?.diagnostics.liveReadError
       ? `NFT live reads: ${nft.diagnostics.liveReadError}`
       : null,
     erc20 && erc20.diagnostics.liveReadFailureCount > 0
-      ? `ERC-20/PRC-20 read failures inside multicall: ${erc20.diagnostics.liveReadFailureCount} (${formatErc20FailureBreakdown(erc20.diagnostics.liveReadFailures)})`
+      ? `${fungibleLabel} read failures inside multicall: ${erc20.diagnostics.liveReadFailureCount} (${formatErc20FailureBreakdown(erc20.diagnostics.liveReadFailures)})`
       : null,
     nft && nft.diagnostics.liveReadFailureCount > 0
       ? `NFT read failures inside multicall: ${nft.diagnostics.liveReadFailureCount} (${formatNftFailureBreakdown(nft.diagnostics.liveReadFailures)})`
@@ -117,6 +119,38 @@ export function ScannerDiagnosticsPanel({
               ["Explorer source", sourceName ?? "Unavailable"],
               ["Source ID", sourceId ?? "Unavailable"],
               [
+                "RPC env",
+                chainConfig
+                  ? `${chainConfig.rpc.envVar}: ${
+                      chainConfig.rpc.hasEnvOverride ? "configured" : "default"
+                    }`
+                  : "Unavailable",
+              ],
+              [
+                "Explorer API env",
+                chainConfig
+                  ? `${chainConfig.discovery.apiUrlEnvVar}: ${
+                      chainConfig.discovery.usesDefaultApiUrl
+                        ? "default"
+                        : "configured"
+                    }`
+                  : "Unavailable",
+              ],
+              [
+                "Explorer key env",
+                chainConfig?.discovery.apiKeyEnvVar
+                  ? `${chainConfig.discovery.apiKeyEnvVar}: ${
+                      chainConfig.discovery.hasApiKey ? "configured" : "missing"
+                    }`
+                  : "Not required",
+              ],
+              [
+                "Historical logs",
+                chainConfig
+                  ? `${chainConfig.discoverySettings.providerName} explorer API`
+                  : "Unavailable",
+              ],
+              [
                 "Source URL",
                 sourceUrl ? (
                   <a
@@ -135,7 +169,7 @@ export function ScannerDiagnosticsPanel({
           />
         </DiagnosticCard>
 
-        <DiagnosticCard title="ERC-20 / PRC-20 pipeline">
+        <DiagnosticCard title={`${fungibleLabel} pipeline`}>
           {erc20 ? (
             <DiagnosticRows
               rows={[
@@ -143,11 +177,11 @@ export function ScannerDiagnosticsPanel({
                 ["Raw shared Approval-topic logs", erc20.stats.rawCandidateLogs],
                 ["Decode attempts", erc20Parse?.decodeAttempts ?? 0],
                 [
-                  "ERC-20/PRC-20-shaped logs",
+                  `${fungibleLabel}-shaped logs`,
                   erc20Parse?.erc20TopicShape ?? 0,
                 ],
                 [
-                  "ERC-721-shaped logs skipped",
+                  `${nftLabel}-shaped logs skipped`,
                   erc20Parse?.erc721TokenApprovalShape ?? 0,
                 ],
                 ["Other skipped logs", erc20DecodeFailures],
@@ -191,7 +225,7 @@ export function ScannerDiagnosticsPanel({
             />
           ) : (
             <p>
-              Connect a supported wallet and network to start ERC-20/PRC-20
+              Connect a supported wallet and network to start {fungibleLabel}
               diagnostics.
             </p>
           )}

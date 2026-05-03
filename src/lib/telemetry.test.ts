@@ -45,7 +45,7 @@ describe("telemetry", () => {
 
       // This should not throw
       expect(() => {
-        trackEvent("revoke_submitted", { amount: 100 });
+        trackEvent("revoke_submitted", { chainId: 369 });
       }).not.toThrow();
 
       expect(throwingSink).toHaveBeenCalledTimes(1);

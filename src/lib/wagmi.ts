@@ -1,14 +1,14 @@
 import { createConfig, http } from "wagmi";
 import { injected, walletConnect } from "wagmi/connectors";
 
-import { mainnet, pulsechain } from "@/lib/chains";
+import { bsc, pulsechain, supportedChains } from "@/lib/chains";
 
 /**
  * Wagmi client configuration for Pulse Revoke.
  *
  * Supported chains:
  *  - PulseChain mainnet (369)
- *  - Ethereum mainnet (1)
+ *  - BNB Smart Chain mainnet (56)
  *
  * Connectors:
  *  - Injected (MetaMask, Rabby, Brave, etc.)
@@ -29,7 +29,7 @@ export const hasWalletConnect: boolean = Boolean(walletConnectProjectId);
 const WALLETCONNECT_METADATA = {
   name: "Pulse Revoke",
   description:
-    "Review and revoke ERC-20 token approvals on PulseChain and Ethereum.",
+    "Review and revoke token approvals on PulseChain and BSC.",
   url: "https://pulse-revoke.app",
   icons: ["https://pulse-revoke.app/icon.png"],
 };
@@ -48,15 +48,13 @@ const connectors = [
 ];
 
 export const wagmiConfig = createConfig({
-  chains: [pulsechain, mainnet],
+  chains: supportedChains,
   connectors,
   transports: {
     [pulsechain.id]: http(
       process.env.NEXT_PUBLIC_PULSECHAIN_RPC_URL ?? undefined,
     ),
-    [mainnet.id]: http(
-      process.env.NEXT_PUBLIC_MAINNET_RPC_URL ?? undefined,
-    ),
+    [bsc.id]: http(process.env.NEXT_PUBLIC_BSC_RPC_URL ?? undefined),
   },
   ssr: true,
 });

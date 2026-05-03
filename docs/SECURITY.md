@@ -24,9 +24,11 @@ Users should:
 - No unnecessary backend custody
 
 ## Contract Interaction Scope
-For MVP, only support:
-- ERC-20 `allowance`
-- ERC-20 `approve`
+Supported write scope remains narrow:
+- Fungible token `allowance`
+- Fungible token `approve(spender, 0)` for PRC-20/BEP-20-compatible revokes
+- NFT `setApprovalForAll(operator, false)`
+- NFT `approve(address(0), tokenId)` for per-token BEP-721/ERC-721-compatible revokes
 
 ## Future Security Enhancements
 - spender contract labeling

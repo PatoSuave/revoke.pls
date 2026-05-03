@@ -1,57 +1,95 @@
 # Architecture
 
 ## Frontend
+
 - Next.js App Router
-- React components for wallet connect, token approval tables, revoke actions
-- Tailwind for styling
+- React components for wallet connect, scanner results, revoke actions, and
+  diagnostics
+- Tailwind CSS for the existing Pulse-themed UI
+
+## Active Chains
+
+Active supported chains are configured in `src/lib/chains.ts`:
+
+- PulseChain, chain ID `369`, native gas token `PLS`, explorer `PulseScan`
+- BSC / BNB Smart Chain, chain ID `56`, native gas token `BNB`, explorer
+  `BscScan`
+
+Ethereum is not an active supported chain.
 
 ## Web3 Layer
-- viem for reads and writes
-- wagmi for wallet connection and chain state
-- PulseChain chain config added manually
 
-## Data Strategy
+- `src/lib/wagmi.ts` registers PulseChain and BSC with wagmi.
+- PulseChain RPC defaults to `https://rpc.pulsechain.com`.
+- BSC RPC defaults to `https://bsc-dataseed.bnbchain.org`.
+- Both RPCs can be overridden with public env vars.
+- Live reads and writes always include the approval record's `chainId`.
+
+## Discovery Strategy
+
 The scanner uses a discovery-first pipeline:
 
 1. User connects on a supported chain.
-2. The app fetches historical `Approval` / `ApprovalForAll` logs for the owner
-   from the chain's configured explorer API.
+2. The app fetches historical approval logs for the owner from that chain's
+   configured explorer API.
 3. Raw log candidates are deduped into token/spender or collection/operator
-   pairs.
+   approval candidates.
 4. Every candidate is re-checked live on-chain via `allowance`,
-   `isApprovedForAll`, or `getApproved` before it is displayed as active.
-5. The curated registry enriches known tokens and spenders; it is not the
-   discovery source of truth.
+   `isApprovedForAll`, or `getApproved`.
+5. The curated registry enriches known tokens and spenders. It is not a
+   discovery source.
 
-## Chain API Strategy
+BSC historical discovery uses BscScan `module=logs&action=getLogs` with
+`topic0` for the event signature and the padded owner address in `topic1`.
+Public BSC RPC `eth_getLogs` is not used for historical approval discovery.
 
-- PulseChain live reads/writes use `https://rpc.pulsechain.com` by default.
-- PulseChain historical discovery uses PulseScan's BlockScout-compatible
-  `https://api.scan.pulsechain.com/api` logs endpoint.
-- The PulseScan ETH-RPC endpoint documented at
-  `https://api.scan.pulsechain.com/eth-rpc-api-docs` only supports a small
-  method subset (`eth_blockNumber`, `eth_getBalance`, `eth_getLogs`) and caps
-  `eth_getLogs` responses at 1000 logs, so it should not be used as the wagmi
-  transport for normal EVM reads/writes.
-- Ethereum live reads/writes use the configured mainnet RPC transport.
-- Ethereum historical discovery uses Etherscan v2 and requires
-  `NEXT_PUBLIC_ETHERSCAN_API_KEY`.
+## Explorer APIs
 
-The discovery fetcher uses adaptive block-range windowing when an explorer
-returns the 1000-log cap. PulseScan may pad topic arrays with trailing `null`
-values, so log parsing normalizes those before distinguishing ERC-20/PRC-20
-approvals from ERC-721 per-token approvals.
+- PulseChain discovery API default:
+  `https://api.scan.pulsechain.com/api`
+- BSC discovery API default:
+  `https://api.bscscan.com/api`
+- BSC API key env var:
+  `NEXT_PUBLIC_BSCSCAN_API_KEY`
+
+Both explorer APIs can rate-limit or cap responses. The discovery fetcher uses
+adaptive block-range windowing and pagination. If discovery or live validation
+is incomplete, the UI reports the incomplete state instead of showing a false
+"clear" result.
+
+## Approval Standards
+
+Internal ABI/event handling uses EVM-compatible ERC interfaces where
+appropriate. User-facing BSC copy uses:
+
+- `BEP-20` for fungible token approvals
+- `BEP-721` for NFT approvals
+- `BEP-1155` for multi-token NFT / semi-fungible approvals
+- `BNB` for gas
 
 ## Transaction Flow
-1. User selects approval to revoke
-2. App prepares `approve(spender, 0)`
-3. Wallet signs transaction
-4. Chain confirms
-5. UI refreshes allowance state
+
+Fungible token revoke:
+
+1. User reviews an active approval.
+2. App refreshes live allowance on the same chain.
+3. App prepares `approve(spender, 0)`.
+4. Wallet signs and submits on the approval's `chainId`.
+5. UI links the transaction to PulseScan or BscScan and rescans after success.
+
+NFT revoke:
+
+- `setApprovalForAll(operator, false)` for collection-wide operator approvals
+- `approve(address(0), tokenId)` for per-token BEP-721/ERC-721-compatible
+  approvals
+
+Batch revoke is sequential. Mixed-chain batches are blocked.
 
 ## Security Principles
-- Never ask for seed phrase
+
+- Never ask for a seed phrase
 - Never request unnecessary signatures
 - Clearly distinguish reads from writes
 - Explain gas before revoke
-- Link spender address to explorer
+- Link spender/operator addresses to the active chain explorer
+- Keep telemetry aggregate and privacy-safe

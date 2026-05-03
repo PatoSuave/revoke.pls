@@ -4,7 +4,7 @@ import { useState } from "react";
 import type { Address } from "viem";
 
 import { useRevokeNftApproval } from "@/hooks/use-revoke-nft-approval";
-import { getChainConfig } from "@/lib/chains";
+import { getChainConfig, type SupportedChainConfig } from "@/lib/chains";
 import { explorerAddressUrl, explorerTxUrl } from "@/lib/explorer";
 import { shortenAddress } from "@/lib/format";
 import type { NftApproval, NftStandard } from "@/lib/nft-approvals";
@@ -86,7 +86,7 @@ export function NftApprovalRow({
             <ExplorerLink chainId={chainId} address={approval.operatorAddress} inline />
           </p>
           <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
-            <StandardBadge standard={approval.standard} />
+            <StandardBadge standard={approval.standard} chainConfig={chainConfig} />
             <KindBadge kind={approval.kind} />
             {approval.trusted ? (
               <TrustedBadge
@@ -199,20 +199,26 @@ function RiskBadge({
   );
 }
 
-function StandardBadge({ standard }: { standard: NftStandard }) {
+function StandardBadge({
+  standard,
+  chainConfig,
+}: {
+  standard: NftStandard;
+  chainConfig: SupportedChainConfig | undefined;
+}) {
   const label =
     standard === "erc721"
-      ? "ERC-721"
+      ? chainConfig?.standardLabels.nft ?? "NFT"
       : standard === "erc1155"
-      ? "ERC-1155"
+      ? chainConfig?.standardLabels.multiToken ?? "multi-token NFT"
       : "Standard unknown";
   return (
     <span
       className="inline-flex items-center rounded-full border border-pulse-border bg-pulse-bg/60 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-pulse-muted"
       title={
         standard === "unknown"
-          ? "Collection did not report a standard via ERC-165."
-          : `Detected via ERC-165 supportsInterface.`
+          ? "Collection did not report a known NFT standard."
+          : "Detected through the standard NFT interface check."
       }
     >
       {label}

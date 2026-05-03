@@ -33,7 +33,7 @@ import {
 import { getErc20ResultState } from "@/lib/scanner-result-state";
 
 /**
- * Connected-wallet approval scanner (PulseChain + Ethereum).
+ * Connected-wallet approval scanner (PulseChain + BSC).
  *
  * Uses `useApprovalDiscovery` to pull historical `Approval` events from the
  * configured explorer, re-validate every `(token, spender)` pair live via
@@ -63,8 +63,8 @@ export function ApprovalScanner() {
               Approval <span className="text-gradient-pulse">scanner</span>
             </h2>
             <p className="mt-3 leading-7 text-pulse-muted">
-              Connect on PulseChain or Ethereum to find ERC-20 allowances and
-              NFT operator approvals from your wallet history. Every result is
+              Connect on PulseChain or BSC to find token allowances and NFT
+              operator approvals from your wallet history. Every result is
               re-checked live before it is shown as active.
             </p>
           </div>
@@ -192,7 +192,7 @@ function ScannerBody({
   }
 
   if (!onSupportedChain || !chainConfig) {
-    const names = supportedChainConfigList.map((c) => c.displayName).join(" or ");
+    const names = supportedChainConfigList.map((c) => c.shortName).join(" or ");
     return (
       <div className="space-y-5">
         <ScannerState
@@ -405,7 +405,7 @@ function ScannerSummary({
       ? `${activeCount} active / ${candidateCount} checked`
       : status === "pending"
       ? "Searching wallet history"
-      : "No active ERC-20/PRC-20 approvals";
+      : `No active ${chainConfig.standardLabels.fungible} approvals`;
 
   return (
     <div className="rounded-2xl border border-pulse-border bg-pulse-bg/55 p-4">
@@ -473,9 +473,9 @@ function NftSection({
             NFT approvals
           </h3>
           <p className="mt-1 max-w-2xl text-sm leading-6 text-pulse-muted">
-            Review collection-wide operator approvals and per-token ERC-721
-            approvals. Collection-wide permissions are usually the highest
-            priority to verify.
+            Review collection-wide operator approvals and per-token{" "}
+            {chainConfig.standardLabels.nft} approvals. Collection-wide
+            permissions are usually the highest priority to verify.
           </p>
         </div>
         <div className="flex items-center gap-3">
@@ -517,8 +517,9 @@ function NftSection({
         {nft.truncated
           ? " A per-wallet fetch cap was reached, so very old approvals may be missing."
           : ""}{" "}
-        Per-token approvals are ERC-721 only; ERC-1155 exposes the operator
-        pattern exclusively.
+        Per-token approvals are {chainConfig.standardLabels.nft} only;{" "}
+        {chainConfig.standardLabels.multiToken} exposes the operator pattern
+        exclusively.
       </p>
     </section>
   );
@@ -648,8 +649,8 @@ function CoverageNote({
 }) {
   return (
     <p className="text-xs text-pulse-muted">
-      Approvals are discovered from your wallet&rsquo;s historical ERC-20
-      Approval events via{" "}
+      Approvals are discovered from your wallet&rsquo;s historical{" "}
+      {chainConfig.standardLabels.fungible} Approval events via{" "}
       {scan.sourceMeta?.name ?? chainConfig.discovery.name}
       {scan.stats.windows > 1
         ? ` (${scan.stats.windows} block-range windows)`
@@ -716,7 +717,12 @@ function ScanContent({
     discoveredPairs: scan.stats.candidates,
   });
   if (scan.status === "pending") {
-    return <ScannerSkeleton candidates={scan.stats.candidates} />;
+    return (
+      <ScannerSkeleton
+        candidates={scan.stats.candidates}
+        standardLabel={chainConfig.standardLabels.fungible}
+      />
+    );
   }
 
   if (scan.status === "error") {
@@ -754,6 +760,7 @@ function ScanContent({
         failedAllowanceReads={failedAllowanceReads}
         chainName={chainConfig.displayName}
         explorerName={chainConfig.explorer.name}
+        standardLabel={chainConfig.standardLabels.fungible}
       />
     );
   }
@@ -767,8 +774,8 @@ function ScanContent({
         </p>
         <p className="mt-2 text-lg font-semibold text-pulse-text">
           {noHistory
-            ? "No ERC-20/PRC-20 approval history found"
-            : "No active ERC-20/PRC-20 approvals found"}
+            ? `No ${chainConfig.standardLabels.fungible} approval history found`
+            : `No active ${chainConfig.standardLabels.fungible} approvals found`}
         </p>
         <p className="mt-2 max-w-2xl leading-6 text-pulse-muted">
           {noHistory
@@ -914,10 +921,12 @@ function VerificationIncompleteState({
   failedAllowanceReads,
   chainName,
   explorerName,
+  standardLabel,
 }: {
   failedAllowanceReads: number;
   chainName: string;
   explorerName: string;
+  standardLabel: string;
 }) {
   return (
     <div className="rounded-2xl border border-amber-400/45 bg-amber-400/10 p-6 text-sm">
@@ -925,7 +934,7 @@ function VerificationIncompleteState({
         Verification incomplete
       </p>
       <p className="mt-2 text-lg font-semibold text-pulse-text">
-        No verified active ERC-20/PRC-20 approvals were found.
+        No verified active {standardLabel} approvals were found.
       </p>
       <p className="mt-2 max-w-2xl leading-6 text-pulse-muted">
         Some allowance reads could not be verified live. Failed allowance reads
@@ -962,13 +971,19 @@ function EmptyStateStep({ title, body }: { title: string; body: string }) {
   );
 }
 
-function ScannerSkeleton({ candidates }: { candidates: number }) {
+function ScannerSkeleton({
+  candidates,
+  standardLabel,
+}: {
+  candidates: number;
+  standardLabel: string;
+}) {
   const status =
     candidates > 0
       ? `Re-validating ${candidates} historical approval candidate${
           candidates === 1 ? "" : "s"
         } with live on-chain reads.`
-      : "Searching explorer logs for ERC-20/PRC-20-compatible approval history.";
+      : `Searching explorer logs for ${standardLabel} approval history.`;
 
   return (
     <div className="space-y-4">

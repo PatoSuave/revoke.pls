@@ -14,6 +14,21 @@ const TOKEN = "0x1111111111111111111111111111111111111111" as Address;
 const SPENDER = "0x2222222222222222222222222222222222222222" as Address;
 const OTHER_SPENDER =
   "0x3333333333333333333333333333333333333333" as Address;
+const CHAIN_ID = 56;
+
+function pair(
+  tokenAddress: Address,
+  spenderAddress: Address,
+  chainId = CHAIN_ID,
+): DiscoveredPair {
+  return {
+    chainId,
+    approvalType: "fungible",
+    tokenAddress,
+    ownerAddress: OWNER,
+    spenderAddress,
+  };
+}
 
 function success(result: unknown): ReadResult {
   return { status: "success", result };
@@ -28,8 +43,8 @@ function failure(name: string): ReadResult {
 describe("ERC-20 discovery live-read diagnostics", () => {
   it("groups read failures by metadata and allowance read type", () => {
     const pairs: DiscoveredPair[] = [
-      { tokenAddress: TOKEN, spenderAddress: SPENDER },
-      { tokenAddress: TOKEN, spenderAddress: OTHER_SPENDER },
+      pair(TOKEN, SPENDER),
+      pair(TOKEN, OTHER_SPENDER),
     ];
     const results: ReadResult[] = [
       failure("SymbolReadError"),
@@ -65,7 +80,7 @@ describe("ERC-20 discovery live-read diagnostics", () => {
 
   it("keeps a successful allowance when token metadata reads fail", () => {
     const pairs: DiscoveredPair[] = [
-      { tokenAddress: TOKEN, spenderAddress: SPENDER },
+      pair(TOKEN, SPENDER),
     ];
     const results: ReadResult[] = [
       failure("SymbolReadError"),
@@ -74,7 +89,7 @@ describe("ERC-20 discovery live-read diagnostics", () => {
       success(123n),
     ];
 
-    const parsed = parseDiscoveryResults(results, OWNER, 1, pairs);
+    const parsed = parseDiscoveryResults(results, OWNER, CHAIN_ID, pairs);
 
     expect(parsed.stats.active).toBe(1);
     expect(parsed.approvals).toHaveLength(1);
@@ -89,7 +104,7 @@ describe("ERC-20 discovery live-read diagnostics", () => {
 
   it("does not treat failed allowance reads as confirmed zero allowances", () => {
     const pairs: DiscoveredPair[] = [
-      { tokenAddress: TOKEN, spenderAddress: SPENDER },
+      pair(TOKEN, SPENDER),
     ];
     const results: ReadResult[] = [
       success("TOK"),
@@ -99,7 +114,7 @@ describe("ERC-20 discovery live-read diagnostics", () => {
     ];
 
     const diagnostics = collectDiscoveryReadFailures(results, pairs);
-    const parsed = parseDiscoveryResults(results, OWNER, 1, pairs);
+    const parsed = parseDiscoveryResults(results, OWNER, CHAIN_ID, pairs);
 
     expect(diagnostics.allowance).toBe(1);
     expect(diagnostics.allowanceFailed).toBe(1);
@@ -111,5 +126,6 @@ describe("ERC-20 discovery live-read diagnostics", () => {
   it("uses neutral fungible approval-shape diagnostics copy", () => {
     expect(FUNGIBLE_APPROVAL_SHAPE_COPY).toContain("Fungible token approvals");
     expect(FUNGIBLE_APPROVAL_SHAPE_COPY).not.toContain("PulseChain");
+    expect(FUNGIBLE_APPROVAL_SHAPE_COPY).not.toContain("Ethereum");
   });
 });

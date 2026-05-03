@@ -69,6 +69,7 @@ export interface UseBatchRevokeResult {
   results: Readonly<Record<string, BatchItemResult>>;
   counts: BatchCounts;
   preflightSummary: BatchPreflightSummary;
+  blockedReason: string | null;
   /** Move from idle → confirming with a snapshot of approvals to revoke. */
   beginConfirm: (items: readonly Approval[]) => void;
   /** Cancel from the confirmation step without submitting anything. */
@@ -108,6 +109,7 @@ export function useBatchRevoke({
   const [results, setResults] = useState<Record<string, BatchItemResult>>({});
   const [preflightSummary, setPreflightSummary] =
     useState<BatchPreflightSummary>(EMPTY_BATCH_PREFLIGHT_SUMMARY);
+  const [blockedReason, setBlockedReason] = useState<string | null>(null);
 
   const config = useConfig();
   const { writeContractAsync } = useWriteContract();
@@ -120,6 +122,33 @@ export function useBatchRevoke({
 
   const beginConfirm = useCallback((next: readonly Approval[]) => {
     if (next.length === 0) return;
+    const chainIds = new Set(next.map((item) => item.chainId));
+    if (chainIds.size > 1) {
+      const initial: Record<string, BatchItemResult> = {};
+      for (const a of next) {
+        initial[a.key] = {
+          status: "unverified",
+          error:
+            "Selected approvals span multiple chains. Clear the selection and batch one chain at a time.",
+        };
+      }
+      setItems(next);
+      setResults(initial);
+      setCurrentKey(null);
+      setPreflightSummary({
+        ...EMPTY_BATCH_PREFLIGHT_SUMMARY,
+        total: next.length,
+        attempted: next.length,
+        failed: next.length,
+        unverified: next.length,
+      });
+      setBlockedReason(
+        "Selected approvals span multiple chains. Batch revoke one chain at a time.",
+      );
+      stopRef.current = false;
+      setState("confirming");
+      return;
+    }
     const runId = preflightRunRef.current + 1;
     preflightRunRef.current = runId;
     const initial: Record<string, BatchItemResult> = {};
@@ -132,6 +161,7 @@ export function useBatchRevoke({
       total: next.length,
       attempted: next.length,
     });
+    setBlockedReason(null);
     stopRef.current = false;
     setState("refreshing");
 
@@ -162,6 +192,7 @@ export function useBatchRevoke({
     setResults({});
     setCurrentKey(null);
     setPreflightSummary(EMPTY_BATCH_PREFLIGHT_SUMMARY);
+    setBlockedReason(null);
     stopRef.current = false;
     setState("idle");
   }, []);
@@ -353,6 +384,7 @@ export function useBatchRevoke({
     results,
     counts,
     preflightSummary,
+    blockedReason,
     beginConfirm,
     cancelConfirm,
     start,

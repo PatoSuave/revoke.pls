@@ -1,6 +1,6 @@
 import type { Address } from "viem";
 
-import { mainnet, pulsechain } from "@/lib/chains";
+import { pulsechain } from "@/lib/chains";
 
 import {
   validateAddresses,
@@ -162,12 +162,18 @@ export const PULSECHAIN_TOKEN_REGISTRY: readonly TokenEntry[] = [
 ] as const;
 
 /**
- * Curated Ethereum mainnet token registry. Small, high-confidence list of
- * canonical ERC-20s that commonly hold allowances on routers and bridges.
+ * BSC token labels start empty by design. Add only manually verified entries.
  */
+export const BSC_TOKEN_REGISTRY: readonly TokenEntry[] = [] as const;
+
+/**
+ * Dormant Ethereum mainnet token registry retained from the earlier app
+ * scaffold. Ethereum is not an active supported chain in Pulse Revoke.
+ */
+const DORMANT_MAINNET_CHAIN_ID = 1;
 export const MAINNET_TOKEN_REGISTRY: readonly TokenEntry[] = [
   {
-    chainId: mainnet.id,
+    chainId: DORMANT_MAINNET_CHAIN_ID,
     address: "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2",
     symbol: "WETH",
     name: "Wrapped Ether",
@@ -177,7 +183,7 @@ export const MAINNET_TOKEN_REGISTRY: readonly TokenEntry[] = [
     source: "https://etherscan.io",
   },
   {
-    chainId: mainnet.id,
+    chainId: DORMANT_MAINNET_CHAIN_ID,
     address: "0x6B175474E89094C44Da98b954EedeAC495271d0F",
     symbol: "DAI",
     name: "Dai Stablecoin",
@@ -186,7 +192,7 @@ export const MAINNET_TOKEN_REGISTRY: readonly TokenEntry[] = [
     source: "https://etherscan.io",
   },
   {
-    chainId: mainnet.id,
+    chainId: DORMANT_MAINNET_CHAIN_ID,
     address: "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
     symbol: "USDC",
     name: "USD Coin",
@@ -195,7 +201,7 @@ export const MAINNET_TOKEN_REGISTRY: readonly TokenEntry[] = [
     source: "https://etherscan.io",
   },
   {
-    chainId: mainnet.id,
+    chainId: DORMANT_MAINNET_CHAIN_ID,
     address: "0xdAC17F958D2ee523a2206206994597C13D831ec7",
     symbol: "USDT",
     name: "Tether USD",
@@ -204,7 +210,7 @@ export const MAINNET_TOKEN_REGISTRY: readonly TokenEntry[] = [
     source: "https://etherscan.io",
   },
   {
-    chainId: mainnet.id,
+    chainId: DORMANT_MAINNET_CHAIN_ID,
     address: "0x2260FAC5E5542a773Aa44fBCfeDf7C193bc2C599",
     symbol: "WBTC",
     name: "Wrapped BTC",
@@ -214,9 +220,10 @@ export const MAINNET_TOKEN_REGISTRY: readonly TokenEntry[] = [
   },
 ] as const;
 
-/** Combined flat view across every supported chain. */
+/** Combined flat view used for chain-scoped lookup. Includes dormant entries. */
 export const TOKEN_REGISTRY: readonly TokenEntry[] = [
   ...PULSECHAIN_TOKEN_REGISTRY,
+  ...BSC_TOKEN_REGISTRY,
   ...MAINNET_TOKEN_REGISTRY,
 ] as const;
 
@@ -224,6 +231,7 @@ export const TOKEN_REGISTRY: readonly TokenEntry[] = [
 // Validation is scoped per chain so that duplicate addresses across chains
 // (expected on the PulseChain fork snapshot) do not trip the duplicate check.
 validateAddresses(PULSECHAIN_TOKEN_REGISTRY, "TOKEN_REGISTRY[pulsechain]");
+validateAddresses(BSC_TOKEN_REGISTRY, "TOKEN_REGISTRY[bsc]");
 validateAddresses(MAINNET_TOKEN_REGISTRY, "TOKEN_REGISTRY[mainnet]");
 for (const t of TOKEN_REGISTRY) {
   validateRequiredStrings(
