@@ -2,9 +2,15 @@ import { describe, expect, it } from "vitest";
 import type { Address } from "viem";
 
 import {
+  BSC_GAS_CAP_BODY,
+  BSC_GAS_CAP_ERROR,
+  BSC_GAS_CAP_HELPER,
+  BSC_GAS_CAP_TITLE,
+  applyGasEstimateToPreflight,
   evaluateErc20AllowancePreflight,
   evaluateNftApprovalPreflight,
   failedErc20Preflight,
+  gasForRevokeRequest,
   summarizeBatchPreflight,
   type Erc20PreflightResult,
 } from "./preflight";
@@ -102,5 +108,80 @@ describe("approval revoke preflight", () => {
 
     expect(result.status).toBe("unverified");
     expect(result.currentAllowance).toBeUndefined();
+  });
+
+  it("allows a BSC revoke gas estimate below the Osaka/Mendel cap", () => {
+    const result = applyGasEstimateToPreflight(
+      { kind: "erc20", status: "active", currentAllowance: 1n },
+      120_000n,
+      16_777_216n,
+    );
+
+    expect(result).toMatchObject({
+      status: "active",
+      estimatedGas: 120_000n,
+      maxTransactionGas: 16_777_216n,
+      gasCapExceeded: false,
+    });
+    expect(gasForRevokeRequest(result)).toBe(120_000n);
+  });
+
+  it("blocks a BSC revoke gas estimate above the Osaka/Mendel cap", () => {
+    const active: Erc20PreflightResult = {
+      kind: "erc20",
+      status: "active",
+      currentAllowance: 1n,
+    };
+    const result = applyGasEstimateToPreflight(
+      active,
+      16_777_217n,
+      16_777_216n,
+    );
+
+    expect(result).toMatchObject({
+      status: "unverified",
+      error: BSC_GAS_CAP_ERROR,
+      estimatedGas: 16_777_217n,
+      maxTransactionGas: 16_777_216n,
+      gasCapExceeded: true,
+    });
+    expect(result.error).toContain(BSC_GAS_CAP_TITLE);
+    expect(result.error).toContain(BSC_GAS_CAP_BODY);
+    expect(result.error).toContain(BSC_GAS_CAP_HELPER);
+    expect(result.error).toContain("Osaka/Mendel");
+    expect(gasForRevokeRequest(result)).toBeUndefined();
+  });
+
+  it("applies the same BSC gas cap to NFT revoke preflight", () => {
+    const result = applyGasEstimateToPreflight(
+      { kind: "nft-operator", status: "active", approvedForAll: true },
+      20_000_000n,
+      16_777_216n,
+    );
+
+    expect(result).toMatchObject({
+      kind: "nft-operator",
+      status: "unverified",
+      gasCapExceeded: true,
+      estimatedGas: 20_000_000n,
+      maxTransactionGas: 16_777_216n,
+    });
+    expect(gasForRevokeRequest(result)).toBeUndefined();
+  });
+
+  it("marks above-cap batch preflight results as unverified", () => {
+    const aboveCap = applyGasEstimateToPreflight(
+      { kind: "erc20", status: "active", currentAllowance: 1n },
+      30_000_000n,
+      16_777_216n,
+    );
+
+    expect(summarizeBatchPreflight([aboveCap])).toMatchObject({
+      total: 1,
+      attempted: 1,
+      failed: 1,
+      active: 0,
+      unverified: 1,
+    });
   });
 });

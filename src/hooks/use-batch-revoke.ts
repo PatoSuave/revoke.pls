@@ -6,14 +6,16 @@ import { useConfig, useWriteContract } from "wagmi";
 import type { Address } from "viem";
 
 import type { Approval } from "@/lib/approvals";
-import type { SupportedChainId } from "@/lib/chains";
+import { getChainConfig, type SupportedChainId } from "@/lib/chains";
 import { normalizeRevokeError } from "@/lib/errors";
 import {
+  applyGasEstimateToPreflight,
   batchPreflightContext,
   buildErc20PreflightRead,
   EMPTY_BATCH_PREFLIGHT_SUMMARY,
   evaluateErc20AllowancePreflight,
   failedErc20Preflight,
+  gasForRevokeRequest,
   summarizeBatchPreflight,
   type BatchPreflightSummary,
   type Erc20PreflightResult,
@@ -259,6 +261,7 @@ export function useBatchRevoke({
       }
 
       patch(item.key, { status: "wallet" });
+      const gas = gasForRevokeRequest(latest);
 
       let hash: `0x${string}`;
       try {
@@ -269,6 +272,7 @@ export function useBatchRevoke({
             spenderAddress: item.spenderAddress,
           }),
           chainId: item.chainId as SupportedChainId,
+          ...(gas ? { gas } : {}),
         });
       } catch (e) {
         const n = normalizeRevokeError(e);
@@ -408,7 +412,29 @@ async function refreshErc20PreflightForItem(
     const raw = await client.readContract(
       buildErc20PreflightRead(ownerAddress, item),
     );
-    return evaluateErc20AllowancePreflight(raw, batchPreflightContext(item));
+    const allowancePreflight = evaluateErc20AllowancePreflight(
+      raw,
+      batchPreflightContext(item),
+    );
+    if (allowancePreflight.status !== "active") return allowancePreflight;
+
+    const chainConfig = getChainConfig(item.chainId);
+    if (!chainConfig?.maxTransactionGas) return allowancePreflight;
+
+    const estimatedGas = await client.estimateContractGas({
+      ...buildRevokeCall({
+        chainId: item.chainId,
+        tokenAddress: item.tokenAddress,
+        spenderAddress: item.spenderAddress,
+      }),
+      account: ownerAddress,
+    });
+
+    return applyGasEstimateToPreflight(
+      allowancePreflight,
+      estimatedGas,
+      chainConfig.maxTransactionGas,
+    );
   } catch (error) {
     return failedErc20Preflight(error);
   }

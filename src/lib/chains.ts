@@ -25,6 +25,7 @@ export const BSC_EXPLORER_API_DEFAULT = "https://api.etherscan.io/v2/api";
 export const BSC_DEPRECATED_V1_EXPLORER_API_URL =
   "https://api.bscscan.com/api";
 export const BSC_EXPLORER_CHAIN_ID_DEFAULT = BSC_CHAIN_ID.toString();
+export const BSC_OSAKA_MAX_TRANSACTION_GAS = 16_777_216n;
 
 export type SupportedChainKey = "pulsechain" | "bsc";
 
@@ -244,6 +245,7 @@ export interface SupportedChainConfig {
   discovery: DiscoverySourceConfig;
   discoverySettings: DiscoverySettings;
   standardLabels: ChainStandardLabels;
+  maxTransactionGas?: bigint;
 }
 
 function explorerUrls(baseUrl: string): ExplorerUrlBuilders {
@@ -436,6 +438,7 @@ export const supportedChainConfigs = {
       multiToken: "BEP-1155",
       nftOperator: "BEP-721/BEP-1155",
     },
+    maxTransactionGas: BSC_OSAKA_MAX_TRANSACTION_GAS,
   },
 } as const satisfies Record<number, SupportedChainConfig>;
 

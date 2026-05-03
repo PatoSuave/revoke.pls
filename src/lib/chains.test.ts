@@ -6,6 +6,7 @@ import {
   BSC_DEPRECATED_V1_EXPLORER_API_URL,
   BSC_EXPLORER_CHAIN_ID_DEFAULT,
   BSC_EXPLORER_API_DEFAULT,
+  BSC_OSAKA_MAX_TRANSACTION_GAS,
   PULSECHAIN_CHAIN_ID,
   bsc,
   getChainConfig,
@@ -57,6 +58,7 @@ describe("supported chain config", () => {
     expect(config?.displayName).toBe("BNB Smart Chain");
     expect(config?.shortName).toBe("BSC");
     expect(config?.nativeSymbol).toBe("BNB");
+    expect(config?.maxTransactionGas).toBe(BSC_OSAKA_MAX_TRANSACTION_GAS);
     expect(config?.standardLabels).toMatchObject({
       fungible: "BEP-20",
       nft: "BEP-721",
@@ -90,6 +92,7 @@ describe("supported chain config", () => {
     const config = getChainConfig(PULSECHAIN_CHAIN_ID);
 
     expect(config?.nativeSymbol).toBe("PLS");
+    expect(config?.maxTransactionGas).toBeUndefined();
     expect(config?.explorer.name).toBe("PulseScan");
     expect(config?.standardLabels.fungible).toBe("PRC-20");
   });

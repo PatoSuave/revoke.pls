@@ -169,6 +169,18 @@ export function ScannerDiagnosticsPanel({
                 requiresChainIdParam ? "Yes" : "Not required",
               ],
               [
+                "Max transaction gas",
+                chainConfig?.maxTransactionGas
+                  ? formatGasAmount(chainConfig.maxTransactionGas)
+                  : "Not configured",
+              ],
+              [
+                "Gas cap preflight",
+                chainConfig?.maxTransactionGas
+                  ? "Enabled; estimated gas is shown in row and batch revoke preflight"
+                  : "Not required",
+              ],
+              [
                 "Source URL",
                 sourceUrl ? (
                   <a
@@ -524,4 +536,8 @@ function formatElapsed(ms: number | null) {
   if (ms === null) return "Not completed";
   if (ms < 1000) return `${ms} ms`;
   return `${(ms / 1000).toFixed(1)} s`;
+}
+
+function formatGasAmount(value: bigint): string {
+  return value.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
 }

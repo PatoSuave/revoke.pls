@@ -4,6 +4,8 @@ import {
   UserRejectedRequestError,
 } from "viem";
 
+import { BSC_GAS_CAP_ERROR } from "@/lib/preflight";
+
 export interface NormalizedError {
   message: string;
   rejected: boolean;
@@ -16,6 +18,10 @@ export interface NormalizedError {
  */
 export function normalizeRevokeError(error: unknown): NormalizedError {
   if (error instanceof BaseError) {
+    if (isBscGasCapError(error.shortMessage) || isBscGasCapError(error.message)) {
+      return { message: BSC_GAS_CAP_ERROR, rejected: false };
+    }
+
     const rejected = error.walk((e) => e instanceof UserRejectedRequestError);
     if (rejected) {
       return {
@@ -47,8 +53,21 @@ export function normalizeRevokeError(error: unknown): NormalizedError {
   }
 
   if (error instanceof Error) {
+    if (isBscGasCapError(error.message)) {
+      return { message: BSC_GAS_CAP_ERROR, rejected: false };
+    }
     return { message: error.message, rejected: false };
   }
 
   return { message: "Unknown error", rejected: false };
+}
+
+function isBscGasCapError(message: string | undefined): boolean {
+  const lower = message?.toLowerCase() ?? "";
+  return (
+    lower.includes("osaka") ||
+    lower.includes("mendel") ||
+    lower.includes("gas cannot exceed 16777216") ||
+    lower.includes("gas cannot exceed 16,777,216")
+  );
 }

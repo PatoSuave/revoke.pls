@@ -5,12 +5,14 @@ import { getPublicClient } from "@wagmi/core";
 import { useConfig, useWaitForTransactionReceipt, useWriteContract } from "wagmi";
 import type { Address } from "viem";
 
-import type { SupportedChainId } from "@/lib/chains";
+import { getChainConfig, type SupportedChainId } from "@/lib/chains";
 import { normalizeRevokeError } from "@/lib/errors";
 import {
+  applyGasEstimateToPreflight,
   buildErc20PreflightRead,
   evaluateErc20AllowancePreflight,
   failedErc20Preflight,
+  gasForRevokeRequest,
   type Erc20PreflightResult,
 } from "@/lib/preflight";
 import { buildRevokeCall, type RevokeTarget } from "@/lib/revoke";
@@ -153,10 +155,30 @@ export function useRevokeApproval({
       const raw = await client.readContract(
         buildErc20PreflightRead(ownerAddress, target),
       );
-      const next = evaluateErc20AllowancePreflight(raw, {
+      const allowancePreflight = evaluateErc20AllowancePreflight(raw, {
         tokenSymbol,
         tokenDecimals,
       });
+      if (allowancePreflight.status !== "active") {
+        setPreflight(allowancePreflight);
+        return allowancePreflight;
+      }
+
+      const chainConfig = getChainConfig(target.chainId);
+      const revokeCall = buildRevokeCall(target);
+      const estimatedGas = chainConfig?.maxTransactionGas
+        ? await client.estimateContractGas({
+            ...revokeCall,
+            account: ownerAddress,
+          })
+        : undefined;
+      const next = estimatedGas
+        ? applyGasEstimateToPreflight(
+            allowancePreflight,
+            estimatedGas,
+            chainConfig?.maxTransactionGas,
+          )
+        : allowancePreflight;
       setPreflight(next);
       return next;
     } catch (error) {
@@ -173,9 +195,11 @@ export function useRevokeApproval({
     const latest = await refreshPreflight();
     if (latest.status !== "active") return;
     trackEvent("revoke_submitted", { kind: "erc20", chainId: target.chainId });
+    const gas = gasForRevokeRequest(latest);
     write.writeContract({
       ...buildRevokeCall(target),
       chainId: target.chainId as SupportedChainId,
+      ...(gas ? { gas } : {}),
     });
   }, [refreshPreflight, target, write]);
 

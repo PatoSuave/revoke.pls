@@ -8,6 +8,13 @@ import { nftReadAbi, ZERO_ADDRESS } from "@/lib/nft-approvals";
 
 export type PreflightStatus = "active" | "cleared" | "unverified";
 
+export const BSC_GAS_CAP_TITLE = "BSC gas limit exceeded";
+export const BSC_GAS_CAP_BODY =
+  "BNB Smart Chain now rejects individual transactions above 16,777,216 gas after the Osaka/Mendel upgrade. This revoke estimated above that cap, so it was blocked before submission.";
+export const BSC_GAS_CAP_HELPER =
+  "Try again with a different RPC or verify directly on BscScan. If the token requires more gas than the chain allows, it may not be revokable through a standard approve(spender, 0) transaction.";
+export const BSC_GAS_CAP_ERROR = `${BSC_GAS_CAP_TITLE}. ${BSC_GAS_CAP_BODY} ${BSC_GAS_CAP_HELPER}`;
+
 export interface Erc20PreflightContext {
   tokenSymbol: string;
   tokenDecimals: number | null;
@@ -19,6 +26,9 @@ export interface Erc20PreflightResult {
   currentAllowance?: bigint;
   currentLabel?: string;
   error?: string;
+  estimatedGas?: bigint;
+  maxTransactionGas?: bigint;
+  gasCapExceeded?: boolean;
 }
 
 export interface NftPreflightResult {
@@ -27,6 +37,9 @@ export interface NftPreflightResult {
   approvedForAll?: boolean;
   currentApprovedAddress?: Address;
   error?: string;
+  estimatedGas?: bigint;
+  maxTransactionGas?: bigint;
+  gasCapExceeded?: boolean;
 }
 
 export type ApprovalPreflightResult =
@@ -181,6 +194,47 @@ export function failedNftPreflight(
     status: "unverified",
     error: safeErrorCategory(error),
   };
+}
+
+export function applyGasEstimateToPreflight<T extends ApprovalPreflightResult>(
+  result: T,
+  estimatedGas: bigint,
+  maxTransactionGas: bigint | undefined,
+): T {
+  if (!maxTransactionGas) {
+    return {
+      ...result,
+      estimatedGas,
+      gasCapExceeded: false,
+    };
+  }
+
+  if (estimatedGas > maxTransactionGas) {
+    return {
+      ...result,
+      status: "unverified",
+      error: BSC_GAS_CAP_ERROR,
+      estimatedGas,
+      maxTransactionGas,
+      gasCapExceeded: true,
+    };
+  }
+
+  return {
+    ...result,
+    estimatedGas,
+    maxTransactionGas,
+    gasCapExceeded: false,
+  };
+}
+
+export function gasForRevokeRequest(
+  result: ApprovalPreflightResult | null | undefined,
+): bigint | undefined {
+  if (!result || result.status !== "active" || result.gasCapExceeded) {
+    return undefined;
+  }
+  return result.estimatedGas;
 }
 
 export function summarizeBatchPreflight(
