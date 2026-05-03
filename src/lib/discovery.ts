@@ -350,6 +350,19 @@ function buildLogsUrl(
   return `${apiUrl}?${params.toString()}`;
 }
 
+function buildEffectiveQueryParams(
+  source: DiscoverySourceConfig,
+  chainId: number,
+): Record<string, string> | undefined {
+  const params = { ...(source.queryParams ?? {}) };
+
+  if (source.apiProviderKind === "etherscan-v2") {
+    params.chainid = source.apiChainId ?? chainId.toString();
+  }
+
+  return Object.keys(params).length > 0 ? params : undefined;
+}
+
 async function fetchDiscovery(
   url: string,
   signal: AbortSignal | undefined,
@@ -866,7 +879,7 @@ export function createBlockscoutDiscoverySource({
     chainId,
   };
   const { apiUrl, apiKey } = source;
-  const queryParams = source.queryParams;
+  const queryParams = buildEffectiveQueryParams(source, chainId);
 
   const assertReady = () => {
     if (!apiUrl) {

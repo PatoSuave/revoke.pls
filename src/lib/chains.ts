@@ -146,6 +146,8 @@ export interface DiscoverySourceConfig {
   id: string;
   /** Human-readable source name shown in coverage copy. */
   name: string;
+  /** Provider behavior used by the request builder for API-specific params. */
+  apiProviderKind?: "blockscout-compatible" | "etherscan-v2";
   /** API provider shown in diagnostics when it differs from explorer links. */
   apiProviderName?: string;
   /** Base URL the user can visit to learn more about the source. */
@@ -270,6 +272,7 @@ function buildRpcConfig(
 function buildDiscoveryConfig(args: {
   id: string;
   name: string;
+  apiProviderKind?: DiscoverySourceConfig["apiProviderKind"];
   apiProviderName?: string;
   url: string;
   apiUrlEnvVar: string;
@@ -292,6 +295,7 @@ function buildDiscoveryConfig(args: {
   return {
     id: args.id,
     name: args.name,
+    apiProviderKind: args.apiProviderKind,
     apiProviderName: args.apiProviderName,
     url: args.url,
     apiUrl,
@@ -326,6 +330,7 @@ const bscRpc = buildRpcConfig(
 const pulsechainDiscovery = buildDiscoveryConfig({
   id: "blockscout-pulsescan",
   name: "PulseScan (Blockscout)",
+  apiProviderKind: "blockscout-compatible",
   url: PULSECHAIN_EXPLORER_BASE_URL,
   apiUrlEnvVar: "NEXT_PUBLIC_PULSECHAIN_EXPLORER_API",
   apiUrlDefault: PULSECHAIN_EXPLORER_API_DEFAULT,
@@ -337,6 +342,7 @@ const pulsechainDiscovery = buildDiscoveryConfig({
 const bscDiscovery = buildDiscoveryConfig({
   id: "etherscan-v2-bsc",
   name: "Etherscan API V2 (BSC logs)",
+  apiProviderKind: "etherscan-v2",
   apiProviderName: "Etherscan API V2",
   url: BSC_EXPLORER_BASE_URL,
   apiUrlEnvVar: "NEXT_PUBLIC_BSC_EXPLORER_API_URL",

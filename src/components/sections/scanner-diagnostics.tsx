@@ -41,6 +41,8 @@ export function ScannerDiagnosticsPanel({
   const apiKeyEnvLabel =
     chainConfig?.discovery.apiKeyEnvVars?.join(" / ") ??
     chainConfig?.discovery.apiKeyEnvVar;
+  const requiresChainIdParam =
+    chainConfig?.discovery.apiProviderKind === "etherscan-v2";
 
   const explorerIssues = [
     ...(chainConfig?.discovery.warnings ?? []),
@@ -161,6 +163,10 @@ export function ScannerDiagnosticsPanel({
                 chainConfig?.discovery.apiChainId
                   ? `${chainConfig.discovery.apiChainIdEnvVar}: ${chainConfig.discovery.apiChainId}`
                   : "Not required",
+              ],
+              [
+                "Chain ID param included",
+                requiresChainIdParam ? "Yes" : "Not required",
               ],
               [
                 "Source URL",

@@ -6,6 +6,7 @@ import {
   BSC_DEPRECATED_V1_EXPLORER_API_URL,
   BSC_EXPLORER_API_DEFAULT,
   PULSECHAIN_CHAIN_ID,
+  type DiscoverySourceConfig,
   getChainConfig,
 } from "./chains";
 import {
@@ -36,6 +37,8 @@ function jsonResponse(body: unknown): Response {
 function source(options?: {
   chainId?: number;
   apiUrl?: string;
+  apiProviderKind?: DiscoverySourceConfig["apiProviderKind"];
+  apiChainId?: string;
   queryParams?: Record<string, string>;
   requiresApiKey?: boolean;
   apiKey?: string;
@@ -46,9 +49,11 @@ function source(options?: {
     source: {
       id: "test-source",
       name: "TestSource",
+      apiProviderKind: options?.apiProviderKind,
       url: "https://example.test",
       apiUrl: options?.apiUrl ?? "https://example.test/api",
       apiUrlEnvVar: "NEXT_PUBLIC_TEST_EXPLORER_API",
+      apiChainId: options?.apiChainId,
       apiKey: options?.apiKey,
       apiKeyEnvVar: "NEXT_PUBLIC_TEST_API_KEY",
       requiresApiKey: options?.requiresApiKey,
@@ -256,6 +261,36 @@ describe("createBlockscoutDiscoverySource", () => {
     expect(urls.map((url) => url.searchParams.get("topic0")).sort()).toEqual(
       [ERC20_APPROVAL_TOPIC0, ERC_APPROVAL_FOR_ALL_TOPIC0].sort(),
     );
+  });
+
+  it("falls back to the supported chain ID for Etherscan V2 sources without explicit query params", async () => {
+    const fetch = vi.fn(async (input: RequestInfo | URL) => {
+      void input;
+      return jsonResponse({ status: "1", message: "OK", result: [] });
+    });
+    vi.stubGlobal("fetch", fetch);
+    const config = getChainConfig(BSC_CHAIN_ID)!;
+    const discovery = createBlockscoutDiscoverySource({
+      chainId: BSC_CHAIN_ID,
+      source: {
+        ...config.discovery,
+        apiProviderKind: "etherscan-v2",
+        apiChainId: undefined,
+        queryParams: undefined,
+        apiKey: "test-key",
+        hasApiKey: true,
+      },
+      limits: {
+        ...DEFAULT_DISCOVERY_LIMITS,
+        maxRequests: 2,
+        requestTimeoutMs: 1000,
+      },
+    });
+
+    await discovery.discover(OWNER);
+
+    const url = new URL(String(fetch.mock.calls[0]?.[0]));
+    expect(url.searchParams.get("chainid")).toBe("56");
   });
 
   it("leaves PulseChain log requests without an Etherscan V2 chainid", async () => {
