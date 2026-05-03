@@ -40,22 +40,26 @@ Out of scope for this release:
 5. Known tokens and spenders are enriched from a chain-scoped registry.
 6. Revokes are submitted directly from the user's wallet.
 
-BSC discovery uses the BscScan logs API by default. It does not rely on public
-BSC RPC `eth_getLogs` for historical approval discovery.
+BSC discovery uses Etherscan API V2 logs with `chainid=56`. It does not rely on
+public BSC RPC `eth_getLogs` for historical approval discovery. Explorer links
+still open BscScan.
 
 ## BSC Discovery
 
 BSC approval discovery uses:
 
-- API URL: `https://api.bscscan.com/api`
+- API URL: `https://api.etherscan.io/v2/api`
+- Chain ID parameter: `chainid=56`
 - Module/action: `module=logs&action=getLogs`
 - Topics: approval event topic in `topic0`, owner address padded into `topic1`
 - Pagination: `page` and `offset`
-- API key env var: `NEXT_PUBLIC_BSCSCAN_API_KEY`
+- Preferred API key env var: `NEXT_PUBLIC_BSC_EXPLORER_API_KEY`
+- Deprecated fallback key env var: `NEXT_PUBLIC_BSCSCAN_API_KEY`
 
-BscScan free/public API plans can rate-limit, cap responses, or require smaller
-block windows. The scanner reports incomplete discovery or validation instead
-of showing a false "clear" state.
+Use an Etherscan API V2 key with BNB Smart Chain access. The old BscScan V1
+endpoint `https://api.bscscan.com/api` is deprecated for this logs flow. If the
+API returns the V1 deprecation error, the scanner reports an actionable
+incomplete discovery failure instead of showing a false "clear" state.
 
 ## Revoke Behavior
 
@@ -104,8 +108,10 @@ Copy `.env.example` to `.env.local` if you want to override defaults.
 | `NEXT_PUBLIC_PULSECHAIN_RPC_URL` | No | Override PulseChain RPC. Defaults to `https://rpc.pulsechain.com`. |
 | `NEXT_PUBLIC_BSC_RPC_URL` | No | Override BSC RPC. Defaults to `https://bsc-dataseed.bnbchain.org`. Use a private RPC for production reliability. |
 | `NEXT_PUBLIC_PULSECHAIN_EXPLORER_API` | No | Override PulseChain discovery API. Defaults to `https://api.scan.pulsechain.com/api`. |
-| `NEXT_PUBLIC_BSC_EXPLORER_API_URL` | No | Override BscScan discovery API. Defaults to `https://api.bscscan.com/api`. |
-| `NEXT_PUBLIC_BSCSCAN_API_KEY` | Yes for BSC discovery | API key for BscScan logs API. Do not commit real keys. |
+| `NEXT_PUBLIC_BSC_EXPLORER_API_URL` | No | Override BSC historical logs API. Defaults to Etherscan API V2 at `https://api.etherscan.io/v2/api`. Do not use deprecated BscScan V1 `https://api.bscscan.com/api`. |
+| `NEXT_PUBLIC_BSC_EXPLORER_CHAIN_ID` | No | Etherscan API V2 chain id for BNB Smart Chain logs. Defaults to `56`; keep it at `56`. |
+| `NEXT_PUBLIC_BSC_EXPLORER_API_KEY` | Yes for BSC discovery | Preferred Etherscan API V2 key with BNB Smart Chain access. Do not commit real keys. |
+| `NEXT_PUBLIC_BSCSCAN_API_KEY` | Deprecated fallback | Backward-compatible fallback key name for older deploys. Prefer `NEXT_PUBLIC_BSC_EXPLORER_API_KEY`. |
 | `NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID` | No | Enables WalletConnect QR pairing. |
 | `NEXT_PUBLIC_SITE_URL` | No | Canonical public URL used by metadata and generated social images. |
 

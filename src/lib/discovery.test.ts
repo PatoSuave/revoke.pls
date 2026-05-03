@@ -2,6 +2,13 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { getAddress, type Address } from "viem";
 
 import {
+  BSC_CHAIN_ID,
+  BSC_DEPRECATED_V1_EXPLORER_API_URL,
+  BSC_EXPLORER_API_DEFAULT,
+  PULSECHAIN_CHAIN_ID,
+  getChainConfig,
+} from "./chains";
+import {
   createBlockscoutDiscoverySource,
   DEFAULT_DISCOVERY_LIMITS,
   discoveredPairDedupeKey,
@@ -27,17 +34,20 @@ function jsonResponse(body: unknown): Response {
 }
 
 function source(options?: {
+  chainId?: number;
+  apiUrl?: string;
+  queryParams?: Record<string, string>;
   requiresApiKey?: boolean;
   apiKey?: string;
   pageCap?: number;
 }) {
   return createBlockscoutDiscoverySource({
-    chainId: 369,
+    chainId: options?.chainId ?? 369,
     source: {
       id: "test-source",
       name: "TestSource",
       url: "https://example.test",
-      apiUrl: "https://example.test/api",
+      apiUrl: options?.apiUrl ?? "https://example.test/api",
       apiUrlEnvVar: "NEXT_PUBLIC_TEST_EXPLORER_API",
       apiKey: options?.apiKey,
       apiKeyEnvVar: "NEXT_PUBLIC_TEST_API_KEY",
@@ -45,6 +55,7 @@ function source(options?: {
       hasApiKey: Boolean(options?.apiKey),
       hasApiUrl: true,
       usesDefaultApiUrl: true,
+      queryParams: options?.queryParams,
       limitations: "test source",
     },
     limits: {
@@ -179,6 +190,121 @@ describe("createBlockscoutDiscoverySource", () => {
       source({ requiresApiKey: true }).discover(OWNER),
     ).rejects.toThrow("requires an API key");
     expect(fetch).not.toHaveBeenCalled();
+  });
+
+  it("builds BSC BEP-20 log requests with Etherscan V2 and chainid=56", async () => {
+    const fetch = vi.fn(async (input: RequestInfo | URL) => {
+      void input;
+      return jsonResponse({ status: "1", message: "OK", result: [] });
+    });
+    vi.stubGlobal("fetch", fetch);
+    const config = getChainConfig(BSC_CHAIN_ID)!;
+    const discovery = createBlockscoutDiscoverySource({
+      chainId: BSC_CHAIN_ID,
+      source: {
+        ...config.discovery,
+        apiKey: "test-key",
+        hasApiKey: true,
+      },
+      limits: {
+        ...DEFAULT_DISCOVERY_LIMITS,
+        maxRequests: 2,
+        requestTimeoutMs: 1000,
+      },
+    });
+
+    await discovery.discover(OWNER);
+
+    const url = new URL(String(fetch.mock.calls[0]?.[0]));
+    expect(`${url.origin}${url.pathname}`).toBe(BSC_EXPLORER_API_DEFAULT);
+    expect(url.searchParams.get("chainid")).toBe("56");
+    expect(url.searchParams.get("module")).toBe("logs");
+    expect(url.searchParams.get("action")).toBe("getLogs");
+    expect(url.searchParams.get("topic0")).toBe(ERC20_APPROVAL_TOPIC0);
+    expect(url.searchParams.get("topic1")).toBe(pad(OWNER));
+    expect(url.searchParams.get("apikey")).toBe("test-key");
+  });
+
+  it("builds BSC NFT log requests with Etherscan V2 chainid=56", async () => {
+    const fetch = vi.fn(async (input: RequestInfo | URL) => {
+      void input;
+      return jsonResponse({ status: "1", message: "OK", result: [] });
+    });
+    vi.stubGlobal("fetch", fetch);
+    const config = getChainConfig(BSC_CHAIN_ID)!;
+    const discovery = createBlockscoutDiscoverySource({
+      chainId: BSC_CHAIN_ID,
+      source: {
+        ...config.discovery,
+        apiKey: "test-key",
+        hasApiKey: true,
+      },
+      limits: {
+        ...DEFAULT_DISCOVERY_LIMITS,
+        maxRequests: 3,
+        requestTimeoutMs: 1000,
+      },
+    });
+
+    await discovery.discoverNftApprovals(OWNER);
+
+    const urls = fetch.mock.calls.map((call) => new URL(String(call[0])));
+    expect(urls).toHaveLength(2);
+    expect(urls.every((url) => url.searchParams.get("chainid") === "56")).toBe(
+      true,
+    );
+    expect(urls.map((url) => url.searchParams.get("topic0")).sort()).toEqual(
+      [ERC20_APPROVAL_TOPIC0, ERC_APPROVAL_FOR_ALL_TOPIC0].sort(),
+    );
+  });
+
+  it("leaves PulseChain log requests without an Etherscan V2 chainid", async () => {
+    const fetch = vi.fn(async (input: RequestInfo | URL) => {
+      void input;
+      return jsonResponse({ status: "1", message: "OK", result: [] });
+    });
+    vi.stubGlobal("fetch", fetch);
+    const config = getChainConfig(PULSECHAIN_CHAIN_ID)!;
+    const discovery = createBlockscoutDiscoverySource({
+      chainId: PULSECHAIN_CHAIN_ID,
+      source: config.discovery,
+      limits: {
+        ...DEFAULT_DISCOVERY_LIMITS,
+        maxRequests: 2,
+        requestTimeoutMs: 1000,
+      },
+    });
+
+    await discovery.discover(OWNER);
+
+    const url = new URL(String(fetch.mock.calls[0]?.[0]));
+    expect(url.searchParams.has("chainid")).toBe(false);
+    expect(`${url.origin}${url.pathname}`).toBe(config.discovery.apiUrl);
+  });
+
+  it("turns the BscScan V1 deprecation response into an actionable failure", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () =>
+        jsonResponse({
+          status: "0",
+          message: "NOTOK",
+          result:
+            "You are using a deprecated V1 endpoint, switch to Etherscan API V2 using https://docs.etherscan.io/v2-migration",
+        }),
+      ),
+    );
+
+    await expect(
+      source({
+        chainId: BSC_CHAIN_ID,
+        apiUrl: BSC_DEPRECATED_V1_EXPLORER_API_URL,
+        apiKey: "test-key",
+        queryParams: { chainid: "56" },
+      }).discover(OWNER),
+    ).rejects.toThrow(
+      "set NEXT_PUBLIC_BSC_EXPLORER_API_URL=https://api.etherscan.io/v2/api",
+    );
   });
 
   it("includes chain ID in fungible approval dedupe keys", () => {

@@ -256,6 +256,20 @@ function optionalNumber(value: string | undefined): bigint | undefined {
   return parseHexNumber(value) ?? undefined;
 }
 
+function explorerErrorMessage(message: string | undefined): string {
+  const lower = message?.toLowerCase() ?? "";
+  if (
+    lower.includes("deprecated v1 endpoint") ||
+    lower.includes("v2-migration")
+  ) {
+    return [
+      "The configured explorer API is using a deprecated V1 endpoint.",
+      "For BSC historical discovery, set NEXT_PUBLIC_BSC_EXPLORER_API_URL=https://api.etherscan.io/v2/api and NEXT_PUBLIC_BSC_EXPLORER_API_KEY to an Etherscan API V2 key with BNB Smart Chain access.",
+    ].join(" ");
+  }
+  return message ?? "unknown explorer error";
+}
+
 function logIdentity(log: BlockscoutLogEntry): string {
   return [
     log.transactionHash ?? "",
@@ -426,7 +440,7 @@ async function fetchLogsPage(
     (body.status === "0" || lower.includes("rate limit") || lower.includes("notok"))
   ) {
     throw new Error(
-      `Discovery source rejected the request: ${message ?? "unknown explorer error"}`,
+      `Discovery source rejected the request: ${explorerErrorMessage(message)}`,
     );
   }
 

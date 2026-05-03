@@ -35,8 +35,15 @@ export function ScannerDiagnosticsPanel({
     erc20?.sourceMeta?.url ?? nft?.sourceMeta?.url ?? chainConfig?.discovery.url;
   const fungibleLabel = chainConfig?.standardLabels.fungible ?? "fungible token";
   const nftLabel = chainConfig?.standardLabels.nft ?? "NFT";
+  const historicalApiName =
+    chainConfig?.discovery.apiProviderName ??
+    chainConfig?.discoverySettings.providerName;
+  const apiKeyEnvLabel =
+    chainConfig?.discovery.apiKeyEnvVars?.join(" / ") ??
+    chainConfig?.discovery.apiKeyEnvVar;
 
   const explorerIssues = [
+    ...(chainConfig?.discovery.warnings ?? []),
     erc20?.diagnostics.discoveryError
       ? `${fungibleLabel} discovery: ${erc20.diagnostics.discoveryError}`
       : null,
@@ -116,6 +123,7 @@ export function ScannerDiagnosticsPanel({
               ["Chain ID", chainId?.toString() ?? "Unknown"],
               ["Chain", chainConfig?.displayName ?? "Unsupported / unknown"],
               ["Supported", onSupportedChain ? "Yes" : "No"],
+              ["Explorer links", chainConfig?.explorer.name ?? "Unavailable"],
               ["Explorer source", sourceName ?? "Unavailable"],
               ["Source ID", sourceId ?? "Unavailable"],
               [
@@ -138,17 +146,21 @@ export function ScannerDiagnosticsPanel({
               ],
               [
                 "Explorer key env",
-                chainConfig?.discovery.apiKeyEnvVar
-                  ? `${chainConfig.discovery.apiKeyEnvVar}: ${
-                      chainConfig.discovery.hasApiKey ? "configured" : "missing"
+                apiKeyEnvLabel
+                  ? `${apiKeyEnvLabel}: ${
+                      chainConfig?.discovery.hasApiKey ? "configured" : "missing"
                     }`
                   : "Not required",
               ],
               [
                 "Historical logs",
-                chainConfig
-                  ? `${chainConfig.discoverySettings.providerName} explorer API`
-                  : "Unavailable",
+                historicalApiName ?? "Unavailable",
+              ],
+              [
+                "API chain ID",
+                chainConfig?.discovery.apiChainId
+                  ? `${chainConfig.discovery.apiChainIdEnvVar}: ${chainConfig.discovery.apiChainId}`
+                  : "Not required",
               ],
               [
                 "Source URL",

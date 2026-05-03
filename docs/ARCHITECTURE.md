@@ -39,23 +39,31 @@ The scanner uses a discovery-first pipeline:
 5. The curated registry enriches known tokens and spenders. It is not a
    discovery source.
 
-BSC historical discovery uses BscScan `module=logs&action=getLogs` with
-`topic0` for the event signature and the padded owner address in `topic1`.
-Public BSC RPC `eth_getLogs` is not used for historical approval discovery.
+BSC historical discovery uses Etherscan API V2 `module=logs&action=getLogs`
+with `chainid=56`, `topic0` for the event signature, and the padded owner
+address in `topic1`. Public BSC RPC `eth_getLogs` is not used for historical
+approval discovery. BscScan remains the explorer for address, token, and
+transaction links.
 
 ## Explorer APIs
 
 - PulseChain discovery API default:
   `https://api.scan.pulsechain.com/api`
 - BSC discovery API default:
-  `https://api.bscscan.com/api`
-- BSC API key env var:
+  `https://api.etherscan.io/v2/api`
+- BSC discovery API chain id:
+  `NEXT_PUBLIC_BSC_EXPLORER_CHAIN_ID=56`
+- Preferred BSC API key env var:
+  `NEXT_PUBLIC_BSC_EXPLORER_API_KEY`
+- Deprecated fallback BSC key env var:
   `NEXT_PUBLIC_BSCSCAN_API_KEY`
 
-Both explorer APIs can rate-limit or cap responses. The discovery fetcher uses
-adaptive block-range windowing and pagination. If discovery or live validation
-is incomplete, the UI reports the incomplete state instead of showing a false
-"clear" result.
+The old BscScan V1 endpoint `https://api.bscscan.com/api` is deprecated for
+BSC log discovery. If it is configured or returned by a custom endpoint, debug
+mode surfaces an actionable migration warning. Both explorer APIs can rate-limit
+or cap responses. The discovery fetcher uses adaptive block-range windowing and
+pagination. If discovery or live validation is incomplete, the UI reports the
+incomplete state instead of showing a false "clear" result.
 
 ## Approval Standards
 
