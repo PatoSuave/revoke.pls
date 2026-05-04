@@ -169,6 +169,7 @@ See [docs/AUDIT-GUIDE.md](docs/AUDIT-GUIDE.md) for a practical audit checklist.
 
 ## Documentation
 
+- [Changelog](CHANGELOG.md)
 - [Architecture](docs/ARCHITECTURE.md)
 - [Audit guide](docs/AUDIT-GUIDE.md)
 - [Environment variables](docs/ENVIRONMENT.md)
