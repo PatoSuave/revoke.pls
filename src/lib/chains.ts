@@ -26,6 +26,7 @@ export const BSC_DEPRECATED_V1_EXPLORER_API_URL =
   "https://api.bscscan.com/api";
 export const BSC_EXPLORER_CHAIN_ID_DEFAULT = BSC_CHAIN_ID.toString();
 export const BSC_OSAKA_MAX_TRANSACTION_GAS = 16_777_216n;
+export const BSC_HIGH_GAS_WARNING_THRESHOLD = 1_000_000n;
 
 export type SupportedChainKey = "pulsechain" | "bsc";
 
@@ -246,6 +247,7 @@ export interface SupportedChainConfig {
   discoverySettings: DiscoverySettings;
   standardLabels: ChainStandardLabels;
   maxTransactionGas?: bigint;
+  highGasWarningThreshold?: bigint;
 }
 
 function explorerUrls(baseUrl: string): ExplorerUrlBuilders {
@@ -439,6 +441,7 @@ export const supportedChainConfigs = {
       nftOperator: "BEP-721/BEP-1155",
     },
     maxTransactionGas: BSC_OSAKA_MAX_TRANSACTION_GAS,
+    highGasWarningThreshold: BSC_HIGH_GAS_WARNING_THRESHOLD,
   },
 } as const satisfies Record<number, SupportedChainConfig>;
 

@@ -7,7 +7,7 @@ import type {
 } from "@/hooks/use-batch-revoke";
 import { getChainConfig } from "@/lib/chains";
 import { explorerTxUrl } from "@/lib/explorer";
-import { BSC_GAS_CAP_TITLE } from "@/lib/preflight";
+import { BSC_GAS_CAP_TITLE, HIGH_GAS_WARNING_TITLE } from "@/lib/preflight";
 import type { ScoredApproval } from "@/lib/risk";
 
 /**
@@ -145,6 +145,7 @@ function ConfirmingCard({ batch }: { batch: UseBatchRevokeResult }) {
   const unlimited = batch.items.filter((a) => a.unlimited).length;
   const ready = batch.counts.ready;
   const cleared = batch.counts.cleared;
+  const highGasWarning = batch.counts.highGasWarning;
   const unverified = batch.counts.unverified;
   const chainConfig = getChainConfig(batch.items[0]?.chainId);
   const gasLabel = chainConfig
@@ -167,6 +168,9 @@ function ConfirmingCard({ batch }: { batch: UseBatchRevokeResult }) {
         ) : null}
         {unverified > 0 ? (
           <Pill tone="red">{unverified} unverified</Pill>
+        ) : null}
+        {highGasWarning > 0 ? (
+          <Pill tone="red">{highGasWarning} high-gas review</Pill>
         ) : null}
         {highRisk > 0 ? (
           <Pill tone="red">{highRisk} high-risk</Pill>
@@ -192,6 +196,12 @@ function ConfirmingCard({ batch }: { batch: UseBatchRevokeResult }) {
         Already-cleared approvals are skipped. Unverified approvals are not
         submitted from this batch.
       </p>
+      {highGasWarning > 0 ? (
+        <p className="mt-1 text-xs leading-5 text-amber-200">
+          High-gas BSC revokes are skipped by batch and require individual
+          review before any wallet prompt opens.
+        </p>
+      ) : null}
       <p className="mt-1 text-xs leading-5 text-pulse-muted">
         Preflight reads: {batch.preflightSummary.attempted} attempted,{" "}
         {batch.preflightSummary.succeeded} succeeded,{" "}
@@ -311,6 +321,7 @@ function RunningCard({ batch }: { batch: UseBatchRevokeResult }) {
 function CompleteCard({ batch }: { batch: UseBatchRevokeResult }) {
   const { success, failed, rejected, skipped, cleared, unverified, total } =
     batch.counts;
+  const highGasWarning = batch.counts.highGasWarning;
   const stoppedByRejection = rejected > 0 && skipped > 0;
 
   return (
@@ -339,6 +350,9 @@ function CompleteCard({ batch }: { batch: UseBatchRevokeResult }) {
         {rejected > 0 ? <Pill tone="muted">{rejected} rejected</Pill> : null}
         {skipped > 0 ? <Pill tone="muted">{skipped} skipped</Pill> : null}
         {cleared > 0 ? <Pill tone="green">{cleared} already cleared</Pill> : null}
+        {highGasWarning > 0 ? (
+          <Pill tone="red">{highGasWarning} review individually</Pill>
+        ) : null}
         {unverified > 0 ? <Pill tone="red">{unverified} unverified</Pill> : null}
       </ul>
 
@@ -377,6 +391,7 @@ const STATUS_LABEL: Record<BatchItemStatus, string> = {
   rejected: "Rejected",
   skipped: "Skipped",
   cleared: "Already cleared",
+  review: "Review individually",
   unverified: "Unverified",
 };
 
@@ -393,6 +408,7 @@ const STATUS_TONE: Record<
   rejected: "muted",
   skipped: "muted",
   cleared: "success",
+  review: "red",
   unverified: "red",
 };
 
@@ -451,6 +467,9 @@ function BatchProgressRow({
       {result?.preflight?.gasCapExceeded ? (
         <span className="sr-only">{BSC_GAS_CAP_TITLE}</span>
       ) : null}
+      {result?.preflight?.highGasWarning ? (
+        <span className="sr-only">{HIGH_GAS_WARNING_TITLE}</span>
+      ) : null}
     </li>
   );
 }
@@ -464,6 +483,13 @@ function formatBatchPreflightDetail(
     return `${BSC_GAS_CAP_TITLE}: ${formatGasAmount(
       preflight.estimatedGas ?? 0n,
     )} / ${formatGasAmount(preflight.maxTransactionGas ?? 0n)}`;
+  }
+  if (preflight?.highGasWarning) {
+    return `${HIGH_GAS_WARNING_TITLE}: ${formatGasAmount(
+      preflight.estimatedGas ?? 0n,
+    )} / warning ${formatGasAmount(
+      preflight.highGasWarningThreshold ?? 0n,
+    )} / cap ${formatGasAmount(preflight.maxTransactionGas ?? 0n)}`;
   }
   return (
     preflight?.currentLabel ??

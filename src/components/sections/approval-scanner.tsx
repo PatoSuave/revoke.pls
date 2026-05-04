@@ -372,6 +372,7 @@ function ConnectedScanner({
         isConnected
         erc20={scan}
         nft={nft}
+        batch={batch}
       />
 
       <NftSection nft={nft} owner={owner} chainConfig={chainConfig} />

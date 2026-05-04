@@ -12,6 +12,9 @@ import {
   BSC_GAS_CAP_BODY,
   BSC_GAS_CAP_HELPER,
   BSC_GAS_CAP_TITLE,
+  HIGH_GAS_WARNING_BODY,
+  HIGH_GAS_WARNING_HELPER,
+  HIGH_GAS_WARNING_TITLE,
   type NftPreflightResult,
 } from "@/lib/preflight";
 import type { RiskLevel } from "@/lib/risk";
@@ -145,6 +148,9 @@ export function NftApprovalRow({
           isRefreshingApproval={isRefreshingApproval}
           onRefresh={() => void refreshPreflight()}
           onConfirm={() => void revoke()}
+          onConfirmHighGas={() =>
+            void revoke({ allowHighGasWarning: true })
+          }
         />
       ) : null}
 
@@ -391,6 +397,7 @@ function ConfirmPanel({
   isRefreshingApproval,
   onRefresh,
   onConfirm,
+  onConfirmHighGas,
 }: {
   approval: NftApproval;
   chainName: string;
@@ -400,9 +407,12 @@ function ConfirmPanel({
   isRefreshingApproval: boolean;
   onRefresh: () => void;
   onConfirm: () => void;
+  onConfirmHighGas: () => void;
 }) {
   const gas = nativeSymbol ? `Paid in ${nativeSymbol} gas.` : "Gas fees apply.";
-  const canConfirm = preflight?.status === "active" && !isRefreshingApproval;
+  const highGasWarning = preflight?.status === "highGasWarning";
+  const canConfirm =
+    (preflight?.status === "active" || highGasWarning) && !isRefreshingApproval;
   const summary =
     approval.kind === "approvalForAll"
       ? `Sends setApprovalForAll(${shortenAddress(
@@ -459,11 +469,11 @@ function ConfirmPanel({
           )}
           <button
             type="button"
-            onClick={onConfirm}
+            onClick={highGasWarning ? onConfirmHighGas : onConfirm}
             disabled={!canConfirm}
             className="flex-1 rounded-xl bg-pulse-gradient px-3 py-2 text-xs font-semibold text-pulse-bg shadow-glow transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-60 sm:flex-none"
           >
-            Confirm revoke
+            {highGasWarning ? "Continue to wallet anyway" : "Confirm revoke"}
           </button>
         </div>
       </div>
@@ -503,6 +513,19 @@ function NftPreflightNotice({
       <PreflightBox tone="success">
         <span>Current approval is still active.</span>
         <GasDiagnostics preflight={preflight} />
+      </PreflightBox>
+    );
+  }
+
+  if (preflight.status === "highGasWarning") {
+    return (
+      <PreflightBox tone="warning">
+        <span className="font-semibold text-pulse-text">
+          {HIGH_GAS_WARNING_TITLE}
+        </span>
+        <span>{HIGH_GAS_WARNING_BODY}</span>
+        <GasDiagnostics preflight={preflight} />
+        <span>{HIGH_GAS_WARNING_HELPER}</span>
       </PreflightBox>
     );
   }
@@ -567,7 +590,11 @@ function GasDiagnostics({
 }: {
   preflight: Pick<
     NftPreflightResult,
-    "estimatedGas" | "maxTransactionGas" | "gasCapExceeded"
+    | "estimatedGas"
+    | "maxTransactionGas"
+    | "highGasWarningThreshold"
+    | "gasCapExceeded"
+    | "highGasWarning"
   >;
 }) {
   if (!preflight.estimatedGas) return null;
@@ -579,7 +606,13 @@ function GasDiagnostics({
             preflight.maxTransactionGas,
           )}`
         : ""}
+      {preflight.highGasWarningThreshold
+        ? ` / high-gas warning threshold: ${formatGasAmount(
+            preflight.highGasWarningThreshold,
+          )}`
+        : ""}
       {preflight.gasCapExceeded === false ? " / gas cap preflight passed" : ""}
+      {preflight.highGasWarning ? " / requires explicit high-gas confirmation" : ""}
     </span>
   );
 }

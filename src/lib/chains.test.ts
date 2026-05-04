@@ -6,6 +6,7 @@ import {
   BSC_DEPRECATED_V1_EXPLORER_API_URL,
   BSC_EXPLORER_CHAIN_ID_DEFAULT,
   BSC_EXPLORER_API_DEFAULT,
+  BSC_HIGH_GAS_WARNING_THRESHOLD,
   BSC_OSAKA_MAX_TRANSACTION_GAS,
   PULSECHAIN_CHAIN_ID,
   bsc,
@@ -59,6 +60,9 @@ describe("supported chain config", () => {
     expect(config?.shortName).toBe("BSC");
     expect(config?.nativeSymbol).toBe("BNB");
     expect(config?.maxTransactionGas).toBe(BSC_OSAKA_MAX_TRANSACTION_GAS);
+    expect(config?.highGasWarningThreshold).toBe(
+      BSC_HIGH_GAS_WARNING_THRESHOLD,
+    );
     expect(config?.standardLabels).toMatchObject({
       fungible: "BEP-20",
       nft: "BEP-721",
@@ -93,6 +97,7 @@ describe("supported chain config", () => {
 
     expect(config?.nativeSymbol).toBe("PLS");
     expect(config?.maxTransactionGas).toBeUndefined();
+    expect(config?.highGasWarningThreshold).toBeUndefined();
     expect(config?.explorer.name).toBe("PulseScan");
     expect(config?.standardLabels.fungible).toBe("PRC-20");
   });

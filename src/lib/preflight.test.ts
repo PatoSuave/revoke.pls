@@ -6,6 +6,9 @@ import {
   BSC_GAS_CAP_ERROR,
   BSC_GAS_CAP_HELPER,
   BSC_GAS_CAP_TITLE,
+  HIGH_GAS_WARNING_BODY,
+  HIGH_GAS_WARNING_HELPER,
+  HIGH_GAS_WARNING_TITLE,
   applyGasEstimateToPreflight,
   evaluateErc20AllowancePreflight,
   evaluateNftApprovalPreflight,
@@ -100,6 +103,7 @@ describe("approval revoke preflight", () => {
       succeeded: 2,
       failed: 1,
       active: 1,
+      highGasWarning: 0,
       cleared: 1,
       unverified: 1,
     });
@@ -123,7 +127,9 @@ describe("approval revoke preflight", () => {
       status: "active",
       estimatedGas: 120_000n,
       maxTransactionGas: 16_777_216n,
+      highGasWarningThreshold: undefined,
       gasCapExceeded: false,
+      highGasWarning: false,
     });
     const safeGas = safeGasForRevokeRequest(result, 16_777_216n);
     expect(safeGas).toEqual({ ok: true, gas: 120_000n });
@@ -132,6 +138,71 @@ describe("approval revoke preflight", () => {
         ...(safeGas.gas !== undefined ? { gas: safeGas.gas } : {}),
       };
       expect(requestGasFields).toEqual({ gas: 120_000n });
+      expect("gasLimit" in requestGasFields).toBe(false);
+    }
+  });
+
+  it("keeps BSC estimates at the high-gas threshold as normal active revokes", () => {
+    const result = applyGasEstimateToPreflight(
+      { kind: "erc20", status: "active", currentAllowance: 1n },
+      1_000_000n,
+      16_777_216n,
+      1_000_000n,
+    );
+
+    expect(result).toMatchObject({
+      status: "active",
+      estimatedGas: 1_000_000n,
+      highGasWarningThreshold: 1_000_000n,
+      gasCapExceeded: false,
+      highGasWarning: false,
+    });
+    expect(safeGasForRevokeRequest(result, 16_777_216n)).toEqual({
+      ok: true,
+      gas: 1_000_000n,
+    });
+  });
+
+  it("marks BSC estimates above 1,000,000 and below the cap as high-gas warnings", () => {
+    const result = applyGasEstimateToPreflight(
+      { kind: "erc20", status: "active", currentAllowance: 1n },
+      1_000_001n,
+      16_777_216n,
+      1_000_000n,
+    );
+
+    expect(result).toMatchObject({
+      status: "highGasWarning",
+      estimatedGas: 1_000_001n,
+      maxTransactionGas: 16_777_216n,
+      highGasWarningThreshold: 1_000_000n,
+      gasCapExceeded: false,
+      highGasWarning: true,
+    });
+    expect(HIGH_GAS_WARNING_TITLE).toBe("Unusually high gas estimate");
+    expect(HIGH_GAS_WARNING_BODY).toContain("above 1,000,000 gas on BSC");
+    expect(HIGH_GAS_WARNING_HELPER).toContain("not mean the transaction");
+    expect(safeGasForRevokeRequest(result, 16_777_216n).ok).toBe(false);
+  });
+
+  it("allows a high-gas BSC revoke only after explicit confirmation", () => {
+    const result = applyGasEstimateToPreflight(
+      { kind: "erc20", status: "active", currentAllowance: 1n },
+      1_500_000n,
+      16_777_216n,
+      1_000_000n,
+    );
+
+    const firstClick = safeGasForRevokeRequest(result, 16_777_216n);
+    expect(firstClick.ok).toBe(false);
+
+    const confirmed = safeGasForRevokeRequest(result, 16_777_216n, true);
+    expect(confirmed).toEqual({ ok: true, gas: 1_500_000n });
+    if (confirmed.ok) {
+      const requestGasFields = {
+        ...(confirmed.gas !== undefined ? { gas: confirmed.gas } : {}),
+      };
+      expect(requestGasFields).toEqual({ gas: 1_500_000n });
       expect("gasLimit" in requestGasFields).toBe(false);
     }
   });
@@ -260,7 +331,28 @@ describe("approval revoke preflight", () => {
       attempted: 1,
       failed: 1,
       active: 0,
+      highGasWarning: 0,
       unverified: 1,
     });
+  });
+
+  it("counts high-gas warning items separately so batch can skip them by default", () => {
+    const highGas = applyGasEstimateToPreflight(
+      { kind: "erc20", status: "active", currentAllowance: 1n },
+      1_500_000n,
+      16_777_216n,
+      1_000_000n,
+    );
+
+    expect(summarizeBatchPreflight([highGas])).toMatchObject({
+      total: 1,
+      attempted: 1,
+      succeeded: 1,
+      failed: 0,
+      active: 0,
+      highGasWarning: 1,
+      unverified: 0,
+    });
+    expect(safeGasForRevokeRequest(highGas, 16_777_216n).ok).toBe(false);
   });
 });

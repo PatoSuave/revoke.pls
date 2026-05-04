@@ -33,6 +33,7 @@ export type BatchItemStatus =
   | "rejected"
   | "skipped"
   | "cleared"
+  | "review"
   | "unverified";
 
 export interface BatchItemResult {
@@ -57,6 +58,7 @@ export interface BatchCounts {
   rejected: number;
   skipped: number;
   cleared: number;
+  highGasWarning: number;
   unverified: number;
   ready: number;
   done: number;
@@ -237,6 +239,7 @@ export function useBatchRevoke({
       const currentResult = results[item.key];
       if (
         currentResult?.status === "cleared" ||
+        currentResult?.status === "review" ||
         currentResult?.status === "unverified"
       ) {
         continue;
@@ -364,6 +367,7 @@ export function useBatchRevoke({
     let rejected = 0;
     let skipped = 0;
     let cleared = 0;
+    let highGasWarning = 0;
     let unverified = 0;
     let ready = 0;
     for (const item of items) {
@@ -374,6 +378,7 @@ export function useBatchRevoke({
       else if (r.status === "rejected") rejected++;
       else if (r.status === "skipped") skipped++;
       else if (r.status === "cleared") cleared++;
+      else if (r.status === "review") highGasWarning++;
       else if (r.status === "unverified") unverified++;
       else if (r.status === "queued") ready++;
     }
@@ -384,9 +389,17 @@ export function useBatchRevoke({
       rejected,
       skipped,
       cleared,
+      highGasWarning,
       unverified,
       ready,
-      done: success + failed + rejected + skipped + cleared + unverified,
+      done:
+        success +
+        failed +
+        rejected +
+        skipped +
+        cleared +
+        highGasWarning +
+        unverified,
     };
   }, [items, results]);
 
@@ -443,6 +456,7 @@ async function refreshErc20PreflightForItem(
       allowancePreflight,
       estimatedGas,
       chainConfig.maxTransactionGas,
+      chainConfig.highGasWarningThreshold,
     );
   } catch (error) {
     return withGasCapContext(failedErc20Preflight(error), item.chainId);
@@ -454,6 +468,14 @@ function resultFromPreflight(
 ): BatchItemResult {
   if (preflight.status === "active") {
     return { status: "queued", preflight };
+  }
+  if (preflight.status === "highGasWarning") {
+    return {
+      status: "review",
+      error:
+        "High-gas BSC revoke requires individual review and is skipped by batch by default.",
+      preflight,
+    };
   }
   if (preflight.status === "cleared") {
     return { status: "cleared", preflight };

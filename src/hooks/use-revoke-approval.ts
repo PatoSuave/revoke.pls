@@ -36,7 +36,7 @@ export interface UseRevokeApprovalResult {
   isBusy: boolean;
   isRefreshingApproval: boolean;
   refreshPreflight: () => Promise<Erc20PreflightResult>;
-  revoke: () => Promise<void>;
+  revoke: (options?: { allowHighGasWarning?: boolean }) => Promise<void>;
   reset: () => void;
 }
 
@@ -177,6 +177,7 @@ export function useRevokeApproval({
             allowancePreflight,
             estimatedGas,
             chainConfig?.maxTransactionGas,
+            chainConfig?.highGasWarningThreshold,
           )
         : allowancePreflight;
       setPreflight(next);
@@ -193,14 +194,15 @@ export function useRevokeApproval({
     }
   }, [config, ownerAddress, target, tokenSymbol, tokenDecimals]);
 
-  const revoke = useCallback(async () => {
+  const revoke = useCallback(async (options?: { allowHighGasWarning?: boolean }) => {
     notifiedHashRef.current = null;
     const latest = await refreshPreflight();
-    if (latest.status !== "active") return;
+    if (latest.status !== "active" && latest.status !== "highGasWarning") return;
     const chainConfig = getChainConfig(target.chainId);
     const safeGas = safeGasForRevokeRequest(
       latest,
       chainConfig?.maxTransactionGas,
+      options?.allowHighGasWarning === true,
     );
     if (!safeGas.ok) {
       setPreflight(safeGas.preflight);
