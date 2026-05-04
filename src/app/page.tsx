@@ -13,7 +13,7 @@ import {
 import { absoluteUrl, siteConfig } from "@/lib/site";
 
 const productName = "Pulse Revoke";
-const launcherTitle = `${productName} - PulseChain approval safety`;
+const launcherTitle = `${productName} - PulseChain and BSC approval safety`;
 const launcherDescription =
   "Launch the Pulse Revoke scanner or track desktop release status. Review and revoke token approvals on PulseChain and BSC without custody.";
 
@@ -60,6 +60,8 @@ const HERO_STATS = [
   { label: "Scanner", value: "Live at /app" },
   { label: "Desktop", value: "Pending release" },
 ] as const;
+
+const LIVE_NETWORKS = ["PulseChain", "BSC / BNB Smart Chain"] as const;
 
 const HOW_IT_WORKS = [
   {
@@ -197,7 +199,7 @@ function Hero({ desktopReady }: { desktopReady: boolean }) {
               className="h-1.5 w-1.5 rounded-full bg-pulse-green"
               aria-hidden
             />
-            PulseChain approval safety
+            PulseChain and BSC approval safety
           </div>
 
           <h1 className="mt-5 text-5xl font-bold tracking-tight sm:text-7xl">
@@ -205,8 +207,8 @@ function Hero({ desktopReady }: { desktopReady: boolean }) {
           </h1>
 
           <p className="mt-5 max-w-2xl text-xl font-semibold leading-8 text-pulse-text sm:text-2xl">
-            Revoke risky approvals on PulseChain with a scanner built for
-            careful wallet review.
+            Revoke risky approvals on PulseChain and BSC with a scanner built
+            for careful wallet review.
           </p>
 
           <p className="mt-4 max-w-2xl text-base leading-7 text-pulse-muted">
@@ -229,6 +231,8 @@ function Hero({ desktopReady }: { desktopReady: boolean }) {
               Desktop App {desktopReady ? "" : "/ Coming Soon"}
             </a>
           </div>
+
+          <LiveNetworksStrip />
 
           <dl className="mt-8 grid max-w-2xl grid-cols-1 gap-3 sm:grid-cols-3">
             {HERO_STATS.map((item) => (
@@ -257,6 +261,35 @@ function Hero({ desktopReady }: { desktopReady: boolean }) {
         <LaunchChoicePanel desktopReady={desktopReady} />
       </div>
     </section>
+  );
+}
+
+function LiveNetworksStrip() {
+  return (
+    <div className="mt-5 max-w-2xl rounded-2xl border border-pulse-cyan/30 bg-pulse-panel/55 p-4">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <p className="text-xs font-semibold uppercase tracking-[0.18em] text-pulse-cyan">
+          Live networks
+        </p>
+        <p className="text-sm font-semibold text-pulse-text">
+          Live now on PulseChain and BSC.
+        </p>
+      </div>
+      <div className="mt-3 flex flex-wrap gap-2">
+        {LIVE_NETWORKS.map((network) => (
+          <span
+            key={network}
+            className="inline-flex items-center gap-2 rounded-full border border-pulse-border bg-pulse-bg/70 px-3 py-1 text-xs font-semibold text-pulse-text"
+          >
+            <span
+              className="h-1.5 w-1.5 rounded-full bg-pulse-green"
+              aria-hidden
+            />
+            {network}
+          </span>
+        ))}
+      </div>
+    </div>
   );
 }
 
