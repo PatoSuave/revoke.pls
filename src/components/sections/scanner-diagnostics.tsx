@@ -1,4 +1,5 @@
 import type { UseApprovalDiscoveryResult } from "@/hooks/use-approval-discovery";
+import type { UseBatchRevokeResult } from "@/hooks/use-batch-revoke";
 import type { UseNftApprovalDiscoveryResult } from "@/hooks/use-nft-approval-discovery";
 import type { SupportedChainConfig } from "@/lib/chains";
 import { FUNGIBLE_APPROVAL_SHAPE_COPY } from "@/lib/diagnostic-copy";
@@ -13,6 +14,7 @@ interface ScannerDiagnosticsPanelProps {
   isConnected: boolean;
   erc20?: UseApprovalDiscoveryResult;
   nft?: UseNftApprovalDiscoveryResult;
+  batch?: Pick<UseBatchRevokeResult, "results">;
 }
 
 export function ScannerDiagnosticsPanel({
@@ -24,6 +26,7 @@ export function ScannerDiagnosticsPanel({
   isConnected,
   erc20,
   nft,
+  batch,
 }: ScannerDiagnosticsPanelProps) {
   if (!enabled) return null;
 
@@ -43,6 +46,11 @@ export function ScannerDiagnosticsPanel({
     chainConfig?.discovery.apiKeyEnvVar;
   const requiresChainIdParam =
     chainConfig?.discovery.apiProviderKind === "etherscan-v2";
+  const highGasWarningCount = batch
+    ? Object.values(batch.results).filter(
+        (result) => result.preflight?.highGasWarning,
+      ).length
+    : null;
 
   const explorerIssues = [
     ...(chainConfig?.discovery.warnings ?? []),
@@ -173,6 +181,26 @@ export function ScannerDiagnosticsPanel({
                 chainConfig?.maxTransactionGas
                   ? formatGasAmount(chainConfig.maxTransactionGas)
                   : "Not configured",
+              ],
+              [
+                "High gas warning threshold",
+                chainConfig?.highGasWarningThreshold
+                  ? formatGasAmount(chainConfig.highGasWarningThreshold)
+                  : "Not configured",
+              ],
+              [
+                "High gas warning items",
+                highGasWarningCount === null
+                  ? "No batch preflight run"
+                  : highGasWarningCount.toString(),
+              ],
+              [
+                "Any high gas warning",
+                highGasWarningCount === null
+                  ? "Unknown until revoke preflight runs"
+                  : highGasWarningCount > 0
+                    ? "Yes"
+                    : "No",
               ],
               [
                 "Gas cap preflight",

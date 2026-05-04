@@ -32,7 +32,7 @@ export interface UseRevokeNftApprovalResult {
   isBusy: boolean;
   isRefreshingApproval: boolean;
   refreshPreflight: () => Promise<NftPreflightResult>;
-  revoke: () => Promise<void>;
+  revoke: (options?: { allowHighGasWarning?: boolean }) => Promise<void>;
   reset: () => void;
 }
 
@@ -171,6 +171,7 @@ export function useRevokeNftApproval({
             approvalPreflight,
             estimatedGas,
             chainConfig?.maxTransactionGas,
+            chainConfig?.highGasWarningThreshold,
           )
         : approvalPreflight;
       setPreflight(next);
@@ -187,14 +188,15 @@ export function useRevokeNftApproval({
     }
   }, [config, ownerAddress, target]);
 
-  const revoke = useCallback(async () => {
+  const revoke = useCallback(async (options?: { allowHighGasWarning?: boolean }) => {
     notifiedHashRef.current = null;
     const latest = await refreshPreflight();
-    if (latest.status !== "active") return;
+    if (latest.status !== "active" && latest.status !== "highGasWarning") return;
     const chainConfig = getChainConfig(target.chainId);
     const safeGas = safeGasForRevokeRequest(
       latest,
       chainConfig?.maxTransactionGas,
+      options?.allowHighGasWarning === true,
     );
     if (!safeGas.ok) {
       setPreflight(safeGas.preflight);

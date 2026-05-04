@@ -6,7 +6,11 @@ import { erc20Abi, formatAllowance, isUnlimitedAllowance } from "@/lib/erc20";
 import type { NftApproval } from "@/lib/nft-approvals";
 import { nftReadAbi, ZERO_ADDRESS } from "@/lib/nft-approvals";
 
-export type PreflightStatus = "active" | "cleared" | "unverified";
+export type PreflightStatus =
+  | "active"
+  | "highGasWarning"
+  | "cleared"
+  | "unverified";
 
 export const BSC_GAS_CAP_TITLE = "BSC gas limit exceeded";
 export const BSC_GAS_CAP_BODY =
@@ -14,6 +18,11 @@ export const BSC_GAS_CAP_BODY =
 export const BSC_GAS_CAP_HELPER =
   "Try again with a different RPC or verify directly on BscScan. If the token requires more gas than the chain allows, it may not be revokable through a standard approve(spender, 0) transaction.";
 export const BSC_GAS_CAP_ERROR = `${BSC_GAS_CAP_TITLE}. ${BSC_GAS_CAP_BODY} ${BSC_GAS_CAP_HELPER}`;
+export const HIGH_GAS_WARNING_TITLE = "Unusually high gas estimate";
+export const HIGH_GAS_WARNING_BODY =
+  "This revoke estimates above 1,000,000 gas on BSC. That is unusually high for a standard token approval revoke. Rabby or another wallet may warn that this could be risky. Only continue if you recognize this token and spender.";
+export const HIGH_GAS_WARNING_HELPER =
+  "This does not mean the transaction is automatically malicious, but it is abnormal for a normal BEP-20 revoke. You can cancel and verify directly on BscScan.";
 
 export interface Erc20PreflightContext {
   tokenSymbol: string;
@@ -28,7 +37,9 @@ export interface Erc20PreflightResult {
   error?: string;
   estimatedGas?: bigint;
   maxTransactionGas?: bigint;
+  highGasWarningThreshold?: bigint;
   gasCapExceeded?: boolean;
+  highGasWarning?: boolean;
 }
 
 export interface NftPreflightResult {
@@ -39,7 +50,9 @@ export interface NftPreflightResult {
   error?: string;
   estimatedGas?: bigint;
   maxTransactionGas?: bigint;
+  highGasWarningThreshold?: bigint;
   gasCapExceeded?: boolean;
+  highGasWarning?: boolean;
 }
 
 export type ApprovalPreflightResult =
@@ -56,6 +69,7 @@ export interface BatchPreflightSummary {
   succeeded: number;
   failed: number;
   active: number;
+  highGasWarning: number;
   cleared: number;
   unverified: number;
 }
@@ -66,6 +80,7 @@ export const EMPTY_BATCH_PREFLIGHT_SUMMARY: BatchPreflightSummary = {
   succeeded: 0,
   failed: 0,
   active: 0,
+  highGasWarning: 0,
   cleared: 0,
   unverified: 0,
 };
@@ -208,40 +223,52 @@ export function applyGasEstimateToPreflight<T extends ApprovalPreflightResult>(
   result: T,
   estimatedGas: bigint,
   maxTransactionGas: bigint | undefined,
+  highGasWarningThreshold?: bigint,
 ): T {
-  if (!maxTransactionGas) {
+  if (maxTransactionGas && estimatedGas > maxTransactionGas) {
+    return blockGasCapPreflight(result, estimatedGas, maxTransactionGas);
+  }
+
+  if (highGasWarningThreshold && estimatedGas > highGasWarningThreshold) {
     return {
       ...result,
       estimatedGas,
+      maxTransactionGas,
+      highGasWarningThreshold,
+      status: "highGasWarning",
       gasCapExceeded: false,
+      highGasWarning: true,
     };
-  }
-
-  if (estimatedGas > maxTransactionGas) {
-    return blockGasCapPreflight(result, estimatedGas, maxTransactionGas);
   }
 
   return {
     ...result,
     estimatedGas,
     maxTransactionGas,
+    highGasWarningThreshold,
     gasCapExceeded: false,
+    highGasWarning: false,
   };
 }
 
 export function safeGasForRevokeRequest<T extends ApprovalPreflightResult>(
   result: T,
   maxTransactionGas: bigint | undefined,
+  allowHighGasWarning = false,
 ): SafeRevokeGasResult<T> {
-  if (result.status !== "active" || result.gasCapExceeded) {
+  if (result.gasCapExceeded) {
     return { ok: false, preflight: result };
   }
 
-  if (!maxTransactionGas) {
-    return { ok: true, gas: result.estimatedGas };
+  if (result.status === "highGasWarning" && !allowHighGasWarning) {
+    return { ok: false, preflight: result };
   }
 
-  if (!result.estimatedGas || result.estimatedGas > maxTransactionGas) {
+  if (result.status !== "active" && result.status !== "highGasWarning") {
+    return { ok: false, preflight: result };
+  }
+
+  if (maxTransactionGas && (!result.estimatedGas || result.estimatedGas > maxTransactionGas)) {
     return {
       ok: false,
       preflight: blockGasCapPreflight(
@@ -250,6 +277,10 @@ export function safeGasForRevokeRequest<T extends ApprovalPreflightResult>(
         maxTransactionGas,
       ),
     };
+  }
+
+  if (!maxTransactionGas) {
+    return { ok: true, gas: result.estimatedGas };
   }
 
   return { ok: true, gas: result.estimatedGas };
@@ -272,11 +303,13 @@ export function summarizeBatchPreflight(
   results: readonly Erc20PreflightResult[],
 ): BatchPreflightSummary {
   let active = 0;
+  let highGasWarning = 0;
   let cleared = 0;
   let unverified = 0;
 
   for (const result of results) {
     if (result.status === "active") active += 1;
+    else if (result.status === "highGasWarning") highGasWarning += 1;
     else if (result.status === "cleared") cleared += 1;
     else unverified += 1;
   }
@@ -284,9 +317,10 @@ export function summarizeBatchPreflight(
   return {
     total: results.length,
     attempted: results.length,
-    succeeded: active + cleared,
+    succeeded: active + highGasWarning + cleared,
     failed: unverified,
     active,
+    highGasWarning,
     cleared,
     unverified,
   };
