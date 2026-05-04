@@ -12,7 +12,7 @@ import {
   buildErc20PreflightRead,
   evaluateErc20AllowancePreflight,
   failedErc20Preflight,
-  gasForRevokeRequest,
+  safeGasForRevokeRequest,
   type Erc20PreflightResult,
 } from "@/lib/preflight";
 import { buildRevokeCall, type RevokeTarget } from "@/lib/revoke";
@@ -182,7 +182,10 @@ export function useRevokeApproval({
       setPreflight(next);
       return next;
     } catch (error) {
-      const next = failedErc20Preflight(error);
+      const next = withGasCapContext(
+        failedErc20Preflight(error),
+        target.chainId,
+      );
       setPreflight(next);
       return next;
     } finally {
@@ -194,12 +197,20 @@ export function useRevokeApproval({
     notifiedHashRef.current = null;
     const latest = await refreshPreflight();
     if (latest.status !== "active") return;
+    const chainConfig = getChainConfig(target.chainId);
+    const safeGas = safeGasForRevokeRequest(
+      latest,
+      chainConfig?.maxTransactionGas,
+    );
+    if (!safeGas.ok) {
+      setPreflight(safeGas.preflight);
+      return;
+    }
     trackEvent("revoke_submitted", { kind: "erc20", chainId: target.chainId });
-    const gas = gasForRevokeRequest(latest);
     write.writeContract({
       ...buildRevokeCall(target),
       chainId: target.chainId as SupportedChainId,
-      ...(gas ? { gas } : {}),
+      ...(safeGas.gas !== undefined ? { gas: safeGas.gas } : {}),
     });
   }, [refreshPreflight, target, write]);
 
@@ -221,4 +232,13 @@ export function useRevokeApproval({
     revoke,
     reset,
   };
+}
+
+function withGasCapContext(
+  result: Erc20PreflightResult,
+  chainId: number,
+): Erc20PreflightResult {
+  const maxTransactionGas = getChainConfig(chainId)?.maxTransactionGas;
+  if (!result.gasCapExceeded || !maxTransactionGas) return result;
+  return { ...result, maxTransactionGas };
 }

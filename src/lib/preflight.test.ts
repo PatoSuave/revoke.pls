@@ -10,7 +10,9 @@ import {
   evaluateErc20AllowancePreflight,
   evaluateNftApprovalPreflight,
   failedErc20Preflight,
-  gasForRevokeRequest,
+  failedNftPreflight,
+  isBscGasCapErrorMessage,
+  safeGasForRevokeRequest,
   summarizeBatchPreflight,
   type Erc20PreflightResult,
 } from "./preflight";
@@ -123,7 +125,15 @@ describe("approval revoke preflight", () => {
       maxTransactionGas: 16_777_216n,
       gasCapExceeded: false,
     });
-    expect(gasForRevokeRequest(result)).toBe(120_000n);
+    const safeGas = safeGasForRevokeRequest(result, 16_777_216n);
+    expect(safeGas).toEqual({ ok: true, gas: 120_000n });
+    if (safeGas.ok) {
+      const requestGasFields = {
+        ...(safeGas.gas !== undefined ? { gas: safeGas.gas } : {}),
+      };
+      expect(requestGasFields).toEqual({ gas: 120_000n });
+      expect("gasLimit" in requestGasFields).toBe(false);
+    }
   });
 
   it("blocks a BSC revoke gas estimate above the Osaka/Mendel cap", () => {
@@ -149,7 +159,40 @@ describe("approval revoke preflight", () => {
     expect(result.error).toContain(BSC_GAS_CAP_BODY);
     expect(result.error).toContain(BSC_GAS_CAP_HELPER);
     expect(result.error).toContain("Osaka/Mendel");
-    expect(gasForRevokeRequest(result)).toBeUndefined();
+    expect(safeGasForRevokeRequest(result, 16_777_216n).ok).toBe(false);
+  });
+
+  it("blocks capped BSC revokes that do not have a safe gas estimate", () => {
+    const result: Erc20PreflightResult = {
+      kind: "erc20",
+      status: "active",
+      currentAllowance: 1n,
+    };
+
+    const safeGas = safeGasForRevokeRequest(result, 16_777_216n);
+
+    expect(safeGas.ok).toBe(false);
+    if (!safeGas.ok) {
+      expect(safeGas.preflight).toMatchObject({
+        status: "unverified",
+        error: BSC_GAS_CAP_ERROR,
+        maxTransactionGas: 16_777_216n,
+        gasCapExceeded: true,
+      });
+    }
+  });
+
+  it("leaves uncapped PulseChain revoke requests unchanged", () => {
+    const result: Erc20PreflightResult = {
+      kind: "erc20",
+      status: "active",
+      currentAllowance: 1n,
+    };
+
+    expect(safeGasForRevokeRequest(result, undefined)).toEqual({
+      ok: true,
+      gas: undefined,
+    });
   });
 
   it("applies the same BSC gas cap to NFT revoke preflight", () => {
@@ -166,7 +209,43 @@ describe("approval revoke preflight", () => {
       estimatedGas: 20_000_000n,
       maxTransactionGas: 16_777_216n,
     });
-    expect(gasForRevokeRequest(result)).toBeUndefined();
+    expect(safeGasForRevokeRequest(result, 16_777_216n).ok).toBe(false);
+  });
+
+  it("classifies Osaka/Mendel estimate failures as BSC gas-cap preflight blocks", () => {
+    const error = new Error(
+      "mainnet passes Osaka hardfork, transaction gas cannot exceed 16777216",
+    );
+
+    expect(failedErc20Preflight(error)).toMatchObject({
+      status: "unverified",
+      error: BSC_GAS_CAP_ERROR,
+      gasCapExceeded: true,
+    });
+    expect(
+      failedNftPreflight(error, { kind: "approvalForAll" }),
+    ).toMatchObject({
+      status: "unverified",
+      error: BSC_GAS_CAP_ERROR,
+      gasCapExceeded: true,
+    });
+  });
+
+  it("recognizes BSC gas-cap error wording variants", () => {
+    expect(isBscGasCapErrorMessage("Osaka hardfork")).toBe(true);
+    expect(
+      isBscGasCapErrorMessage("transaction gas cannot exceed 16777216"),
+    ).toBe(true);
+    expect(isBscGasCapErrorMessage("gas cannot exceed 16777216")).toBe(true);
+    expect(isBscGasCapErrorMessage("exceeds maximum transaction gas")).toBe(
+      true,
+    );
+    expect(
+      isBscGasCapErrorMessage({
+        shortMessage: "Estimate failed",
+        cause: { message: "transaction gas cannot exceed 16777216" },
+      }),
+    ).toBe(true);
   });
 
   it("marks above-cap batch preflight results as unverified", () => {

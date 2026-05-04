@@ -10,7 +10,7 @@ export type PreflightStatus = "active" | "cleared" | "unverified";
 
 export const BSC_GAS_CAP_TITLE = "BSC gas limit exceeded";
 export const BSC_GAS_CAP_BODY =
-  "BNB Smart Chain now rejects individual transactions above 16,777,216 gas after the Osaka/Mendel upgrade. This revoke estimated above that cap, so it was blocked before submission.";
+  "BNB Smart Chain rejects individual transactions above 16,777,216 gas after the Osaka/Mendel upgrade. This revoke estimated above that cap, so it was blocked before wallet submission.";
 export const BSC_GAS_CAP_HELPER =
   "Try again with a different RPC or verify directly on BscScan. If the token requires more gas than the chain allows, it may not be revokable through a standard approve(spender, 0) transaction.";
 export const BSC_GAS_CAP_ERROR = `${BSC_GAS_CAP_TITLE}. ${BSC_GAS_CAP_BODY} ${BSC_GAS_CAP_HELPER}`;
@@ -45,6 +45,10 @@ export interface NftPreflightResult {
 export type ApprovalPreflightResult =
   | Erc20PreflightResult
   | NftPreflightResult;
+
+export type SafeRevokeGasResult<T extends ApprovalPreflightResult> =
+  | { ok: true; gas?: bigint }
+  | { ok: false; preflight: T };
 
 export interface BatchPreflightSummary {
   total: number;
@@ -136,10 +140,12 @@ export function evaluateErc20AllowancePreflight(
 }
 
 export function failedErc20Preflight(error: unknown): Erc20PreflightResult {
+  const gasCapExceeded = isBscGasCapErrorMessage(error);
   return {
     kind: "erc20",
     status: "unverified",
-    error: safeErrorCategory(error),
+    error: gasCapExceeded ? BSC_GAS_CAP_ERROR : safeErrorCategory(error),
+    gasCapExceeded,
   };
 }
 
@@ -189,10 +195,12 @@ export function failedNftPreflight(
   error: unknown,
   target: Pick<NftApproval, "kind">,
 ): NftPreflightResult {
+  const gasCapExceeded = isBscGasCapErrorMessage(error);
   return {
     kind: target.kind === "approvalForAll" ? "nft-operator" : "nft-token",
     status: "unverified",
-    error: safeErrorCategory(error),
+    error: gasCapExceeded ? BSC_GAS_CAP_ERROR : safeErrorCategory(error),
+    gasCapExceeded,
   };
 }
 
@@ -210,14 +218,7 @@ export function applyGasEstimateToPreflight<T extends ApprovalPreflightResult>(
   }
 
   if (estimatedGas > maxTransactionGas) {
-    return {
-      ...result,
-      status: "unverified",
-      error: BSC_GAS_CAP_ERROR,
-      estimatedGas,
-      maxTransactionGas,
-      gasCapExceeded: true,
-    };
+    return blockGasCapPreflight(result, estimatedGas, maxTransactionGas);
   }
 
   return {
@@ -228,13 +229,43 @@ export function applyGasEstimateToPreflight<T extends ApprovalPreflightResult>(
   };
 }
 
-export function gasForRevokeRequest(
-  result: ApprovalPreflightResult | null | undefined,
-): bigint | undefined {
-  if (!result || result.status !== "active" || result.gasCapExceeded) {
-    return undefined;
+export function safeGasForRevokeRequest<T extends ApprovalPreflightResult>(
+  result: T,
+  maxTransactionGas: bigint | undefined,
+): SafeRevokeGasResult<T> {
+  if (result.status !== "active" || result.gasCapExceeded) {
+    return { ok: false, preflight: result };
   }
-  return result.estimatedGas;
+
+  if (!maxTransactionGas) {
+    return { ok: true, gas: result.estimatedGas };
+  }
+
+  if (!result.estimatedGas || result.estimatedGas > maxTransactionGas) {
+    return {
+      ok: false,
+      preflight: blockGasCapPreflight(
+        result,
+        result.estimatedGas,
+        maxTransactionGas,
+      ),
+    };
+  }
+
+  return { ok: true, gas: result.estimatedGas };
+}
+
+export function isBscGasCapErrorMessage(error: unknown): boolean {
+  const lower = collectErrorText(error).toLowerCase();
+  return (
+    lower.includes("osaka") ||
+    lower.includes("mendel") ||
+    lower.includes("transaction gas cannot exceed 16777216") ||
+    lower.includes("transaction gas cannot exceed 16,777,216") ||
+    lower.includes("gas cannot exceed 16777216") ||
+    lower.includes("gas cannot exceed 16,777,216") ||
+    lower.includes("exceeds maximum transaction gas")
+  );
 }
 
 export function summarizeBatchPreflight(
@@ -271,6 +302,7 @@ export function batchPreflightContext(
 }
 
 function safeErrorCategory(error: unknown): string {
+  if (isBscGasCapErrorMessage(error)) return BSC_GAS_CAP_ERROR;
   if (!error || typeof error !== "object") return "Unknown read error";
   const name =
     "name" in error && typeof error.name === "string"
@@ -282,4 +314,40 @@ function safeErrorCategory(error: unknown): string {
     return `code ${String(code).slice(0, 48)}`;
   }
   return "Read error";
+}
+
+function blockGasCapPreflight<T extends ApprovalPreflightResult>(
+  result: T,
+  estimatedGas: bigint | undefined,
+  maxTransactionGas: bigint,
+): T {
+  return {
+    ...result,
+    status: "unverified",
+    error: BSC_GAS_CAP_ERROR,
+    estimatedGas,
+    maxTransactionGas,
+    gasCapExceeded: true,
+  };
+}
+
+function collectErrorText(error: unknown, depth = 0): string {
+  if (depth > 4 || error === null || error === undefined) return "";
+  if (typeof error === "string") return error;
+  if (typeof error === "number" || typeof error === "bigint") {
+    return error.toString();
+  }
+  if (typeof error !== "object") return "";
+
+  const parts: string[] = [];
+  const record = error as Record<string, unknown>;
+  for (const key of ["name", "message", "shortMessage", "details", "code"]) {
+    const value = record[key];
+    if (typeof value === "string" || typeof value === "number") {
+      parts.push(String(value));
+    }
+  }
+  parts.push(collectErrorText(record.cause, depth + 1));
+
+  return parts.filter(Boolean).join(" ");
 }
