@@ -1,37 +1,39 @@
 # Roadmap
 
-## Phase 1: Foundation
-- Repo setup
-- PulseChain chain config
-- Wallet connect
-- Base UI shell
-- Explorer links
-- Token/spender registry format
+This roadmap is descriptive, not a promise of future support. New networks,
+write paths, or distribution modes should be explicitly reviewed before they
+ship.
 
-## Phase 2: Fungible Token Approval MVP
-- Known token list
-- Known spender list
-- Allowance lookup
-- Approval table UI
-- Revoke action
-- Pending / success / failure states
+## Live Product
 
-## Phase 3: UX Improvements
-- Search and filter
-- Sort by unlimited approvals
-- Mobile optimization
-- Branded PulseChain styling
-- Risk badges
+- PulseChain support
+- BSC / BNB Smart Chain support
+- Browser wallet connection
+- WalletConnect when configured
+- Historical approval log discovery
+- Live on-chain validation
+- PRC-20 / BEP-20 approval display and revoke
+- NFT approval display and revoke where supported by the app pipeline
+- Sequential fungible token batch revoke
+- Chain-scoped token and spender registry enrichment
+- BSC Etherscan API V2 discovery with `chainid=56`
+- BSC hard gas-cap block and high-gas warning UX
 
-## Phase 4: Better Coverage
-- Expand protocol registry
-- Add NFT approval support
-- Label contracts by protocol
-- Add suspicious spender flags
+## Active Guardrails
 
-## Phase 5: Advanced Features
-- Batch planning UI
-- Transaction simulation
-- Historical approval review
-- Multi-wallet profiles
-- Additional explicitly reviewed chain support
+- Ethereum is not an active supported chain.
+- Do not broaden into unsupported networks without explicit review.
+- Do not treat registry labels as proof of safety.
+- Do not show a clear state when discovery or validation is incomplete.
+- Do not publish desktop or IPFS artifacts until real signed artifacts,
+  checksums, and release metadata exist.
+
+## Future Ideas Requiring Review
+
+- More manually verified PulseChain and BSC registry labels
+- Additional suspicious-spender heuristics
+- Better unsupported-network guidance
+- More focused manual QA fixtures for BSC high-gas cases
+- Desktop packaging after signing, checksums, icons, and release policy are
+  ready
+- IPFS distribution only after real artifacts are produced and pinned
