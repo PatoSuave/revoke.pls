@@ -1,37 +1,23 @@
-# Security
+# Security Notes
 
-## Security Principles
+The canonical public security policy is [../SECURITY.md](../SECURITY.md).
 
-- Never request private keys or seed phrases
-- Only request standard wallet connection
-- Only prepare explicit approval revoke transactions
-- Show exact spender address before user confirms
-- Prefer zeroing allowance over ambiguous flows
-- Keep dependencies minimal and audited where possible
+This project does not claim an external audit. Treat the source as open for
+review and verify wallet prompts before signing.
 
-## User Warnings
-Users should:
-- Verify the connected site URL
-- Confirm spender address matches intended target
-- Review wallet prompts carefully
-- Understand that every revoke is an on-chain transaction
+## Principles
 
-## Developer Rules
-- No hidden transaction modifications
-- No silent wallet requests
-- No auto-sign flows
-- No proxy write calls without clear disclosure
-- No unnecessary backend custody
+- Never request seed phrases or private keys.
+- Keep reads visibly separate from writes.
+- Only prepare explicit approval-clearing transactions after user action.
+- Show token, spender, operator, chain, and explorer context before signing.
+- Preserve chain-correct transaction submission.
+- Keep telemetry aggregate and privacy-safe.
 
-## Contract Interaction Scope
-Supported write scope remains narrow:
-- Fungible token `allowance`
-- Fungible token `approve(spender, 0)` for PRC-20/BEP-20-compatible revokes
+## Write Scope
+
+- Fungible token `approve(spender, 0)`
 - NFT `setApprovalForAll(operator, false)`
-- NFT `approve(address(0), tokenId)` for per-token BEP-721/ERC-721-compatible revokes
+- NFT `approve(address(0), tokenId)`
 
-## Future Security Enhancements
-- spender contract labeling
-- verified protocol lists
-- suspicious spender warnings
-- phishing domain warning banner
+Any new write path should be documented, reviewed, and tested before release.

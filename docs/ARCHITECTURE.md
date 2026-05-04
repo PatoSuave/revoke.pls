@@ -93,6 +93,20 @@ NFT revoke:
 
 Batch revoke is sequential. Mixed-chain batches are blocked.
 
+## BSC Gas Safety
+
+BNB Smart Chain enforces an Osaka/Mendel transaction gas cap. Pulse Revoke keeps
+two BSC-specific revoke preflight thresholds in `src/lib/chains.ts` and
+`src/lib/preflight.ts`:
+
+- Hard cap: `16_777_216n`
+- High-gas warning threshold: `1_000_000n`
+
+BSC revokes estimated above the hard cap are blocked before wallet submission.
+BSC revokes estimated above the warning threshold and at or below the hard cap
+require an explicit in-app confirmation before the wallet opens. Safe BSC
+revokes pass viem/wagmi transaction gas as `gas`, not `gasLimit`.
+
 ## Security Principles
 
 - Never ask for a seed phrase
