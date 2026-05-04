@@ -15,7 +15,7 @@ import {
   EMPTY_BATCH_PREFLIGHT_SUMMARY,
   evaluateErc20AllowancePreflight,
   failedErc20Preflight,
-  gasForRevokeRequest,
+  safeGasForRevokeRequest,
   summarizeBatchPreflight,
   type BatchPreflightSummary,
   type Erc20PreflightResult,
@@ -260,8 +260,17 @@ export function useBatchRevoke({
         continue;
       }
 
+      const chainConfig = getChainConfig(item.chainId);
+      const safeGas = safeGasForRevokeRequest(
+        latest,
+        chainConfig?.maxTransactionGas,
+      );
+      if (!safeGas.ok) {
+        patch(item.key, resultFromPreflight(safeGas.preflight));
+        continue;
+      }
+
       patch(item.key, { status: "wallet" });
-      const gas = gasForRevokeRequest(latest);
 
       let hash: `0x${string}`;
       try {
@@ -272,7 +281,7 @@ export function useBatchRevoke({
             spenderAddress: item.spenderAddress,
           }),
           chainId: item.chainId as SupportedChainId,
-          ...(gas ? { gas } : {}),
+          ...(safeGas.gas !== undefined ? { gas: safeGas.gas } : {}),
         });
       } catch (e) {
         const n = normalizeRevokeError(e);
@@ -436,7 +445,7 @@ async function refreshErc20PreflightForItem(
       chainConfig.maxTransactionGas,
     );
   } catch (error) {
-    return failedErc20Preflight(error);
+    return withGasCapContext(failedErc20Preflight(error), item.chainId);
   }
 }
 
@@ -454,4 +463,13 @@ function resultFromPreflight(
     error: preflight.error,
     preflight,
   };
+}
+
+function withGasCapContext(
+  result: Erc20PreflightResult,
+  chainId: number,
+): Erc20PreflightResult {
+  const maxTransactionGas = getChainConfig(chainId)?.maxTransactionGas;
+  if (!result.gasCapExceeded || !maxTransactionGas) return result;
+  return { ...result, maxTransactionGas };
 }

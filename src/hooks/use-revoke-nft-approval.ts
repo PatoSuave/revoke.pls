@@ -17,7 +17,7 @@ import {
   buildNftPreflightRead,
   evaluateNftApprovalPreflight,
   failedNftPreflight,
-  gasForRevokeRequest,
+  safeGasForRevokeRequest,
   type NftPreflightResult,
 } from "@/lib/preflight";
 import { trackEvent } from "@/lib/telemetry";
@@ -176,7 +176,10 @@ export function useRevokeNftApproval({
       setPreflight(next);
       return next;
     } catch (error) {
-      const next = failedNftPreflight(error, target);
+      const next = withGasCapContext(
+        failedNftPreflight(error, target),
+        target.chainId,
+      );
       setPreflight(next);
       return next;
     } finally {
@@ -188,16 +191,24 @@ export function useRevokeNftApproval({
     notifiedHashRef.current = null;
     const latest = await refreshPreflight();
     if (latest.status !== "active") return;
+    const chainConfig = getChainConfig(target.chainId);
+    const safeGas = safeGasForRevokeRequest(
+      latest,
+      chainConfig?.maxTransactionGas,
+    );
+    if (!safeGas.ok) {
+      setPreflight(safeGas.preflight);
+      return;
+    }
     trackEvent("revoke_submitted", {
       kind: telemetryKind,
       chainId: target.chainId,
     });
     const call = buildNftRevokeCall(target);
-    const gas = gasForRevokeRequest(latest);
     write.writeContract({
       ...call,
       chainId: target.chainId as SupportedChainId,
-      ...(gas ? { gas } : {}),
+      ...(safeGas.gas !== undefined ? { gas: safeGas.gas } : {}),
     });
   }, [refreshPreflight, target, write, telemetryKind]);
 
@@ -231,4 +242,13 @@ function buildNftRevokeCall(target: NftApproval) {
         collectionAddress: target.collectionAddress,
         tokenId: target.tokenId!,
       });
+}
+
+function withGasCapContext(
+  result: NftPreflightResult,
+  chainId: number,
+): NftPreflightResult {
+  const maxTransactionGas = getChainConfig(chainId)?.maxTransactionGas;
+  if (!result.gasCapExceeded || !maxTransactionGas) return result;
+  return { ...result, maxTransactionGas };
 }
