@@ -305,10 +305,10 @@ function uniqueTokenAddresses(pairs: readonly DiscoveredPair[]): Address[] {
  * Deduping tokens before the metadata reads keeps Multicall3 payloads small
  * even for wallets with hundreds of historical approvals.
  */
-export function buildDiscoveryContracts(
+export function buildDiscoveryContracts<TChainId extends number = SupportedChainId>(
   owner: Address,
   pairs: readonly DiscoveredPair[],
-  chainId: SupportedChainId,
+  chainId: TChainId,
 ) {
   const tokens = uniqueTokenAddresses(pairs);
   const metadata = tokens.flatMap((address) => [
