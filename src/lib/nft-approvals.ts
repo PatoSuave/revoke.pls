@@ -126,10 +126,10 @@ function uniqueCollectionAddresses(
   return out;
 }
 
-export function buildNftValidationContracts(
+export function buildNftValidationContracts<TChainId extends number = SupportedChainId>(
   owner: Address,
   candidates: readonly NftDiscoveredApproval[],
-  chainId: SupportedChainId,
+  chainId: TChainId,
 ) {
   const collections = uniqueCollectionAddresses(candidates);
   const metadata = collections.flatMap((address) => [
