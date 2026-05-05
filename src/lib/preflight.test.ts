@@ -266,6 +266,26 @@ describe("approval revoke preflight", () => {
     });
   });
 
+  it("does not inherit BSC gas caps or high-gas warnings for uncapped chains", () => {
+    const result = applyGasEstimateToPreflight(
+      { kind: "erc20", status: "active", currentAllowance: 1n },
+      20_000_000n,
+      undefined,
+      undefined,
+    );
+
+    expect(result).toMatchObject({
+      status: "active",
+      estimatedGas: 20_000_000n,
+      gasCapExceeded: false,
+      highGasWarning: false,
+    });
+    expect(safeGasForRevokeRequest(result, undefined)).toEqual({
+      ok: true,
+      gas: 20_000_000n,
+    });
+  });
+
   it("applies the same BSC gas cap to NFT revoke preflight", () => {
     const result = applyGasEstimateToPreflight(
       { kind: "nft-operator", status: "active", approvedForAll: true },

@@ -1,14 +1,21 @@
 import type { Address } from "viem";
 
-import { BSC_CHAIN_ID, isSupportedChainId } from "@/lib/chains";
+import {
+  BASE_CHAIN_ID,
+  BSC_CHAIN_ID,
+  PULSECHAIN_CHAIN_ID,
+  isSupportedChainId,
+} from "@/lib/chains";
 
 import {
+  BASE_SPENDER_REGISTRY,
   BSC_SPENDER_REGISTRY,
   PULSECHAIN_SPENDER_REGISTRY,
   SPENDER_REGISTRY,
   type SpenderEntry,
 } from "./spenders";
 import {
+  BASE_TOKEN_REGISTRY,
   BSC_TOKEN_REGISTRY,
   PULSECHAIN_TOKEN_REGISTRY,
   TOKEN_REGISTRY,
@@ -16,6 +23,7 @@ import {
 } from "./tokens";
 
 export {
+  BASE_TOKEN_REGISTRY,
   BSC_TOKEN_REGISTRY,
   MAINNET_TOKEN_REGISTRY,
   PULSECHAIN_TOKEN_REGISTRY,
@@ -24,6 +32,7 @@ export {
   type TokenEntry,
 } from "./tokens";
 export {
+  BASE_SPENDER_REGISTRY,
   BSC_SPENDER_REGISTRY,
   MAINNET_SPENDER_REGISTRY,
   PULSECHAIN_SPENDER_REGISTRY,
@@ -73,11 +82,14 @@ export function getTokensForChain(chainId: number): readonly TokenEntry[] {
     return [];
   }
 
-  if (chainId === PULSECHAIN_TOKEN_REGISTRY[0]?.chainId) {
+  if (chainId === PULSECHAIN_CHAIN_ID) {
     return PULSECHAIN_TOKEN_REGISTRY;
   }
   if (chainId === BSC_CHAIN_ID) {
     return BSC_TOKEN_REGISTRY;
+  }
+  if (chainId === BASE_CHAIN_ID) {
+    return BASE_TOKEN_REGISTRY;
   }
   return [];
 }
@@ -88,11 +100,14 @@ export function getSpendersForChain(chainId: number): readonly SpenderEntry[] {
     return [];
   }
 
-  if (chainId === PULSECHAIN_SPENDER_REGISTRY[0]?.chainId) {
+  if (chainId === PULSECHAIN_CHAIN_ID) {
     return PULSECHAIN_SPENDER_REGISTRY;
   }
   if (chainId === BSC_CHAIN_ID) {
     return BSC_SPENDER_REGISTRY;
+  }
+  if (chainId === BASE_CHAIN_ID) {
+    return BASE_SPENDER_REGISTRY;
   }
   return [];
 }

@@ -1,7 +1,7 @@
 # Transparency Notes
 
 Pulse Revoke is public code for reviewing and clearing wallet approvals on
-PulseChain and BSC / BNB Smart Chain.
+PulseChain, BSC / BNB Smart Chain, and Base.
 
 ## What The App Does
 
@@ -20,7 +20,7 @@ PulseChain and BSC / BNB Smart Chain.
 - Does not ask for private keys
 - Does not take custody of funds
 - Does not require token transfers
-- Does not support Ethereum right now
+- Does not support Ethereum Mainnet right now
 - Does not guarantee complete discovery when explorer APIs are capped,
   rate-limited, unavailable, or malformed
 - Does not claim that known registry labels make a spender safe
@@ -28,10 +28,11 @@ PulseChain and BSC / BNB Smart Chain.
 ## How Users Can Verify Behavior
 
 - Review the active chain shown in the app.
-- Open token and spender links on PulseScan or BscScan.
+- Open token and spender links on PulseScan, BscScan, or BaseScan.
 - Check that revoke wallet prompts match the intended approval-clearing call.
 - Confirm BSC transactions use BNB gas and BscScan links.
 - Confirm PulseChain transactions use PLS gas and PulseScan links.
+- Confirm Base transactions use ETH gas and BaseScan links.
 - Use `/app?debug=1` for diagnostic information about discovery source,
   chain ID, API configuration presence, and incomplete scan reasons.
 
@@ -39,11 +40,13 @@ PulseChain and BSC / BNB Smart Chain.
 
 Approval discovery starts from historical events. Public RPC providers can be
 unreliable or impractical for large historical `eth_getLogs` scans, especially
-on BSC. Pulse Revoke uses explorer log APIs for historical discovery and then
-uses live RPC reads to validate current state.
+on BSC and Base. Pulse Revoke uses explorer log APIs for historical discovery
+and then uses live RPC reads to validate current state.
 
 For BSC, historical discovery uses Etherscan API V2 with `chainid=56`. BscScan
-is still used for public explorer links.
+is still used for public explorer links. For Base, historical discovery uses
+Etherscan API V2 with `chainid=8453`. BaseScan is still used for public
+explorer links.
 
 ## Why Live Validation Matters
 

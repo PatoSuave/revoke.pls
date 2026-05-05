@@ -167,6 +167,11 @@ export const PULSECHAIN_TOKEN_REGISTRY: readonly TokenEntry[] = [
 export const BSC_TOKEN_REGISTRY: readonly TokenEntry[] = [] as const;
 
 /**
+ * Base token labels start empty by design. Add only manually verified entries.
+ */
+export const BASE_TOKEN_REGISTRY: readonly TokenEntry[] = [] as const;
+
+/**
  * Dormant Ethereum mainnet token registry retained from the earlier app
  * scaffold. Ethereum is not an active supported chain in Pulse Revoke.
  */
@@ -224,6 +229,7 @@ export const MAINNET_TOKEN_REGISTRY: readonly TokenEntry[] = [
 export const TOKEN_REGISTRY: readonly TokenEntry[] = [
   ...PULSECHAIN_TOKEN_REGISTRY,
   ...BSC_TOKEN_REGISTRY,
+  ...BASE_TOKEN_REGISTRY,
   ...MAINNET_TOKEN_REGISTRY,
 ] as const;
 
@@ -232,6 +238,7 @@ export const TOKEN_REGISTRY: readonly TokenEntry[] = [
 // (expected on the PulseChain fork snapshot) do not trip the duplicate check.
 validateAddresses(PULSECHAIN_TOKEN_REGISTRY, "TOKEN_REGISTRY[pulsechain]");
 validateAddresses(BSC_TOKEN_REGISTRY, "TOKEN_REGISTRY[bsc]");
+validateAddresses(BASE_TOKEN_REGISTRY, "TOKEN_REGISTRY[base]");
 validateAddresses(MAINNET_TOKEN_REGISTRY, "TOKEN_REGISTRY[mainnet]");
 for (const t of TOKEN_REGISTRY) {
   validateRequiredStrings(

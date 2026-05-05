@@ -35,6 +35,10 @@ NFT revocation is implemented by calling:
 BSC user-facing copy uses BEP-20, BEP-721, BEP-1155, and BNB. Internal ABIs
 remain ERC-compatible because BSC is EVM-compatible.
 
+## Base Naming
+Base user-facing copy uses ERC-20, ERC-721, ERC-1155, and ETH. Base is
+EVM-compatible, but it is not Ethereum Mainnet support.
+
 ## Known Limitations
 - Not all tokens behave perfectly
 - Some non-standard tokens may revert or behave differently

@@ -9,8 +9,9 @@ Current active supported networks should be exactly:
 
 - PulseChain, chain ID `369`
 - BSC / BNB Smart Chain, chain ID `56`
+- Base, chain ID `8453`
 
-Ethereum should remain inactive.
+Ethereum Mainnet should remain inactive.
 
 ## Key Files
 
@@ -30,9 +31,9 @@ Ethereum should remain inactive.
 
 ## Chain Safety Questions
 
-- Are active supported chains exactly PulseChain and BSC?
-- Does `src/lib/wagmi.ts` register only PulseChain and BSC?
-- Is Ethereum absent from active supported-chain lists?
+- Are active supported chains exactly PulseChain, BSC, and Base?
+- Does `src/lib/wagmi.ts` register only PulseChain, BSC, and Base?
+- Is Ethereum Mainnet absent from active supported-chain lists?
 - Do approval records carry `chainId` through discovery, validation, display,
   revoke, and batch revoke?
 - Are unsupported networks blocked from scan/revoke flows?
@@ -49,6 +50,16 @@ Ethereum should remain inactive.
 - Does the scanner report incomplete discovery if API caps, rate limits, or
   malformed responses prevent full discovery?
 - Does public BSC RPC avoid historical `eth_getLogs` discovery?
+
+## Base Discovery Questions
+
+- Do Base historical log requests use Etherscan API V2 at
+  `https://api.etherscan.io/v2/api`?
+- Does every Base log request include `chainid=8453`?
+- Are Base explorer links built with `https://basescan.org`?
+- Does Base discovery use approval logs rather than token-transfer endpoints as
+  the approval source of truth?
+- Does public Base RPC avoid historical `eth_getLogs` discovery?
 
 ## Live Validation Questions
 
@@ -69,6 +80,7 @@ Ethereum should remain inactive.
 - Do transaction requests include the approval's `chainId`?
 - Do BSC revokes use BNB wording and BscScan links?
 - Do PulseChain revokes use PLS wording and PulseScan links?
+- Do Base revokes use ETH wording and BaseScan links?
 
 ## BSC Gas Safety Questions
 
@@ -86,8 +98,10 @@ Ethereum should remain inactive.
 
 - Are registry lookups scoped by `chainId` and address?
 - Do PulseChain labels avoid leaking onto BSC approvals?
+- Do PulseChain or BSC labels avoid leaking onto Base approvals?
 - Are BSC labels empty unless manually verified?
-- Are unknown BSC spenders shown as unknown rather than guessed?
+- Are Base labels empty unless manually verified?
+- Are unknown BSC and Base spenders shown as unknown rather than guessed?
 - Is registry data treated only as enrichment, not discovery truth?
 
 ## Telemetry Questions
@@ -109,9 +123,11 @@ npm.cmd run build
 
 ## Manual Review Checklist
 
-- Load `/` and confirm it lists PulseChain and BSC / BNB Smart Chain as live.
+- Load `/` and confirm it lists PulseChain, BSC / BNB Smart Chain, and Base as
+  live.
 - Load `/app` on PulseChain and run a scan.
 - Load `/app` on BSC and run a scan.
+- Load `/app` on Base and run a scan.
 - Test a low-gas BSC revoke and confirm the wallet receives `gas` below the
   hard cap.
 - Test or simulate a high-gas BSC revoke and confirm the in-app warning appears

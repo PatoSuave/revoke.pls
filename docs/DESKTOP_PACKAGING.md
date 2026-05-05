@@ -30,7 +30,7 @@ scanner logic.
 Electron is defensible if wallet extension injection is a hard requirement
 (MetaMask browser extension running inside the app). For this app it is
 not — WalletConnect covers the primary mobile + hardware wallet case for
-PulseChain and BSC users, and the target audience is comfortable with QR
+PulseChain, BSC, and Base users, and the target audience is comfortable with QR
 pairing. Electron's 150 MB binary also works against IPFS distribution
 credibility.
 
@@ -53,7 +53,7 @@ The current `/app` build is nearly ideal for Tauri wrapping:
   use only `fetch()`, wagmi hooks, and React state. The only `document`
   usage is `document.addEventListener` in `connect-wallet-button.tsx`
   for menu dismiss — a non-issue in the Tauri webview.
-- **Configurable network access.** PulseChain and BSC RPC/explorer values are
+- **Configurable network access.** PulseChain, BSC, and Base RPC/explorer values are
   env-variable-driven and baked into the desktop build at compile time.
 
 ---
@@ -70,7 +70,7 @@ This is the most important architectural difference from the web product.
 
 **Practical consequence for v1:** the desktop build should ship with
 `NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID` baked in. WalletConnect covers common
-PulseChain and BSC wallet use cases (MetaMask Mobile, Rabby Mobile, hardware
+PulseChain, BSC, and Base wallet use cases (MetaMask Mobile, Rabby Mobile, hardware
 wallets).
 Pure MetaMask-desktop-only users are not served by the injected path in a
 webview — they must scan a QR or use the web app instead.

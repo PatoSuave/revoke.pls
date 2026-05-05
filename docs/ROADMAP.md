@@ -8,20 +8,22 @@ ship.
 
 - PulseChain support
 - BSC / BNB Smart Chain support
+- Base support
 - Browser wallet connection
 - WalletConnect when configured
 - Historical approval log discovery
 - Live on-chain validation
-- PRC-20 / BEP-20 approval display and revoke
+- PRC-20 / BEP-20 / ERC-20 approval display and revoke on supported chains
 - NFT approval display and revoke where supported by the app pipeline
 - Sequential fungible token batch revoke
 - Chain-scoped token and spender registry enrichment
 - BSC Etherscan API V2 discovery with `chainid=56`
+- Base Etherscan API V2 discovery with `chainid=8453`
 - BSC hard gas-cap block and high-gas warning UX
 
 ## Active Guardrails
 
-- Ethereum is not an active supported chain.
+- Ethereum Mainnet is not an active supported chain.
 - Do not broaden into unsupported networks without explicit review.
 - Do not treat registry labels as proof of safety.
 - Do not show a clear state when discovery or validation is incomplete.
@@ -30,7 +32,7 @@ ship.
 
 ## Future Ideas Requiring Review
 
-- More manually verified PulseChain and BSC registry labels
+- More manually verified PulseChain, BSC, and Base registry labels
 - Additional suspicious-spender heuristics
 - Better unsupported-network guidance
 - More focused manual QA fixtures for BSC high-gas cases

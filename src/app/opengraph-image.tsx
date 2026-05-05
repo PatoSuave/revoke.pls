@@ -110,7 +110,7 @@ export default function OpengraphImage() {
                 color: "transparent",
               }}
             >
-              PulseChain approvals.
+              wallet approvals.
             </span>
           </div>
           <div
@@ -134,7 +134,7 @@ export default function OpengraphImage() {
             color: muted,
           }}
         >
-          <span>Non-custodial · Open source · PulseChain + BSC</span>
+          <span>Non-custodial · Open source · PulseChain + BSC + Base</span>
           <span
             style={{
               background: gradient,

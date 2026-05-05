@@ -23,6 +23,8 @@ does not mean a desktop release exists today.
   default RPC from `src/lib/chains.ts` is used.
 - `NEXT_PUBLIC_BSC_RPC_URL` is optional. If unset, the BSC public fallback RPC
   from `src/lib/chains.ts` is used.
+- `NEXT_PUBLIC_BASE_RPC_URL` is optional. If unset, the Base public fallback
+  RPC from `src/lib/chains.ts` is used.
 - `NEXT_PUBLIC_PULSECHAIN_EXPLORER_API` is optional. If unset, the PulseScan
   API default is used.
 - `NEXT_PUBLIC_BSC_EXPLORER_API_URL` is an optional BSC historical logs API
@@ -34,6 +36,12 @@ does not mean a desktop release exists today.
   be an Etherscan API V2 key with BNB Smart Chain access.
 - `NEXT_PUBLIC_BSCSCAN_API_KEY` remains a deprecated fallback key name for older
   deploys.
+- `NEXT_PUBLIC_BASE_EXPLORER_API_URL` is an optional Base historical logs API
+  override. It defaults to Etherscan API V2 at
+  `https://api.etherscan.io/v2/api`.
+- `NEXT_PUBLIC_BASE_EXPLORER_CHAIN_ID` should be unset or set to `8453`.
+- `NEXT_PUBLIC_BASE_EXPLORER_API_KEY` is required for Base discovery. It should
+  be an Etherscan API V2 key with Base Mainnet access.
 
 Do not commit local `.env` files or release secrets.
 
