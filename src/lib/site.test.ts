@@ -3,6 +3,10 @@ import { describe, expect, it } from "vitest";
 import { DEFAULT_SITE_URL, normalizeSiteUrl, resolveSiteUrl } from "./site";
 
 describe("normalizeSiteUrl", () => {
+  it("uses pulserevoke.com as the built-in production fallback", () => {
+    expect(DEFAULT_SITE_URL).toBe("https://pulserevoke.com");
+  });
+
   it("keeps a full https URL as the normalized origin", () => {
     expect(normalizeSiteUrl("https://revoke-pls.vercel.app")).toBe(
       "https://revoke-pls.vercel.app",
