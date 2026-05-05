@@ -3,7 +3,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
   useAccount,
-  useChainId,
   useConnect,
   useDisconnect,
   useSwitchChain,
@@ -64,11 +63,10 @@ export function ConnectWalletButton({
   variant = "primary",
   className = "",
 }: ConnectWalletButtonProps) {
-  const { address, isConnected, status } = useAccount();
+  const { address, chainId: walletChainId, isConnected, status } = useAccount();
   const { connect, connectors, isPending: isConnecting, error } = useConnect();
   const { disconnect } = useDisconnect();
   const { switchChain, isPending: isSwitching } = useSwitchChain();
-  const chainId = useChainId();
 
   const [menuOpen, setMenuOpen] = useState(false);
   const [pendingId, setPendingId] = useState<string | null>(null);
@@ -140,8 +138,8 @@ export function ConnectWalletButton({
   }
 
   if (isConnected && address) {
-    const onSupportedChain = isSupportedChainId(chainId);
-    const currentConfig = getChainConfig(chainId);
+    const onSupportedChain = isSupportedChainId(walletChainId);
+    const currentConfig = getChainConfig(walletChainId);
 
     if (!onSupportedChain) {
       return (

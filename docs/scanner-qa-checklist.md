@@ -22,6 +22,7 @@ Run the scanner flow on all supported chains:
 For each chain, confirm diagnostics show:
 
 - Expected chain ID and chain name.
+- Connected wallet chain ID and active app chain ID match.
 - Supported chain: `Yes`.
 - Expected explorer/log source.
 - RPC env status without printing URL secrets.

@@ -15,10 +15,9 @@ import { ScannerDiagnosticsPanel } from "@/components/sections/scanner-diagnosti
 import { useApprovalDiscovery } from "@/hooks/use-approval-discovery";
 import { useBatchRevoke } from "@/hooks/use-batch-revoke";
 import { useNftApprovalDiscovery } from "@/hooks/use-nft-approval-discovery";
+import { resolveActiveChain, scannerSessionKey } from "@/lib/active-chain";
 import {
-  getChainConfig,
   getSupportedChainShortNames,
-  isSupportedChainId,
   type SupportedChainConfig,
 } from "@/lib/chains";
 import { shortenAddress } from "@/lib/format";
@@ -42,10 +41,18 @@ import { getErc20ResultState } from "@/lib/scanner-result-state";
  * as a secondary option for future registry-constrained modes.
  */
 export function ApprovalScanner() {
-  const { address, isConnected, status: accountStatus } = useAccount();
-  const chainId = useChainId();
-  const chainConfig = getChainConfig(chainId);
-  const onSupportedChain = isSupportedChainId(chainId);
+  const {
+    address,
+    chainId: walletChainId,
+    isConnected,
+    status: accountStatus,
+  } = useAccount();
+  const wagmiChainId = useChainId();
+  const activeChain = resolveActiveChain({
+    isConnected,
+    walletChainId,
+    wagmiChainId,
+  });
   const debugMode = useDebugModeFromQuery();
 
   return (
@@ -80,10 +87,13 @@ export function ApprovalScanner() {
             <ScannerBody
               accountStatus={accountStatus}
               address={address}
-              chainId={chainId}
+              walletChainId={walletChainId}
+              wagmiChainId={wagmiChainId}
+              activeChainId={activeChain.activeChainId}
               isConnected={isConnected}
-              chainConfig={chainConfig}
-              onSupportedChain={onSupportedChain}
+              chainConfig={activeChain.activeChainConfig}
+              onSupportedChain={activeChain.status === "supported"}
+              walletMatchesActiveChain={activeChain.walletMatchesActiveChain}
               debugMode={debugMode}
             />
           </div>
@@ -135,18 +145,24 @@ function SafetyStrip() {
 function ScannerBody({
   accountStatus,
   address,
-  chainId,
+  walletChainId,
+  wagmiChainId,
+  activeChainId,
   isConnected,
   chainConfig,
   onSupportedChain,
+  walletMatchesActiveChain,
   debugMode,
 }: {
   accountStatus: ReturnType<typeof useAccount>["status"];
   address: `0x${string}` | undefined;
-  chainId: number | undefined;
+  walletChainId: number | undefined;
+  wagmiChainId: number | undefined;
+  activeChainId: number | undefined;
   isConnected: boolean;
   chainConfig: SupportedChainConfig | undefined;
   onSupportedChain: boolean;
+  walletMatchesActiveChain: boolean | null;
   debugMode: boolean;
 }) {
   if (accountStatus === "reconnecting" || accountStatus === "connecting") {
@@ -161,9 +177,12 @@ function ScannerBody({
         <ScannerDiagnosticsPanel
           enabled={debugMode}
           owner={address}
-          chainId={chainId}
+          walletChainId={walletChainId}
+          wagmiChainId={wagmiChainId}
+          activeChainId={activeChainId}
           chainConfig={chainConfig}
           onSupportedChain={onSupportedChain}
+          walletMatchesActiveChain={walletMatchesActiveChain}
           isConnected={isConnected}
         />
       </div>
@@ -182,9 +201,12 @@ function ScannerBody({
         <ScannerDiagnosticsPanel
           enabled={debugMode}
           owner={address}
-          chainId={chainId}
+          walletChainId={walletChainId}
+          wagmiChainId={wagmiChainId}
+          activeChainId={activeChainId}
           chainConfig={chainConfig}
           onSupportedChain={onSupportedChain}
+          walletMatchesActiveChain={walletMatchesActiveChain}
           isConnected={isConnected}
         />
       </div>
@@ -205,9 +227,12 @@ function ScannerBody({
         <ScannerDiagnosticsPanel
           enabled={debugMode}
           owner={address}
-          chainId={chainId}
+          walletChainId={walletChainId}
+          wagmiChainId={wagmiChainId}
+          activeChainId={activeChainId}
           chainConfig={chainConfig}
           onSupportedChain={onSupportedChain}
+          walletMatchesActiveChain={walletMatchesActiveChain}
           isConnected={isConnected}
         />
       </div>
@@ -216,8 +241,15 @@ function ScannerBody({
 
   return (
     <ConnectedScanner
+      // Remount the scanner session when wallet or chain changes so old
+      // approvals, selections, batch state, and diagnostics cannot bleed into
+      // the newly active wallet chain.
+      key={scannerSessionKey(address, chainConfig.chainId)}
       owner={address}
       chainConfig={chainConfig}
+      walletChainId={walletChainId}
+      wagmiChainId={wagmiChainId}
+      walletMatchesActiveChain={walletMatchesActiveChain}
       debugMode={debugMode}
     />
   );
@@ -226,10 +258,16 @@ function ScannerBody({
 function ConnectedScanner({
   owner,
   chainConfig,
+  walletChainId,
+  wagmiChainId,
+  walletMatchesActiveChain,
   debugMode,
 }: {
   owner: `0x${string}`;
   chainConfig: SupportedChainConfig;
+  walletChainId: number | undefined;
+  wagmiChainId: number | undefined;
+  walletMatchesActiveChain: boolean | null;
   debugMode: boolean;
 }) {
   const scan = useApprovalDiscovery({ owner, chainId: chainConfig.chainId });
@@ -366,9 +404,12 @@ function ConnectedScanner({
       <ScannerDiagnosticsPanel
         enabled={debugMode}
         owner={owner}
-        chainId={chainConfig.chainId}
+        walletChainId={walletChainId}
+        wagmiChainId={wagmiChainId}
+        activeChainId={chainConfig.chainId}
         chainConfig={chainConfig}
         onSupportedChain
+        walletMatchesActiveChain={walletMatchesActiveChain}
         isConnected
         erc20={scan}
         nft={nft}

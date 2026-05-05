@@ -195,13 +195,33 @@ describe("supported chain config", () => {
   });
 
   it("builds a BEP-20-compatible revoke call with approve(spender, 0)", () => {
-    expect(
-      buildRevokeCall({
+    const request = {
+      ...buildRevokeCall({
         chainId: BSC_CHAIN_ID,
         tokenAddress: TOKEN,
         spenderAddress: SPENDER,
       }),
-    ).toMatchObject({
+      chainId: BSC_CHAIN_ID,
+    };
+
+    expect(request).toMatchObject({
+      address: TOKEN,
+      functionName: "approve",
+      args: [SPENDER, 0n],
+    });
+  });
+
+  it("builds a PulseChain PRC-20-compatible revoke call with chainId 369", () => {
+    const request = {
+      ...buildRevokeCall({
+        chainId: PULSECHAIN_CHAIN_ID,
+        tokenAddress: TOKEN,
+        spenderAddress: SPENDER,
+      }),
+      chainId: PULSECHAIN_CHAIN_ID,
+    };
+
+    expect(request).toMatchObject({
       address: TOKEN,
       functionName: "approve",
       args: [SPENDER, 0n],
@@ -209,13 +229,16 @@ describe("supported chain config", () => {
   });
 
   it("builds a Base ERC-20-compatible revoke call with approve(spender, 0)", () => {
-    expect(
-      buildRevokeCall({
+    const request = {
+      ...buildRevokeCall({
         chainId: BASE_CHAIN_ID,
         tokenAddress: TOKEN,
         spenderAddress: SPENDER,
       }),
-    ).toMatchObject({
+      chainId: BASE_CHAIN_ID,
+    };
+
+    expect(request).toMatchObject({
       address: TOKEN,
       functionName: "approve",
       args: [SPENDER, 0n],

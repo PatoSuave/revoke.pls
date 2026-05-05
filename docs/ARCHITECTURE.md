@@ -26,6 +26,11 @@ Ethereum Mainnet is not an active supported chain.
 - Base RPC defaults to `https://mainnet.base.org`.
 - RPCs can be overridden with public env vars.
 - Live reads and writes always include the approval record's `chainId`.
+- When connected, the wallet account `chainId` is the active scanner source of
+  truth. The app does not fall back to PulseChain after a supported wallet chain
+  is detected.
+- The scanner session remounts when wallet address or chain changes so previous
+  results, selections, batch state, and diagnostics are cleared.
 
 ## Discovery Strategy
 
