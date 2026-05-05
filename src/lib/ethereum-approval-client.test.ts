@@ -2,6 +2,9 @@ import { describe, expect, it } from "vitest";
 
 import {
   ETHEREUM_MAINNET_CLIENT_CHAIN_ID,
+  ETHEREUM_READ_ONLY_MODE_LABEL,
+  ethereumTokenDisplayDescription,
+  isEthereumReadOnlyChainId,
   mapEthereumApprovalApiResponse,
   type EthereumApprovalApiResponse,
 } from "./ethereum-approval-client";
@@ -42,10 +45,43 @@ function response(
 }
 
 describe("Ethereum approval client mapping", () => {
+  it("identifies Ethereum Mainnet as gated read-only mode", () => {
+    expect(ETHEREUM_READ_ONLY_MODE_LABEL).toBe("Ethereum read-only mode");
+    expect(isEthereumReadOnlyChainId(1)).toBe(true);
+    expect(isEthereumReadOnlyChainId(369)).toBe(false);
+  });
+
   it("keeps Ethereum Mainnet out of the active supported chain list", () => {
     expect(supportedChainConfigList.map((chain) => chain.chainId)).not.toContain(
       ETHEREUM_MAINNET_CLIENT_CHAIN_ID,
     );
+  });
+
+  it("uses neutral Ethereum token descriptions for PulseChain-specific metadata", () => {
+    expect(
+      ethereumTokenDisplayDescription(
+        "WBTC from PulseChain",
+        "0x2222222222222222222222222222222222222222",
+      ),
+    ).toBe("Ethereum token");
+    expect(
+      ethereumTokenDisplayDescription(
+        "GIFF on Pulse Chain",
+        "0x2222222222222222222222222222222222222222",
+      ),
+    ).toBe("Ethereum token");
+    expect(
+      ethereumTokenDisplayDescription(
+        "Wrapped BTC",
+        "0x2222222222222222222222222222222222222222",
+      ),
+    ).toBe("Wrapped BTC");
+    expect(
+      ethereumTokenDisplayDescription(
+        undefined,
+        "0x2222222222222222222222222222222222222222",
+      ),
+    ).toBe("Ethereum token");
   });
 
   it("maps active ERC-20 and NFT approvals without enabling revoke", () => {

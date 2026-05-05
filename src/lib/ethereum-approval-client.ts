@@ -6,6 +6,7 @@ import type { NftApproval } from "@/lib/nft-approvals";
 export const ETHEREUM_MAINNET_CLIENT_CHAIN_ID = 1;
 export const ETHEREUM_MAINNET_DISPLAY_NAME = "Ethereum Mainnet";
 export const ETHEREUM_MAINNET_SHORT_NAME = "Ethereum";
+export const ETHEREUM_READ_ONLY_MODE_LABEL = "Ethereum read-only mode";
 export const ETHEREUM_MAINNET_NATIVE_SYMBOL = "ETH";
 export const ETHEREUM_MAINNET_EXPLORER_NAME = "Etherscan";
 export const ETHEREUM_MAINNET_EXPLORER_BASE_URL = "https://etherscan.io";
@@ -237,4 +238,31 @@ export function ethereumExplorerAddressUrl(address: Address | string): string {
 
 export function ethereumExplorerTokenUrl(address: Address | string): string {
   return `${ETHEREUM_MAINNET_EXPLORER_BASE_URL}/token/${address}`;
+}
+
+export function isEthereumReadOnlyChainId(
+  chainId: number | undefined,
+): chainId is typeof ETHEREUM_MAINNET_CLIENT_CHAIN_ID {
+  return chainId === ETHEREUM_MAINNET_CLIENT_CHAIN_ID;
+}
+
+export function ethereumTokenDisplayDescription(
+  tokenName: string | undefined,
+  tokenAddress: Address | string,
+): string {
+  const cleaned = tokenName?.trim();
+  if (!cleaned) return "Ethereum token";
+
+  // The gated Ethereum view must not reuse PulseChain-specific bridge/fork
+  // language as token description copy. Keep the symbol visible, but use a
+  // neutral descriptor when returned metadata is chain-specific or ambiguous.
+  if (/\bpulse\s*chain\b/i.test(cleaned) || /\bpulsechain\b/i.test(cleaned)) {
+    return "Ethereum token";
+  }
+
+  if (cleaned.toLowerCase() === String(tokenAddress).toLowerCase()) {
+    return "Ethereum token";
+  }
+
+  return cleaned;
 }
