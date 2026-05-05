@@ -15,7 +15,7 @@ import {
  *  - BNB Smart Chain mainnet (56)
  *  - Base mainnet (8453)
  *
- * Ethereum Mainnet (1) is registered as a wallet-only chain for the gated
+ * Ethereum Mainnet (1) is registered as a wallet-only chain for the
  * Ethereum scanner/revoke flow. It is intentionally not part of the active
  * `supportedChains` product list used by the default scanner.
  *

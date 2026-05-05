@@ -11,7 +11,7 @@ import {
   ETHEREUM_MAINNET_DISPLAY_NAME,
   ETHEREUM_MAINNET_EXPLORER_NAME,
   ETHEREUM_MAINNET_NATIVE_SYMBOL,
-  ETHEREUM_READ_ONLY_MODE_LABEL,
+  ETHEREUM_LIVE_VERIFICATION_LABEL,
   canEnableEthereumWalletRevoke,
   ethereumApprovalDisplayAllowance,
   ethereumExplorerAddressUrl,
@@ -70,16 +70,22 @@ export function EthereumReadOnlyScanner({
                 aria-hidden
               />
               {revokeEnabled
-                ? "Ethereum scan/revoke mode"
-                : ETHEREUM_READ_ONLY_MODE_LABEL}
+                ? "Ethereum revoke ready"
+                : ETHEREUM_LIVE_VERIFICATION_LABEL}
             </span>
             <span className="rounded-full border border-pulse-border bg-pulse-panel/70 px-3 py-1 font-mono text-xs text-pulse-muted">
               {shortenAddress(owner)}
             </span>
-            <span className="rounded-full border border-amber-400/35 bg-amber-400/10 px-3 py-1 text-xs font-semibold text-amber-200">
+            <span
+              className={`rounded-full border px-3 py-1 text-xs font-semibold ${
+                revokeEnabled
+                  ? "border-pulse-green/35 bg-pulse-green/10 text-pulse-green"
+                  : "border-pulse-border bg-pulse-panel/70 text-pulse-muted"
+              }`}
+            >
               {revokeEnabled
-                ? "Wallet-side revoke enabled"
-                : "Read-only Ethereum scan"}
+                ? "Wallet revoke available"
+                : "Read-only scan"}
             </span>
           </div>
 
@@ -131,17 +137,24 @@ function ReadOnlyNotice({
   revokeEnabled: boolean;
   revokeDisabledReason: string;
 }) {
+  const noticeClass = revokeEnabled
+    ? "border-pulse-green/35 bg-pulse-green/10"
+    : "border-pulse-cyan/35 bg-pulse-cyan/10";
+  const headingClass = revokeEnabled ? "text-pulse-green" : "text-pulse-cyan";
+
   return (
-    <div className="rounded-2xl border border-amber-400/40 bg-amber-400/10 p-4 text-sm">
-      <p className="text-xs font-semibold uppercase tracking-[0.16em] text-amber-200">
+    <div className={`rounded-2xl border p-4 text-sm ${noticeClass}`}>
+      <p
+        className={`text-xs font-semibold uppercase tracking-[0.16em] ${headingClass}`}
+      >
         {revokeEnabled
-          ? "Ethereum wallet-side revoke enabled"
-          : "Ethereum verification required"}
+          ? "Ethereum live verification complete"
+          : "Ethereum live verification"}
       </p>
       <p className="mt-2 leading-6 text-pulse-muted">
         {revokeEnabled
-          ? "Ethereum revoke is enabled only for approvals that the read-only API live-validated. Transactions are requested from the connected wallet on Ethereum Mainnet; the API still cannot sign, submit, or move funds."
-          : `Ethereum Mainnet approval discovery is connected through a read-only API. ${revokeDisabledReason} This view does not request signatures, submit transactions, or move funds.`}
+          ? "These Ethereum approvals were live-validated before revoke became available. Transactions still come from your connected wallet on Ethereum Mainnet; the API cannot sign, submit, or move funds."
+          : `Ethereum approvals are checked through a read-only API and live RPC validation. ${revokeDisabledReason} The scanner will not request signatures or submit transactions until revoke is available.`}
       </p>
     </div>
   );
@@ -722,7 +735,7 @@ function EthereumErc20Confirm({
   const canConfirm = preflight?.status === "active" && !isRefreshing;
   return (
     <div className="w-full max-w-xs rounded-xl border border-pulse-border/70 bg-pulse-bg/60 p-3 text-xs leading-5 text-pulse-muted sm:text-right">
-      <p className="font-semibold text-pulse-text">Review Ethereum revoke</p>
+      <p className="font-semibold text-pulse-text">Review transaction</p>
       <p className="mt-1">
         Sets allowance to zero with{" "}
         <span className="font-mono text-pulse-text">
@@ -784,7 +797,7 @@ function EthereumNftConfirm({
       : `approve(0x0, ${approval.tokenId?.toString() ?? "tokenId"})`;
   return (
     <div className="w-full max-w-xs rounded-xl border border-pulse-border/70 bg-pulse-bg/60 p-3 text-xs leading-5 text-pulse-muted sm:text-right">
-      <p className="font-semibold text-pulse-text">Review Ethereum NFT revoke</p>
+      <p className="font-semibold text-pulse-text">Review transaction</p>
       <p className="mt-1">
         Sends <span className="font-mono text-pulse-text">{call}</span>. Gas is
         paid in {ETHEREUM_MAINNET_NATIVE_SYMBOL}.
@@ -861,7 +874,7 @@ function EthereumPreflightNotice({
   return (
     <p className="mt-2 rounded-lg border border-amber-400/40 bg-amber-400/10 p-2 text-amber-200">
       Live verification failed
-      {preflight.error ? ` (${preflight.error})` : ""}. Revoke is disabled.
+      {preflight.error ? ` (${preflight.error})` : ""}. Revoke is unavailable.
     </p>
   );
 }
@@ -870,7 +883,7 @@ function ReadOnlyAction({ title }: { title?: string }) {
   return (
     <div className="flex justify-stretch sm:justify-end">
       <span className="inline-flex w-full items-center justify-center rounded-xl border border-pulse-border bg-white/5 px-3 py-2 text-xs font-semibold text-pulse-muted sm:w-auto">
-        <span title={title}>Revoke disabled</span>
+        <span title={title}>Revoke unavailable</span>
       </span>
     </div>
   );
@@ -947,7 +960,7 @@ function EthereumDiagnostics({
     ["API route", "/api/ethereum/approvals"],
     ["API status", response?.status ?? scan.status],
     ["Wallet-side revoke enabled", revokeEnabled ? "Yes" : "No"],
-    ["Revoke disabled reason", revokeEnabled ? "None" : revokeDisabledReason],
+    ["Revoke unavailable reason", revokeEnabled ? "None" : revokeDisabledReason],
     ["Chain ID", diagnostics?.chainId.toString() ?? "1"],
     ["RPC configured", diagnostics?.rpcConfigured ? "Yes" : "No / unknown"],
     [

@@ -175,7 +175,7 @@ describe("supported chain config", () => {
     );
   });
 
-  it("builds Etherscan links for gated Ethereum wallet revokes without activating Ethereum", () => {
+  it("builds Etherscan links for wallet-only Ethereum revokes without activating Ethereum", () => {
     expect(isSupportedChainId(ETHEREUM_MAINNET_CLIENT_CHAIN_ID)).toBe(false);
     expect(explorerAddressUrl(ETHEREUM_MAINNET_CLIENT_CHAIN_ID, SPENDER)).toBe(
       `https://etherscan.io/address/${SPENDER}`,

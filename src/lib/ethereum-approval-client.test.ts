@@ -1,11 +1,11 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  ETHEREUM_LIVE_VERIFICATION_LABEL,
   ETHEREUM_MAINNET_CLIENT_CHAIN_ID,
   ETHEREUM_MAINNET_EXPLORER_BASE_URL,
   ETHEREUM_MAINNET_NATIVE_SYMBOL,
   ETHEREUM_MAINNET_STATUS_LABEL,
-  ETHEREUM_READ_ONLY_MODE_LABEL,
   canEnableEthereumWalletRevoke,
   ethereumApprovalDisplayAllowance,
   ethereumExplorerTxUrl,
@@ -55,8 +55,10 @@ function response(
 }
 
 describe("Ethereum approval client mapping", () => {
-  it("identifies Ethereum Mainnet status and read-only labels", () => {
-    expect(ETHEREUM_READ_ONLY_MODE_LABEL).toBe("Ethereum read-only mode");
+  it("identifies Ethereum Mainnet status and verification labels", () => {
+    expect(ETHEREUM_LIVE_VERIFICATION_LABEL).toBe(
+      "Ethereum live verification",
+    );
     expect(ETHEREUM_MAINNET_STATUS_LABEL).toBe("Ethereum Mainnet");
     expect(ethereumMainnetWalletChain.id).toBe(1);
     expect(ethereumMainnetWalletChain.nativeCurrency.symbol).toBe(
