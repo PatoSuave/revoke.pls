@@ -1,15 +1,48 @@
-import type { Address } from "viem";
+import { defineChain, type Address } from "viem";
 
 import type { Approval } from "@/lib/approvals";
+import type { SupportedChainId } from "@/lib/chains";
 import type { NftApproval } from "@/lib/nft-approvals";
 
 export const ETHEREUM_MAINNET_CLIENT_CHAIN_ID = 1;
 export const ETHEREUM_MAINNET_DISPLAY_NAME = "Ethereum Mainnet";
 export const ETHEREUM_MAINNET_SHORT_NAME = "Ethereum";
 export const ETHEREUM_READ_ONLY_MODE_LABEL = "Ethereum read-only mode";
+export const ETHEREUM_GATED_MODE_LABEL = "Ethereum gated mode";
 export const ETHEREUM_MAINNET_NATIVE_SYMBOL = "ETH";
 export const ETHEREUM_MAINNET_EXPLORER_NAME = "Etherscan";
 export const ETHEREUM_MAINNET_EXPLORER_BASE_URL = "https://etherscan.io";
+export const ETHEREUM_MAINNET_PUBLIC_RPC_URL =
+  "https://ethereum-rpc.publicnode.com";
+
+export const ethereumMainnetWalletChain = defineChain({
+  id: ETHEREUM_MAINNET_CLIENT_CHAIN_ID,
+  name: ETHEREUM_MAINNET_DISPLAY_NAME,
+  nativeCurrency: {
+    name: "Ether",
+    symbol: ETHEREUM_MAINNET_NATIVE_SYMBOL,
+    decimals: 18,
+  },
+  rpcUrls: {
+    default: {
+      http: [
+        process.env.NEXT_PUBLIC_MAINNET_RPC_URL ??
+          process.env.NEXT_PUBLIC_ETHEREUM_RPC_URL ??
+          ETHEREUM_MAINNET_PUBLIC_RPC_URL,
+      ],
+    },
+  },
+  blockExplorers: {
+    default: {
+      name: ETHEREUM_MAINNET_EXPLORER_NAME,
+      url: ETHEREUM_MAINNET_EXPLORER_BASE_URL,
+    },
+  },
+});
+
+export type WalletWriteChainId =
+  | SupportedChainId
+  | typeof ETHEREUM_MAINNET_CLIENT_CHAIN_ID;
 
 export type EthereumApprovalApiStatus =
   | "active-approvals-found"
@@ -65,7 +98,10 @@ export type EthereumApprovalClientState =
 export interface EthereumApprovalClientMapping {
   state: EthereumApprovalClientState;
   canShowClear: boolean;
-  revokeEnabled: false;
+  /** True only when the API response is complete enough for wallet-side revoke. */
+  revokeEnabled: boolean;
+  revokeDisabledReason: string | null;
+  malformedResponse: boolean;
   activeApprovalCount: number;
   approvals: {
     erc20: Approval[];
@@ -139,10 +175,12 @@ export function mapEthereumApprovalApiResponse(
   response: EthereumApprovalApiResponse,
 ): EthereumApprovalClientMapping {
   const warnings = [...response.warnings];
+  let malformedResponse = false;
   const erc20: Approval[] = [];
   for (const approval of response.approvals.erc20) {
     const rawAllowance = parseBigIntOrNull(approval.rawAllowance);
     if (rawAllowance === null) {
+      malformedResponse = true;
       warnings.push("Ethereum API returned a malformed ERC-20 allowance.");
       continue;
     }
@@ -159,6 +197,7 @@ export function mapEthereumApprovalApiResponse(
 
     const parsedTokenId = parseBigIntOrNull(tokenId);
     if (parsedTokenId === null) {
+      malformedResponse = true;
       warnings.push("Ethereum API returned a malformed NFT token ID.");
       continue;
     }
@@ -169,15 +208,32 @@ export function mapEthereumApprovalApiResponse(
     response.diagnostics.liveReadFailureCount > 0 ||
     response.diagnostics.incompleteVerificationCount > 0 ||
     response.diagnostics.discoveryTruncated;
+  const apiVerifiedForRevoke =
+    response.status === "active-approvals-found" &&
+    response.ok &&
+    !incomplete &&
+    !malformedResponse &&
+    activeApprovalCount > 0;
+  const base = {
+    revokeEnabled: apiVerifiedForRevoke,
+    revokeDisabledReason: ethereumApiRevokeDisabledReason({
+      response,
+      incomplete,
+      malformedResponse,
+      activeApprovalCount,
+    }),
+    malformedResponse,
+    activeApprovalCount,
+    approvals: { erc20, nft },
+    warnings,
+  };
 
   if (response.status === "config-missing") {
     return {
       state: "config-missing",
       canShowClear: false,
+      ...base,
       revokeEnabled: false,
-      activeApprovalCount,
-      approvals: { erc20, nft },
-      warnings,
     };
   }
 
@@ -185,21 +241,21 @@ export function mapEthereumApprovalApiResponse(
     return {
       state: "upstream-failure",
       canShowClear: false,
+      ...base,
       revokeEnabled: false,
-      activeApprovalCount,
-      approvals: { erc20, nft },
-      warnings,
     };
   }
 
-  if (response.status === "verification-incomplete" || incomplete) {
+  if (
+    response.status === "verification-incomplete" ||
+    incomplete ||
+    malformedResponse
+  ) {
     return {
       state: "verification-incomplete",
       canShowClear: false,
+      ...base,
       revokeEnabled: false,
-      activeApprovalCount,
-      approvals: { erc20, nft },
-      warnings,
     };
   }
 
@@ -207,21 +263,82 @@ export function mapEthereumApprovalApiResponse(
     return {
       state: "active",
       canShowClear: false,
-      revokeEnabled: false,
-      activeApprovalCount,
-      approvals: { erc20, nft },
-      warnings,
+      ...base,
     };
   }
 
   return {
     state: "complete-clear",
-    canShowClear: true,
+    canShowClear: !malformedResponse,
+    ...base,
     revokeEnabled: false,
-    activeApprovalCount,
-    approvals: { erc20, nft },
-    warnings,
   };
+}
+
+function ethereumApiRevokeDisabledReason({
+  response,
+  incomplete,
+  malformedResponse,
+  activeApprovalCount,
+}: {
+  response: EthereumApprovalApiResponse;
+  incomplete: boolean;
+  malformedResponse: boolean;
+  activeApprovalCount: number;
+}): string | null {
+  if (
+    response.status === "active-approvals-found" &&
+    response.ok &&
+    !incomplete &&
+    !malformedResponse &&
+    activeApprovalCount > 0
+  ) {
+    return null;
+  }
+
+  if (response.status === "config-missing") {
+    return "Ethereum API configuration is missing - revoke disabled.";
+  }
+  if (response.status === "upstream-failure") {
+    return "Ethereum explorer or RPC failed - revoke disabled.";
+  }
+  if (malformedResponse) {
+    return "Ethereum API response was malformed - revoke disabled.";
+  }
+  if (response.status === "verification-incomplete" || incomplete) {
+    return "Verification incomplete - revoke disabled.";
+  }
+  if (response.status === "complete-clear" || activeApprovalCount === 0) {
+    return "No active Ethereum approvals are available to revoke.";
+  }
+  return "Ethereum revoke disabled.";
+}
+
+export function canEnableEthereumWalletRevoke({
+  mapping,
+  walletChainId,
+}: {
+  mapping: EthereumApprovalClientMapping | null | undefined;
+  walletChainId: number | undefined;
+}): boolean {
+  return (
+    mapping?.revokeEnabled === true &&
+    walletChainId === ETHEREUM_MAINNET_CLIENT_CHAIN_ID
+  );
+}
+
+export function ethereumWalletRevokeDisabledReason({
+  mapping,
+  walletChainId,
+}: {
+  mapping: EthereumApprovalClientMapping | null | undefined;
+  walletChainId: number | undefined;
+}): string {
+  if (!mapping) return "Ethereum approvals are still loading.";
+  if (walletChainId !== ETHEREUM_MAINNET_CLIENT_CHAIN_ID) {
+    return "Switch to Ethereum Mainnet.";
+  }
+  return mapping.revokeDisabledReason ?? "Ethereum wallet revoke is available.";
 }
 
 function parseBigIntOrNull(value: string): bigint | null {
@@ -238,6 +355,10 @@ export function ethereumExplorerAddressUrl(address: Address | string): string {
 
 export function ethereumExplorerTokenUrl(address: Address | string): string {
   return `${ETHEREUM_MAINNET_EXPLORER_BASE_URL}/token/${address}`;
+}
+
+export function ethereumExplorerTxUrl(hash: string): string {
+  return `${ETHEREUM_MAINNET_EXPLORER_BASE_URL}/tx/${hash}`;
 }
 
 export function isEthereumReadOnlyChainId(

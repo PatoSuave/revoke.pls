@@ -1,23 +1,32 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import type { ReactNode } from "react";
 import type { Address } from "viem";
 
 import { useEthereumApprovalScan } from "@/hooks/use-ethereum-approval-scan";
+import { useRevokeApproval } from "@/hooks/use-revoke-approval";
+import { useRevokeNftApproval } from "@/hooks/use-revoke-nft-approval";
 import {
   ETHEREUM_MAINNET_DISPLAY_NAME,
   ETHEREUM_MAINNET_EXPLORER_NAME,
   ETHEREUM_MAINNET_NATIVE_SYMBOL,
   ETHEREUM_READ_ONLY_MODE_LABEL,
+  canEnableEthereumWalletRevoke,
   ethereumApprovalDisplayAllowance,
   ethereumExplorerAddressUrl,
   ethereumExplorerTokenUrl,
+  ethereumExplorerTxUrl,
   ethereumTokenDisplayDescription,
   ethereumTokenDisplaySymbol,
+  ethereumWalletRevokeDisabledReason,
 } from "@/lib/ethereum-approval-client";
 import { shortenAddress } from "@/lib/format";
 import type { NftApproval } from "@/lib/nft-approvals";
+import type {
+  Erc20PreflightResult,
+  NftPreflightResult,
+} from "@/lib/preflight";
 import { scoreApprovals, type RiskAssessment, type ScoredApproval } from "@/lib/risk";
 
 export function EthereumReadOnlyScanner({
@@ -41,6 +50,14 @@ export function EthereumReadOnlyScanner({
     [scan.mapped?.approvals.nft],
   );
   const activeCount = scoredErc20.length + sortedNft.length;
+  const revokeEnabled = canEnableEthereumWalletRevoke({
+    mapping: scan.mapped,
+    walletChainId,
+  });
+  const revokeDisabledReason = ethereumWalletRevokeDisabledReason({
+    mapping: scan.mapped,
+    walletChainId,
+  });
 
   return (
     <div className="space-y-6">
@@ -52,13 +69,17 @@ export function EthereumReadOnlyScanner({
                 className="h-1.5 w-1.5 rounded-full bg-pulse-cyan"
                 aria-hidden
               />
-              {ETHEREUM_READ_ONLY_MODE_LABEL}
+              {revokeEnabled
+                ? "Ethereum wallet revoke mode"
+                : ETHEREUM_READ_ONLY_MODE_LABEL}
             </span>
             <span className="rounded-full border border-pulse-border bg-pulse-panel/70 px-3 py-1 font-mono text-xs text-pulse-muted">
               {shortenAddress(owner)}
             </span>
             <span className="rounded-full border border-amber-400/35 bg-amber-400/10 px-3 py-1 text-xs font-semibold text-amber-200">
-              Read-only Ethereum scan
+              {revokeEnabled
+                ? "Wallet-side revoke enabled"
+                : "Read-only Ethereum scan"}
             </span>
           </div>
 
@@ -73,13 +94,19 @@ export function EthereumReadOnlyScanner({
         </div>
       </section>
 
-      <ReadOnlyNotice />
+      <ReadOnlyNotice
+        revokeEnabled={revokeEnabled}
+        revokeDisabledReason={revokeDisabledReason}
+      />
 
       <EthereumScanContent
         scan={scan}
+        owner={owner}
         erc20={scoredErc20}
         nft={sortedNft}
         activeCount={activeCount}
+        revokeEnabled={revokeEnabled}
+        revokeDisabledReason={revokeDisabledReason}
       />
 
       <EthereumCoverageNote scan={scan} />
@@ -90,21 +117,29 @@ export function EthereumReadOnlyScanner({
         walletChainId={walletChainId}
         wagmiChainId={wagmiChainId}
         scan={scan}
+        revokeEnabled={revokeEnabled}
+        revokeDisabledReason={revokeDisabledReason}
       />
     </div>
   );
 }
 
-function ReadOnlyNotice() {
+function ReadOnlyNotice({
+  revokeEnabled,
+  revokeDisabledReason,
+}: {
+  revokeEnabled: boolean;
+  revokeDisabledReason: string;
+}) {
   return (
     <div className="rounded-2xl border border-amber-400/40 bg-amber-400/10 p-4 text-sm">
       <p className="text-xs font-semibold uppercase tracking-[0.16em] text-amber-200">
-        Ethereum gated mode
+        {revokeEnabled ? "Ethereum wallet-side revoke" : "Ethereum gated mode"}
       </p>
       <p className="mt-2 leading-6 text-pulse-muted">
-        Ethereum Mainnet approval discovery is connected through a read-only API.
-        Revoke transactions are not enabled in this branch. This view does not
-        request signatures, submit transactions, or move funds.
+        {revokeEnabled
+          ? "Ethereum revoke is enabled only for approvals that the read-only API live-validated. Transactions are requested from the connected wallet on Ethereum Mainnet; the API still cannot sign, submit, or move funds."
+          : `Ethereum Mainnet approval discovery is connected through a read-only API. ${revokeDisabledReason} This view does not request signatures, submit transactions, or move funds.`}
       </p>
     </div>
   );
@@ -112,14 +147,20 @@ function ReadOnlyNotice() {
 
 function EthereumScanContent({
   scan,
+  owner,
   erc20,
   nft,
   activeCount,
+  revokeEnabled,
+  revokeDisabledReason,
 }: {
   scan: ReturnType<typeof useEthereumApprovalScan>;
+  owner: Address;
   erc20: readonly ScoredApproval[];
   nft: readonly NftApproval[];
   activeCount: number;
+  revokeEnabled: boolean;
+  revokeDisabledReason: string;
 }) {
   if (scan.status === "pending" || !scan.mapped) {
     return <EthereumScannerSkeleton />;
@@ -212,13 +253,25 @@ function EthereumScanContent({
       ) : null}
 
       {erc20.length > 0 ? (
-        <ReadOnlyErc20Table approvals={erc20} />
+        <ReadOnlyErc20Table
+          approvals={erc20}
+          owner={owner}
+          revokeEnabled={revokeEnabled}
+          revokeDisabledReason={revokeDisabledReason}
+          onRevoked={scan.refetch}
+        />
       ) : (
         <EmptyReadOnlyGroup label="ERC-20 approvals" />
       )}
 
       {nft.length > 0 ? (
-        <ReadOnlyNftTable approvals={nft} />
+        <ReadOnlyNftTable
+          approvals={nft}
+          owner={owner}
+          revokeEnabled={revokeEnabled}
+          revokeDisabledReason={revokeDisabledReason}
+          onRevoked={scan.refetch}
+        />
       ) : (
         <EmptyReadOnlyGroup label="ERC-721 / ERC-1155 approvals" />
       )}
@@ -228,8 +281,16 @@ function EthereumScanContent({
 
 function ReadOnlyErc20Table({
   approvals,
+  owner,
+  revokeEnabled,
+  revokeDisabledReason,
+  onRevoked,
 }: {
   approvals: readonly ScoredApproval[];
+  owner: Address;
+  revokeEnabled: boolean;
+  revokeDisabledReason: string;
+  onRevoked: () => void;
 }) {
   return (
     <section className="overflow-hidden rounded-2xl border border-pulse-border bg-pulse-bg/40">
@@ -299,7 +360,13 @@ function ReadOnlyErc20Table({
               )}
             </div>
 
-            <ReadOnlyAction />
+            <EthereumErc20Action
+              approval={approval}
+              owner={owner}
+              revokeEnabled={revokeEnabled}
+              revokeDisabledReason={revokeDisabledReason}
+              onRevoked={onRevoked}
+            />
           </li>
         ))}
       </ul>
@@ -307,7 +374,19 @@ function ReadOnlyErc20Table({
   );
 }
 
-function ReadOnlyNftTable({ approvals }: { approvals: readonly NftApproval[] }) {
+function ReadOnlyNftTable({
+  approvals,
+  owner,
+  revokeEnabled,
+  revokeDisabledReason,
+  onRevoked,
+}: {
+  approvals: readonly NftApproval[];
+  owner: Address;
+  revokeEnabled: boolean;
+  revokeDisabledReason: string;
+  onRevoked: () => void;
+}) {
   return (
     <section className="overflow-hidden rounded-2xl border border-pulse-border bg-pulse-bg/40">
       <div className="hidden grid-cols-[1.2fr_1.5fr_1fr_auto] gap-4 border-b border-pulse-border bg-pulse-bg/60 px-4 py-3 text-xs font-semibold uppercase tracking-wider text-pulse-muted sm:grid">
@@ -369,7 +448,13 @@ function ReadOnlyNftTable({ approvals }: { approvals: readonly NftApproval[] }) 
               </span>
             </div>
 
-            <ReadOnlyAction />
+            <EthereumNftAction
+              approval={approval}
+              owner={owner}
+              revokeEnabled={revokeEnabled}
+              revokeDisabledReason={revokeDisabledReason}
+              onRevoked={onRevoked}
+            />
           </li>
         ))}
       </ul>
@@ -377,13 +462,428 @@ function ReadOnlyNftTable({ approvals }: { approvals: readonly NftApproval[] }) 
   );
 }
 
-function ReadOnlyAction() {
+function EthereumErc20Action({
+  approval,
+  owner,
+  revokeEnabled,
+  revokeDisabledReason,
+  onRevoked,
+}: {
+  approval: ScoredApproval;
+  owner: Address;
+  revokeEnabled: boolean;
+  revokeDisabledReason: string;
+  onRevoked: () => void;
+}) {
+  const [confirming, setConfirming] = useState(false);
+  const revoke = useRevokeApproval({
+    target: {
+      chainId: approval.chainId,
+      tokenAddress: approval.tokenAddress,
+      spenderAddress: approval.spenderAddress,
+    },
+    ownerAddress: owner,
+    tokenSymbol: approval.tokenSymbol,
+    tokenDecimals: approval.tokenDecimals,
+    onSuccess: () => {
+      setConfirming(false);
+      onRevoked();
+    },
+  });
+
+  if (!revokeEnabled) {
+    return <ReadOnlyAction title={revokeDisabledReason} />;
+  }
+
+  return (
+    <EthereumActionShell
+      status={revoke.status}
+      hash={revoke.hash}
+      errorMessage={revoke.errorMessage}
+      isBusy={revoke.isBusy}
+      confirming={confirming}
+      onStart={() => {
+        setConfirming(true);
+        void revoke.refreshPreflight();
+      }}
+      onCancel={() => setConfirming(false)}
+      onRetry={() => {
+        revoke.reset();
+        setConfirming(true);
+        void revoke.refreshPreflight();
+      }}
+      onDismiss={revoke.reset}
+    >
+      {confirming ? (
+        <EthereumErc20Confirm
+          approval={approval}
+          preflight={revoke.preflight}
+          isRefreshing={revoke.isRefreshingApproval}
+          onRefresh={() => void revoke.refreshPreflight()}
+          onConfirm={() => void revoke.revoke()}
+        />
+      ) : null}
+    </EthereumActionShell>
+  );
+}
+
+function EthereumNftAction({
+  approval,
+  owner,
+  revokeEnabled,
+  revokeDisabledReason,
+  onRevoked,
+}: {
+  approval: NftApproval;
+  owner: Address;
+  revokeEnabled: boolean;
+  revokeDisabledReason: string;
+  onRevoked: () => void;
+}) {
+  const [confirming, setConfirming] = useState(false);
+  const revoke = useRevokeNftApproval({
+    target: approval,
+    ownerAddress: owner,
+    onSuccess: () => {
+      setConfirming(false);
+      onRevoked();
+    },
+  });
+
+  if (!revokeEnabled) {
+    return <ReadOnlyAction title={revokeDisabledReason} />;
+  }
+
+  return (
+    <EthereumActionShell
+      status={revoke.status}
+      hash={revoke.hash}
+      errorMessage={revoke.errorMessage}
+      isBusy={revoke.isBusy}
+      confirming={confirming}
+      onStart={() => {
+        setConfirming(true);
+        void revoke.refreshPreflight();
+      }}
+      onCancel={() => setConfirming(false)}
+      onRetry={() => {
+        revoke.reset();
+        setConfirming(true);
+        void revoke.refreshPreflight();
+      }}
+      onDismiss={revoke.reset}
+    >
+      {confirming ? (
+        <EthereumNftConfirm
+          approval={approval}
+          preflight={revoke.preflight}
+          isRefreshing={revoke.isRefreshingApproval}
+          onRefresh={() => void revoke.refreshPreflight()}
+          onConfirm={() => void revoke.revoke()}
+        />
+      ) : null}
+    </EthereumActionShell>
+  );
+}
+
+function EthereumActionShell({
+  status,
+  hash,
+  errorMessage,
+  isBusy,
+  confirming,
+  onStart,
+  onCancel,
+  onRetry,
+  onDismiss,
+  children,
+}: {
+  status: ReturnType<typeof useRevokeApproval>["status"];
+  hash?: `0x${string}`;
+  errorMessage?: string;
+  isBusy: boolean;
+  confirming: boolean;
+  onStart: () => void;
+  onCancel: () => void;
+  onRetry: () => void;
+  onDismiss: () => void;
+  children?: ReactNode;
+}) {
+  const base =
+    "inline-flex w-full items-center justify-center rounded-xl px-3 py-2 text-xs font-semibold transition disabled:cursor-not-allowed sm:w-auto";
+
+  let action: ReactNode;
+  if (status === "refreshing") {
+    action = (
+      <span className={`${base} border border-pulse-cyan/40 bg-pulse-cyan/10 text-pulse-cyan`}>
+        Checking...
+      </span>
+    );
+  } else if (status === "wallet") {
+    action = (
+      <span className={`${base} border border-pulse-border bg-white/5 text-pulse-muted`}>
+        Confirm in wallet...
+      </span>
+    );
+  } else if (status === "pending") {
+    action = (
+      <span className={`${base} border border-pulse-border bg-white/5 text-pulse-muted`}>
+        Confirming...
+        {hash ? <EthereumTxLink hash={hash} /> : null}
+      </span>
+    );
+  } else if (status === "success") {
+    action = (
+      <span className={`${base} border border-pulse-green/40 bg-pulse-green/10 text-pulse-green`}>
+        Revoked
+        {hash ? <EthereumTxLink hash={hash} /> : null}
+      </span>
+    );
+  } else if (status === "error") {
+    action = (
+      <button
+        type="button"
+        onClick={onRetry}
+        className={`${base} border border-pulse-red/40 bg-pulse-red/10 text-pulse-red hover:bg-pulse-red/20`}
+      >
+        Retry
+      </button>
+    );
+  } else if (status === "rejected") {
+    action = (
+      <button
+        type="button"
+        onClick={onRetry}
+        className={`${base} border border-pulse-border bg-white/5 text-pulse-text hover:bg-white/10`}
+      >
+        Try again
+      </button>
+    );
+  } else if (confirming) {
+    action = (
+      <button
+        type="button"
+        onClick={onCancel}
+        className={`${base} border border-pulse-border bg-white/5 text-pulse-muted hover:bg-white/10`}
+      >
+        Cancel
+      </button>
+    );
+  } else {
+    action = (
+      <button
+        type="button"
+        onClick={onStart}
+        disabled={isBusy}
+        className={`${base} bg-pulse-gradient text-pulse-bg shadow-glow hover:brightness-110 active:brightness-95`}
+      >
+        Revoke
+      </button>
+    );
+  }
+
+  return (
+    <div className="flex flex-col gap-2 sm:items-end">
+      {action}
+      {children}
+      {errorMessage && status === "error" ? (
+        <p className="max-w-[16rem] text-xs leading-5 text-pulse-red">
+          {errorMessage}
+        </p>
+      ) : null}
+      {status === "success" ? (
+        <button
+          type="button"
+          onClick={onDismiss}
+          className="text-xs font-semibold text-pulse-muted underline-offset-2 hover:text-pulse-cyan hover:underline"
+        >
+          Dismiss
+        </button>
+      ) : null}
+    </div>
+  );
+}
+
+function EthereumErc20Confirm({
+  approval,
+  preflight,
+  isRefreshing,
+  onRefresh,
+  onConfirm,
+}: {
+  approval: ScoredApproval;
+  preflight: Erc20PreflightResult | null;
+  isRefreshing: boolean;
+  onRefresh: () => void;
+  onConfirm: () => void;
+}) {
+  const canConfirm = preflight?.status === "active" && !isRefreshing;
+  return (
+    <div className="w-full max-w-xs rounded-xl border border-pulse-border/70 bg-pulse-bg/60 p-3 text-xs leading-5 text-pulse-muted sm:text-right">
+      <p className="font-semibold text-pulse-text">Review Ethereum revoke</p>
+      <p className="mt-1">
+        Sets allowance to zero with{" "}
+        <span className="font-mono text-pulse-text">
+          approve({shortenAddress(approval.spenderAddress)}, 0)
+        </span>
+        . Gas is paid in {ETHEREUM_MAINNET_NATIVE_SYMBOL}.
+      </p>
+      <EthereumPreflightNotice
+        activeLabel={
+          preflight?.currentLabel
+            ? `Current allowance: ${preflight.currentLabel}.`
+            : "Current allowance is still active."
+        }
+        clearedLabel="Already cleared. No transaction is needed."
+        preflight={preflight}
+        isRefreshing={isRefreshing}
+      />
+      <div className="mt-3 flex gap-2 sm:justify-end">
+        {!canConfirm ? (
+          <button
+            type="button"
+            onClick={onRefresh}
+            disabled={isRefreshing}
+            className="rounded-lg border border-pulse-cyan/35 bg-pulse-cyan/10 px-2.5 py-1.5 font-semibold text-pulse-cyan disabled:opacity-60"
+          >
+            {isRefreshing ? "Checking..." : "Refresh"}
+          </button>
+        ) : null}
+        <button
+          type="button"
+          onClick={onConfirm}
+          disabled={!canConfirm}
+          className="rounded-lg bg-pulse-gradient px-2.5 py-1.5 font-semibold text-pulse-bg shadow-glow disabled:cursor-not-allowed disabled:opacity-60"
+        >
+          Confirm revoke
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function EthereumNftConfirm({
+  approval,
+  preflight,
+  isRefreshing,
+  onRefresh,
+  onConfirm,
+}: {
+  approval: NftApproval;
+  preflight: NftPreflightResult | null;
+  isRefreshing: boolean;
+  onRefresh: () => void;
+  onConfirm: () => void;
+}) {
+  const canConfirm = preflight?.status === "active" && !isRefreshing;
+  const call =
+    approval.kind === "approvalForAll"
+      ? `setApprovalForAll(${shortenAddress(approval.operatorAddress)}, false)`
+      : `approve(0x0, ${approval.tokenId?.toString() ?? "tokenId"})`;
+  return (
+    <div className="w-full max-w-xs rounded-xl border border-pulse-border/70 bg-pulse-bg/60 p-3 text-xs leading-5 text-pulse-muted sm:text-right">
+      <p className="font-semibold text-pulse-text">Review Ethereum NFT revoke</p>
+      <p className="mt-1">
+        Sends <span className="font-mono text-pulse-text">{call}</span>. Gas is
+        paid in {ETHEREUM_MAINNET_NATIVE_SYMBOL}.
+      </p>
+      <EthereumPreflightNotice
+        activeLabel="Current approval is still active."
+        clearedLabel={
+          approval.kind === "approvalForAll"
+            ? "Already cleared. The operator is no longer approved."
+            : "Already cleared. The token approval no longer points to this operator."
+        }
+        preflight={preflight}
+        isRefreshing={isRefreshing}
+      />
+      <div className="mt-3 flex gap-2 sm:justify-end">
+        {!canConfirm ? (
+          <button
+            type="button"
+            onClick={onRefresh}
+            disabled={isRefreshing}
+            className="rounded-lg border border-pulse-cyan/35 bg-pulse-cyan/10 px-2.5 py-1.5 font-semibold text-pulse-cyan disabled:opacity-60"
+          >
+            {isRefreshing ? "Checking..." : "Refresh"}
+          </button>
+        ) : null}
+        <button
+          type="button"
+          onClick={onConfirm}
+          disabled={!canConfirm}
+          className="rounded-lg bg-pulse-gradient px-2.5 py-1.5 font-semibold text-pulse-bg shadow-glow disabled:cursor-not-allowed disabled:opacity-60"
+        >
+          Confirm revoke
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function EthereumPreflightNotice({
+  activeLabel,
+  clearedLabel,
+  preflight,
+  isRefreshing,
+}: {
+  activeLabel: string;
+  clearedLabel: string;
+  preflight: Erc20PreflightResult | NftPreflightResult | null;
+  isRefreshing: boolean;
+}) {
+  if (isRefreshing || !preflight) {
+    return (
+      <p className="mt-2 rounded-lg border border-pulse-cyan/35 bg-pulse-cyan/10 p-2 text-pulse-cyan">
+        Checking live approval before the wallet opens.
+      </p>
+    );
+  }
+
+  if (preflight.status === "active") {
+    return (
+      <p className="mt-2 rounded-lg border border-pulse-green/40 bg-pulse-green/10 p-2 text-pulse-green">
+        {activeLabel}
+      </p>
+    );
+  }
+
+  if (preflight.status === "cleared") {
+    return (
+      <p className="mt-2 rounded-lg border border-pulse-green/40 bg-pulse-green/10 p-2 text-pulse-green">
+        {clearedLabel}
+      </p>
+    );
+  }
+
+  return (
+    <p className="mt-2 rounded-lg border border-amber-400/40 bg-amber-400/10 p-2 text-amber-200">
+      Live verification failed
+      {preflight.error ? ` (${preflight.error})` : ""}. Revoke is disabled.
+    </p>
+  );
+}
+
+function ReadOnlyAction({ title }: { title?: string }) {
   return (
     <div className="flex justify-stretch sm:justify-end">
       <span className="inline-flex w-full items-center justify-center rounded-xl border border-pulse-border bg-white/5 px-3 py-2 text-xs font-semibold text-pulse-muted sm:w-auto">
-        Revoke disabled
+        <span title={title}>Revoke disabled</span>
       </span>
     </div>
+  );
+}
+
+function EthereumTxLink({ hash }: { hash: `0x${string}` }) {
+  return (
+    <a
+      href={ethereumExplorerTxUrl(hash)}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="ml-1 underline-offset-2 hover:text-pulse-cyan hover:underline"
+    >
+      Etherscan
+    </a>
   );
 }
 
@@ -406,8 +906,9 @@ function EthereumCoverageNote({
       Ethereum discovery uses the server read-only API, Etherscan API V2, and
       live Ethereum RPC validation before results are displayed. Gas on Ethereum
       is paid in {ETHEREUM_MAINNET_NATIVE_SYMBOL}. Explorer links open{" "}
-      {ETHEREUM_MAINNET_EXPLORER_NAME}. Revoke transactions are intentionally
-      disabled for this gated integration.
+      {ETHEREUM_MAINNET_EXPLORER_NAME}. Revoke transactions, when enabled, are
+      wallet-side only and require a fresh live-read preflight before the wallet
+      opens.
       {diagnostics?.discoveryTruncated
         ? " Discovery reported truncation, so this is not a complete clear state."
         : ""}
@@ -421,12 +922,16 @@ function EthereumDiagnostics({
   walletChainId,
   wagmiChainId,
   scan,
+  revokeEnabled,
+  revokeDisabledReason,
 }: {
   enabled: boolean;
   owner: Address;
   walletChainId: number | undefined;
   wagmiChainId: number | undefined;
   scan: ReturnType<typeof useEthereumApprovalScan>;
+  revokeEnabled: boolean;
+  revokeDisabledReason: string;
 }) {
   if (!enabled) return null;
 
@@ -439,7 +944,8 @@ function EthereumDiagnostics({
     ["Active scan mode", ETHEREUM_MAINNET_DISPLAY_NAME],
     ["API route", "/api/ethereum/approvals"],
     ["API status", response?.status ?? scan.status],
-    ["Revoke enabled", "No"],
+    ["Wallet-side revoke enabled", revokeEnabled ? "Yes" : "No"],
+    ["Revoke disabled reason", revokeEnabled ? "None" : revokeDisabledReason],
     ["Chain ID", diagnostics?.chainId.toString() ?? "1"],
     ["RPC configured", diagnostics?.rpcConfigured ? "Yes" : "No / unknown"],
     [
