@@ -9,6 +9,7 @@ import {
   BatchActionBar,
   BatchRevokePanel,
 } from "@/components/approvals/batch-revoke-panel";
+import { EthereumReadOnlyScanner } from "@/components/sections/ethereum-readonly-scanner";
 import { NftApprovalRow } from "@/components/approvals/nft-approval-row";
 import { ConnectWalletButton } from "@/components/connect-wallet-button";
 import { ScannerDiagnosticsPanel } from "@/components/sections/scanner-diagnostics";
@@ -20,6 +21,7 @@ import {
   getSupportedChainShortNames,
   type SupportedChainConfig,
 } from "@/lib/chains";
+import { ETHEREUM_MAINNET_CLIENT_CHAIN_ID } from "@/lib/ethereum-approval-client";
 import { shortenAddress } from "@/lib/format";
 import type { NftApproval } from "@/lib/nft-approvals";
 import {
@@ -210,6 +212,17 @@ function ScannerBody({
           isConnected={isConnected}
         />
       </div>
+    );
+  }
+
+  if (walletChainId === ETHEREUM_MAINNET_CLIENT_CHAIN_ID) {
+    return (
+      <EthereumReadOnlyScanner
+        owner={address}
+        walletChainId={walletChainId}
+        wagmiChainId={wagmiChainId}
+        debugMode={debugMode}
+      />
     );
   }
 
