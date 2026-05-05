@@ -23,7 +23,7 @@ src/lib/registry/
 
 `validate.ts` runs at module load for both registries. In development and
 test it **throws** on duplicates, malformed addresses, empty required
-fields, or bogus decimals. In production it logs and continues — we want
+fields, or bogus decimals. In production it logs and continues — this keeps
 loud failures at dev time and graceful failures at runtime.
 
 ## Adding a token
@@ -60,7 +60,7 @@ loud failures at dev time and graceful failures at runtime.
    - the address is confirmed canonical against the protocol's own docs
    - the labeled protocol is an established, actively maintained deployment
    `isTrusted` is a naming claim, not a safety claim. Users see a "Known"
-   badge — that simply means "we recognize this address", not "this is
+   badge — that simply means "known address", not "this is
    safe".
 5. Fill provenance fields factually:
    - `verificationMethod` — how you verified the address (e.g.
@@ -88,7 +88,7 @@ Before merging a registry change:
 - Tokens with live circulating supply on PulseChain, verified BSC tokens, or
   verified Base tokens
 - Spenders that commonly hold user approvals (routers, farms, bridges)
-- Entries we can verify from public documentation
+- Entries verified from public documentation
 
 **Out of scope**
 - Speculative pre-launch contracts

@@ -930,7 +930,7 @@ function GuidancePanel() {
         </li>
         <li>
           <span className="font-semibold text-pulse-text">Known is not risk-free.</span>{" "}
-          Registry labels identify addresses we recognize. You should still
+          Registry labels identify known addresses. You should still
           review every spender before signing a revoke or leaving access open.
         </li>
       </ul>
