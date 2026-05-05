@@ -1,5 +1,36 @@
 # Changelog
 
+## 2026-05-04 - Base Mainnet Support
+
+Pulse Revoke now supports approval scanning and revocation on PulseChain, BSC /
+BNB Smart Chain, and Base.
+
+### Supported Live Networks
+
+- PulseChain
+- BSC / BNB Smart Chain
+- Base
+
+Ethereum Mainnet is not active in this release.
+
+### What Changed
+
+- Added Base Mainnet as the third active supported network.
+- Added Base ERC-20 approval discovery through Etherscan API V2 with
+  `chainid=8453`.
+- Added BaseScan links for Base addresses, tokens, and transactions.
+- Added ETH gas wording for Base revoke flows.
+- Added Base user-facing labels for `ERC-20`, `ERC-721`, and `ERC-1155`.
+- Kept registry enrichment chain-scoped so PulseChain and BSC labels do not
+  leak onto Base.
+
+### Safety Notes
+
+- Base revokes use the same standard approval-clearing calls as other
+  EVM-compatible chains.
+- BSC-specific Osaka/Mendel gas cap and high-gas warning thresholds remain
+  scoped to BSC and are not inherited by Base.
+
 ## 2026-05-04 - BSC Support + Public Audit Documentation
 
 Pulse Revoke now supports approval scanning and revocation on PulseChain and
