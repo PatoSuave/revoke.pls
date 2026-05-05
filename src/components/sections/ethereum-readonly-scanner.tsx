@@ -9,8 +9,10 @@ import {
   ETHEREUM_MAINNET_DISPLAY_NAME,
   ETHEREUM_MAINNET_EXPLORER_NAME,
   ETHEREUM_MAINNET_NATIVE_SYMBOL,
+  ETHEREUM_READ_ONLY_MODE_LABEL,
   ethereumExplorerAddressUrl,
   ethereumExplorerTokenUrl,
+  ethereumTokenDisplayDescription,
 } from "@/lib/ethereum-approval-client";
 import { shortenAddress } from "@/lib/format";
 import type { NftApproval } from "@/lib/nft-approvals";
@@ -48,7 +50,7 @@ export function EthereumReadOnlyScanner({
                 className="h-1.5 w-1.5 rounded-full bg-pulse-cyan"
                 aria-hidden
               />
-              {ETHEREUM_MAINNET_DISPLAY_NAME}
+              {ETHEREUM_READ_ONLY_MODE_LABEL}
             </span>
             <span className="rounded-full border border-pulse-border bg-pulse-panel/70 px-3 py-1 font-mono text-xs text-pulse-muted">
               {shortenAddress(owner)}
@@ -255,7 +257,10 @@ function ReadOnlyErc20Table({
                 className="truncate text-xs text-pulse-muted underline-offset-2 hover:text-pulse-cyan hover:underline"
                 title={approval.tokenAddress}
               >
-                {approval.tokenName ?? shortenAddress(approval.tokenAddress)}
+                {ethereumTokenDisplayDescription(
+                  approval.tokenName,
+                  approval.tokenAddress,
+                )}
               </a>
             </div>
 
