@@ -1,16 +1,23 @@
 import type { UseApprovalDiscoveryResult } from "@/hooks/use-approval-discovery";
 import type { UseBatchRevokeResult } from "@/hooks/use-batch-revoke";
 import type { UseNftApprovalDiscoveryResult } from "@/hooks/use-nft-approval-discovery";
-import type { SupportedChainConfig } from "@/lib/chains";
+import {
+  getChainConfig,
+  getSupportedChainShortNames,
+  type SupportedChainConfig,
+} from "@/lib/chains";
 import { FUNGIBLE_APPROVAL_SHAPE_COPY } from "@/lib/diagnostic-copy";
 import { shortenAddress } from "@/lib/format";
 
 interface ScannerDiagnosticsPanelProps {
   enabled: boolean;
   owner: `0x${string}` | undefined;
-  chainId: number | undefined;
+  walletChainId: number | undefined;
+  wagmiChainId: number | undefined;
+  activeChainId: number | undefined;
   chainConfig: SupportedChainConfig | undefined;
   onSupportedChain: boolean;
+  walletMatchesActiveChain: boolean | null;
   isConnected: boolean;
   erc20?: UseApprovalDiscoveryResult;
   nft?: UseNftApprovalDiscoveryResult;
@@ -20,9 +27,12 @@ interface ScannerDiagnosticsPanelProps {
 export function ScannerDiagnosticsPanel({
   enabled,
   owner,
-  chainId,
+  walletChainId,
+  wagmiChainId,
+  activeChainId,
   chainConfig,
   onSupportedChain,
+  walletMatchesActiveChain,
   isConnected,
   erc20,
   nft,
@@ -46,6 +56,16 @@ export function ScannerDiagnosticsPanel({
     chainConfig?.discovery.apiKeyEnvVar;
   const requiresChainIdParam =
     chainConfig?.discovery.apiProviderKind === "etherscan-v2";
+  const walletChainConfig = getChainConfig(walletChainId);
+  const supportedChains = getSupportedChainShortNames();
+  const discoveryTarget =
+    chainConfig && activeChainId
+      ? `${chainConfig.displayName} (${activeChainId})`
+      : "None";
+  const chainMismatchWarning =
+    walletMatchesActiveChain === false && activeChainId !== undefined
+      ? "Wallet chain and scanner chain do not match."
+      : null;
   const highGasWarningCount = batch
     ? Object.values(batch.results).filter(
         (result) => result.preflight?.highGasWarning,
@@ -53,6 +73,7 @@ export function ScannerDiagnosticsPanel({
     : null;
 
   const explorerIssues = [
+    chainMismatchWarning,
     ...(chainConfig?.discovery.warnings ?? []),
     erc20?.diagnostics.discoveryError
       ? `${fungibleLabel} discovery: ${erc20.diagnostics.discoveryError}`
@@ -130,9 +151,28 @@ export function ScannerDiagnosticsPanel({
           <DiagnosticRows
             rows={[
               ["Wallet", isConnected && owner ? shortenAddress(owner) : "Not connected"],
-              ["Chain ID", chainId?.toString() ?? "Unknown"],
-              ["Chain", chainConfig?.displayName ?? "Unsupported / unknown"],
+              [
+                "Connected wallet chain ID",
+                walletChainId?.toString() ?? "Unknown",
+              ],
+              [
+                "Connected wallet chain",
+                walletChainConfig?.displayName ?? "Unsupported / unknown",
+              ],
+              ["Wagmi state chain ID", wagmiChainId?.toString() ?? "Unknown"],
+              ["Active app chain ID", activeChainId?.toString() ?? "None"],
+              ["Active app chain", chainConfig?.displayName ?? "None"],
+              [
+                "Wallet/app chain match",
+                walletMatchesActiveChain === null
+                  ? "Not connected"
+                  : walletMatchesActiveChain
+                    ? "Yes"
+                    : "No",
+              ],
               ["Supported", onSupportedChain ? "Yes" : "No"],
+              ["Supported chains", supportedChains],
+              ["Discovery target chain", discoveryTarget],
               ["Explorer links", chainConfig?.explorer.name ?? "Unavailable"],
               ["Explorer source", sourceName ?? "Unavailable"],
               ["Source ID", sourceId ?? "Unavailable"],

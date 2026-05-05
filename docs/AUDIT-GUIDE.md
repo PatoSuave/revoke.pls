@@ -36,6 +36,9 @@ Ethereum Mainnet should remain inactive.
 - Is Ethereum Mainnet absent from active supported-chain lists?
 - Do approval records carry `chainId` through discovery, validation, display,
   revoke, and batch revoke?
+- Is the connected wallet account `chainId` the active scanner source of truth?
+- Does switching wallet chains clear prior scan results, selections, batch
+  state, and diagnostics?
 - Are unsupported networks blocked from scan/revoke flows?
 - Are mixed-chain batch selections blocked or skipped safely?
 
