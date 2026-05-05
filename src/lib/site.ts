@@ -5,7 +5,7 @@
  * here so routes, metadata, generated images, and footer copy stay consistent.
  */
 
-export const DEFAULT_SITE_URL = "https://revoke.pls";
+export const DEFAULT_SITE_URL = "https://pulserevoke.com";
 
 export interface SiteUrlResolution {
   url: string;
