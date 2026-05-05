@@ -21,6 +21,7 @@ import {
   supportedChains,
 } from "./chains";
 import { explorerAddressUrl, explorerTokenUrl, explorerTxUrl } from "./explorer";
+import { ETHEREUM_MAINNET_CLIENT_CHAIN_ID } from "./ethereum-approval-client";
 import {
   getSpenderEntry,
   getSpendersForChain,
@@ -174,6 +175,19 @@ describe("supported chain config", () => {
     );
   });
 
+  it("builds Etherscan links for gated Ethereum wallet revokes without activating Ethereum", () => {
+    expect(isSupportedChainId(ETHEREUM_MAINNET_CLIENT_CHAIN_ID)).toBe(false);
+    expect(explorerAddressUrl(ETHEREUM_MAINNET_CLIENT_CHAIN_ID, SPENDER)).toBe(
+      `https://etherscan.io/address/${SPENDER}`,
+    );
+    expect(explorerTokenUrl(ETHEREUM_MAINNET_CLIENT_CHAIN_ID, TOKEN)).toBe(
+      `https://etherscan.io/token/${TOKEN}`,
+    );
+    expect(explorerTxUrl(ETHEREUM_MAINNET_CLIENT_CHAIN_ID, "0xabc")).toBe(
+      "https://etherscan.io/tx/0xabc",
+    );
+  });
+
   it("does not leak PulseChain registry labels onto BSC", () => {
     expect(getSpenderEntry(PULSECHAIN_CHAIN_ID, PULSEX_ROUTER)?.label).toBe(
       "PulseX Router v2",
@@ -242,6 +256,24 @@ describe("supported chain config", () => {
       address: TOKEN,
       functionName: "approve",
       args: [SPENDER, 0n],
+    });
+  });
+
+  it("builds an Ethereum ERC-20 revoke call with approve(spender, 0)", () => {
+    const request = {
+      ...buildRevokeCall({
+        chainId: ETHEREUM_MAINNET_CLIENT_CHAIN_ID,
+        tokenAddress: TOKEN,
+        spenderAddress: SPENDER,
+      }),
+      chainId: ETHEREUM_MAINNET_CLIENT_CHAIN_ID,
+    };
+
+    expect(request).toMatchObject({
+      address: TOKEN,
+      functionName: "approve",
+      args: [SPENDER, 0n],
+      chainId: ETHEREUM_MAINNET_CLIENT_CHAIN_ID,
     });
   });
 

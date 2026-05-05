@@ -5,8 +5,9 @@ import { getPublicClient } from "@wagmi/core";
 import { useConfig, useWaitForTransactionReceipt, useWriteContract } from "wagmi";
 import type { Address } from "viem";
 
-import { getChainConfig, type SupportedChainId } from "@/lib/chains";
+import { getChainConfig } from "@/lib/chains";
 import { normalizeRevokeError } from "@/lib/errors";
+import type { WalletWriteChainId } from "@/lib/ethereum-approval-client";
 import {
   buildErc721TokenRevoke,
   buildSetApprovalForAllRevoke,
@@ -62,7 +63,7 @@ export function useRevokeNftApproval({
   const [isRefreshingApproval, setIsRefreshingApproval] = useState(false);
   const wait = useWaitForTransactionReceipt({
     hash: write.data,
-    chainId: target.chainId as SupportedChainId,
+    chainId: target.chainId as WalletWriteChainId,
     query: { enabled: Boolean(write.data) },
   });
 
@@ -146,7 +147,7 @@ export function useRevokeNftApproval({
     setIsRefreshingApproval(true);
     try {
       const client = getPublicClient(config, {
-        chainId: target.chainId as SupportedChainId,
+        chainId: target.chainId as WalletWriteChainId,
       });
       if (!client) throw new Error(`No public client for chain ${target.chainId}`);
       const raw = await client.readContract(
@@ -209,7 +210,7 @@ export function useRevokeNftApproval({
     const call = buildNftRevokeCall(target);
     write.writeContract({
       ...call,
-      chainId: target.chainId as SupportedChainId,
+      chainId: target.chainId as WalletWriteChainId,
       ...(safeGas.gas !== undefined ? { gas: safeGas.gas } : {}),
     });
   }, [refreshPreflight, target, write, telemetryKind]);

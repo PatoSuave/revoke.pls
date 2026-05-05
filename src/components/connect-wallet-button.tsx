@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
   useAccount,
+  useChainId,
   useConnect,
   useDisconnect,
   useSwitchChain,
@@ -15,6 +16,11 @@ import {
   supportedChainConfigList,
   type SupportedChainId,
 } from "@/lib/chains";
+import {
+  ETHEREUM_GATED_MODE_LABEL,
+  isEthereumReadOnlyChainId,
+  resolveEthereumReadOnlyChainId,
+} from "@/lib/ethereum-approval-client";
 import { shortenAddress } from "@/lib/format";
 import { isDesktopBuild } from "@/lib/platform";
 import { trackEvent } from "@/lib/telemetry";
@@ -64,6 +70,7 @@ export function ConnectWalletButton({
   className = "",
 }: ConnectWalletButtonProps) {
   const { address, chainId: walletChainId, isConnected, status } = useAccount();
+  const wagmiChainId = useChainId();
   const { connect, connectors, isPending: isConnecting, error } = useConnect();
   const { disconnect } = useDisconnect();
   const { switchChain, isPending: isSwitching } = useSwitchChain();
@@ -138,8 +145,34 @@ export function ConnectWalletButton({
   }
 
   if (isConnected && address) {
-    const onSupportedChain = isSupportedChainId(walletChainId);
-    const currentConfig = getChainConfig(walletChainId);
+    const connectedChainId = walletChainId ?? wagmiChainId;
+    const onSupportedChain = isSupportedChainId(connectedChainId);
+    const currentConfig = getChainConfig(connectedChainId);
+    const ethereumReadOnlyChainId = resolveEthereumReadOnlyChainId({
+      walletChainId,
+      wagmiChainId,
+    });
+
+    if (isEthereumReadOnlyChainId(ethereumReadOnlyChainId)) {
+      return (
+        <div className={`inline-flex items-center gap-2 ${className}`}>
+          <span className="inline-flex items-center gap-2 rounded-xl border border-amber-400/35 bg-amber-400/10 px-3 py-2 text-xs font-medium text-amber-200">
+            <span className="h-2 w-2 rounded-full bg-amber-300" aria-hidden />
+            {ETHEREUM_GATED_MODE_LABEL}
+          </span>
+          <button
+            type="button"
+            onClick={() => disconnect()}
+            className={`${base} ${variantStyles.ghost}`}
+          >
+            <span className="font-mono text-xs text-pulse-text">
+              {shortenAddress(address)}
+            </span>
+            <span className="text-xs text-pulse-muted">Disconnect</span>
+          </button>
+        </div>
+      );
+    }
 
     if (!onSupportedChain) {
       return (
