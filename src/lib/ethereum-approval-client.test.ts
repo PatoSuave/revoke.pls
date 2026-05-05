@@ -4,7 +4,7 @@ import {
   ETHEREUM_MAINNET_CLIENT_CHAIN_ID,
   ETHEREUM_MAINNET_EXPLORER_BASE_URL,
   ETHEREUM_MAINNET_NATIVE_SYMBOL,
-  ETHEREUM_GATED_MODE_LABEL,
+  ETHEREUM_MAINNET_STATUS_LABEL,
   ETHEREUM_READ_ONLY_MODE_LABEL,
   canEnableEthereumWalletRevoke,
   ethereumApprovalDisplayAllowance,
@@ -55,9 +55,9 @@ function response(
 }
 
 describe("Ethereum approval client mapping", () => {
-  it("identifies Ethereum Mainnet as gated read-only mode", () => {
+  it("identifies Ethereum Mainnet status and read-only labels", () => {
     expect(ETHEREUM_READ_ONLY_MODE_LABEL).toBe("Ethereum read-only mode");
-    expect(ETHEREUM_GATED_MODE_LABEL).toBe("Ethereum gated mode");
+    expect(ETHEREUM_MAINNET_STATUS_LABEL).toBe("Ethereum Mainnet");
     expect(ethereumMainnetWalletChain.id).toBe(1);
     expect(ethereumMainnetWalletChain.nativeCurrency.symbol).toBe(
       ETHEREUM_MAINNET_NATIVE_SYMBOL,

@@ -299,7 +299,7 @@ describe("supported chain config", () => {
     });
   });
 
-  it("keeps public product copy from presenting Ethereum as supported", () => {
+  it("presents Ethereum in public product copy without adding it to active chain config", () => {
     const copy = [
       siteConfig.tagline,
       siteConfig.description,
@@ -309,7 +309,8 @@ describe("supported chain config", () => {
 
     expect(copy).toContain("BSC");
     expect(copy).toContain("Base");
-    expect(copy).not.toContain("Ethereum");
+    expect(copy).toContain("Ethereum");
+    expect(isSupportedChainId(1)).toBe(false);
     expect(copy).not.toContain("Etherscan");
   });
 

@@ -95,13 +95,13 @@ export const siteConfig = {
   /** Production domain, without protocol. */
   domain: hostFromUrl(resolvedUrl),
   /** One-line tagline. */
-  tagline: "Manage PulseChain, BSC, and Base token approvals",
+  tagline: "Manage PulseChain, BSC, Base, and Ethereum token approvals",
   /** Single-sentence meta description (used for SEO + OG). */
   description:
-    "Pulse Revoke is a non-custodial tool to review and revoke token and NFT approvals on PulseChain, BSC, and Base. Open source, read-only until you sign.",
+    "Pulse Revoke is a non-custodial tool to review and revoke token and NFT approvals on PulseChain, BSC, Base, and Ethereum Mainnet. Open source, read-only until you sign.",
   /** Longer paragraph for hero copy and social previews. */
   longDescription:
-    "Review every token allowance and NFT operator approval your wallet has granted on PulseChain, BSC, or Base, understand the risk, and revoke the ones you no longer need one signature at a time.",
+    "Review every token allowance and NFT operator approval your wallet has granted on PulseChain, BSC, Base, or Ethereum Mainnet, understand the risk, and revoke the ones you no longer need one signature at a time.",
   /** Canonical public URL. Override at build time with NEXT_PUBLIC_SITE_URL. */
   url: resolvedUrl,
   /** Keywords for search engines. Keep conservative and factual. */
@@ -140,7 +140,7 @@ export const siteConfig = {
     github: "https://github.com/PatoSuave/revoke.pls",
   },
   /** Short attribution line shown in the footer. */
-  attribution: "Built for the PulseChain, BSC, and Base communities.",
+  attribution: "Built for the PulseChain, BSC, Base, and Ethereum communities.",
   /** Brand accent colors used by the OG image and icon renderers. */
   brandColors: {
     background: "#07070b",

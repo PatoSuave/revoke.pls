@@ -70,7 +70,7 @@ export function EthereumReadOnlyScanner({
                 aria-hidden
               />
               {revokeEnabled
-                ? "Ethereum wallet revoke mode"
+                ? "Ethereum scan/revoke mode"
                 : ETHEREUM_READ_ONLY_MODE_LABEL}
             </span>
             <span className="rounded-full border border-pulse-border bg-pulse-panel/70 px-3 py-1 font-mono text-xs text-pulse-muted">
@@ -134,7 +134,9 @@ function ReadOnlyNotice({
   return (
     <div className="rounded-2xl border border-amber-400/40 bg-amber-400/10 p-4 text-sm">
       <p className="text-xs font-semibold uppercase tracking-[0.16em] text-amber-200">
-        {revokeEnabled ? "Ethereum wallet-side revoke" : "Ethereum gated mode"}
+        {revokeEnabled
+          ? "Ethereum wallet-side revoke enabled"
+          : "Ethereum verification required"}
       </p>
       <p className="mt-2 leading-6 text-pulse-muted">
         {revokeEnabled
