@@ -1,7 +1,7 @@
 # Pulse Revoke / revoke.pls
 
-Pulse Revoke is a non-custodial approval scanner and revoker for PulseChain and
-BSC / BNB Smart Chain.
+Pulse Revoke is a non-custodial approval scanner and revoker for PulseChain,
+BSC / BNB Smart Chain, and Base.
 
 Live app: <https://pulserevoke.com>
 
@@ -14,26 +14,29 @@ Active supported networks are intentionally limited to:
 
 - PulseChain mainnet, chain ID `369`, gas token `PLS`, explorer `PulseScan`
 - BSC / BNB Smart Chain, chain ID `56`, gas token `BNB`, explorer `BscScan`
+- Base Mainnet, chain ID `8453`, gas token `ETH`, explorer `BaseScan`
 
-Ethereum is not an active supported product chain.
+Ethereum Mainnet is not an active supported product chain.
 
 ## What It Can Scan And Revoke
 
 - PulseChain PRC-20 / ERC-20-compatible fungible token approvals
 - BSC BEP-20 fungible token approvals
+- Base ERC-20 fungible token approvals
 - NFT operator approvals where supported by the app pipeline
 - NFT per-token approvals where supported by the app pipeline
 - Sequential batch revoke for fungible token approvals on one chain at a time
 
-User-facing BSC labels are `BEP-20`, `BEP-721`, and `BEP-1155`. Internal ABI and
-event handling uses ERC-compatible EVM interfaces where appropriate.
+User-facing BSC labels are `BEP-20`, `BEP-721`, and `BEP-1155`. User-facing
+Base labels are `ERC-20`, `ERC-721`, and `ERC-1155`. Internal ABI and event
+handling uses ERC-compatible EVM interfaces where appropriate.
 
 ## What It Does Not Do
 
 - Does not take custody of funds
 - Does not ask for seed phrases or private keys
 - Does not require token transfers
-- Does not support Ethereum right now
+- Does not support Ethereum Mainnet right now
 - Does not use a backend/indexer for the approval path
 - Does not guarantee complete discovery if explorer/API providers are
   rate-limited, capped, unavailable, or return malformed data
@@ -60,13 +63,13 @@ reported as incomplete/unverified states. The app should not show a false
 Revokes are standard approval-clearing transactions submitted by the user's
 wallet:
 
-- BEP-20 / ERC-compatible fungible approvals: `approve(spender, 0)`
+- PRC-20 / BEP-20 / ERC-compatible fungible approvals: `approve(spender, 0)`
 - NFT operator approvals: `setApprovalForAll(operator, false)`
 - NFT per-token approvals: `approve(address(0), tokenId)`
 
 The app sets the transaction `chainId` from the approval record. PulseChain
 revokes use PLS gas wording and PulseScan links. BSC revokes use BNB gas wording
-and BscScan links.
+and BscScan links. Base revokes use ETH gas wording and BaseScan links.
 
 ## BSC Implementation Notes
 
@@ -82,6 +85,18 @@ and BscScan links.
 - BSC revokes estimated above `1,000,000` gas and at or below `16,777,216` gas
   show an in-app high-gas warning before the wallet opens.
 
+## Base Implementation Notes
+
+- Historical Base approval discovery uses Etherscan API V2:
+  `https://api.etherscan.io/v2/api`
+- Every Base historical log request includes `chainid=8453`.
+- Public Base RPC `eth_getLogs` is not used for historical approval discovery.
+- BaseScan remains the public explorer for Base address, token, and transaction
+  links.
+- Base gas wording is `ETH`.
+- Base does not inherit BSC's Osaka/Mendel gas cap or high-gas warning
+  thresholds.
+
 ## Security Model
 
 - Wallet interactions are client-side through wagmi/viem connectors.
@@ -94,7 +109,7 @@ and BscScan links.
   is not a safety guarantee.
 
 Always verify token, spender, operator, and transaction details in your wallet
-and on PulseScan or BscScan before signing.
+and on PulseScan, BscScan, or BaseScan before signing.
 
 ## Privacy Posture
 
@@ -138,11 +153,15 @@ supports it.
 | --- | --- | --- |
 | `NEXT_PUBLIC_PULSECHAIN_RPC_URL` | Optional | Override PulseChain RPC. Defaults to `https://rpc.pulsechain.com`. |
 | `NEXT_PUBLIC_BSC_RPC_URL` | Recommended for production | Override BSC RPC. Defaults to `https://bsc-dataseed.bnbchain.org`. |
+| `NEXT_PUBLIC_BASE_RPC_URL` | Recommended for production | Override Base RPC. Defaults to `https://mainnet.base.org`. |
 | `NEXT_PUBLIC_PULSECHAIN_EXPLORER_API` | Optional | Override PulseChain discovery API. Defaults to `https://api.scan.pulsechain.com/api`. |
 | `NEXT_PUBLIC_BSC_EXPLORER_API_URL` | Optional | BSC historical logs API. Defaults to `https://api.etherscan.io/v2/api`. |
 | `NEXT_PUBLIC_BSC_EXPLORER_CHAIN_ID` | Optional | Etherscan API V2 chain ID for BNB Smart Chain logs. Defaults to `56`; keep it at `56`. |
 | `NEXT_PUBLIC_BSC_EXPLORER_API_KEY` | Required for reliable BSC discovery | Preferred Etherscan API V2 key with BNB Smart Chain access. |
 | `NEXT_PUBLIC_BSCSCAN_API_KEY` | Deprecated fallback | Backward-compatible fallback key name for older deploys. Prefer `NEXT_PUBLIC_BSC_EXPLORER_API_KEY`. |
+| `NEXT_PUBLIC_BASE_EXPLORER_API_URL` | Optional | Base historical logs API. Defaults to `https://api.etherscan.io/v2/api`. |
+| `NEXT_PUBLIC_BASE_EXPLORER_CHAIN_ID` | Optional | Etherscan API V2 chain ID for Base logs. Defaults to `8453`; keep it at `8453`. |
+| `NEXT_PUBLIC_BASE_EXPLORER_API_KEY` | Required for reliable Base discovery | Etherscan API V2 key with Base Mainnet access. |
 | `NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID` | Optional | Enables WalletConnect QR pairing. |
 | `NEXT_PUBLIC_SITE_URL` | Optional | Canonical public URL used by metadata and social images. Production should use `https://pulserevoke.com`. |
 | `NEXT_PUBLIC_TELEMETRY_ENABLED` | Optional | Enables the current telemetry sink in production when set to `true`. |
@@ -152,10 +171,10 @@ See [docs/ENVIRONMENT.md](docs/ENVIRONMENT.md) for details.
 ## Audit Starting Points
 
 - `src/lib/chains.ts` - active supported chains, RPC defaults, explorer config,
-  gas symbols, BSC gas safety thresholds
+  gas symbols, BSC gas safety thresholds, and Base Etherscan V2 settings
 - `src/lib/wagmi.ts` - registered wallet chains and transports
 - `src/lib/discovery.ts` - historical log discovery, pagination/windowing,
-  BSC Etherscan API V2 `chainid=56` request construction
+  Etherscan API V2 `chainid=56` / `chainid=8453` request construction
 - `src/lib/explorer.ts` - explorer URL generation
 - `src/lib/preflight.ts` - live validation helpers, BSC hard cap, high-gas
   warning classification
