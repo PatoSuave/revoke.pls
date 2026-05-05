@@ -7,7 +7,7 @@ import type { NftApproval } from "@/lib/nft-approvals";
 export const ETHEREUM_MAINNET_CLIENT_CHAIN_ID = 1;
 export const ETHEREUM_MAINNET_DISPLAY_NAME = "Ethereum Mainnet";
 export const ETHEREUM_MAINNET_SHORT_NAME = "Ethereum";
-export const ETHEREUM_READ_ONLY_MODE_LABEL = "Ethereum read-only mode";
+export const ETHEREUM_LIVE_VERIFICATION_LABEL = "Ethereum live verification";
 export const ETHEREUM_MAINNET_STATUS_LABEL = "Ethereum Mainnet";
 export const ETHEREUM_MAINNET_NATIVE_SYMBOL = "ETH";
 export const ETHEREUM_MAINNET_EXPLORER_NAME = "Etherscan";
@@ -297,21 +297,21 @@ function ethereumApiRevokeDisabledReason({
   }
 
   if (response.status === "config-missing") {
-    return "Ethereum API configuration is missing - revoke disabled.";
+    return "Ethereum API configuration is missing - revoke unavailable.";
   }
   if (response.status === "upstream-failure") {
-    return "Ethereum explorer or RPC failed - revoke disabled.";
+    return "Ethereum explorer or RPC failed - revoke unavailable.";
   }
   if (malformedResponse) {
-    return "Ethereum API response was malformed - revoke disabled.";
+    return "Ethereum API response was malformed - revoke unavailable.";
   }
   if (response.status === "verification-incomplete" || incomplete) {
-    return "Verification incomplete - revoke disabled.";
+    return "Verification incomplete - revoke unavailable.";
   }
   if (response.status === "complete-clear" || activeApprovalCount === 0) {
     return "No active Ethereum approvals are available to revoke.";
   }
-  return "Ethereum revoke disabled.";
+  return "Ethereum revoke unavailable.";
 }
 
 export function canEnableEthereumWalletRevoke({
