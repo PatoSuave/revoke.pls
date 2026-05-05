@@ -3,9 +3,12 @@ import { describe, expect, it } from "vitest";
 import {
   ETHEREUM_MAINNET_CLIENT_CHAIN_ID,
   ETHEREUM_READ_ONLY_MODE_LABEL,
+  ethereumApprovalDisplayAllowance,
   ethereumTokenDisplayDescription,
+  ethereumTokenDisplaySymbol,
   isEthereumReadOnlyChainId,
   mapEthereumApprovalApiResponse,
+  resolveEthereumReadOnlyChainId,
   type EthereumApprovalApiResponse,
 } from "./ethereum-approval-client";
 import { supportedChainConfigList } from "./chains";
@@ -49,6 +52,18 @@ describe("Ethereum approval client mapping", () => {
     expect(ETHEREUM_READ_ONLY_MODE_LABEL).toBe("Ethereum read-only mode");
     expect(isEthereumReadOnlyChainId(1)).toBe(true);
     expect(isEthereumReadOnlyChainId(369)).toBe(false);
+    expect(
+      resolveEthereumReadOnlyChainId({
+        walletChainId: undefined,
+        wagmiChainId: 1,
+      }),
+    ).toBe(1);
+    expect(
+      resolveEthereumReadOnlyChainId({
+        walletChainId: 369,
+        wagmiChainId: 1,
+      }),
+    ).toBeUndefined();
   });
 
   it("keeps Ethereum Mainnet out of the active supported chain list", () => {
@@ -82,6 +97,28 @@ describe("Ethereum approval client mapping", () => {
         "0x2222222222222222222222222222222222222222",
       ),
     ).toBe("Ethereum token");
+    expect(ethereumTokenDisplaySymbol("Wrapped BTC from PulseChain")).toBe(
+      "Token",
+    );
+    expect(ethereumTokenDisplaySymbol("WBTC")).toBe("WBTC");
+    expect(
+      ethereumApprovalDisplayAllowance({
+        formattedAllowance: "10 Wrapped BTC from PulseChain",
+        unlimited: false,
+      }),
+    ).toBe("Token allowance");
+    expect(
+      ethereumApprovalDisplayAllowance({
+        formattedAllowance: "10 WBTC",
+        unlimited: false,
+      }),
+    ).toBe("10 WBTC");
+    expect(
+      ethereumApprovalDisplayAllowance({
+        formattedAllowance: "Wrapped BTC from PulseChain",
+        unlimited: true,
+      }),
+    ).toBe("Unlimited");
   });
 
   it("maps active ERC-20 and NFT approvals without enabling revoke", () => {
