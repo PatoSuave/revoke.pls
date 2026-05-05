@@ -10,9 +10,11 @@ import {
   ETHEREUM_MAINNET_EXPLORER_NAME,
   ETHEREUM_MAINNET_NATIVE_SYMBOL,
   ETHEREUM_READ_ONLY_MODE_LABEL,
+  ethereumApprovalDisplayAllowance,
   ethereumExplorerAddressUrl,
   ethereumExplorerTokenUrl,
   ethereumTokenDisplayDescription,
+  ethereumTokenDisplaySymbol,
 } from "@/lib/ethereum-approval-client";
 import { shortenAddress } from "@/lib/format";
 import type { NftApproval } from "@/lib/nft-approvals";
@@ -246,7 +248,7 @@ function ReadOnlyErc20Table({
             <div className="min-w-0">
               <div className="flex min-w-0 flex-wrap items-center gap-2">
                 <p className="truncate text-sm font-semibold text-pulse-text">
-                  {approval.tokenSymbol}
+                  {ethereumTokenDisplaySymbol(approval.tokenSymbol)}
                 </p>
                 <RiskBadge risk={approval.risk} />
               </div>
@@ -289,7 +291,10 @@ function ReadOnlyErc20Table({
                 </span>
               ) : (
                 <span className="font-mono text-sm text-pulse-text">
-                  {approval.formattedAllowance}
+                  {ethereumApprovalDisplayAllowance({
+                    formattedAllowance: approval.formattedAllowance,
+                    unlimited: approval.unlimited,
+                  })}
                 </span>
               )}
             </div>

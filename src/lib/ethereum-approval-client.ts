@@ -246,6 +246,22 @@ export function isEthereumReadOnlyChainId(
   return chainId === ETHEREUM_MAINNET_CLIENT_CHAIN_ID;
 }
 
+export function resolveEthereumReadOnlyChainId({
+  walletChainId,
+  wagmiChainId,
+}: {
+  walletChainId: number | undefined;
+  wagmiChainId: number | undefined;
+}): typeof ETHEREUM_MAINNET_CLIENT_CHAIN_ID | undefined {
+  if (isEthereumReadOnlyChainId(walletChainId)) {
+    return ETHEREUM_MAINNET_CLIENT_CHAIN_ID;
+  }
+
+  return walletChainId === undefined && isEthereumReadOnlyChainId(wagmiChainId)
+    ? ETHEREUM_MAINNET_CLIENT_CHAIN_ID
+    : undefined;
+}
+
 export function ethereumTokenDisplayDescription(
   tokenName: string | undefined,
   tokenAddress: Address | string,
@@ -253,10 +269,7 @@ export function ethereumTokenDisplayDescription(
   const cleaned = tokenName?.trim();
   if (!cleaned) return "Ethereum token";
 
-  // The gated Ethereum view must not reuse PulseChain-specific bridge/fork
-  // language as token description copy. Keep the symbol visible, but use a
-  // neutral descriptor when returned metadata is chain-specific or ambiguous.
-  if (/\bpulse\s*chain\b/i.test(cleaned) || /\bpulsechain\b/i.test(cleaned)) {
+  if (containsPulseChainCopy(cleaned)) {
     return "Ethereum token";
   }
 
@@ -265,4 +278,30 @@ export function ethereumTokenDisplayDescription(
   }
 
   return cleaned;
+}
+
+export function ethereumTokenDisplaySymbol(
+  tokenSymbol: string | undefined,
+): string {
+  const cleaned = tokenSymbol?.trim();
+  if (!cleaned) return "Token";
+  return containsPulseChainCopy(cleaned) ? "Token" : cleaned;
+}
+
+export function ethereumApprovalDisplayAllowance(input: {
+  formattedAllowance: string;
+  unlimited: boolean;
+}): string {
+  if (input.unlimited) return "Unlimited";
+  return containsPulseChainCopy(input.formattedAllowance)
+    ? "Token allowance"
+    : input.formattedAllowance;
+}
+
+function containsPulseChainCopy(value: string): boolean {
+  return (
+    /\bfrom\s+pulse\s*chain\b/i.test(value) ||
+    /\bon\s+pulse\s*chain\b/i.test(value) ||
+    /\bpulsechain\b/i.test(value)
+  );
 }

@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
   useAccount,
+  useChainId,
   useConnect,
   useDisconnect,
   useSwitchChain,
@@ -18,6 +19,7 @@ import {
 import {
   ETHEREUM_READ_ONLY_MODE_LABEL,
   isEthereumReadOnlyChainId,
+  resolveEthereumReadOnlyChainId,
 } from "@/lib/ethereum-approval-client";
 import { shortenAddress } from "@/lib/format";
 import { isDesktopBuild } from "@/lib/platform";
@@ -68,6 +70,7 @@ export function ConnectWalletButton({
   className = "",
 }: ConnectWalletButtonProps) {
   const { address, chainId: walletChainId, isConnected, status } = useAccount();
+  const wagmiChainId = useChainId();
   const { connect, connectors, isPending: isConnecting, error } = useConnect();
   const { disconnect } = useDisconnect();
   const { switchChain, isPending: isSwitching } = useSwitchChain();
@@ -142,10 +145,15 @@ export function ConnectWalletButton({
   }
 
   if (isConnected && address) {
-    const onSupportedChain = isSupportedChainId(walletChainId);
-    const currentConfig = getChainConfig(walletChainId);
+    const connectedChainId = walletChainId ?? wagmiChainId;
+    const onSupportedChain = isSupportedChainId(connectedChainId);
+    const currentConfig = getChainConfig(connectedChainId);
+    const ethereumReadOnlyChainId = resolveEthereumReadOnlyChainId({
+      walletChainId,
+      wagmiChainId,
+    });
 
-    if (isEthereumReadOnlyChainId(walletChainId)) {
+    if (isEthereumReadOnlyChainId(ethereumReadOnlyChainId)) {
       return (
         <div className={`inline-flex items-center gap-2 ${className}`}>
           <span className="inline-flex items-center gap-2 rounded-xl border border-amber-400/35 bg-amber-400/10 px-3 py-2 text-xs font-medium text-amber-200">

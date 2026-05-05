@@ -21,7 +21,10 @@ import {
   getSupportedChainShortNames,
   type SupportedChainConfig,
 } from "@/lib/chains";
-import { ETHEREUM_MAINNET_CLIENT_CHAIN_ID } from "@/lib/ethereum-approval-client";
+import {
+  ETHEREUM_MAINNET_CLIENT_CHAIN_ID,
+  resolveEthereumReadOnlyChainId,
+} from "@/lib/ethereum-approval-client";
 import { shortenAddress } from "@/lib/format";
 import type { NftApproval } from "@/lib/nft-approvals";
 import {
@@ -215,7 +218,12 @@ function ScannerBody({
     );
   }
 
-  if (walletChainId === ETHEREUM_MAINNET_CLIENT_CHAIN_ID) {
+  const ethereumReadOnlyChainId = resolveEthereumReadOnlyChainId({
+    walletChainId,
+    wagmiChainId,
+  });
+
+  if (ethereumReadOnlyChainId === ETHEREUM_MAINNET_CLIENT_CHAIN_ID) {
     return (
       <EthereumReadOnlyScanner
         owner={address}
