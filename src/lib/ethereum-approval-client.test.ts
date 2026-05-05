@@ -2,10 +2,17 @@ import { describe, expect, it } from "vitest";
 
 import {
   ETHEREUM_MAINNET_CLIENT_CHAIN_ID,
+  ETHEREUM_MAINNET_EXPLORER_BASE_URL,
+  ETHEREUM_MAINNET_NATIVE_SYMBOL,
+  ETHEREUM_GATED_MODE_LABEL,
   ETHEREUM_READ_ONLY_MODE_LABEL,
+  canEnableEthereumWalletRevoke,
   ethereumApprovalDisplayAllowance,
+  ethereumExplorerTxUrl,
   ethereumTokenDisplayDescription,
   ethereumTokenDisplaySymbol,
+  ethereumWalletRevokeDisabledReason,
+  ethereumMainnetWalletChain,
   isEthereumReadOnlyChainId,
   mapEthereumApprovalApiResponse,
   resolveEthereumReadOnlyChainId,
@@ -50,6 +57,11 @@ function response(
 describe("Ethereum approval client mapping", () => {
   it("identifies Ethereum Mainnet as gated read-only mode", () => {
     expect(ETHEREUM_READ_ONLY_MODE_LABEL).toBe("Ethereum read-only mode");
+    expect(ETHEREUM_GATED_MODE_LABEL).toBe("Ethereum gated mode");
+    expect(ethereumMainnetWalletChain.id).toBe(1);
+    expect(ethereumMainnetWalletChain.nativeCurrency.symbol).toBe(
+      ETHEREUM_MAINNET_NATIVE_SYMBOL,
+    );
     expect(isEthereumReadOnlyChainId(1)).toBe(true);
     expect(isEthereumReadOnlyChainId(369)).toBe(false);
     expect(
@@ -69,6 +81,13 @@ describe("Ethereum approval client mapping", () => {
   it("keeps Ethereum Mainnet out of the active supported chain list", () => {
     expect(supportedChainConfigList.map((chain) => chain.chainId)).not.toContain(
       ETHEREUM_MAINNET_CLIENT_CHAIN_ID,
+    );
+  });
+
+  it("builds Etherscan links without making Ethereum an active supported chain", () => {
+    expect(ETHEREUM_MAINNET_EXPLORER_BASE_URL).toBe("https://etherscan.io");
+    expect(ethereumExplorerTxUrl("0xabc")).toBe(
+      "https://etherscan.io/tx/0xabc",
     );
   });
 
@@ -121,7 +140,7 @@ describe("Ethereum approval client mapping", () => {
     ).toBe("Unlimited");
   });
 
-  it("maps active ERC-20 and NFT approvals without enabling revoke", () => {
+  it("maps verified active ERC-20 and NFT approvals as eligible for wallet revoke", () => {
     const mapped = mapEthereumApprovalApiResponse(
       response({
         status: "active-approvals-found",
@@ -170,10 +189,26 @@ describe("Ethereum approval client mapping", () => {
 
     expect(mapped.state).toBe("active");
     expect(mapped.canShowClear).toBe(false);
-    expect(mapped.revokeEnabled).toBe(false);
+    expect(mapped.revokeEnabled).toBe(true);
+    expect(mapped.revokeDisabledReason).toBeNull();
     expect(mapped.activeApprovalCount).toBe(2);
     expect(mapped.approvals.erc20[0]?.rawAllowance).toBe(1000000000000000000n);
     expect(mapped.approvals.nft[0]?.tokenId).toBe(7n);
+    expect(
+      canEnableEthereumWalletRevoke({
+        mapping: mapped,
+        walletChainId: ETHEREUM_MAINNET_CLIENT_CHAIN_ID,
+      }),
+    ).toBe(true);
+    expect(
+      canEnableEthereumWalletRevoke({ mapping: mapped, walletChainId: 369 }),
+    ).toBe(false);
+    expect(
+      ethereumWalletRevokeDisabledReason({
+        mapping: mapped,
+        walletChainId: 369,
+      }),
+    ).toBe("Switch to Ethereum Mainnet.");
   });
 
   it("shows clear only for complete-clear with no incomplete diagnostics", () => {
@@ -183,6 +218,7 @@ describe("Ethereum approval client mapping", () => {
 
     expect(mapped.state).toBe("complete-clear");
     expect(mapped.canShowClear).toBe(true);
+    expect(mapped.revokeEnabled).toBe(false);
   });
 
   it("never maps failed live-read diagnostics to clear", () => {
@@ -199,6 +235,8 @@ describe("Ethereum approval client mapping", () => {
 
     expect(mapped.state).toBe("verification-incomplete");
     expect(mapped.canShowClear).toBe(false);
+    expect(mapped.revokeEnabled).toBe(false);
+    expect(mapped.revokeDisabledReason).toContain("Verification incomplete");
   });
 
   it("maps config-missing and upstream-failure to non-clear states", () => {
@@ -211,8 +249,10 @@ describe("Ethereum approval client mapping", () => {
 
     expect(missing.state).toBe("config-missing");
     expect(missing.canShowClear).toBe(false);
+    expect(missing.revokeEnabled).toBe(false);
     expect(upstream.state).toBe("upstream-failure");
     expect(upstream.canShowClear).toBe(false);
+    expect(upstream.revokeEnabled).toBe(false);
   });
 
   it("maps truncated discovery to verification-incomplete, not clear", () => {
@@ -229,5 +269,42 @@ describe("Ethereum approval client mapping", () => {
 
     expect(mapped.state).toBe("verification-incomplete");
     expect(mapped.canShowClear).toBe(false);
+    expect(mapped.revokeEnabled).toBe(false);
+  });
+
+  it("disables Ethereum revoke when a returned approval is malformed", () => {
+    const mapped = mapEthereumApprovalApiResponse(
+      response({
+        status: "active-approvals-found",
+        approvals: {
+          erc20: [
+            {
+              key: `${ETHEREUM_MAINNET_CLIENT_CHAIN_ID}-${TOKEN}-${SPENDER}`,
+              chainId: ETHEREUM_MAINNET_CLIENT_CHAIN_ID,
+              tokenAddress: TOKEN,
+              tokenSymbol: "TKN",
+              tokenName: "Token",
+              tokenDecimals: 18,
+              tokenCategory: "unknown",
+              spenderAddress: SPENDER,
+              spenderLabel: "Unknown spender",
+              protocol: "Unknown",
+              spenderCategory: "unknown",
+              trusted: false,
+              rawAllowance: "not-a-number",
+              formattedAllowance: "1 TKN",
+              unlimited: false,
+            },
+          ],
+          nft: [],
+        },
+      }),
+    );
+
+    expect(mapped.state).toBe("verification-incomplete");
+    expect(mapped.malformedResponse).toBe(true);
+    expect(mapped.canShowClear).toBe(false);
+    expect(mapped.revokeEnabled).toBe(false);
+    expect(mapped.revokeDisabledReason).toContain("malformed");
   });
 });

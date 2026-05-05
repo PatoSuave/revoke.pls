@@ -2,6 +2,10 @@ import { createConfig, http } from "wagmi";
 import { injected, walletConnect } from "wagmi/connectors";
 
 import { base, bsc, pulsechain, supportedChains } from "@/lib/chains";
+import {
+  ETHEREUM_MAINNET_PUBLIC_RPC_URL,
+  ethereumMainnetWalletChain,
+} from "@/lib/ethereum-approval-client";
 
 /**
  * Wagmi client configuration for Pulse Revoke.
@@ -10,6 +14,10 @@ import { base, bsc, pulsechain, supportedChains } from "@/lib/chains";
  *  - PulseChain mainnet (369)
  *  - BNB Smart Chain mainnet (56)
  *  - Base mainnet (8453)
+ *
+ * Ethereum Mainnet (1) is registered as a wallet-only chain for the gated
+ * Ethereum scanner/revoke flow. It is intentionally not part of the active
+ * `supportedChains` product list used by the default scanner.
  *
  * Connectors:
  *  - Injected (MetaMask, Rabby, Brave, etc.)
@@ -48,8 +56,13 @@ const connectors = [
     : []),
 ];
 
+export const walletChains = [
+  ...supportedChains,
+  ethereumMainnetWalletChain,
+] as const;
+
 export const wagmiConfig = createConfig({
-  chains: supportedChains,
+  chains: walletChains,
   connectors,
   transports: {
     [pulsechain.id]: http(
@@ -57,6 +70,11 @@ export const wagmiConfig = createConfig({
     ),
     [bsc.id]: http(process.env.NEXT_PUBLIC_BSC_RPC_URL ?? undefined),
     [base.id]: http(process.env.NEXT_PUBLIC_BASE_RPC_URL ?? undefined),
+    [ethereumMainnetWalletChain.id]: http(
+      process.env.NEXT_PUBLIC_MAINNET_RPC_URL ??
+        process.env.NEXT_PUBLIC_ETHEREUM_RPC_URL ??
+        ETHEREUM_MAINNET_PUBLIC_RPC_URL,
+    ),
   },
   ssr: true,
 });
