@@ -1,7 +1,7 @@
 const PILLARS = [
   {
     title: "Non-custodial by design",
-    body: "Pulse Revoke never holds your funds or your keys. Every action is signed locally by your wallet and broadcast directly to the chain it targets (PulseChain or BSC).",
+    body: "Pulse Revoke never holds your funds or your keys. Every action is signed locally by your wallet and broadcast directly to the chain it targets (PulseChain, BSC, or Base).",
   },
   {
     title: "No seed phrases. Ever.",
@@ -19,7 +19,7 @@ const PILLARS = [
 
 const NON_GOALS = [
   "No seed-phrase entry, ever.",
-  "No custody of funds or approvals on our side.",
+  "No custody of funds or approvals.",
   "No analytics, tracking scripts, or cookies.",
   "No fee on top of network gas.",
 ];

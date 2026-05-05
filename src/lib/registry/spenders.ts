@@ -43,7 +43,7 @@ export type SpenderCategory =
  * `isTrusted` is an explicit, conservative flag. It is only `true` when the
  * address has been manually cross-checked against the protocol's official
  * source and the contract is considered canonical. It is **not** a general
- * safety rating — it simply means "we know what this address is". A trusted
+ * safety rating — it simply means "this address is known". A trusted
  * spender with an unlimited allowance is still worth reviewing.
  *
  * Provenance fields (`verificationMethod`, `source`, `lastReviewed`) are
