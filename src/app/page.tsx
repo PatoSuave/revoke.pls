@@ -13,9 +13,9 @@ import {
 import { absoluteUrl, siteConfig } from "@/lib/site";
 
 const productName = "Pulse Revoke";
-const launcherTitle = `${productName} - PulseChain, BSC, and Base approval safety`;
+const launcherTitle = `${productName} - PulseChain, BSC, Base, and Ethereum approval safety`;
 const launcherDescription =
-  "Launch the Pulse Revoke scanner or track desktop release status. Review and revoke token approvals on PulseChain, BSC, and Base without custody.";
+  "Launch the Pulse Revoke scanner or track desktop release status. Review and revoke token approvals on PulseChain, BSC, Base, and Ethereum Mainnet without custody.";
 
 export const metadata: Metadata = {
   title: launcherTitle,
@@ -56,12 +56,17 @@ const TRUST_POINTS = [
 ] as const;
 
 const HERO_STATS = [
-  { label: "Supported chains", value: "PulseChain + BSC + Base" },
+  { label: "Supported chains", value: "PulseChain + BSC + Base + Ethereum" },
   { label: "Scanner", value: "Live at /app" },
   { label: "Desktop", value: "Pending release" },
 ] as const;
 
-const LIVE_NETWORKS = ["PulseChain", "BSC / BNB Smart Chain", "Base"] as const;
+const LIVE_NETWORKS = [
+  "PulseChain",
+  "BSC / BNB Smart Chain",
+  "Base",
+  "Ethereum Mainnet",
+] as const;
 
 const HOW_IT_WORKS = [
   {
@@ -110,7 +115,7 @@ const FAQ_ITEMS = [
   {
     question: "What chains are supported?",
     answer:
-      "PulseChain mainnet (369), BSC / BNB Smart Chain (56), and Base (8453). Results should still be checked on PulseScan, BscScan, or BaseScan before signing.",
+      "PulseChain mainnet (369), BSC / BNB Smart Chain (56), Base (8453), and Ethereum Mainnet (1). Results should still be checked on PulseScan, BscScan, BaseScan, or Etherscan before signing.",
   },
 ] as const;
 
@@ -199,7 +204,7 @@ function Hero({ desktopReady }: { desktopReady: boolean }) {
               className="h-1.5 w-1.5 rounded-full bg-pulse-green"
               aria-hidden
             />
-            PulseChain, BSC, and Base approval safety
+            PulseChain, BSC, Base, and Ethereum approval safety
           </div>
 
           <h1 className="mt-5 text-5xl font-bold tracking-tight sm:text-7xl">
@@ -207,8 +212,8 @@ function Hero({ desktopReady }: { desktopReady: boolean }) {
           </h1>
 
           <p className="mt-5 max-w-2xl text-xl font-semibold leading-8 text-pulse-text sm:text-2xl">
-            Revoke risky approvals on PulseChain, BSC, and Base with a scanner
-            built for careful wallet review.
+            Revoke risky approvals on PulseChain, BSC, Base, and Ethereum
+            Mainnet with a scanner built for careful wallet review.
           </p>
 
           <p className="mt-4 max-w-2xl text-base leading-7 text-pulse-muted">
@@ -253,9 +258,9 @@ function Hero({ desktopReady }: { desktopReady: boolean }) {
           </dl>
 
           <p className="mt-5 max-w-xl text-xs leading-5 text-pulse-muted">
-            Always verify spender addresses on PulseScan, BscScan, or BaseScan
-            before signing. Registry labels are curated, not a guarantee of
-            safety.
+            Always verify spender addresses on PulseScan, BscScan, BaseScan, or
+            Etherscan before signing. Registry labels are curated, not a
+            guarantee of safety.
           </p>
         </div>
 
@@ -273,7 +278,7 @@ function LiveNetworksStrip() {
           Live networks
         </p>
         <p className="text-sm font-semibold text-pulse-text">
-          Live now on PulseChain, BSC, and Base.
+          Live now on PulseChain, BSC, Base, and Ethereum Mainnet.
         </p>
       </div>
       <div className="mt-3 flex flex-wrap gap-2">

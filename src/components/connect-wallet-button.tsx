@@ -17,7 +17,7 @@ import {
   type SupportedChainId,
 } from "@/lib/chains";
 import {
-  ETHEREUM_GATED_MODE_LABEL,
+  ETHEREUM_MAINNET_STATUS_LABEL,
   isEthereumReadOnlyChainId,
   resolveEthereumReadOnlyChainId,
 } from "@/lib/ethereum-approval-client";
@@ -158,7 +158,7 @@ export function ConnectWalletButton({
         <div className={`inline-flex items-center gap-2 ${className}`}>
           <span className="inline-flex items-center gap-2 rounded-xl border border-amber-400/35 bg-amber-400/10 px-3 py-2 text-xs font-medium text-amber-200">
             <span className="h-2 w-2 rounded-full bg-amber-300" aria-hidden />
-            {ETHEREUM_GATED_MODE_LABEL}
+            {ETHEREUM_MAINNET_STATUS_LABEL}
           </span>
           <button
             type="button"

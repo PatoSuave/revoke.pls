@@ -1,7 +1,7 @@
 const PILLARS = [
   {
     title: "Non-custodial by design",
-    body: "Pulse Revoke never holds your funds or your keys. Every action is signed locally by your wallet and broadcast directly to the chain it targets (PulseChain, BSC, or Base).",
+    body: "Pulse Revoke never holds your funds or your keys. Every action is signed locally by your wallet and broadcast directly to the chain it targets (PulseChain, BSC, Base, or Ethereum Mainnet).",
   },
   {
     title: "No seed phrases. Ever.",

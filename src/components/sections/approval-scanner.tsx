@@ -75,9 +75,10 @@ export function ApprovalScanner() {
               Approval <span className="text-gradient-pulse">scanner</span>
             </h2>
             <p className="mt-3 leading-7 text-pulse-muted">
-              Connect on PulseChain, BSC, or Base to find token allowances and
-              NFT operator approvals from your wallet history. Every result is
-              re-checked live before it is shown as active.
+              Connect on PulseChain, BSC, Base, or Ethereum Mainnet to find
+              token allowances and NFT operator approvals from your wallet
+              history. Every result is re-checked live before it is shown as
+              active.
             </p>
           </div>
           <SafetyStrip />

@@ -38,7 +38,7 @@ export const hasWalletConnect: boolean = Boolean(walletConnectProjectId);
 const WALLETCONNECT_METADATA = {
   name: "Pulse Revoke",
   description:
-    "Review and revoke token approvals on PulseChain, BSC, and Base.",
+    "Review and revoke token approvals on PulseChain, BSC, Base, and Ethereum.",
   url: "https://pulserevoke.com",
   icons: ["https://pulserevoke.com/icon.png"],
 };
