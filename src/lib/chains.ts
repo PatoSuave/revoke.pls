@@ -4,31 +4,39 @@ import { defineChain, type Chain, type Address } from "viem";
  * Supported chain registry.
  *
  * This is the single source of truth for active app chains. The active list is
- * intentionally narrow: PulseChain mainnet and BNB Smart Chain only.
+ * intentionally narrow: PulseChain mainnet, BNB Smart Chain, and Base only.
  */
 
 export const PULSECHAIN_CHAIN_ID = 369;
 export const BSC_CHAIN_ID = 56;
+export const BASE_CHAIN_ID = 8453;
 export type SupportedChainId =
   | typeof PULSECHAIN_CHAIN_ID
-  | typeof BSC_CHAIN_ID;
+  | typeof BSC_CHAIN_ID
+  | typeof BASE_CHAIN_ID;
 
 const PULSECHAIN_RPC_DEFAULT = "https://rpc.pulsechain.com";
 const BSC_RPC_DEFAULT = "https://bsc-dataseed.bnbchain.org";
+const BASE_RPC_DEFAULT = "https://mainnet.base.org";
 
 const PULSECHAIN_EXPLORER_BASE_URL = "https://scan.pulsechain.com";
 const BSC_EXPLORER_BASE_URL = "https://bscscan.com";
+const BASE_EXPLORER_BASE_URL = "https://basescan.org";
 
 export const PULSECHAIN_EXPLORER_API_DEFAULT =
   "https://api.scan.pulsechain.com/api";
 export const BSC_EXPLORER_API_DEFAULT = "https://api.etherscan.io/v2/api";
+export const BASE_EXPLORER_API_DEFAULT = "https://api.etherscan.io/v2/api";
 export const BSC_DEPRECATED_V1_EXPLORER_API_URL =
   "https://api.bscscan.com/api";
+export const BASE_DEPRECATED_V1_EXPLORER_API_URL =
+  "https://api.basescan.org/api";
 export const BSC_EXPLORER_CHAIN_ID_DEFAULT = BSC_CHAIN_ID.toString();
+export const BASE_EXPLORER_CHAIN_ID_DEFAULT = BASE_CHAIN_ID.toString();
 export const BSC_OSAKA_MAX_TRANSACTION_GAS = 16_777_216n;
 export const BSC_HIGH_GAS_WARNING_THRESHOLD = 1_000_000n;
 
-export type SupportedChainKey = "pulsechain" | "bsc";
+export type SupportedChainKey = "pulsechain" | "bsc" | "base";
 
 function cleanEnv(value: string | undefined): string | undefined {
   const trimmed = value?.trim();
@@ -41,6 +49,7 @@ function cleanApiKey(value: string | undefined): string | undefined {
   if (cleaned === "PASTE_YOUR_BSCSCAN_KEY_HERE") return undefined;
   if (cleaned === "PASTE_YOUR_ETHERSCAN_V2_KEY_HERE") return undefined;
   if (cleaned === "your_bscscan_key") return undefined;
+  if (cleaned === "YOUR_ETHERSCAN_V2_KEY") return undefined;
   return cleaned;
 }
 
@@ -55,26 +64,49 @@ function isDeprecatedBscV1ApiUrl(value: string | undefined): boolean {
   );
 }
 
+function isDeprecatedBaseV1ApiUrl(value: string | undefined): boolean {
+  return (
+    withNoTrailingSlash(value ?? "").toLowerCase() ===
+    BASE_DEPRECATED_V1_EXPLORER_API_URL
+  );
+}
+
 const pulsechainRpcEnv = cleanEnv(process.env.NEXT_PUBLIC_PULSECHAIN_RPC_URL);
 const bscRpcEnv = cleanEnv(process.env.NEXT_PUBLIC_BSC_RPC_URL);
+const baseRpcEnv = cleanEnv(process.env.NEXT_PUBLIC_BASE_RPC_URL);
 const pulsechainExplorerApiEnv = cleanEnv(
   process.env.NEXT_PUBLIC_PULSECHAIN_EXPLORER_API,
 );
 const bscExplorerApiEnv = cleanEnv(
   process.env.NEXT_PUBLIC_BSC_EXPLORER_API_URL,
 );
+const baseExplorerApiEnv = cleanEnv(
+  process.env.NEXT_PUBLIC_BASE_EXPLORER_API_URL,
+);
 const bscExplorerChainIdEnv = cleanEnv(
   process.env.NEXT_PUBLIC_BSC_EXPLORER_CHAIN_ID,
+);
+const baseExplorerChainIdEnv = cleanEnv(
+  process.env.NEXT_PUBLIC_BASE_EXPLORER_CHAIN_ID,
 );
 const bscPreferredApiKeyEnv = cleanApiKey(
   process.env.NEXT_PUBLIC_BSC_EXPLORER_API_KEY,
 );
 const bscScanApiKeyEnv = cleanApiKey(process.env.NEXT_PUBLIC_BSCSCAN_API_KEY);
+const baseExplorerApiKeyEnv = cleanApiKey(
+  process.env.NEXT_PUBLIC_BASE_EXPLORER_API_KEY,
+);
 const bscDeprecatedV1ApiConfigured = isDeprecatedBscV1ApiUrl(bscExplorerApiEnv);
+const baseDeprecatedV1ApiConfigured =
+  isDeprecatedBaseV1ApiUrl(baseExplorerApiEnv);
 const bscExplorerChainId =
   bscExplorerChainIdEnv === BSC_EXPLORER_CHAIN_ID_DEFAULT
     ? bscExplorerChainIdEnv
     : BSC_EXPLORER_CHAIN_ID_DEFAULT;
+const baseExplorerChainId =
+  baseExplorerChainIdEnv === BASE_EXPLORER_CHAIN_ID_DEFAULT
+    ? baseExplorerChainIdEnv
+    : BASE_EXPLORER_CHAIN_ID_DEFAULT;
 const bscExplorerApiKeyEnv = bscPreferredApiKeyEnv ?? bscScanApiKeyEnv;
 const bscDiscoveryWarnings = [
   bscDeprecatedV1ApiConfigured
@@ -86,6 +118,15 @@ const bscDiscoveryWarnings = [
     : null,
   !bscPreferredApiKeyEnv && bscScanApiKeyEnv
     ? "Using deprecated fallback NEXT_PUBLIC_BSCSCAN_API_KEY. Prefer NEXT_PUBLIC_BSC_EXPLORER_API_KEY for the Etherscan API V2 key."
+    : null,
+].filter((warning): warning is string => Boolean(warning));
+const baseDiscoveryWarnings = [
+  baseDeprecatedV1ApiConfigured
+    ? `NEXT_PUBLIC_BASE_EXPLORER_API_URL is set to the deprecated BaseScan V1 endpoint (${BASE_DEPRECATED_V1_EXPLORER_API_URL}). Base historical discovery uses ${BASE_EXPLORER_API_DEFAULT} with chainid=${BASE_EXPLORER_CHAIN_ID_DEFAULT}; update the Vercel env var to avoid confusion.`
+    : null,
+  baseExplorerChainIdEnv &&
+  baseExplorerChainIdEnv !== BASE_EXPLORER_CHAIN_ID_DEFAULT
+    ? `NEXT_PUBLIC_BASE_EXPLORER_CHAIN_ID must be ${BASE_EXPLORER_CHAIN_ID_DEFAULT} for Base Mainnet. The app is using chainid=${BASE_EXPLORER_CHAIN_ID_DEFAULT}.`
     : null,
 ].filter((warning): warning is string => Boolean(warning));
 
@@ -133,6 +174,33 @@ export const bsc = defineChain({
     default: {
       name: "BscScan",
       url: BSC_EXPLORER_BASE_URL,
+    },
+  },
+  contracts: {
+    multicall3: {
+      address: "0xcA11bde05977b3631167028862bE2a173976CA11",
+    },
+  },
+  testnet: false,
+});
+
+export const base = defineChain({
+  id: BASE_CHAIN_ID,
+  name: "Base",
+  nativeCurrency: {
+    name: "Ether",
+    symbol: "ETH",
+    decimals: 18,
+  },
+  rpcUrls: {
+    default: {
+      http: [baseRpcEnv ?? BASE_RPC_DEFAULT],
+    },
+  },
+  blockExplorers: {
+    default: {
+      name: "BaseScan",
+      url: BASE_EXPLORER_BASE_URL,
     },
   },
   contracts: {
@@ -330,6 +398,11 @@ const bscRpc = buildRpcConfig(
   BSC_RPC_DEFAULT,
   bscRpcEnv,
 );
+const baseRpc = buildRpcConfig(
+  "NEXT_PUBLIC_BASE_RPC_URL",
+  BASE_RPC_DEFAULT,
+  baseRpcEnv,
+);
 
 const pulsechainDiscovery = buildDiscoveryConfig({
   id: "blockscout-pulsescan",
@@ -369,6 +442,31 @@ const bscDiscovery = buildDiscoveryConfig({
   missingApiKeyMessage:
     "BSC historical discovery uses Etherscan API V2. Set NEXT_PUBLIC_BSC_EXPLORER_API_KEY to an Etherscan V2 API key with BNB Smart Chain access. NEXT_PUBLIC_BSCSCAN_API_KEY is only a deprecated fallback.",
   warnings: bscDiscoveryWarnings,
+});
+
+const baseDiscovery = buildDiscoveryConfig({
+  id: "etherscan-v2-base",
+  name: "Etherscan API V2 (Base logs)",
+  apiProviderKind: "etherscan-v2",
+  apiProviderName: "Etherscan API V2",
+  url: BASE_EXPLORER_BASE_URL,
+  apiUrlEnvVar: "NEXT_PUBLIC_BASE_EXPLORER_API_URL",
+  apiUrlDefault: BASE_EXPLORER_API_DEFAULT,
+  apiChainId: baseExplorerChainId,
+  apiChainIdEnvVar: "NEXT_PUBLIC_BASE_EXPLORER_CHAIN_ID",
+  apiKeyEnvVar: "NEXT_PUBLIC_BASE_EXPLORER_API_KEY",
+  apiKeyEnvVars: ["NEXT_PUBLIC_BASE_EXPLORER_API_KEY"],
+  apiUrlEnv: baseDeprecatedV1ApiConfigured ? undefined : baseExplorerApiEnv,
+  apiKeyEnv: baseExplorerApiKeyEnv,
+  requiresApiKey: true,
+  queryParams: {
+    chainid: baseExplorerChainId,
+  },
+  limitations:
+    "Etherscan API V2 can rate-limit, cap responses, or require smaller block windows for Base logs.",
+  missingApiKeyMessage:
+    "Base historical discovery uses Etherscan API V2. Set NEXT_PUBLIC_BASE_EXPLORER_API_KEY to an Etherscan V2 API key with Base Mainnet access.",
+  warnings: baseDiscoveryWarnings,
 });
 
 export const supportedChainConfigs = {
@@ -443,9 +541,44 @@ export const supportedChainConfigs = {
     maxTransactionGas: BSC_OSAKA_MAX_TRANSACTION_GAS,
     highGasWarningThreshold: BSC_HIGH_GAS_WARNING_THRESHOLD,
   },
+  [BASE_CHAIN_ID]: {
+    key: "base",
+    chain: base,
+    chainId: BASE_CHAIN_ID,
+    displayName: "Base",
+    shortName: "Base",
+    nativeSymbol: "ETH",
+    rpc: baseRpc,
+    explorer: {
+      name: "BaseScan",
+      baseUrl: BASE_EXPLORER_BASE_URL,
+      apiUrl: baseDiscovery.apiUrl,
+      apiUrlEnvVar: baseDiscovery.apiUrlEnvVar,
+      apiKeyEnvVar: baseDiscovery.apiKeyEnvVar,
+      urls: explorerUrls(BASE_EXPLORER_BASE_URL),
+    },
+    discovery: baseDiscovery,
+    discoverySettings: {
+      sourceKind: "explorer-logs",
+      providerName: "Etherscan API V2",
+      approvalEventTopicMode: "topic0-topic1-owner",
+      defaultFromBlock: "0",
+      defaultToBlock: "latest",
+      pageSize: 1000,
+      historicalRpcLogs: "disabled",
+      capWarning:
+        "Etherscan API V2 may rate-limit, cap pages, or require smaller windows for Base logs; incomplete discovery is surfaced to the user.",
+    },
+    standardLabels: {
+      fungible: "ERC-20",
+      nft: "ERC-721",
+      multiToken: "ERC-1155",
+      nftOperator: "ERC-721/ERC-1155",
+    },
+  },
 } as const satisfies Record<number, SupportedChainConfig>;
 
-export const supportedChains = [pulsechain, bsc] as const;
+export const supportedChains = [pulsechain, bsc, base] as const;
 
 export function isSupportedChainId(
   id: number | undefined,
@@ -465,8 +598,18 @@ export function getChainConfig(
 export const supportedChainConfigList = [
   supportedChainConfigs[PULSECHAIN_CHAIN_ID],
   supportedChainConfigs[BSC_CHAIN_ID],
+  supportedChainConfigs[BASE_CHAIN_ID],
 ] as const;
 
+function joinNames(names: readonly string[]): string {
+  if (names.length <= 2) return names.join(" or ");
+  return `${names.slice(0, -1).join(", ")}, or ${names[names.length - 1]}`;
+}
+
 export function getSupportedChainNames(): string {
-  return supportedChainConfigList.map((c) => c.displayName).join(" or ");
+  return joinNames(supportedChainConfigList.map((c) => c.displayName));
+}
+
+export function getSupportedChainShortNames(): string {
+  return joinNames(supportedChainConfigList.map((c) => c.shortName));
 }

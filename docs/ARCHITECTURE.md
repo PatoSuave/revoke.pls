@@ -14,15 +14,17 @@ Active supported chains are configured in `src/lib/chains.ts`:
 - PulseChain, chain ID `369`, native gas token `PLS`, explorer `PulseScan`
 - BSC / BNB Smart Chain, chain ID `56`, native gas token `BNB`, explorer
   `BscScan`
+- Base, chain ID `8453`, native gas token `ETH`, explorer `BaseScan`
 
-Ethereum is not an active supported chain.
+Ethereum Mainnet is not an active supported chain.
 
 ## Web3 Layer
 
-- `src/lib/wagmi.ts` registers PulseChain and BSC with wagmi.
+- `src/lib/wagmi.ts` registers PulseChain, BSC, and Base with wagmi.
 - PulseChain RPC defaults to `https://rpc.pulsechain.com`.
 - BSC RPC defaults to `https://bsc-dataseed.bnbchain.org`.
-- Both RPCs can be overridden with public env vars.
+- Base RPC defaults to `https://mainnet.base.org`.
+- RPCs can be overridden with public env vars.
 - Live reads and writes always include the approval record's `chainId`.
 
 ## Discovery Strategy
@@ -45,6 +47,11 @@ address in `topic1`. Public BSC RPC `eth_getLogs` is not used for historical
 approval discovery. BscScan remains the explorer for address, token, and
 transaction links.
 
+Base historical discovery uses the same Etherscan API V2 logs path with
+`chainid=8453`. Public Base RPC `eth_getLogs` is not used for historical
+approval discovery. BaseScan remains the explorer for address, token, and
+transaction links.
+
 ## Explorer APIs
 
 - PulseChain discovery API default:
@@ -57,6 +64,12 @@ transaction links.
   `NEXT_PUBLIC_BSC_EXPLORER_API_KEY`
 - Deprecated fallback BSC key env var:
   `NEXT_PUBLIC_BSCSCAN_API_KEY`
+- Base discovery API default:
+  `https://api.etherscan.io/v2/api`
+- Base discovery API chain id:
+  `NEXT_PUBLIC_BASE_EXPLORER_CHAIN_ID=8453`
+- Base API key env var:
+  `NEXT_PUBLIC_BASE_EXPLORER_API_KEY`
 
 The old BscScan V1 endpoint `https://api.bscscan.com/api` is deprecated for
 BSC log discovery. If it is configured or returned by a custom endpoint, debug
@@ -75,6 +88,13 @@ appropriate. User-facing BSC copy uses:
 - `BEP-1155` for multi-token NFT / semi-fungible approvals
 - `BNB` for gas
 
+User-facing Base copy uses:
+
+- `ERC-20` for fungible token approvals
+- `ERC-721` for NFT approvals
+- `ERC-1155` for multi-token NFT / semi-fungible approvals
+- `ETH` for gas
+
 ## Transaction Flow
 
 Fungible token revoke:
@@ -83,12 +103,13 @@ Fungible token revoke:
 2. App refreshes live allowance on the same chain.
 3. App prepares `approve(spender, 0)`.
 4. Wallet signs and submits on the approval's `chainId`.
-5. UI links the transaction to PulseScan or BscScan and rescans after success.
+5. UI links the transaction to PulseScan, BscScan, or BaseScan and rescans
+   after success.
 
 NFT revoke:
 
 - `setApprovalForAll(operator, false)` for collection-wide operator approvals
-- `approve(address(0), tokenId)` for per-token BEP-721/ERC-721-compatible
+- `approve(address(0), tokenId)` for per-token BEP-721 or ERC-721-compatible
   approvals
 
 Batch revoke is sequential. Mixed-chain batches are blocked.

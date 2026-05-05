@@ -1,7 +1,7 @@
 # Scanner QA Checklist
 
 Use this checklist to verify that Pulse Revoke reads approval state correctly on
-PulseChain and BSC. Keep all testing low-risk and manual.
+PulseChain, BSC, and Base. Keep all testing low-risk and manual.
 
 ## Safety Setup
 
@@ -13,10 +13,11 @@ PulseChain and BSC. Keep all testing low-risk and manual.
 
 ## Network Coverage
 
-Run the scanner flow on both supported chains:
+Run the scanner flow on all supported chains:
 
 - PulseChain mainnet, chain ID `369`, gas token `PLS`.
 - BSC / BNB Smart Chain, chain ID `56`, gas token `BNB`.
+- Base, chain ID `8453`, gas token `ETH`.
 
 For each chain, confirm diagnostics show:
 
@@ -27,6 +28,7 @@ For each chain, confirm diagnostics show:
 - Explorer API env status.
 - Etherscan API V2 key presence as configured/missing, never the key value.
 - BSC API chain ID `56` when testing BNB Smart Chain.
+- Base API chain ID `8453` when testing Base.
 - Fungible token and NFT scan status.
 - Explorer request/window counts.
 - Any truncation, explorer/API error, or RPC/live-read error.
@@ -49,6 +51,21 @@ For each chain, confirm diagnostics show:
 - Rate limits, malformed responses, missing API keys, and capped responses are
   shown as incomplete/error states, not as "clear".
 
+## Base Discovery Checks
+
+- `NEXT_PUBLIC_BASE_EXPLORER_API_URL` is either unset or points to a compatible
+  Etherscan API V2 endpoint. The default is
+  `https://api.etherscan.io/v2/api`.
+- `NEXT_PUBLIC_BASE_EXPLORER_CHAIN_ID` is unset or set to `8453`.
+- `NEXT_PUBLIC_BASE_EXPLORER_API_KEY` is set to an Etherscan API V2 key with
+  Base Mainnet access.
+- Base scans use Etherscan API V2 logs with `chainid=8453` for historical
+  approval discovery.
+- The app does not rely on public Base RPC `eth_getLogs` for historical
+  approval discovery.
+- Rate limits, malformed responses, missing API keys, and capped responses are
+  shown as incomplete/error states, not as "clear".
+
 ## Controlled Fungible Approval Test
 
 1. Use a burner wallet as the owner wallet.
@@ -63,7 +80,7 @@ For each chain, confirm diagnostics show:
 9. Revoke the approval from the app.
 10. Rescan after the transaction confirms.
 11. Confirm the approval disappears or diagnostics show no nonzero allowance.
-12. Verify directly on PulseScan or BscScan if results disagree.
+12. Verify directly on PulseScan, BscScan, or BaseScan if results disagree.
 
 ## NFT Approval Test
 
@@ -79,14 +96,15 @@ For collection-wide approvals:
 4. Confirm NFT candidates and live NFT validation counts update.
 5. Confirm the NFT approval appears in the NFT approvals section.
 6. On BSC, confirm UI copy says `BEP-721` or `BEP-1155`.
-7. Revoke with `setApprovalForAll(operator, false)` through the app.
-8. Rescan after confirmation.
-9. Confirm the NFT approval disappears or diagnostics show no active live NFT
+7. On Base, confirm UI copy says `ERC-721` or `ERC-1155`.
+8. Revoke with `setApprovalForAll(operator, false)` through the app.
+9. Rescan after confirmation.
+10. Confirm the NFT approval disappears or diagnostics show no active live NFT
    approval.
 
 For per-token approvals:
 
-1. Approve a second wallet for a single low-value BEP-721/ERC-721-compatible
+1. Approve a second wallet for a single low-value BEP-721 or ERC-721-compatible
    token.
 2. Scan with `/app?debug=1`.
 3. Confirm the NFT pipeline discovers and validates the per-token approval.
@@ -97,8 +115,10 @@ For per-token approvals:
 
 - Single PulseChain revoke confirm panel says PulseChain and PLS.
 - Single BSC revoke confirm panel says BSC or BNB Smart Chain and BNB.
+- Single Base revoke confirm panel says Base and ETH.
 - PulseChain transaction links open PulseScan.
 - BSC transaction links open BscScan.
+- Base transaction links open BaseScan.
 - Batch revoke submits one transaction at a time.
 - Batch revoke uses the selected approvals' chain ID.
 - Mixed-chain batch selection is blocked.
@@ -107,7 +127,7 @@ For per-token approvals:
 ## Unsupported Network Checks
 
 - Connect to an unsupported chain.
-- Confirm the app lists PulseChain and BSC as supported.
+- Confirm the app lists PulseChain, BSC, and Base as supported.
 - Confirm no scan starts.
 - Confirm no revoke action is available.
 - Confirm stale approvals from a previous chain are not shown as current.
@@ -120,4 +140,4 @@ For per-token approvals:
 - Wallet with historical approvals that validate to zero shows a clear state.
 - Failed live reads show verification incomplete, not clear.
 - Etherscan API V2 rate limits, the BscScan V1 deprecation error, or a missing
-  BSC API key show an actionable error.
+  BSC/Base API key show an actionable error.

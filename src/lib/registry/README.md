@@ -7,8 +7,8 @@ or unverified token lists.
 
 The discovery-first scanner does not depend on this registry for coverage. A
 bad entry still becomes a user-facing labeling mistake, so favor correctness
-over coverage. BSC registries start empty; add BSC labels only after explicit
-BscScan/source verification.
+over coverage. BSC and Base registries start empty; add labels only after
+explicit explorer/source verification.
 
 ## File layout
 
@@ -75,7 +75,7 @@ loud failures at dev time and graceful failures at runtime.
 
 Before merging a registry change:
 
-- [ ] Address checked on PulseScan or BscScan
+- [ ] Address checked on PulseScan, BscScan, or BaseScan
 - [ ] Address sourced from an official doc / site / repo (linked in `source`)
 - [ ] Category set accurately, or `unknown`
 - [ ] `isTrusted` set conservatively
@@ -85,7 +85,8 @@ Before merging a registry change:
 ## What belongs here, what does not
 
 **In scope**
-- Tokens with live circulating supply on PulseChain or verified BSC tokens
+- Tokens with live circulating supply on PulseChain, verified BSC tokens, or
+  verified Base tokens
 - Spenders that commonly hold user approvals (routers, farms, bridges)
 - Entries we can verify from public documentation
 

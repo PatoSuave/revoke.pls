@@ -2,6 +2,8 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { getAddress, type Address } from "viem";
 
 import {
+  BASE_CHAIN_ID,
+  BASE_EXPLORER_API_DEFAULT,
   BSC_CHAIN_ID,
   BSC_DEPRECATED_V1_EXPLORER_API_URL,
   BSC_EXPLORER_API_DEFAULT,
@@ -197,6 +199,158 @@ describe("createBlockscoutDiscoverySource", () => {
     expect(fetch).not.toHaveBeenCalled();
   });
 
+  it("fails Base discovery fast when the Etherscan API key is missing", async () => {
+    const fetch = vi.fn();
+    vi.stubGlobal("fetch", fetch);
+    const config = getChainConfig(BASE_CHAIN_ID)!;
+    const discovery = createBlockscoutDiscoverySource({
+      chainId: BASE_CHAIN_ID,
+      source: {
+        ...config.discovery,
+        apiKey: undefined,
+        hasApiKey: false,
+      },
+      limits: {
+        ...DEFAULT_DISCOVERY_LIMITS,
+        maxRequests: 2,
+        requestTimeoutMs: 1000,
+      },
+    });
+
+    await expect(discovery.discover(OWNER)).rejects.toThrow(
+      "Base historical discovery uses Etherscan API V2",
+    );
+    expect(fetch).not.toHaveBeenCalled();
+  });
+
+  it("builds Base ERC-20 log requests with Etherscan V2 and chainid=8453", async () => {
+    const fetch = vi.fn(async (input: RequestInfo | URL) => {
+      void input;
+      return jsonResponse({ status: "1", message: "OK", result: [] });
+    });
+    vi.stubGlobal("fetch", fetch);
+    const config = getChainConfig(BASE_CHAIN_ID)!;
+    const discovery = createBlockscoutDiscoverySource({
+      chainId: BASE_CHAIN_ID,
+      source: {
+        ...config.discovery,
+        apiKey: "base-key",
+        hasApiKey: true,
+      },
+      limits: {
+        ...DEFAULT_DISCOVERY_LIMITS,
+        maxRequests: 2,
+        requestTimeoutMs: 1000,
+      },
+    });
+
+    await discovery.discover(OWNER);
+
+    const url = new URL(String(fetch.mock.calls[0]?.[0]));
+    expect(`${url.origin}${url.pathname}`).toBe(BASE_EXPLORER_API_DEFAULT);
+    expect(url.searchParams.get("chainid")).toBe("8453");
+    expect(url.searchParams.get("module")).toBe("logs");
+    expect(url.searchParams.get("action")).toBe("getLogs");
+    expect(url.searchParams.get("topic0")).toBe(ERC20_APPROVAL_TOPIC0);
+    expect(url.searchParams.get("topic1")).toBe(pad(OWNER));
+    expect(url.searchParams.get("apikey")).toBe("base-key");
+  });
+
+  it("builds Base NFT log requests with Etherscan V2 chainid=8453", async () => {
+    const fetch = vi.fn(async (input: RequestInfo | URL) => {
+      void input;
+      return jsonResponse({ status: "1", message: "OK", result: [] });
+    });
+    vi.stubGlobal("fetch", fetch);
+    const config = getChainConfig(BASE_CHAIN_ID)!;
+    const discovery = createBlockscoutDiscoverySource({
+      chainId: BASE_CHAIN_ID,
+      source: {
+        ...config.discovery,
+        apiKey: "base-key",
+        hasApiKey: true,
+      },
+      limits: {
+        ...DEFAULT_DISCOVERY_LIMITS,
+        maxRequests: 3,
+        requestTimeoutMs: 1000,
+      },
+    });
+
+    await discovery.discoverNftApprovals(OWNER);
+
+    const urls = fetch.mock.calls.map((call) => new URL(String(call[0])));
+    expect(urls).toHaveLength(2);
+    expect(urls.every((url) => url.searchParams.get("chainid") === "8453")).toBe(
+      true,
+    );
+    expect(urls.map((url) => url.searchParams.get("topic0")).sort()).toEqual(
+      [ERC20_APPROVAL_TOPIC0, ERC_APPROVAL_FOR_ALL_TOPIC0].sort(),
+    );
+  });
+
+  it("falls back to Base chainid=8453 for Etherscan V2 sources without explicit query params", async () => {
+    const fetch = vi.fn(async (input: RequestInfo | URL) => {
+      void input;
+      return jsonResponse({ status: "1", message: "OK", result: [] });
+    });
+    vi.stubGlobal("fetch", fetch);
+    const config = getChainConfig(BASE_CHAIN_ID)!;
+    const discovery = createBlockscoutDiscoverySource({
+      chainId: BASE_CHAIN_ID,
+      source: {
+        ...config.discovery,
+        apiProviderKind: "etherscan-v2",
+        apiChainId: undefined,
+        queryParams: undefined,
+        apiKey: "base-key",
+        hasApiKey: true,
+      },
+      limits: {
+        ...DEFAULT_DISCOVERY_LIMITS,
+        maxRequests: 2,
+        requestTimeoutMs: 1000,
+      },
+    });
+
+    await discovery.discover(OWNER);
+
+    const url = new URL(String(fetch.mock.calls[0]?.[0]));
+    expect(url.searchParams.get("chainid")).toBe("8453");
+  });
+
+  it("turns Base Etherscan V2 paid-plan errors into discovery failures", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () =>
+        jsonResponse({
+          status: "0",
+          message: "NOTOK",
+          result:
+            "This endpoint requires an Etherscan API plan with Base Mainnet access.",
+        }),
+      ),
+    );
+    const config = getChainConfig(BASE_CHAIN_ID)!;
+    const discovery = createBlockscoutDiscoverySource({
+      chainId: BASE_CHAIN_ID,
+      source: {
+        ...config.discovery,
+        apiKey: "base-key",
+        hasApiKey: true,
+      },
+      limits: {
+        ...DEFAULT_DISCOVERY_LIMITS,
+        maxRequests: 2,
+        requestTimeoutMs: 1000,
+      },
+    });
+
+    await expect(discovery.discover(OWNER)).rejects.toThrow(
+      "Base Mainnet access",
+    );
+  });
+
   it("builds BSC BEP-20 log requests with Etherscan V2 and chainid=56", async () => {
     const fetch = vi.fn(async (input: RequestInfo | URL) => {
       void input;
@@ -338,7 +492,7 @@ describe("createBlockscoutDiscoverySource", () => {
         queryParams: { chainid: "56" },
       }).discover(OWNER),
     ).rejects.toThrow(
-      "set NEXT_PUBLIC_BSC_EXPLORER_API_URL=https://api.etherscan.io/v2/api",
+      "Set this chain's explorer API URL to https://api.etherscan.io/v2/api",
     );
   });
 
@@ -351,6 +505,9 @@ describe("createBlockscoutDiscoverySource", () => {
 
     expect(discoveredPairDedupeKey({ ...base, chainId: 369 })).not.toBe(
       discoveredPairDedupeKey({ ...base, chainId: 56 }),
+    );
+    expect(discoveredPairDedupeKey({ ...base, chainId: 56 })).not.toBe(
+      discoveredPairDedupeKey({ ...base, chainId: 8453 }),
     );
   });
 });

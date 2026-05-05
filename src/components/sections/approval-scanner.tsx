@@ -17,8 +17,8 @@ import { useBatchRevoke } from "@/hooks/use-batch-revoke";
 import { useNftApprovalDiscovery } from "@/hooks/use-nft-approval-discovery";
 import {
   getChainConfig,
+  getSupportedChainShortNames,
   isSupportedChainId,
-  supportedChainConfigList,
   type SupportedChainConfig,
 } from "@/lib/chains";
 import { shortenAddress } from "@/lib/format";
@@ -33,7 +33,7 @@ import {
 import { getErc20ResultState } from "@/lib/scanner-result-state";
 
 /**
- * Connected-wallet approval scanner (PulseChain + BSC).
+ * Connected-wallet approval scanner (PulseChain + BSC + Base).
  *
  * Uses `useApprovalDiscovery` to pull historical `Approval` events from the
  * configured explorer, re-validate every `(token, spender)` pair live via
@@ -63,8 +63,8 @@ export function ApprovalScanner() {
               Approval <span className="text-gradient-pulse">scanner</span>
             </h2>
             <p className="mt-3 leading-7 text-pulse-muted">
-              Connect on PulseChain or BSC to find token allowances and NFT
-              operator approvals from your wallet history. Every result is
+              Connect on PulseChain, BSC, or Base to find token allowances and
+              NFT operator approvals from your wallet history. Every result is
               re-checked live before it is shown as active.
             </p>
           </div>
@@ -192,7 +192,7 @@ function ScannerBody({
   }
 
   if (!onSupportedChain || !chainConfig) {
-    const names = supportedChainConfigList.map((c) => c.shortName).join(" or ");
+    const names = getSupportedChainShortNames();
     return (
       <div className="space-y-5">
         <ScannerState

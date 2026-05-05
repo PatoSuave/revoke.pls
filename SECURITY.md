@@ -12,7 +12,7 @@ It is open for review, but it is not claiming an external audit.
 - Always verify the connected site URL before connecting a wallet.
 - Always review transaction details in your wallet before signing.
 - When unsure, verify token, spender, operator, and transaction links on
-  PulseScan or BscScan.
+  PulseScan, BscScan, or BaseScan.
 
 ## What Revoke Transactions Do
 
@@ -32,8 +32,9 @@ Current active supported networks:
 
 - PulseChain, chain ID `369`
 - BSC / BNB Smart Chain, chain ID `56`
+- Base, chain ID `8453`
 
-Ethereum is not an active supported product chain.
+Ethereum Mainnet is not an active supported product chain.
 
 ## Reporting Vulnerabilities
 

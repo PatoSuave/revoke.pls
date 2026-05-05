@@ -173,7 +173,7 @@ export interface DiscoveryLimits {
 
 export const DEFAULT_DISCOVERY_LIMITS: DiscoveryLimits = {
   // Increased to reduce false negatives for long-lived wallets with large
-  // approval histories across PulseChain/BSC.
+  // approval histories across PulseChain/BSC/Base.
   maxRequests: 120,
   maxRawLogs: 100_000,
   requestTimeoutMs: 15_000,
@@ -264,7 +264,7 @@ function explorerErrorMessage(message: string | undefined): string {
   ) {
     return [
       "The configured explorer API is using a deprecated V1 endpoint.",
-      "For BSC historical discovery, set NEXT_PUBLIC_BSC_EXPLORER_API_URL=https://api.etherscan.io/v2/api and NEXT_PUBLIC_BSC_EXPLORER_API_KEY to an Etherscan API V2 key with BNB Smart Chain access.",
+      "Set this chain's explorer API URL to https://api.etherscan.io/v2/api and use an Etherscan API V2 key with access to the selected network. BSC uses chainid=56; Base uses chainid=8453.",
     ].join(" ");
   }
   return message ?? "unknown explorer error";

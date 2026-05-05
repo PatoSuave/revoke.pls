@@ -110,6 +110,9 @@ export const PULSECHAIN_SPENDER_REGISTRY: readonly SpenderEntry[] = [
 /** BSC spender labels start empty by design. Add only manually verified entries. */
 export const BSC_SPENDER_REGISTRY: readonly SpenderEntry[] = [] as const;
 
+/** Base spender labels start empty by design. Add only manually verified entries. */
+export const BASE_SPENDER_REGISTRY: readonly SpenderEntry[] = [] as const;
+
 /**
  * Dormant Ethereum mainnet spender registry retained from the earlier app
  * scaffold. Ethereum is not an active supported chain in Pulse Revoke.
@@ -195,6 +198,7 @@ export const MAINNET_SPENDER_REGISTRY: readonly SpenderEntry[] = [
 export const SPENDER_REGISTRY: readonly SpenderEntry[] = [
   ...PULSECHAIN_SPENDER_REGISTRY,
   ...BSC_SPENDER_REGISTRY,
+  ...BASE_SPENDER_REGISTRY,
   ...MAINNET_SPENDER_REGISTRY,
 ] as const;
 
@@ -202,6 +206,7 @@ export const SPENDER_REGISTRY: readonly SpenderEntry[] = [
 // on two chains (legitimate) does not trip the duplicate-address check.
 validateAddresses(PULSECHAIN_SPENDER_REGISTRY, "SPENDER_REGISTRY[pulsechain]");
 validateAddresses(BSC_SPENDER_REGISTRY, "SPENDER_REGISTRY[bsc]");
+validateAddresses(BASE_SPENDER_REGISTRY, "SPENDER_REGISTRY[base]");
 validateAddresses(MAINNET_SPENDER_REGISTRY, "SPENDER_REGISTRY[mainnet]");
 for (const s of SPENDER_REGISTRY) {
   validateRequiredStrings(
