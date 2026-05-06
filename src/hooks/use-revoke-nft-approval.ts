@@ -20,6 +20,7 @@ import {
 import type { NftApproval } from "@/lib/nft-approvals";
 import {
   applyGasEstimateToPreflight,
+  blockGasEstimateFailure,
   blockedNftPreflight,
   buildNftPreflightRead,
   evaluateNftApprovalPreflight,
@@ -28,6 +29,7 @@ import {
   type NftPreflightResult,
 } from "@/lib/preflight";
 import { getWalletRevokeBlockReason } from "@/lib/revoke";
+import { shouldEstimateRevokeGas } from "@/lib/revoke-gas";
 import { trackEvent } from "@/lib/telemetry";
 
 import type { RevokeStatus } from "@/hooks/use-revoke-approval";
@@ -191,20 +193,45 @@ export function useRevokeNftApproval({
 
       const chainConfig = getChainConfig(target.chainId);
       const revokeCall = buildNftRevokeCall(target);
-      const estimatedGas = chainConfig?.maxTransactionGas
-        ? await client.estimateContractGas({
-            ...revokeCall,
-            account: ownerAddress,
-          })
-        : undefined;
-      const next = estimatedGas
-        ? applyGasEstimateToPreflight(
-            approvalPreflight,
-            estimatedGas,
-            chainConfig?.maxTransactionGas,
-            chainConfig?.highGasWarningThreshold,
-          )
-        : approvalPreflight;
+      const shouldEstimate =
+        shouldEstimateRevokeGas(target.chainId) ||
+        Boolean(chainConfig?.maxTransactionGas);
+      if (!shouldEstimate) {
+        setPreflight(approvalPreflight);
+        return approvalPreflight;
+      }
+
+      let next: NftPreflightResult;
+      try {
+        const estimatedGas = await client.estimateContractGas({
+          ...revokeCall,
+          account: ownerAddress,
+        });
+        const gasPriceWei = await getGasPriceOrUndefined(client);
+        next = applyGasEstimateToPreflight(
+          approvalPreflight,
+          estimatedGas,
+          chainConfig?.maxTransactionGas,
+          chainConfig?.highGasWarningThreshold,
+          {
+            chainId: target.chainId,
+            callKind:
+              target.kind === "approvalForAll" ? "nft-operator" : "nft-token",
+            gasPriceWei,
+            nativeSymbol: chainConfig?.nativeSymbol,
+          },
+        );
+      } catch (error) {
+        next = withGasCapContext(
+          blockGasEstimateFailure(approvalPreflight, error, {
+            chainId: target.chainId,
+            callKind:
+              target.kind === "approvalForAll" ? "nft-operator" : "nft-token",
+            nativeSymbol: chainConfig?.nativeSymbol,
+          }),
+          target.chainId,
+        );
+      }
       setPreflight(next);
       return next;
     } catch (error) {
@@ -274,6 +301,18 @@ export function useRevokeNftApproval({
     revoke,
     reset,
   };
+}
+
+type PreflightClient = NonNullable<ReturnType<typeof getPublicClient>>;
+
+async function getGasPriceOrUndefined(
+  client: PreflightClient,
+): Promise<bigint | undefined> {
+  try {
+    return await client.getGasPrice();
+  } catch {
+    return undefined;
+  }
 }
 
 function buildNftRevokeCall(target: NftApproval) {

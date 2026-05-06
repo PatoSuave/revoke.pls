@@ -15,6 +15,7 @@ import type { WalletWriteChainId } from "@/lib/ethereum-approval-client";
 import { normalizeRevokeError } from "@/lib/errors";
 import {
   applyGasEstimateToPreflight,
+  blockGasEstimateFailure,
   blockedErc20Preflight,
   buildErc20PreflightRead,
   evaluateErc20AllowancePreflight,
@@ -27,6 +28,7 @@ import {
   getWalletRevokeBlockReason,
   type RevokeTarget,
 } from "@/lib/revoke";
+import { shouldEstimateRevokeGas } from "@/lib/revoke-gas";
 import { trackEvent } from "@/lib/telemetry";
 
 export type RevokeStatus =
@@ -200,20 +202,43 @@ export function useRevokeApproval({
 
       const chainConfig = getChainConfig(target.chainId);
       const revokeCall = buildRevokeCall(target);
-      const estimatedGas = chainConfig?.maxTransactionGas
-        ? await client.estimateContractGas({
-            ...revokeCall,
-            account: ownerAddress,
-          })
-        : undefined;
-      const next = estimatedGas
-        ? applyGasEstimateToPreflight(
-            allowancePreflight,
-            estimatedGas,
-            chainConfig?.maxTransactionGas,
-            chainConfig?.highGasWarningThreshold,
-          )
-        : allowancePreflight;
+      const shouldEstimate =
+        shouldEstimateRevokeGas(target.chainId) ||
+        Boolean(chainConfig?.maxTransactionGas);
+      if (!shouldEstimate) {
+        setPreflight(allowancePreflight);
+        return allowancePreflight;
+      }
+
+      let next: Erc20PreflightResult;
+      try {
+        const estimatedGas = await client.estimateContractGas({
+          ...revokeCall,
+          account: ownerAddress,
+        });
+        const gasPriceWei = await getGasPriceOrUndefined(client);
+        next = applyGasEstimateToPreflight(
+          allowancePreflight,
+          estimatedGas,
+          chainConfig?.maxTransactionGas,
+          chainConfig?.highGasWarningThreshold,
+          {
+            chainId: target.chainId,
+            callKind: "erc20",
+            gasPriceWei,
+            nativeSymbol: chainConfig?.nativeSymbol,
+          },
+        );
+      } catch (error) {
+        next = withGasCapContext(
+          blockGasEstimateFailure(allowancePreflight, error, {
+            chainId: target.chainId,
+            callKind: "erc20",
+            nativeSymbol: chainConfig?.nativeSymbol,
+          }),
+          target.chainId,
+        );
+      }
       setPreflight(next);
       return next;
     } catch (error) {
@@ -280,6 +305,18 @@ export function useRevokeApproval({
     revoke,
     reset,
   };
+}
+
+type PreflightClient = NonNullable<ReturnType<typeof getPublicClient>>;
+
+async function getGasPriceOrUndefined(
+  client: PreflightClient,
+): Promise<bigint | undefined> {
+  try {
+    return await client.getGasPrice();
+  } catch {
+    return undefined;
+  }
 }
 
 function withGasCapContext(

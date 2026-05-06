@@ -4,6 +4,12 @@ import { useMemo, useState } from "react";
 import type { ReactNode } from "react";
 import type { Address } from "viem";
 
+import {
+  EthereumGasDisclosure,
+  GasEstimateDebugDetails,
+  GasEstimateDetails,
+  GasWarningDetails,
+} from "@/components/approvals/gas-estimate-details";
 import { useEthereumApprovalScan } from "@/hooks/use-ethereum-approval-scan";
 import { useRevokeApproval } from "@/hooks/use-revoke-approval";
 import { useRevokeNftApproval } from "@/hooks/use-revoke-nft-approval";
@@ -27,6 +33,10 @@ import type {
   Erc20PreflightResult,
   NftPreflightResult,
 } from "@/lib/preflight";
+import {
+  WALLET_PROMPT_SAFETY_COPY,
+  requiresGasWarningAcknowledgement,
+} from "@/lib/revoke-gas";
 import { scoreApprovals, type RiskAssessment, type ScoredApproval } from "@/lib/risk";
 
 export function EthereumReadOnlyScanner({
@@ -113,6 +123,7 @@ export function EthereumReadOnlyScanner({
         activeCount={activeCount}
         revokeEnabled={revokeEnabled}
         revokeDisabledReason={revokeDisabledReason}
+        debugMode={debugMode}
       />
 
       <EthereumCoverageNote scan={scan} />
@@ -168,6 +179,7 @@ function EthereumScanContent({
   activeCount,
   revokeEnabled,
   revokeDisabledReason,
+  debugMode,
 }: {
   scan: ReturnType<typeof useEthereumApprovalScan>;
   owner: Address;
@@ -176,6 +188,7 @@ function EthereumScanContent({
   activeCount: number;
   revokeEnabled: boolean;
   revokeDisabledReason: string;
+  debugMode: boolean;
 }) {
   if (scan.status === "pending" || !scan.mapped) {
     return <EthereumScannerSkeleton />;
@@ -264,6 +277,9 @@ function EthereumScanContent({
             discovery or live-read check did not complete. This is not a clear
             wallet state.
           </p>
+          <p className="mt-2 font-mono text-xs text-amber-100">
+            {revokeDisabledReason}
+          </p>
         </div>
       ) : null}
 
@@ -274,6 +290,7 @@ function EthereumScanContent({
           revokeEnabled={revokeEnabled}
           revokeDisabledReason={revokeDisabledReason}
           onRevoked={scan.refetch}
+          debugMode={debugMode}
         />
       ) : (
         <EmptyReadOnlyGroup label="ERC-20 approvals" />
@@ -286,6 +303,7 @@ function EthereumScanContent({
           revokeEnabled={revokeEnabled}
           revokeDisabledReason={revokeDisabledReason}
           onRevoked={scan.refetch}
+          debugMode={debugMode}
         />
       ) : (
         <EmptyReadOnlyGroup label="ERC-721 / ERC-1155 approvals" />
@@ -300,12 +318,14 @@ function ReadOnlyErc20Table({
   revokeEnabled,
   revokeDisabledReason,
   onRevoked,
+  debugMode,
 }: {
   approvals: readonly ScoredApproval[];
   owner: Address;
   revokeEnabled: boolean;
   revokeDisabledReason: string;
   onRevoked: () => void;
+  debugMode: boolean;
 }) {
   return (
     <section className="overflow-hidden rounded-2xl border border-pulse-border bg-pulse-bg/40">
@@ -373,6 +393,7 @@ function ReadOnlyErc20Table({
                   })}
                 </span>
               )}
+              <EthereumErc20ProofDetails approval={approval} owner={owner} />
             </div>
 
             <EthereumErc20Action
@@ -381,6 +402,7 @@ function ReadOnlyErc20Table({
               revokeEnabled={revokeEnabled}
               revokeDisabledReason={revokeDisabledReason}
               onRevoked={onRevoked}
+              debugMode={debugMode}
             />
           </li>
         ))}
@@ -395,12 +417,14 @@ function ReadOnlyNftTable({
   revokeEnabled,
   revokeDisabledReason,
   onRevoked,
+  debugMode,
 }: {
   approvals: readonly NftApproval[];
   owner: Address;
   revokeEnabled: boolean;
   revokeDisabledReason: string;
   onRevoked: () => void;
+  debugMode: boolean;
 }) {
   return (
     <section className="overflow-hidden rounded-2xl border border-pulse-border bg-pulse-bg/40">
@@ -461,6 +485,7 @@ function ReadOnlyNftTable({
               <span className="inline-flex rounded-full border border-pulse-border bg-pulse-bg/60 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-pulse-muted">
                 {approval.standard === "erc1155" ? "ERC-1155" : "ERC-721"}
               </span>
+              <EthereumNftProofDetails approval={approval} owner={owner} />
             </div>
 
             <EthereumNftAction
@@ -469,6 +494,7 @@ function ReadOnlyNftTable({
               revokeEnabled={revokeEnabled}
               revokeDisabledReason={revokeDisabledReason}
               onRevoked={onRevoked}
+              debugMode={debugMode}
             />
           </li>
         ))}
@@ -483,12 +509,14 @@ function EthereumErc20Action({
   revokeEnabled,
   revokeDisabledReason,
   onRevoked,
+  debugMode,
 }: {
   approval: ScoredApproval;
   owner: Address;
   revokeEnabled: boolean;
   revokeDisabledReason: string;
   onRevoked: () => void;
+  debugMode: boolean;
 }) {
   const [confirming, setConfirming] = useState(false);
   const revoke = useRevokeApproval({
@@ -534,8 +562,12 @@ function EthereumErc20Action({
           approval={approval}
           preflight={revoke.preflight}
           isRefreshing={revoke.isRefreshingApproval}
+          debugMode={debugMode}
           onRefresh={() => void revoke.refreshPreflight()}
           onConfirm={() => void revoke.revoke()}
+          onConfirmHighGas={() =>
+            void revoke.revoke({ allowHighGasWarning: true })
+          }
         />
       ) : null}
     </EthereumActionShell>
@@ -548,12 +580,14 @@ function EthereumNftAction({
   revokeEnabled,
   revokeDisabledReason,
   onRevoked,
+  debugMode,
 }: {
   approval: NftApproval;
   owner: Address;
   revokeEnabled: boolean;
   revokeDisabledReason: string;
   onRevoked: () => void;
+  debugMode: boolean;
 }) {
   const [confirming, setConfirming] = useState(false);
   const revoke = useRevokeNftApproval({
@@ -593,8 +627,12 @@ function EthereumNftAction({
           approval={approval}
           preflight={revoke.preflight}
           isRefreshing={revoke.isRefreshingApproval}
+          debugMode={debugMode}
           onRefresh={() => void revoke.refreshPreflight()}
           onConfirm={() => void revoke.revoke()}
+          onConfirmHighGas={() =>
+            void revoke.revoke({ allowHighGasWarning: true })
+          }
         />
       ) : null}
     </EthereumActionShell>
@@ -723,16 +761,28 @@ function EthereumErc20Confirm({
   approval,
   preflight,
   isRefreshing,
+  debugMode,
   onRefresh,
   onConfirm,
+  onConfirmHighGas,
 }: {
   approval: ScoredApproval;
   preflight: Erc20PreflightResult | null;
   isRefreshing: boolean;
+  debugMode: boolean;
   onRefresh: () => void;
   onConfirm: () => void;
+  onConfirmHighGas: () => void;
 }) {
-  const canConfirm = preflight?.status === "active" && !isRefreshing;
+  const [gasAcknowledged, setGasAcknowledged] = useState(false);
+  const highGasWarning = preflight?.status === "highGasWarning";
+  const needsGasAcknowledgement = requiresGasWarningAcknowledgement(
+    preflight?.gasWarningLevel,
+  );
+  const canConfirm =
+    (preflight?.status === "active" || highGasWarning) &&
+    !isRefreshing &&
+    (!needsGasAcknowledgement || gasAcknowledged);
   return (
     <div className="w-full max-w-xs rounded-xl border border-pulse-border/70 bg-pulse-bg/60 p-3 text-xs leading-5 text-pulse-muted sm:text-right">
       <p className="font-semibold text-pulse-text">Review transaction</p>
@@ -743,6 +793,10 @@ function EthereumErc20Confirm({
         </span>
         . Gas is paid in {ETHEREUM_MAINNET_NATIVE_SYMBOL}.
       </p>
+      <EthereumGasDisclosure />
+      <p className="mt-1 text-xs leading-5 text-pulse-muted">
+        {WALLET_PROMPT_SAFETY_COPY}
+      </p>
       <EthereumPreflightNotice
         activeLabel={
           preflight?.currentLabel
@@ -752,7 +806,23 @@ function EthereumErc20Confirm({
         clearedLabel="Already cleared. No transaction is needed."
         preflight={preflight}
         isRefreshing={isRefreshing}
+        debugMode={debugMode}
       />
+      {needsGasAcknowledgement ? (
+        <label className="mt-2 flex items-start gap-2 rounded-lg border border-amber-400/35 bg-amber-400/10 p-2 text-left text-amber-100">
+          <input
+            type="checkbox"
+            checked={gasAcknowledged}
+            onChange={(event) => setGasAcknowledged(event.target.checked)}
+            className="mt-1 h-4 w-4 accent-amber-300"
+          />
+          <span>
+            I understand this revoke has an unusually high gas estimate and I
+            will cancel if the wallet prompt shows a transfer or unreasonable
+            fee.
+          </span>
+        </label>
+      ) : null}
       <div className="mt-3 flex gap-2 sm:justify-end">
         {!canConfirm ? (
           <button
@@ -766,11 +836,11 @@ function EthereumErc20Confirm({
         ) : null}
         <button
           type="button"
-          onClick={onConfirm}
+          onClick={highGasWarning ? onConfirmHighGas : onConfirm}
           disabled={!canConfirm}
           className="rounded-lg bg-pulse-gradient px-2.5 py-1.5 font-semibold text-pulse-bg shadow-glow disabled:cursor-not-allowed disabled:opacity-60"
         >
-          Confirm revoke
+          {highGasWarning ? "Continue to wallet anyway" : "Confirm revoke"}
         </button>
       </div>
     </div>
@@ -781,16 +851,28 @@ function EthereumNftConfirm({
   approval,
   preflight,
   isRefreshing,
+  debugMode,
   onRefresh,
   onConfirm,
+  onConfirmHighGas,
 }: {
   approval: NftApproval;
   preflight: NftPreflightResult | null;
   isRefreshing: boolean;
+  debugMode: boolean;
   onRefresh: () => void;
   onConfirm: () => void;
+  onConfirmHighGas: () => void;
 }) {
-  const canConfirm = preflight?.status === "active" && !isRefreshing;
+  const [gasAcknowledged, setGasAcknowledged] = useState(false);
+  const highGasWarning = preflight?.status === "highGasWarning";
+  const needsGasAcknowledgement = requiresGasWarningAcknowledgement(
+    preflight?.gasWarningLevel,
+  );
+  const canConfirm =
+    (preflight?.status === "active" || highGasWarning) &&
+    !isRefreshing &&
+    (!needsGasAcknowledgement || gasAcknowledged);
   const call =
     approval.kind === "approvalForAll"
       ? `setApprovalForAll(${shortenAddress(approval.operatorAddress)}, false)`
@@ -802,6 +884,10 @@ function EthereumNftConfirm({
         Sends <span className="font-mono text-pulse-text">{call}</span>. Gas is
         paid in {ETHEREUM_MAINNET_NATIVE_SYMBOL}.
       </p>
+      <EthereumGasDisclosure />
+      <p className="mt-1 text-xs leading-5 text-pulse-muted">
+        {WALLET_PROMPT_SAFETY_COPY}
+      </p>
       <EthereumPreflightNotice
         activeLabel="Current approval is still active."
         clearedLabel={
@@ -811,7 +897,23 @@ function EthereumNftConfirm({
         }
         preflight={preflight}
         isRefreshing={isRefreshing}
+        debugMode={debugMode}
       />
+      {needsGasAcknowledgement ? (
+        <label className="mt-2 flex items-start gap-2 rounded-lg border border-amber-400/35 bg-amber-400/10 p-2 text-left text-amber-100">
+          <input
+            type="checkbox"
+            checked={gasAcknowledged}
+            onChange={(event) => setGasAcknowledged(event.target.checked)}
+            className="mt-1 h-4 w-4 accent-amber-300"
+          />
+          <span>
+            I understand this revoke has an unusually high gas estimate and I
+            will cancel if the wallet prompt shows a transfer or unreasonable
+            fee.
+          </span>
+        </label>
+      ) : null}
       <div className="mt-3 flex gap-2 sm:justify-end">
         {!canConfirm ? (
           <button
@@ -825,11 +927,11 @@ function EthereumNftConfirm({
         ) : null}
         <button
           type="button"
-          onClick={onConfirm}
+          onClick={highGasWarning ? onConfirmHighGas : onConfirm}
           disabled={!canConfirm}
           className="rounded-lg bg-pulse-gradient px-2.5 py-1.5 font-semibold text-pulse-bg shadow-glow disabled:cursor-not-allowed disabled:opacity-60"
         >
-          Confirm revoke
+          {highGasWarning ? "Continue to wallet anyway" : "Confirm revoke"}
         </button>
       </div>
     </div>
@@ -841,11 +943,13 @@ function EthereumPreflightNotice({
   clearedLabel,
   preflight,
   isRefreshing,
+  debugMode,
 }: {
   activeLabel: string;
   clearedLabel: string;
   preflight: Erc20PreflightResult | NftPreflightResult | null;
   isRefreshing: boolean;
+  debugMode: boolean;
 }) {
   if (isRefreshing || !preflight) {
     return (
@@ -857,9 +961,27 @@ function EthereumPreflightNotice({
 
   if (preflight.status === "active") {
     return (
-      <p className="mt-2 rounded-lg border border-pulse-green/40 bg-pulse-green/10 p-2 text-pulse-green">
-        {activeLabel}
-      </p>
+      <div className="mt-2 rounded-lg border border-pulse-green/40 bg-pulse-green/10 p-2 text-pulse-green">
+        <p>{activeLabel}</p>
+        <GasEstimateDetails
+          preflight={preflight}
+          chainName={ETHEREUM_MAINNET_DISPLAY_NAME}
+          nativeSymbol={ETHEREUM_MAINNET_NATIVE_SYMBOL}
+        />
+        <GasEstimateDebugDetails enabled={debugMode} preflight={preflight} />
+      </div>
+    );
+  }
+
+  if (preflight.status === "highGasWarning") {
+    return (
+      <div className="mt-2 rounded-lg border border-amber-400/40 bg-amber-400/10 p-2 text-amber-200">
+        <GasWarningDetails
+          preflight={preflight}
+          chainName={ETHEREUM_MAINNET_DISPLAY_NAME}
+        />
+        <GasEstimateDebugDetails enabled={debugMode} preflight={preflight} />
+      </div>
     );
   }
 
@@ -872,10 +994,106 @@ function EthereumPreflightNotice({
   }
 
   return (
-    <p className="mt-2 rounded-lg border border-amber-400/40 bg-amber-400/10 p-2 text-amber-200">
-      Live verification failed
-      {preflight.error ? ` (${preflight.error})` : ""}. Revoke is unavailable.
-    </p>
+    <div className="mt-2 rounded-lg border border-amber-400/40 bg-amber-400/10 p-2 text-amber-200">
+      <p>
+        Revoke preflight failed
+        {preflight.error ? ` (${preflight.error})` : ""}. Revoke is
+        unavailable.
+      </p>
+      <GasEstimateDebugDetails enabled={debugMode} preflight={preflight} />
+    </div>
+  );
+}
+
+function EthereumErc20ProofDetails({
+  approval,
+  owner,
+}: {
+  approval: ScoredApproval;
+  owner: Address;
+}) {
+  const allowance = ethereumApprovalDisplayAllowance({
+    formattedAllowance: approval.formattedAllowance,
+    unlimited: approval.unlimited,
+  });
+
+  return (
+    <details className="mt-2 text-left text-[11px] leading-5 text-pulse-muted">
+      <summary className="cursor-pointer font-semibold text-pulse-cyan">
+        Why is this approval shown?
+      </summary>
+      <div className="mt-2 rounded-lg border border-pulse-border/70 bg-pulse-bg/45 p-2">
+        <p>
+          This approval was discovered from historical approval events and
+          confirmed with a live RPC read. Other approval tools may use different
+          indexes, filters, token lists, or spam protections.
+        </p>
+        <dl className="mt-2 grid gap-1 font-mono">
+          <ProofRow label="Type" value="ERC-20 approve allowance" />
+          <ProofRow label="Token" value={approval.tokenAddress} />
+          <ProofRow label="Owner" value={owner} />
+          <ProofRow label="Spender" value={approval.spenderAddress} />
+          <ProofRow label="Live allowance" value={allowance} />
+          <ProofRow label="Live verification" value="allowance(owner, spender) > 0" />
+          <ProofRow
+            label="Candidate source"
+            value="Historical Approval events via Ethereum API"
+          />
+        </dl>
+      </div>
+    </details>
+  );
+}
+
+function EthereumNftProofDetails({
+  approval,
+  owner,
+}: {
+  approval: NftApproval;
+  owner: Address;
+}) {
+  const type =
+    approval.kind === "approvalForAll"
+      ? `${approval.standard === "erc1155" ? "ERC-1155" : "ERC-721"} setApprovalForAll`
+      : "ERC-721 approve token";
+  const liveState =
+    approval.kind === "approvalForAll"
+      ? "isApprovedForAll(owner, operator) == true"
+      : `getApproved(${approval.tokenId?.toString() ?? "tokenId"}) == operator`;
+
+  return (
+    <details className="mt-2 text-left text-[11px] leading-5 text-pulse-muted">
+      <summary className="cursor-pointer font-semibold text-pulse-cyan">
+        Why is this approval shown?
+      </summary>
+      <div className="mt-2 rounded-lg border border-pulse-border/70 bg-pulse-bg/45 p-2">
+        <p>
+          This approval was discovered from historical approval events and
+          confirmed with a live RPC read. Other approval tools may use different
+          indexes, filters, token lists, or spam protections.
+        </p>
+        <dl className="mt-2 grid gap-1 font-mono">
+          <ProofRow label="Type" value={type} />
+          <ProofRow label="Collection" value={approval.collectionAddress} />
+          <ProofRow label="Owner" value={owner} />
+          <ProofRow label="Operator" value={approval.operatorAddress} />
+          <ProofRow label="Live approval state" value={liveState} />
+          <ProofRow
+            label="Candidate source"
+            value="Historical Approval events via Ethereum API"
+          />
+        </dl>
+      </div>
+    </details>
+  );
+}
+
+function ProofRow({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="grid gap-1">
+      <dt className="text-pulse-muted">{label}</dt>
+      <dd className="break-words text-pulse-text">{value}</dd>
+    </div>
   );
 }
 
@@ -952,6 +1170,7 @@ function EthereumDiagnostics({
 
   const response = scan.response;
   const diagnostics = response?.diagnostics;
+  const skippedReasons = diagnostics?.skippedReasons ?? {};
   const rows: readonly [string, string][] = [
     ["Wallet", shortenAddress(owner)],
     ["Connected wallet chain ID", walletChainId?.toString() ?? "Unknown"],
@@ -988,8 +1207,30 @@ function EthereumDiagnostics({
       diagnostics?.liveReadFailureCount.toString() ?? "Not returned",
     ],
     [
+      "ERC-20 live read failures",
+      diagnostics
+        ? (skippedReasons["erc20-live-read-failure"] ?? 0).toString()
+        : "Not returned",
+    ],
+    [
+      "NFT live read failures",
+      diagnostics
+        ? (skippedReasons["nft-live-read-failure"] ?? 0).toString()
+        : "Not returned",
+    ],
+    [
       "Incomplete verification",
       diagnostics?.incompleteVerificationCount.toString() ?? "Not returned",
+    ],
+    [
+      "Skipped approvals",
+      diagnostics?.skippedApprovalCount.toString() ?? "Not returned",
+    ],
+    [
+      "Skipped reason breakdown",
+      diagnostics
+        ? formatSkippedReasonBreakdown(diagnostics.skippedReasons)
+        : "Not returned",
     ],
     [
       "Discovery truncated",
@@ -1026,6 +1267,14 @@ function EthereumDiagnostics({
       ) : null}
     </section>
   );
+}
+
+function formatSkippedReasonBreakdown(reasons: Record<string, number>): string {
+  const entries = Object.entries(reasons).filter(([, count]) => count > 0);
+  if (entries.length === 0) return "None";
+  return entries
+    .map(([reason, count]) => `${reason}: ${count}`)
+    .join("; ");
 }
 
 function StatePanel({

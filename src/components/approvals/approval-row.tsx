@@ -3,6 +3,11 @@
 import { useState } from "react";
 import type { Address } from "viem";
 
+import {
+  GasEstimateDebugDetails,
+  GasEstimateDetails,
+  GasWarningDetails,
+} from "@/components/approvals/gas-estimate-details";
 import type { BatchItemResult } from "@/hooks/use-batch-revoke";
 import { useRevokeApproval } from "@/hooks/use-revoke-approval";
 import { getChainConfig } from "@/lib/chains";
@@ -16,11 +21,9 @@ import {
   BSC_GAS_CAP_BODY,
   BSC_GAS_CAP_HELPER,
   BSC_GAS_CAP_TITLE,
-  HIGH_GAS_WARNING_BODY,
-  HIGH_GAS_WARNING_HELPER,
-  HIGH_GAS_WARNING_TITLE,
   type Erc20PreflightResult,
 } from "@/lib/preflight";
+import { requiresGasWarningAcknowledgement } from "@/lib/revoke-gas";
 import type { RiskLevel, ScoredApproval } from "@/lib/risk";
 
 export function ApprovalRow({
@@ -33,6 +36,7 @@ export function ApprovalRow({
   batchActive = false,
   batchResult,
   revokeDisabledReason,
+  debugMode = false,
 }: {
   approval: ScoredApproval;
   ownerAddress: Address;
@@ -43,6 +47,7 @@ export function ApprovalRow({
   batchActive?: boolean;
   batchResult?: BatchItemResult;
   revokeDisabledReason?: string | null;
+  debugMode?: boolean;
 }) {
   const [confirming, setConfirming] = useState(false);
 
@@ -199,6 +204,7 @@ export function ApprovalRow({
           onCancel={() => setConfirming(false)}
           preflight={preflight}
           isRefreshingApproval={isRefreshingApproval}
+          debugMode={debugMode}
           onRefresh={() => void refreshPreflight()}
           onConfirm={() => {
             void revoke();
@@ -472,6 +478,7 @@ function ConfirmPanel({
   onCancel,
   preflight,
   isRefreshingApproval,
+  debugMode,
   onRefresh,
   onConfirm,
   onConfirmHighGas,
@@ -482,13 +489,20 @@ function ConfirmPanel({
   onCancel: () => void;
   preflight: Erc20PreflightResult | null;
   isRefreshingApproval: boolean;
+  debugMode: boolean;
   onRefresh: () => void;
   onConfirm: () => void;
   onConfirmHighGas: () => void;
 }) {
+  const [gasAcknowledged, setGasAcknowledged] = useState(false);
   const highGasWarning = preflight?.status === "highGasWarning";
+  const needsGasAcknowledgement = requiresGasWarningAcknowledgement(
+    preflight?.gasWarningLevel,
+  );
   const canConfirm =
-    (preflight?.status === "active" || highGasWarning) && !isRefreshingApproval;
+    (preflight?.status === "active" || highGasWarning) &&
+    !isRefreshingApproval &&
+    (!needsGasAcknowledgement || gasAcknowledged);
 
   return (
     <div className="border-t border-pulse-border/60 bg-pulse-bg/50 px-4 py-4 sm:px-6">
@@ -519,6 +533,9 @@ function ConfirmPanel({
           <PreflightNotice
             preflight={preflight}
             isRefreshingApproval={isRefreshingApproval}
+            chainName={chainName}
+            nativeSymbol={nativeSymbol}
+            debugMode={debugMode}
           />
           <p className="mt-2 rounded-xl border border-pulse-border/70 bg-pulse-panel/45 p-3 text-xs leading-5 text-pulse-muted">
             {approval.risk.reason}
@@ -552,6 +569,21 @@ function ConfirmPanel({
           </button>
         </div>
       </div>
+      {needsGasAcknowledgement ? (
+        <label className="mt-3 flex items-start gap-2 rounded-xl border border-amber-400/35 bg-amber-400/10 p-3 text-xs leading-5 text-amber-100">
+          <input
+            type="checkbox"
+            checked={gasAcknowledged}
+            onChange={(event) => setGasAcknowledged(event.target.checked)}
+            className="mt-1 h-4 w-4 accent-amber-300"
+          />
+          <span>
+            I understand this revoke has an unusually high gas estimate and I
+            will cancel if the wallet prompt shows a transfer or unreasonable
+            fee.
+          </span>
+        </label>
+      ) : null}
     </div>
   );
 }
@@ -559,9 +591,15 @@ function ConfirmPanel({
 function PreflightNotice({
   preflight,
   isRefreshingApproval,
+  chainName,
+  nativeSymbol,
+  debugMode,
 }: {
   preflight: Erc20PreflightResult | null;
   isRefreshingApproval: boolean;
+  chainName: string;
+  nativeSymbol?: string;
+  debugMode: boolean;
 }) {
   if (isRefreshingApproval) {
     return (
@@ -591,7 +629,12 @@ function PreflightNotice({
           </span>
           . This approval is still active.
         </span>
-        <GasDiagnostics preflight={preflight} />
+        <GasEstimateDetails
+          preflight={preflight}
+          chainName={chainName}
+          nativeSymbol={nativeSymbol}
+        />
+        <GasEstimateDebugDetails enabled={debugMode} preflight={preflight} />
       </PreflightBox>
     );
   }
@@ -599,12 +642,8 @@ function PreflightNotice({
   if (preflight.status === "highGasWarning") {
     return (
       <PreflightBox tone="warning">
-        <span className="font-semibold text-pulse-text">
-          {HIGH_GAS_WARNING_TITLE}
-        </span>
-        <span>{HIGH_GAS_WARNING_BODY}</span>
-        <GasDiagnostics preflight={preflight} />
-        <span>{HIGH_GAS_WARNING_HELPER}</span>
+        <GasWarningDetails preflight={preflight} chainName={chainName} />
+        <GasEstimateDebugDetails enabled={debugMode} preflight={preflight} />
       </PreflightBox>
     );
   }
@@ -625,7 +664,12 @@ function PreflightNotice({
           {BSC_GAS_CAP_TITLE}
         </span>
         <span>{BSC_GAS_CAP_BODY}</span>
-        <GasDiagnostics preflight={preflight} />
+        <GasEstimateDetails
+          preflight={preflight}
+          chainName={chainName}
+          nativeSymbol={nativeSymbol}
+        />
+        <GasEstimateDebugDetails enabled={debugMode} preflight={preflight} />
         <span>{BSC_GAS_CAP_HELPER}</span>
       </PreflightBox>
     );
@@ -633,9 +677,10 @@ function PreflightNotice({
 
   return (
     <PreflightBox tone="warning">
-      Could not verify the current allowance
+      Could not complete revoke preflight
       {preflight.error ? ` (${preflight.error})` : ""}. No revoke transaction
       will be sent from this prompt.
+      <GasEstimateDebugDetails enabled={debugMode} preflight={preflight} />
     </PreflightBox>
   );
 }
@@ -660,42 +705,6 @@ function PreflightBox({
       {children}
     </div>
   );
-}
-
-function GasDiagnostics({
-  preflight,
-}: {
-  preflight: Pick<
-    Erc20PreflightResult,
-    | "estimatedGas"
-    | "maxTransactionGas"
-    | "highGasWarningThreshold"
-    | "gasCapExceeded"
-    | "highGasWarning"
-  >;
-}) {
-  if (!preflight.estimatedGas) return null;
-  return (
-    <span className="font-mono text-[11px] text-pulse-muted">
-      Estimated gas: {formatGasAmount(preflight.estimatedGas)}
-      {preflight.maxTransactionGas
-        ? ` / BSC max transaction gas: ${formatGasAmount(
-            preflight.maxTransactionGas,
-          )}`
-        : ""}
-      {preflight.highGasWarningThreshold
-        ? ` / high-gas warning threshold: ${formatGasAmount(
-            preflight.highGasWarningThreshold,
-          )}`
-        : ""}
-      {preflight.gasCapExceeded === false ? " / gas cap preflight passed" : ""}
-      {preflight.highGasWarning ? " / requires explicit high-gas confirmation" : ""}
-    </span>
-  );
-}
-
-function formatGasAmount(value: bigint): string {
-  return value.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
 }
 
 function StatusPanel({
