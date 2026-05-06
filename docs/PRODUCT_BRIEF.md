@@ -4,7 +4,7 @@
 Pulse Revoke
 
 ## Vision
-Create a clean, fast approval management interface for PulseChain, BSC, and Base, similar in spirit to revoke.cash, while preserving the Pulse Revoke identity and a narrow security-first scope.
+Create a clean, fast approval management interface for PulseChain, BSC, and Base while preserving the Pulse Revoke identity and a narrow security-first scope.
 
 ## Primary Problem
 Users often approve tokens to contracts and forget about those approvals. Unlimited approvals can create significant risk if a spender contract is compromised or malicious.

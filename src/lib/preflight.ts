@@ -5,6 +5,14 @@ import type { RevokeTarget } from "@/lib/revoke";
 import { erc20Abi, formatAllowance, isUnlimitedAllowance } from "@/lib/erc20";
 import type { NftApproval } from "@/lib/nft-approvals";
 import { nftReadAbi, ZERO_ADDRESS } from "@/lib/nft-approvals";
+import {
+  getGasWarningLevel,
+  getNativeGasSymbol,
+  getRevokeGasThresholds,
+  isGasWarningLevel,
+  type GasWarningLevel,
+  type RevokeGasCallKind,
+} from "@/lib/revoke-gas";
 
 export type PreflightStatus =
   | "active"
@@ -35,11 +43,21 @@ export interface Erc20PreflightResult {
   currentAllowance?: bigint;
   currentLabel?: string;
   error?: string;
+  chainId?: number;
   estimatedGas?: bigint;
+  estimatedFeeWei?: bigint;
+  gasPriceWei?: bigint;
+  nativeSymbol?: string;
   maxTransactionGas?: bigint;
   highGasWarningThreshold?: bigint;
+  severeGasWarningThreshold?: bigint;
+  extremeGasWarningThreshold?: bigint;
   gasCapExceeded?: boolean;
   highGasWarning?: boolean;
+  gasWarningLevel?: GasWarningLevel;
+  gasEstimateAttempted?: boolean;
+  gasEstimateSucceeded?: boolean;
+  gasEstimateError?: string;
 }
 
 export interface NftPreflightResult {
@@ -48,11 +66,21 @@ export interface NftPreflightResult {
   approvedForAll?: boolean;
   currentApprovedAddress?: Address;
   error?: string;
+  chainId?: number;
   estimatedGas?: bigint;
+  estimatedFeeWei?: bigint;
+  gasPriceWei?: bigint;
+  nativeSymbol?: string;
   maxTransactionGas?: bigint;
   highGasWarningThreshold?: bigint;
+  severeGasWarningThreshold?: bigint;
+  extremeGasWarningThreshold?: bigint;
   gasCapExceeded?: boolean;
   highGasWarning?: boolean;
+  gasWarningLevel?: GasWarningLevel;
+  gasEstimateAttempted?: boolean;
+  gasEstimateSucceeded?: boolean;
+  gasEstimateError?: string;
 }
 
 export type ApprovalPreflightResult =
@@ -243,17 +271,54 @@ export function applyGasEstimateToPreflight<T extends ApprovalPreflightResult>(
   estimatedGas: bigint,
   maxTransactionGas: bigint | undefined,
   highGasWarningThreshold?: bigint,
+  options: {
+    chainId?: number;
+    callKind?: RevokeGasCallKind;
+    gasPriceWei?: bigint;
+    nativeSymbol?: string;
+  } = {},
 ): T {
+  const callKind = options.callKind ?? result.kind;
+  const thresholds = getRevokeGasThresholds({
+    chainId: options.chainId,
+    kind: callKind,
+    highGasWarningThreshold,
+  });
+  const gasWarningLevel = getGasWarningLevel({
+    chainId: options.chainId,
+    kind: callKind,
+    estimatedGas,
+    highGasWarningThreshold,
+  });
+  const gasFields = {
+    chainId: options.chainId,
+    estimatedGas,
+    estimatedFeeWei:
+      options.gasPriceWei !== undefined
+        ? estimatedGas * options.gasPriceWei
+        : undefined,
+    gasPriceWei: options.gasPriceWei,
+    nativeSymbol: getNativeGasSymbol({
+      chainId: options.chainId,
+      fallback: options.nativeSymbol,
+    }),
+    maxTransactionGas,
+    highGasWarningThreshold: thresholds.high,
+    severeGasWarningThreshold: thresholds.severe,
+    extremeGasWarningThreshold: thresholds.extreme,
+    gasWarningLevel,
+    gasEstimateAttempted: true,
+    gasEstimateSucceeded: true,
+  };
+
   if (maxTransactionGas && estimatedGas > maxTransactionGas) {
-    return blockGasCapPreflight(result, estimatedGas, maxTransactionGas);
+    return blockGasCapPreflight(result, gasFields, maxTransactionGas);
   }
 
-  if (highGasWarningThreshold && estimatedGas > highGasWarningThreshold) {
+  if (isGasWarningLevel(gasWarningLevel)) {
     return {
       ...result,
-      estimatedGas,
-      maxTransactionGas,
-      highGasWarningThreshold,
+      ...gasFields,
       status: "highGasWarning",
       gasCapExceeded: false,
       highGasWarning: true,
@@ -262,11 +327,39 @@ export function applyGasEstimateToPreflight<T extends ApprovalPreflightResult>(
 
   return {
     ...result,
-    estimatedGas,
-    maxTransactionGas,
-    highGasWarningThreshold,
+    ...gasFields,
     gasCapExceeded: false,
     highGasWarning: false,
+  };
+}
+
+export function blockGasEstimateFailure<T extends ApprovalPreflightResult>(
+  result: T,
+  error: unknown,
+  options: {
+    chainId?: number;
+    callKind?: RevokeGasCallKind;
+    nativeSymbol?: string;
+  } = {},
+): T {
+  const gasCapExceeded = isBscGasCapErrorMessage(error);
+  const safeError = safeErrorCategory(error);
+  return {
+    ...result,
+    chainId: options.chainId,
+    status: "unverified",
+    error: gasCapExceeded
+      ? BSC_GAS_CAP_ERROR
+      : `Gas estimate failed: ${safeError}`,
+    nativeSymbol: getNativeGasSymbol({
+      chainId: options.chainId,
+      fallback: options.nativeSymbol,
+    }),
+    gasCapExceeded,
+    gasWarningLevel: "unavailable",
+    gasEstimateAttempted: true,
+    gasEstimateSucceeded: false,
+    gasEstimateError: safeError,
   };
 }
 
@@ -292,7 +385,20 @@ export function safeGasForRevokeRequest<T extends ApprovalPreflightResult>(
       ok: false,
       preflight: blockGasCapPreflight(
         result,
-        result.estimatedGas,
+        {
+          chainId: result.chainId,
+          estimatedGas: result.estimatedGas,
+          estimatedFeeWei: result.estimatedFeeWei,
+          gasPriceWei: result.gasPriceWei,
+          nativeSymbol: result.nativeSymbol,
+          maxTransactionGas: result.maxTransactionGas,
+          highGasWarningThreshold: result.highGasWarningThreshold,
+          severeGasWarningThreshold: result.severeGasWarningThreshold,
+          extremeGasWarningThreshold: result.extremeGasWarningThreshold,
+          gasWarningLevel: result.gasWarningLevel,
+          gasEstimateAttempted: result.gasEstimateAttempted,
+          gasEstimateSucceeded: result.gasEstimateSucceeded,
+        },
         maxTransactionGas,
       ),
     };
@@ -371,14 +477,28 @@ function safeErrorCategory(error: unknown): string {
 
 function blockGasCapPreflight<T extends ApprovalPreflightResult>(
   result: T,
-  estimatedGas: bigint | undefined,
+  gasFields: Pick<
+    ApprovalPreflightResult,
+    | "chainId"
+    | "estimatedGas"
+    | "estimatedFeeWei"
+    | "gasPriceWei"
+    | "nativeSymbol"
+    | "maxTransactionGas"
+    | "highGasWarningThreshold"
+    | "severeGasWarningThreshold"
+    | "extremeGasWarningThreshold"
+    | "gasWarningLevel"
+    | "gasEstimateAttempted"
+    | "gasEstimateSucceeded"
+  >,
   maxTransactionGas: bigint,
 ): T {
   return {
     ...result,
+    ...gasFields,
     status: "unverified",
     error: BSC_GAS_CAP_ERROR,
-    estimatedGas,
     maxTransactionGas,
     gasCapExceeded: true,
   };

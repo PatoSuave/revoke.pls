@@ -306,12 +306,57 @@ function ethereumApiRevokeDisabledReason({
     return "Ethereum API response was malformed - revoke unavailable.";
   }
   if (response.status === "verification-incomplete" || incomplete) {
-    return "Verification incomplete - revoke unavailable.";
+    return ethereumIncompleteVerificationReason(response);
   }
   if (response.status === "complete-clear" || activeApprovalCount === 0) {
     return "No active Ethereum approvals are available to revoke.";
   }
   return "Ethereum revoke unavailable.";
+}
+
+function ethereumIncompleteVerificationReason(
+  response: EthereumApprovalApiResponse,
+): string {
+  const { diagnostics } = response;
+  const reasons = diagnostics.skippedReasons ?? {};
+  const erc20LiveReadFailures = reasons["erc20-live-read-failure"] ?? 0;
+  const nftLiveReadFailures = reasons["nft-live-read-failure"] ?? 0;
+  const details: string[] = [];
+
+  if (diagnostics.discoveryTruncated || (reasons["discovery-truncated"] ?? 0) > 0) {
+    details.push("discovery was truncated");
+  }
+  if (erc20LiveReadFailures > 0) {
+    details.push(
+      `${erc20LiveReadFailures} ERC-20 live read${erc20LiveReadFailures === 1 ? "" : "s"} failed`,
+    );
+  }
+  if (nftLiveReadFailures > 0) {
+    details.push(
+      `${nftLiveReadFailures} NFT live read${nftLiveReadFailures === 1 ? "" : "s"} failed`,
+    );
+  }
+
+  const unclassifiedLiveReadFailures = Math.max(
+    diagnostics.liveReadFailureCount -
+      erc20LiveReadFailures -
+      nftLiveReadFailures,
+    0,
+  );
+  if (unclassifiedLiveReadFailures > 0) {
+    details.push(
+      `${unclassifiedLiveReadFailures} live read${unclassifiedLiveReadFailures === 1 ? "" : "s"} failed`,
+    );
+  }
+
+  if (details.length === 0 && diagnostics.incompleteVerificationCount > 0) {
+    details.push(
+      `${diagnostics.incompleteVerificationCount} incomplete verification check${diagnostics.incompleteVerificationCount === 1 ? "" : "s"}`,
+    );
+  }
+
+  const suffix = details.length > 0 ? ` (${details.join("; ")})` : "";
+  return `Verification incomplete${suffix} - revoke unavailable.`;
 }
 
 export function canEnableEthereumWalletRevoke({

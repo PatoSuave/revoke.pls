@@ -231,6 +231,9 @@ describe("Ethereum approval client mapping", () => {
           ...response({}).diagnostics,
           liveReadFailureCount: 1,
           incompleteVerificationCount: 1,
+          skippedReasons: {
+            "erc20-live-read-failure": 1,
+          },
         },
       }),
     );
@@ -238,7 +241,33 @@ describe("Ethereum approval client mapping", () => {
     expect(mapped.state).toBe("verification-incomplete");
     expect(mapped.canShowClear).toBe(false);
     expect(mapped.revokeEnabled).toBe(false);
-    expect(mapped.revokeDisabledReason).toContain("Verification incomplete");
+    expect(mapped.revokeDisabledReason).toContain("1 ERC-20 live read failed");
+  });
+
+  it("includes exact Ethereum incomplete verification buckets in the disabled reason", () => {
+    const mapped = mapEthereumApprovalApiResponse(
+      response({
+        status: "verification-incomplete",
+        ok: false,
+        diagnostics: {
+          ...response({}).diagnostics,
+          liveReadFailureCount: 3,
+          incompleteVerificationCount: 4,
+          discoveryTruncated: true,
+          skippedReasons: {
+            "erc20-live-read-failure": 2,
+            "nft-live-read-failure": 1,
+            "discovery-truncated": 1,
+          },
+        },
+      }),
+    );
+
+    expect(mapped.state).toBe("verification-incomplete");
+    expect(mapped.revokeEnabled).toBe(false);
+    expect(mapped.revokeDisabledReason).toBe(
+      "Verification incomplete (discovery was truncated; 2 ERC-20 live reads failed; 1 NFT live read failed) - revoke unavailable.",
+    );
   });
 
   it("maps config-missing and upstream-failure to non-clear states", () => {
@@ -272,6 +301,7 @@ describe("Ethereum approval client mapping", () => {
     expect(mapped.state).toBe("verification-incomplete");
     expect(mapped.canShowClear).toBe(false);
     expect(mapped.revokeEnabled).toBe(false);
+    expect(mapped.revokeDisabledReason).toContain("discovery was truncated");
   });
 
   it("disables Ethereum revoke when a returned approval is malformed", () => {
