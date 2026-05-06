@@ -2,7 +2,12 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { getPublicClient } from "@wagmi/core";
-import { useConfig, useWaitForTransactionReceipt, useWriteContract } from "wagmi";
+import {
+  useAccount,
+  useConfig,
+  useWaitForTransactionReceipt,
+  useWriteContract,
+} from "wagmi";
 import type { Address } from "viem";
 
 import { getChainConfig } from "@/lib/chains";
@@ -15,12 +20,14 @@ import {
 import type { NftApproval } from "@/lib/nft-approvals";
 import {
   applyGasEstimateToPreflight,
+  blockedNftPreflight,
   buildNftPreflightRead,
   evaluateNftApprovalPreflight,
   failedNftPreflight,
   safeGasForRevokeRequest,
   type NftPreflightResult,
 } from "@/lib/preflight";
+import { getWalletRevokeBlockReason } from "@/lib/revoke";
 import { trackEvent } from "@/lib/telemetry";
 
 import type { RevokeStatus } from "@/hooks/use-revoke-approval";
@@ -58,9 +65,11 @@ export function useRevokeNftApproval({
   onSuccess,
 }: UseRevokeNftApprovalOptions): UseRevokeNftApprovalResult {
   const config = useConfig();
+  const { address: connectedAddress, chainId: walletChainId } = useAccount();
   const write = useWriteContract();
   const [preflight, setPreflight] = useState<NftPreflightResult | null>(null);
   const [isRefreshingApproval, setIsRefreshingApproval] = useState(false);
+  const walletStateRef = useRef({ connectedAddress, walletChainId });
   const wait = useWaitForTransactionReceipt({
     hash: write.data,
     chainId: target.chainId as WalletWriteChainId,
@@ -107,6 +116,20 @@ export function useRevokeNftApproval({
   const lastStatusRef = useRef<RevokeStatus>("idle");
 
   useEffect(() => {
+    walletStateRef.current = { connectedAddress, walletChainId };
+  }, [connectedAddress, walletChainId]);
+
+  const walletRevokeBlockReason = useCallback(() => {
+    const current = walletStateRef.current;
+    return getWalletRevokeBlockReason({
+      connectedAddress: current.connectedAddress,
+      ownerAddress,
+      walletChainId: current.walletChainId,
+      targetChainId: target.chainId,
+    });
+  }, [ownerAddress, target.chainId]);
+
+  useEffect(() => {
     if (
       status === "success" &&
       write.data &&
@@ -146,6 +169,13 @@ export function useRevokeNftApproval({
   const refreshPreflight = useCallback(async () => {
     setIsRefreshingApproval(true);
     try {
+      const blockReason = walletRevokeBlockReason();
+      if (blockReason) {
+        const next = blockedNftPreflight(blockReason, target);
+        setPreflight(next);
+        return next;
+      }
+
       const client = getPublicClient(config, {
         chainId: target.chainId as WalletWriteChainId,
       });
@@ -187,7 +217,7 @@ export function useRevokeNftApproval({
     } finally {
       setIsRefreshingApproval(false);
     }
-  }, [config, ownerAddress, target]);
+  }, [config, ownerAddress, target, walletRevokeBlockReason]);
 
   const revoke = useCallback(async (options?: { allowHighGasWarning?: boolean }) => {
     notifiedHashRef.current = null;
@@ -203,6 +233,11 @@ export function useRevokeNftApproval({
       setPreflight(safeGas.preflight);
       return;
     }
+    const blockReason = walletRevokeBlockReason();
+    if (blockReason) {
+      setPreflight(blockedNftPreflight(blockReason, target));
+      return;
+    }
     trackEvent("revoke_submitted", {
       kind: telemetryKind,
       chainId: target.chainId,
@@ -213,7 +248,13 @@ export function useRevokeNftApproval({
       chainId: target.chainId as WalletWriteChainId,
       ...(safeGas.gas !== undefined ? { gas: safeGas.gas } : {}),
     });
-  }, [refreshPreflight, target, write, telemetryKind]);
+  }, [
+    refreshPreflight,
+    target,
+    telemetryKind,
+    walletRevokeBlockReason,
+    write,
+  ]);
 
   const reset = useCallback(() => {
     notifiedHashRef.current = null;

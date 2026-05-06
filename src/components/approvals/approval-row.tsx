@@ -32,6 +32,7 @@ export function ApprovalRow({
   selectionDisabled = false,
   batchActive = false,
   batchResult,
+  revokeDisabledReason,
 }: {
   approval: ScoredApproval;
   ownerAddress: Address;
@@ -41,6 +42,7 @@ export function ApprovalRow({
   selectionDisabled?: boolean;
   batchActive?: boolean;
   batchResult?: BatchItemResult;
+  revokeDisabledReason?: string | null;
 }) {
   const [confirming, setConfirming] = useState(false);
 
@@ -72,7 +74,10 @@ export function ApprovalRow({
   const chainConfig = getChainConfig(approval.chainId);
   const chainId = approval.chainId;
   const showConfirm =
-    confirming && (status === "idle" || status === "refreshing") && !batchActive;
+    confirming &&
+    (status === "idle" || status === "refreshing") &&
+    !batchActive &&
+    !revokeDisabledReason;
   const showStatus =
     status !== "idle" && status !== "refreshing" && !batchActive;
 
@@ -180,6 +185,7 @@ export function ApprovalRow({
                 setConfirming(true);
                 void refreshPreflight();
               }}
+              revokeDisabledReason={revokeDisabledReason}
             />
           )}
         </div>
@@ -343,6 +349,7 @@ function RowAction({
   onConfirmClick,
   onCancel,
   onRetry,
+  revokeDisabledReason,
 }: {
   status: ReturnType<typeof useRevokeApproval>["status"];
   hash?: `0x${string}`;
@@ -352,6 +359,7 @@ function RowAction({
   onConfirmClick: () => void;
   onCancel: () => void;
   onRetry: () => void;
+  revokeDisabledReason?: string | null;
 }) {
   const base =
     "inline-flex w-full items-center justify-center gap-2 rounded-xl px-3 py-2 text-xs font-semibold transition disabled:cursor-not-allowed sm:w-auto";
@@ -394,6 +402,17 @@ function RowAction({
       >
         Revoked
         {hash ? <TxLink chainId={chainId} hash={hash} tone="success" /> : null}
+      </span>
+    );
+  }
+
+  if (revokeDisabledReason) {
+    return (
+      <span
+        className={`${base} border border-amber-400/40 bg-amber-400/10 text-amber-200`}
+        title={revokeDisabledReason}
+      >
+        Revoke unavailable
       </span>
     );
   }

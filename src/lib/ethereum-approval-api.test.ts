@@ -350,7 +350,9 @@ describe("Ethereum approval API foundation", () => {
     const brokenSource: DiscoverySource = {
       meta,
       async discover() {
-        throw new Error("rate limit");
+        throw new Error(
+          "rate limit https://api.etherscan.io/v2/api?apikey=secret-key&module=logs",
+        );
       },
       async discoverNftApprovals() {
         return {
@@ -373,6 +375,8 @@ describe("Ethereum approval API foundation", () => {
     expect(result.status).toBe("upstream-failure");
     expect(result.ok).toBe(false);
     expect(result.errors.join(" ")).toContain("rate limit");
+    expect(result.errors.join(" ")).not.toContain("secret-key");
+    expect(result.errors.join(" ")).toContain("?[redacted]");
   });
 
   it("returns complete-clear only after complete live verification finds no active approvals", async () => {
@@ -397,7 +401,7 @@ describe("Ethereum approval API foundation", () => {
     expect(result.diagnostics.liveReadFailureCount).toBe(0);
   });
 
-  it("preserves compatibility with legacy public Ethereum env names", async () => {
+  it("requires server-only Ethereum RPC and API key names", async () => {
     const result = await scanEthereumApprovals(OWNER, {
       env: env({
         MAINNET_RPC_URL: undefined,
@@ -410,9 +414,11 @@ describe("Ethereum approval API foundation", () => {
       reader: { readContract: vi.fn() },
     });
 
-    expect(result.status).toBe("complete-clear");
-    expect(result.diagnostics.rpcConfigured).toBe(true);
-    expect(result.diagnostics.explorerConfigured).toBe(true);
+    expect(result.status).toBe("config-missing");
+    expect(result.diagnostics.rpcConfigured).toBe(false);
+    expect(result.diagnostics.explorerConfigured).toBe(false);
+    expect(result.missingConfig.join(" ")).toContain("MAINNET_RPC_URL");
+    expect(result.missingConfig.join(" ")).toContain("ETHERSCAN_API_KEY");
   });
 
   it("normalizes valid Ethereum owner input and rejects invalid input", () => {

@@ -164,6 +164,14 @@ export function failedErc20Preflight(error: unknown): Erc20PreflightResult {
   };
 }
 
+export function blockedErc20Preflight(error: string): Erc20PreflightResult {
+  return {
+    kind: "erc20",
+    status: "unverified",
+    error,
+  };
+}
+
 export function evaluateNftApprovalPreflight(
   result: unknown,
   target: Pick<NftApproval, "kind" | "operatorAddress">,
@@ -216,6 +224,17 @@ export function failedNftPreflight(
     status: "unverified",
     error: gasCapExceeded ? BSC_GAS_CAP_ERROR : safeErrorCategory(error),
     gasCapExceeded,
+  };
+}
+
+export function blockedNftPreflight(
+  error: string,
+  target: Pick<NftApproval, "kind">,
+): NftPreflightResult {
+  return {
+    kind: target.kind === "approvalForAll" ? "nft-operator" : "nft-token",
+    status: "unverified",
+    error,
   };
 }
 

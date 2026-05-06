@@ -10,6 +10,8 @@ import {
   HIGH_GAS_WARNING_HELPER,
   HIGH_GAS_WARNING_TITLE,
   applyGasEstimateToPreflight,
+  blockedErc20Preflight,
+  blockedNftPreflight,
   evaluateErc20AllowancePreflight,
   evaluateNftApprovalPreflight,
   failedErc20Preflight,
@@ -114,6 +116,21 @@ describe("approval revoke preflight", () => {
 
     expect(result.status).toBe("unverified");
     expect(result.currentAllowance).toBeUndefined();
+  });
+
+  it("blocks wallet guard failures as unverified ERC-20 and NFT preflight results", () => {
+    expect(blockedErc20Preflight("wrong wallet")).toEqual({
+      kind: "erc20",
+      status: "unverified",
+      error: "wrong wallet",
+    });
+    expect(
+      blockedNftPreflight("wrong chain", { kind: "approvalForAll" }),
+    ).toEqual({
+      kind: "nft-operator",
+      status: "unverified",
+      error: "wrong chain",
+    });
   });
 
   it("allows a BSC revoke gas estimate below the Osaka/Mendel cap", () => {
