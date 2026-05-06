@@ -101,6 +101,13 @@ export interface EthereumApprovalClientMapping {
   /** True only when the API response is complete enough for wallet-side revoke. */
   revokeEnabled: boolean;
   revokeDisabledReason: string | null;
+  /**
+   * True when returned active rows are individually live-verified enough for
+   * one-at-a-time wallet revoke, even if unrelated rows kept the scan globally
+   * incomplete.
+   */
+  rowRevokeEnabled: boolean;
+  rowRevokeDisabledReason: string | null;
   malformedResponse: boolean;
   activeApprovalCount: number;
   approvals: {
@@ -214,11 +221,24 @@ export function mapEthereumApprovalApiResponse(
     !incomplete &&
     !malformedResponse &&
     activeApprovalCount > 0;
+  const rowVerifiedForRevoke =
+    (response.status === "active-approvals-found" ||
+      response.status === "verification-incomplete") &&
+    !malformedResponse &&
+    activeApprovalCount > 0 &&
+    response.diagnostics.liveReadSuccessCount >= activeApprovalCount;
   const base = {
     revokeEnabled: apiVerifiedForRevoke,
     revokeDisabledReason: ethereumApiRevokeDisabledReason({
       response,
       incomplete,
+      malformedResponse,
+      activeApprovalCount,
+    }),
+    rowRevokeEnabled: rowVerifiedForRevoke,
+    rowRevokeDisabledReason: ethereumRowRevokeDisabledReason({
+      response,
+      rowVerifiedForRevoke,
       malformedResponse,
       activeApprovalCount,
     }),
@@ -234,6 +254,7 @@ export function mapEthereumApprovalApiResponse(
       canShowClear: false,
       ...base,
       revokeEnabled: false,
+      rowRevokeEnabled: false,
     };
   }
 
@@ -243,6 +264,7 @@ export function mapEthereumApprovalApiResponse(
       canShowClear: false,
       ...base,
       revokeEnabled: false,
+      rowRevokeEnabled: false,
     };
   }
 
@@ -272,6 +294,7 @@ export function mapEthereumApprovalApiResponse(
     canShowClear: !malformedResponse,
     ...base,
     revokeEnabled: false,
+    rowRevokeEnabled: false,
   };
 }
 
@@ -312,6 +335,36 @@ function ethereumApiRevokeDisabledReason({
     return "No active Ethereum approvals are available to revoke.";
   }
   return "Ethereum revoke unavailable.";
+}
+
+function ethereumRowRevokeDisabledReason({
+  response,
+  rowVerifiedForRevoke,
+  malformedResponse,
+  activeApprovalCount,
+}: {
+  response: EthereumApprovalApiResponse;
+  rowVerifiedForRevoke: boolean;
+  malformedResponse: boolean;
+  activeApprovalCount: number;
+}): string | null {
+  if (rowVerifiedForRevoke) return null;
+  if (response.status === "config-missing") {
+    return "Ethereum API configuration is missing - revoke unavailable.";
+  }
+  if (response.status === "upstream-failure") {
+    return "Ethereum explorer or RPC failed - revoke unavailable.";
+  }
+  if (malformedResponse) {
+    return "This row was not fully verified.";
+  }
+  if (activeApprovalCount === 0) {
+    return "No active Ethereum approvals are available to revoke.";
+  }
+  if (response.diagnostics.liveReadSuccessCount < activeApprovalCount) {
+    return "This row was not fully verified.";
+  }
+  return "This row was not fully verified.";
 }
 
 function ethereumIncompleteVerificationReason(
@@ -372,6 +425,24 @@ export function canEnableEthereumWalletRevoke({
   );
 }
 
+export function canEnableEthereumWalletRowRevoke({
+  mapping,
+  walletChainId,
+  ownerAddress,
+  connectedAddress,
+}: {
+  mapping: EthereumApprovalClientMapping | null | undefined;
+  walletChainId: number | undefined;
+  ownerAddress: Address | undefined;
+  connectedAddress: Address | undefined;
+}): boolean {
+  return (
+    mapping?.rowRevokeEnabled === true &&
+    walletChainId === ETHEREUM_MAINNET_CLIENT_CHAIN_ID &&
+    ethereumAddressesMatch(ownerAddress, connectedAddress)
+  );
+}
+
 export function ethereumWalletRevokeDisabledReason({
   mapping,
   walletChainId,
@@ -384,6 +455,35 @@ export function ethereumWalletRevokeDisabledReason({
     return "Switch to Ethereum Mainnet.";
   }
   return mapping.revokeDisabledReason ?? "Ethereum wallet revoke is available.";
+}
+
+export function ethereumWalletRowRevokeDisabledReason({
+  mapping,
+  walletChainId,
+  ownerAddress,
+  connectedAddress,
+}: {
+  mapping: EthereumApprovalClientMapping | null | undefined;
+  walletChainId: number | undefined;
+  ownerAddress: Address | undefined;
+  connectedAddress: Address | undefined;
+}): string {
+  if (!mapping) return "Ethereum approvals are still loading.";
+  if (walletChainId !== ETHEREUM_MAINNET_CLIENT_CHAIN_ID) {
+    return "Switch to Ethereum Mainnet.";
+  }
+  if (!ethereumAddressesMatch(ownerAddress, connectedAddress)) {
+    return "Connected wallet does not match scanned owner.";
+  }
+  return mapping.rowRevokeDisabledReason ?? "Verified row; revoke available.";
+}
+
+function ethereumAddressesMatch(
+  ownerAddress: Address | undefined,
+  connectedAddress: Address | undefined,
+): boolean {
+  if (!ownerAddress || !connectedAddress) return false;
+  return ownerAddress.toLowerCase() === connectedAddress.toLowerCase();
 }
 
 function parseBigIntOrNull(value: string): bigint | null {

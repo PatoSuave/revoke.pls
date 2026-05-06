@@ -7,10 +7,12 @@ import {
   ETHEREUM_MAINNET_NATIVE_SYMBOL,
   ETHEREUM_MAINNET_STATUS_LABEL,
   canEnableEthereumWalletRevoke,
+  canEnableEthereumWalletRowRevoke,
   ethereumApprovalDisplayAllowance,
   ethereumExplorerTxUrl,
   ethereumTokenDisplayDescription,
   ethereumTokenDisplaySymbol,
+  ethereumWalletRowRevokeDisabledReason,
   ethereumWalletRevokeDisabledReason,
   ethereumMainnetWalletChain,
   isEthereumReadOnlyChainId,
@@ -24,6 +26,7 @@ const TOKEN = "0x2222222222222222222222222222222222222222";
 const SPENDER = "0x3333333333333333333333333333333333333333";
 const COLLECTION = "0x4444444444444444444444444444444444444444";
 const OPERATOR = "0x5555555555555555555555555555555555555555";
+const OWNER = "0x6666666666666666666666666666666666666666";
 
 function response(
   overrides: Partial<EthereumApprovalApiResponse>,
@@ -186,6 +189,10 @@ describe("Ethereum approval client mapping", () => {
             },
           ],
         },
+        diagnostics: {
+          ...response({}).diagnostics,
+          liveReadSuccessCount: 2,
+        },
       }),
     );
 
@@ -193,6 +200,8 @@ describe("Ethereum approval client mapping", () => {
     expect(mapped.canShowClear).toBe(false);
     expect(mapped.revokeEnabled).toBe(true);
     expect(mapped.revokeDisabledReason).toBeNull();
+    expect(mapped.rowRevokeEnabled).toBe(true);
+    expect(mapped.rowRevokeDisabledReason).toBeNull();
     expect(mapped.activeApprovalCount).toBe(2);
     expect(mapped.approvals.erc20[0]?.rawAllowance).toBe(1000000000000000000n);
     expect(mapped.approvals.nft[0]?.tokenId).toBe(7n);
@@ -206,11 +215,51 @@ describe("Ethereum approval client mapping", () => {
       canEnableEthereumWalletRevoke({ mapping: mapped, walletChainId: 369 }),
     ).toBe(false);
     expect(
+      canEnableEthereumWalletRowRevoke({
+        mapping: mapped,
+        walletChainId: ETHEREUM_MAINNET_CLIENT_CHAIN_ID,
+        ownerAddress: OWNER,
+        connectedAddress: OWNER,
+      }),
+    ).toBe(true);
+    expect(
+      canEnableEthereumWalletRowRevoke({
+        mapping: mapped,
+        walletChainId: 369,
+        ownerAddress: OWNER,
+        connectedAddress: OWNER,
+      }),
+    ).toBe(false);
+    expect(
+      canEnableEthereumWalletRowRevoke({
+        mapping: mapped,
+        walletChainId: ETHEREUM_MAINNET_CLIENT_CHAIN_ID,
+        ownerAddress: OWNER,
+        connectedAddress: "0x7777777777777777777777777777777777777777",
+      }),
+    ).toBe(false);
+    expect(
       ethereumWalletRevokeDisabledReason({
         mapping: mapped,
         walletChainId: 369,
       }),
     ).toBe("Switch to Ethereum Mainnet.");
+    expect(
+      ethereumWalletRowRevokeDisabledReason({
+        mapping: mapped,
+        walletChainId: ETHEREUM_MAINNET_CLIENT_CHAIN_ID,
+        ownerAddress: OWNER,
+        connectedAddress: OWNER,
+      }),
+    ).toBe("Verified row; revoke available.");
+    expect(
+      ethereumWalletRowRevokeDisabledReason({
+        mapping: mapped,
+        walletChainId: ETHEREUM_MAINNET_CLIENT_CHAIN_ID,
+        ownerAddress: OWNER,
+        connectedAddress: "0x7777777777777777777777777777777777777777",
+      }),
+    ).toBe("Connected wallet does not match scanned owner.");
   });
 
   it("shows clear only for complete-clear with no incomplete diagnostics", () => {
@@ -221,6 +270,7 @@ describe("Ethereum approval client mapping", () => {
     expect(mapped.state).toBe("complete-clear");
     expect(mapped.canShowClear).toBe(true);
     expect(mapped.revokeEnabled).toBe(false);
+    expect(mapped.rowRevokeEnabled).toBe(false);
   });
 
   it("never maps failed live-read diagnostics to clear", () => {
@@ -241,7 +291,72 @@ describe("Ethereum approval client mapping", () => {
     expect(mapped.state).toBe("verification-incomplete");
     expect(mapped.canShowClear).toBe(false);
     expect(mapped.revokeEnabled).toBe(false);
+    expect(mapped.rowRevokeEnabled).toBe(false);
     expect(mapped.revokeDisabledReason).toContain("1 ERC-20 live read failed");
+  });
+
+  it("keeps globally incomplete Ethereum scans non-clear while verified rows remain individually revokable", () => {
+    const mapped = mapEthereumApprovalApiResponse(
+      response({
+        status: "verification-incomplete",
+        ok: false,
+        approvals: {
+          erc20: [
+            {
+              key: `${ETHEREUM_MAINNET_CLIENT_CHAIN_ID}-${TOKEN}-${SPENDER}`,
+              chainId: ETHEREUM_MAINNET_CLIENT_CHAIN_ID,
+              tokenAddress: TOKEN,
+              tokenSymbol: "TKN",
+              tokenName: "Token",
+              tokenDecimals: 18,
+              tokenCategory: "unknown",
+              spenderAddress: SPENDER,
+              spenderLabel: "Unknown spender",
+              protocol: "Unknown",
+              spenderCategory: "unknown",
+              trusted: false,
+              rawAllowance: "1000000000000000000",
+              formattedAllowance: "1 TKN",
+              unlimited: false,
+            },
+          ],
+          nft: [],
+        },
+        diagnostics: {
+          ...response({}).diagnostics,
+          decodedErc20ApprovalCount: 1,
+          decodedNftApprovalCount: 5,
+          liveReadSuccessCount: 1,
+          liveReadFailureCount: 5,
+          incompleteVerificationCount: 5,
+          skippedApprovalCount: 5,
+          skippedReasons: {
+            "nft-live-read-failure": 5,
+          },
+        },
+      }),
+    );
+
+    expect(mapped.state).toBe("verification-incomplete");
+    expect(mapped.canShowClear).toBe(false);
+    expect(mapped.revokeEnabled).toBe(false);
+    expect(mapped.revokeDisabledReason).toContain("5 NFT live reads failed");
+    expect(mapped.rowRevokeEnabled).toBe(true);
+    expect(mapped.rowRevokeDisabledReason).toBeNull();
+    expect(
+      canEnableEthereumWalletRevoke({
+        mapping: mapped,
+        walletChainId: ETHEREUM_MAINNET_CLIENT_CHAIN_ID,
+      }),
+    ).toBe(false);
+    expect(
+      canEnableEthereumWalletRowRevoke({
+        mapping: mapped,
+        walletChainId: ETHEREUM_MAINNET_CLIENT_CHAIN_ID,
+        ownerAddress: OWNER,
+        connectedAddress: OWNER,
+      }),
+    ).toBe(true);
   });
 
   it("includes exact Ethereum incomplete verification buckets in the disabled reason", () => {

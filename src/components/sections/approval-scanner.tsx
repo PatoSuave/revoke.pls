@@ -231,6 +231,7 @@ function ScannerBody({
     return (
       <EthereumReadOnlyScanner
         owner={address}
+        connectedAddress={address}
         walletChainId={walletChainId}
         wagmiChainId={wagmiChainId}
         debugMode={debugMode}
