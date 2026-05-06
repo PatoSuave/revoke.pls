@@ -169,6 +169,10 @@ export interface DiscoveryLimits {
    * the cap regardless of range density.
    */
   minSplitSpan: number;
+  /** Optional retries for transient explorer throttling or server errors. */
+  retryAttempts?: number;
+  /** Delay between retry attempts for transient explorer failures. */
+  retryDelayMs?: number;
 }
 
 export const DEFAULT_DISCOVERY_LIMITS: DiscoveryLimits = {
@@ -179,6 +183,8 @@ export const DEFAULT_DISCOVERY_LIMITS: DiscoveryLimits = {
   requestTimeoutMs: 15_000,
   pageCap: 1000,
   minSplitSpan: 16,
+  retryAttempts: 2,
+  retryDelayMs: 750,
 };
 
 const BIGINT_TWO = BigInt(2);
@@ -416,6 +422,49 @@ async function fetchLogsPage(
   page: number,
   offset: number,
   timeoutMs: number,
+  retryAttempts: number,
+  retryDelayMs: number,
+  signal: AbortSignal | undefined,
+): Promise<BlockscoutLogEntry[]> {
+  for (let attempt = 0; ; attempt += 1) {
+    try {
+      return await fetchLogsPageOnce(
+        apiUrl,
+        apiKey,
+        queryParams,
+        paddedOwner,
+        topic0,
+        fromBlock,
+        toBlock,
+        page,
+        offset,
+        timeoutMs,
+        signal,
+      );
+    } catch (error) {
+      if (
+        attempt >= retryAttempts ||
+        !isRetryableDiscoveryFailure(error) ||
+        signal?.aborted
+      ) {
+        throw error;
+      }
+      await delayDiscoveryRetry(retryDelayMs, signal);
+    }
+  }
+}
+
+async function fetchLogsPageOnce(
+  apiUrl: string,
+  apiKey: string | undefined,
+  queryParams: Record<string, string> | undefined,
+  paddedOwner: string,
+  topic0: string,
+  fromBlock: string,
+  toBlock: string,
+  page: number,
+  offset: number,
+  timeoutMs: number,
   signal: AbortSignal | undefined,
 ): Promise<BlockscoutLogEntry[]> {
   const url = buildLogsUrl(
@@ -458,6 +507,51 @@ async function fetchLogsPage(
   }
 
   return [];
+}
+
+function isRetryableDiscoveryFailure(error: unknown): boolean {
+  const message = discoveryErrorMessage(error).toLowerCase();
+  return (
+    message.includes("rate limit") ||
+    message.includes("too many requests") ||
+    message.includes("http 429") ||
+    message.includes("http 500") ||
+    message.includes("http 502") ||
+    message.includes("http 503") ||
+    message.includes("http 504") ||
+    message.includes("timed out")
+  );
+}
+
+function discoveryErrorMessage(error: unknown): string {
+  return error instanceof Error ? error.message : String(error);
+}
+
+function delayDiscoveryRetry(
+  retryDelayMs: number,
+  signal: AbortSignal | undefined,
+): Promise<void> {
+  if (retryDelayMs <= 0) return Promise.resolve();
+  if (signal?.aborted) {
+    return Promise.reject(new Error("Discovery request aborted."));
+  }
+
+  return new Promise((resolve, reject) => {
+    let abort = () => {};
+    const cleanup = () => {
+      clearTimeout(timeout);
+      signal?.removeEventListener("abort", abort);
+    };
+    abort = () => {
+      cleanup();
+      reject(new Error("Discovery request aborted."));
+    };
+    const timeout = setTimeout(() => {
+      cleanup();
+      resolve();
+    }, retryDelayMs);
+    signal?.addEventListener("abort", abort, { once: true });
+  });
 }
 
 async function fetchBlockTip(
@@ -516,6 +610,10 @@ async function windowedFetchLogs(
   logs: BlockscoutLogEntry[];
   stats: WindowedFetchStats;
 }> {
+  const retryAttempts =
+    limits.retryAttempts ?? DEFAULT_DISCOVERY_LIMITS.retryAttempts ?? 0;
+  const retryDelayMs =
+    limits.retryDelayMs ?? DEFAULT_DISCOVERY_LIMITS.retryDelayMs ?? 0;
   const initial = await fetchLogsPage(
     apiUrl,
     apiKey,
@@ -527,6 +625,8 @@ async function windowedFetchLogs(
     1,
     limits.pageCap,
     limits.requestTimeoutMs,
+    retryAttempts,
+    retryDelayMs,
     signal,
   );
   let requests = 1;
@@ -600,6 +700,8 @@ async function windowedFetchLogs(
       1,
       limits.pageCap,
       limits.requestTimeoutMs,
+      retryAttempts,
+      retryDelayMs,
       signal,
     );
     requests += 1;
@@ -630,6 +732,8 @@ async function windowedFetchLogs(
           page,
           limits.pageCap,
           limits.requestTimeoutMs,
+          retryAttempts,
+          retryDelayMs,
           signal,
         );
         requests += 1;

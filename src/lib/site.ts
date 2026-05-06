@@ -121,7 +121,7 @@ export const siteConfig = {
     "NFT approvals",
     "ApprovalForAll",
     "wallet security",
-    "revoke.cash alternative",
+    "approval revoke tool",
   ] as const,
   /** Anchor targets for primary nav. */
   nav: [

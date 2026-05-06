@@ -43,7 +43,6 @@ const API_KEY_ENV_NAMES = [
 const API_URL_ENV_NAMES = [
   "ETHEREUM_EXPLORER_API_URL",
   "MAINNET_EXPLORER_API_URL",
-  "NEXT_PUBLIC_ETHEREUM_EXPLORER_API_URL",
 ] as const;
 
 export type EthereumApprovalApiStatus =
@@ -251,6 +250,10 @@ function addReason(
   reasons[reason] = (reasons[reason] ?? 0) + count;
 }
 
+function formatApprovalCandidateCount(count: number): string {
+  return `${count} approval candidate${count === 1 ? "" : "s"}`;
+}
+
 function countNftLiveReads(
   results: readonly ReadResult[],
   candidates: number,
@@ -437,6 +440,20 @@ export async function scanEthereumApprovals(
     );
   }
   if (liveReadFailureCount > 0) {
+    if (erc20ReadFailures.allowanceFailed > 0) {
+      warnings.push(
+        `Ethereum ERC-20 allowance live reads failed for ${formatApprovalCandidateCount(
+          erc20ReadFailures.allowanceFailed,
+        )}.`,
+      );
+    }
+    if (nftLiveReads.failure > 0) {
+      warnings.push(
+        `Ethereum NFT approval live reads failed for ${formatApprovalCandidateCount(
+          nftLiveReads.failure,
+        )}.`,
+      );
+    }
     warnings.push(
       "Ethereum live validation did not complete for every discovered approval. Do not treat this wallet as clear.",
     );

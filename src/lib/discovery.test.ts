@@ -45,6 +45,8 @@ function source(options?: {
   requiresApiKey?: boolean;
   apiKey?: string;
   pageCap?: number;
+  retryAttempts?: number;
+  retryDelayMs?: number;
 }) {
   return createBlockscoutDiscoverySource({
     chainId: options?.chainId ?? 369,
@@ -70,6 +72,8 @@ function source(options?: {
       pageCap: options?.pageCap ?? 1000,
       maxRequests: 10,
       requestTimeoutMs: 1000,
+      retryAttempts: options?.retryAttempts ?? 0,
+      retryDelayMs: options?.retryDelayMs ?? 0,
     },
   });
 }
@@ -197,6 +201,44 @@ describe("createBlockscoutDiscoverySource", () => {
       source({ requiresApiKey: true }).discover(OWNER),
     ).rejects.toThrow("requires an API key");
     expect(fetch).not.toHaveBeenCalled();
+  });
+
+  it("retries transient explorer rate-limit responses before failing discovery", async () => {
+    const fetch = vi
+      .fn()
+      .mockResolvedValueOnce(
+        jsonResponse({
+          status: "0",
+          message: "NOTOK",
+          result: "Max calls per sec rate limit reached (5/sec)",
+        }),
+      )
+      .mockResolvedValueOnce(
+        jsonResponse({
+          status: "1",
+          message: "OK",
+          result: [
+            {
+              address: TOKEN,
+              data: "0x7b",
+              blockNumber: "0x1",
+              transactionHash: "0x1",
+              logIndex: "0x0",
+              topics: [ERC20_APPROVAL_TOPIC0, pad(OWNER), pad(SPENDER), null],
+            },
+          ],
+        }),
+      );
+    vi.stubGlobal("fetch", fetch);
+
+    const result = await source({
+      retryAttempts: 1,
+      retryDelayMs: 0,
+    }).discover(OWNER);
+
+    expect(fetch).toHaveBeenCalledTimes(2);
+    expect(result.pairs).toHaveLength(1);
+    expect(result.truncated).toBe(false);
   });
 
   it("fails Base discovery fast when the Etherscan API key is missing", async () => {

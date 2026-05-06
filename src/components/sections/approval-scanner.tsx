@@ -78,7 +78,7 @@ export function ApprovalScanner() {
               Approval <span className="text-gradient-pulse">scanner</span>
             </h2>
             <p className="mt-3 leading-7 text-pulse-muted">
-              Connect on PulseChain, BSC, Base, or Ethereum Mainnet to find
+              Connect on Ethereum, PulseChain, BNB Smart Chain, or Base to find
               token allowances and NFT operator approvals from your wallet
               history. Every result is re-checked live before it is shown as
               active.
@@ -432,6 +432,7 @@ function ConnectedScanner({
         onReviewBatch={onReviewBatch}
         revokeDisabledReason={erc20RevokeDisabledReason}
         batch={batch}
+        debugMode={debugMode}
       />
 
       <CoverageNote scan={scan} chainConfig={chainConfig} />
@@ -450,7 +451,12 @@ function ConnectedScanner({
         batch={batch}
       />
 
-      <NftSection nft={nft} owner={owner} chainConfig={chainConfig} />
+      <NftSection
+        nft={nft}
+        owner={owner}
+        chainConfig={chainConfig}
+        debugMode={debugMode}
+      />
     </div>
   );
 }
@@ -536,10 +542,12 @@ function NftSection({
   nft,
   owner,
   chainConfig,
+  debugMode,
 }: {
   nft: ReturnType<typeof useNftApprovalDiscovery>;
   owner: `0x${string}`;
   chainConfig: SupportedChainConfig;
+  debugMode: boolean;
 }) {
   const sorted = useMemo(() => sortNftApprovals(nft.approvals), [nft.approvals]);
   const highRisk = sorted.filter((a) => a.risk.level === "high").length;
@@ -593,6 +601,7 @@ function NftSection({
         sorted={sorted}
         chainConfig={chainConfig}
         revokeDisabledReason={revokeDisabledReason}
+        debugMode={debugMode}
       />
 
       <p className="text-xs text-pulse-muted">
@@ -620,12 +629,14 @@ function NftSectionBody({
   sorted,
   chainConfig,
   revokeDisabledReason,
+  debugMode,
 }: {
   nft: ReturnType<typeof useNftApprovalDiscovery>;
   owner: `0x${string}`;
   sorted: NftApproval[];
   chainConfig: SupportedChainConfig;
   revokeDisabledReason: string | null;
+  debugMode: boolean;
 }) {
   if (nft.status === "pending") {
     return (
@@ -721,6 +732,7 @@ function NftSectionBody({
               ownerAddress={owner}
               onRevoked={nft.refetch}
               revokeDisabledReason={revokeDisabledReason}
+              debugMode={debugMode}
             />
           ))}
         </ul>
@@ -796,6 +808,7 @@ function ScanContent({
   onReviewBatch,
   batch,
   revokeDisabledReason,
+  debugMode,
 }: {
   scan: ReturnType<typeof useApprovalDiscovery>;
   owner: `0x${string}`;
@@ -818,6 +831,7 @@ function ScanContent({
   onReviewBatch: () => void;
   batch: ReturnType<typeof useBatchRevoke>;
   revokeDisabledReason: string | null;
+  debugMode: boolean;
 }) {
   const batchActive = batch.state === "running" || batch.state === "stopping";
   const batchInteracting = batch.state !== "idle";
@@ -978,6 +992,7 @@ function ScanContent({
                 batchActive={batchActive}
                 batchResult={batch.results[approval.key]}
                 revokeDisabledReason={revokeDisabledReason}
+                debugMode={debugMode}
               />
             ))}
           </ul>

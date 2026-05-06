@@ -337,6 +337,9 @@ describe("Ethereum approval API foundation", () => {
     expect(result.diagnostics.skippedReasons).toMatchObject({
       "erc20-live-read-failure": 1,
     });
+    expect(result.warnings.join(" ")).toContain(
+      "Ethereum ERC-20 allowance live reads failed for 1 approval candidate.",
+    );
     expect(result.warnings.join(" ")).toContain("Do not treat this wallet as clear");
   });
 
@@ -407,6 +410,8 @@ describe("Ethereum approval API foundation", () => {
         MAINNET_RPC_URL: undefined,
         ETHEREUM_RPC_URL: undefined,
         NEXT_PUBLIC_MAINNET_RPC_URL: "https://public-mainnet-rpc.example",
+        NEXT_PUBLIC_ETHEREUM_EXPLORER_API_URL:
+          "https://public-mainnet-explorer.example",
         ETHERSCAN_API_KEY: undefined,
         NEXT_PUBLIC_ETHERSCAN_API_KEY: "public-key",
       }),

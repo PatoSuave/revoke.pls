@@ -527,15 +527,32 @@ async function refreshErc20PreflightForItem(
       }),
       account: ownerAddress,
     });
+    const gasPriceWei = await getGasPriceOrUndefined(client);
 
     return applyGasEstimateToPreflight(
       allowancePreflight,
       estimatedGas,
       chainConfig.maxTransactionGas,
       chainConfig.highGasWarningThreshold,
+      {
+        chainId: item.chainId,
+        callKind: "erc20",
+        gasPriceWei,
+        nativeSymbol: chainConfig.nativeSymbol,
+      },
     );
   } catch (error) {
     return withGasCapContext(failedErc20Preflight(error), item.chainId);
+  }
+}
+
+async function getGasPriceOrUndefined(
+  client: PreflightClient,
+): Promise<bigint | undefined> {
+  try {
+    return await client.getGasPrice();
+  } catch {
+    return undefined;
   }
 }
 
