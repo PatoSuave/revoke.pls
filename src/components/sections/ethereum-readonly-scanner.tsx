@@ -19,12 +19,14 @@ import {
   ETHEREUM_MAINNET_NATIVE_SYMBOL,
   ETHEREUM_LIVE_VERIFICATION_LABEL,
   canEnableEthereumWalletRevoke,
+  canEnableEthereumWalletRowRevoke,
   ethereumApprovalDisplayAllowance,
   ethereumExplorerAddressUrl,
   ethereumExplorerTokenUrl,
   ethereumExplorerTxUrl,
   ethereumTokenDisplayDescription,
   ethereumTokenDisplaySymbol,
+  ethereumWalletRowRevokeDisabledReason,
   ethereumWalletRevokeDisabledReason,
 } from "@/lib/ethereum-approval-client";
 import { shortenAddress } from "@/lib/format";
@@ -41,11 +43,13 @@ import { scoreApprovals, type RiskAssessment, type ScoredApproval } from "@/lib/
 
 export function EthereumReadOnlyScanner({
   owner,
+  connectedAddress,
   walletChainId,
   wagmiChainId,
   debugMode,
 }: {
   owner: Address;
+  connectedAddress: Address | undefined;
   walletChainId: number | undefined;
   wagmiChainId: number | undefined;
   debugMode: boolean;
@@ -68,6 +72,18 @@ export function EthereumReadOnlyScanner({
     mapping: scan.mapped,
     walletChainId,
   });
+  const rowRevokeEnabled = canEnableEthereumWalletRowRevoke({
+    mapping: scan.mapped,
+    walletChainId,
+    ownerAddress: owner,
+    connectedAddress,
+  });
+  const rowRevokeDisabledReason = ethereumWalletRowRevokeDisabledReason({
+    mapping: scan.mapped,
+    walletChainId,
+    ownerAddress: owner,
+    connectedAddress,
+  });
 
   return (
     <div className="space-y-6">
@@ -81,6 +97,8 @@ export function EthereumReadOnlyScanner({
               />
               {revokeEnabled
                 ? "Ethereum revoke ready"
+                : rowRevokeEnabled
+                  ? "Ethereum verified rows available"
                 : ETHEREUM_LIVE_VERIFICATION_LABEL}
             </span>
             <span className="rounded-full border border-pulse-border bg-pulse-panel/70 px-3 py-1 font-mono text-xs text-pulse-muted">
@@ -90,11 +108,15 @@ export function EthereumReadOnlyScanner({
               className={`rounded-full border px-3 py-1 text-xs font-semibold ${
                 revokeEnabled
                   ? "border-pulse-green/35 bg-pulse-green/10 text-pulse-green"
+                  : rowRevokeEnabled
+                    ? "border-pulse-green/30 bg-pulse-green/10 text-pulse-green"
                   : "border-pulse-border bg-pulse-panel/70 text-pulse-muted"
               }`}
             >
               {revokeEnabled
                 ? "Wallet revoke available"
+                : rowRevokeEnabled
+                  ? "Verified row revoke available"
                 : "Read-only scan"}
             </span>
           </div>
@@ -112,6 +134,7 @@ export function EthereumReadOnlyScanner({
 
       <ReadOnlyNotice
         revokeEnabled={revokeEnabled}
+        rowRevokeEnabled={rowRevokeEnabled}
         revokeDisabledReason={revokeDisabledReason}
       />
 
@@ -121,8 +144,9 @@ export function EthereumReadOnlyScanner({
         erc20={scoredErc20}
         nft={sortedNft}
         activeCount={activeCount}
-        revokeEnabled={revokeEnabled}
         revokeDisabledReason={revokeDisabledReason}
+        rowRevokeEnabled={rowRevokeEnabled}
+        rowRevokeDisabledReason={rowRevokeDisabledReason}
         debugMode={debugMode}
       />
 
@@ -136,6 +160,8 @@ export function EthereumReadOnlyScanner({
         scan={scan}
         revokeEnabled={revokeEnabled}
         revokeDisabledReason={revokeDisabledReason}
+        rowRevokeEnabled={rowRevokeEnabled}
+        rowRevokeDisabledReason={rowRevokeDisabledReason}
       />
     </div>
   );
@@ -143,15 +169,18 @@ export function EthereumReadOnlyScanner({
 
 function ReadOnlyNotice({
   revokeEnabled,
+  rowRevokeEnabled,
   revokeDisabledReason,
 }: {
   revokeEnabled: boolean;
+  rowRevokeEnabled: boolean;
   revokeDisabledReason: string;
 }) {
-  const noticeClass = revokeEnabled
+  const noticeClass = revokeEnabled || rowRevokeEnabled
     ? "border-pulse-green/35 bg-pulse-green/10"
     : "border-pulse-cyan/35 bg-pulse-cyan/10";
-  const headingClass = revokeEnabled ? "text-pulse-green" : "text-pulse-cyan";
+  const headingClass =
+    revokeEnabled || rowRevokeEnabled ? "text-pulse-green" : "text-pulse-cyan";
 
   return (
     <div className={`rounded-2xl border p-4 text-sm ${noticeClass}`}>
@@ -160,15 +189,23 @@ function ReadOnlyNotice({
       >
         {revokeEnabled
           ? "Ethereum live verification complete"
+          : rowRevokeEnabled
+            ? "Ethereum verified rows available"
           : "Ethereum live verification"}
       </p>
       <p className="mt-2 leading-6 text-pulse-muted">
         {revokeEnabled
           ? "These Ethereum approvals were live-validated before revoke became available. Transactions still come from your connected wallet on Ethereum Mainnet; the API cannot sign, submit, or move funds."
+          : rowRevokeEnabled
+            ? `Ethereum verification is incomplete, so this is not a clear wallet state and batch revoke stays unavailable. Rows that were individually live-verified can still be revoked one at a time from your connected wallet. Global scan status: ${formatGlobalScanReason(revokeDisabledReason)}`
           : `Ethereum approvals are checked through a read-only API and live RPC validation. ${revokeDisabledReason} The scanner will not request signatures or submit transactions until revoke is available.`}
       </p>
     </div>
   );
+}
+
+function formatGlobalScanReason(reason: string): string {
+  return reason.replace(" - revoke unavailable.", ".");
 }
 
 function EthereumScanContent({
@@ -177,8 +214,9 @@ function EthereumScanContent({
   erc20,
   nft,
   activeCount,
-  revokeEnabled,
   revokeDisabledReason,
+  rowRevokeEnabled,
+  rowRevokeDisabledReason,
   debugMode,
 }: {
   scan: ReturnType<typeof useEthereumApprovalScan>;
@@ -186,8 +224,9 @@ function EthereumScanContent({
   erc20: readonly ScoredApproval[];
   nft: readonly NftApproval[];
   activeCount: number;
-  revokeEnabled: boolean;
   revokeDisabledReason: string;
+  rowRevokeEnabled: boolean;
+  rowRevokeDisabledReason: string;
   debugMode: boolean;
 }) {
   if (scan.status === "pending" || !scan.mapped) {
@@ -275,10 +314,12 @@ function EthereumScanContent({
           <p className="mt-1 leading-6 text-pulse-muted">
             Active approvals below were returned by the API, but at least one
             discovery or live-read check did not complete. This is not a clear
-            wallet state.
+            wallet state. Verified rows may still be revoked individually after
+            a fresh preflight; rows that were not fully verified remain
+            unavailable.
           </p>
           <p className="mt-2 font-mono text-xs text-amber-100">
-            {revokeDisabledReason}
+            Global scan status: {formatGlobalScanReason(revokeDisabledReason)}
           </p>
         </div>
       ) : null}
@@ -287,8 +328,8 @@ function EthereumScanContent({
         <ReadOnlyErc20Table
           approvals={erc20}
           owner={owner}
-          revokeEnabled={revokeEnabled}
-          revokeDisabledReason={revokeDisabledReason}
+          rowRevokeEnabled={rowRevokeEnabled}
+          rowRevokeDisabledReason={rowRevokeDisabledReason}
           onRevoked={scan.refetch}
           debugMode={debugMode}
         />
@@ -300,8 +341,8 @@ function EthereumScanContent({
         <ReadOnlyNftTable
           approvals={nft}
           owner={owner}
-          revokeEnabled={revokeEnabled}
-          revokeDisabledReason={revokeDisabledReason}
+          rowRevokeEnabled={rowRevokeEnabled}
+          rowRevokeDisabledReason={rowRevokeDisabledReason}
           onRevoked={scan.refetch}
           debugMode={debugMode}
         />
@@ -315,15 +356,15 @@ function EthereumScanContent({
 function ReadOnlyErc20Table({
   approvals,
   owner,
-  revokeEnabled,
-  revokeDisabledReason,
+  rowRevokeEnabled,
+  rowRevokeDisabledReason,
   onRevoked,
   debugMode,
 }: {
   approvals: readonly ScoredApproval[];
   owner: Address;
-  revokeEnabled: boolean;
-  revokeDisabledReason: string;
+  rowRevokeEnabled: boolean;
+  rowRevokeDisabledReason: string;
   onRevoked: () => void;
   debugMode: boolean;
 }) {
@@ -399,8 +440,8 @@ function ReadOnlyErc20Table({
             <EthereumErc20Action
               approval={approval}
               owner={owner}
-              revokeEnabled={revokeEnabled}
-              revokeDisabledReason={revokeDisabledReason}
+              rowRevokeEnabled={rowRevokeEnabled}
+              rowRevokeDisabledReason={rowRevokeDisabledReason}
               onRevoked={onRevoked}
               debugMode={debugMode}
             />
@@ -414,15 +455,15 @@ function ReadOnlyErc20Table({
 function ReadOnlyNftTable({
   approvals,
   owner,
-  revokeEnabled,
-  revokeDisabledReason,
+  rowRevokeEnabled,
+  rowRevokeDisabledReason,
   onRevoked,
   debugMode,
 }: {
   approvals: readonly NftApproval[];
   owner: Address;
-  revokeEnabled: boolean;
-  revokeDisabledReason: string;
+  rowRevokeEnabled: boolean;
+  rowRevokeDisabledReason: string;
   onRevoked: () => void;
   debugMode: boolean;
 }) {
@@ -491,8 +532,8 @@ function ReadOnlyNftTable({
             <EthereumNftAction
               approval={approval}
               owner={owner}
-              revokeEnabled={revokeEnabled}
-              revokeDisabledReason={revokeDisabledReason}
+              rowRevokeEnabled={rowRevokeEnabled}
+              rowRevokeDisabledReason={rowRevokeDisabledReason}
               onRevoked={onRevoked}
               debugMode={debugMode}
             />
@@ -506,15 +547,15 @@ function ReadOnlyNftTable({
 function EthereumErc20Action({
   approval,
   owner,
-  revokeEnabled,
-  revokeDisabledReason,
+  rowRevokeEnabled,
+  rowRevokeDisabledReason,
   onRevoked,
   debugMode,
 }: {
   approval: ScoredApproval;
   owner: Address;
-  revokeEnabled: boolean;
-  revokeDisabledReason: string;
+  rowRevokeEnabled: boolean;
+  rowRevokeDisabledReason: string;
   onRevoked: () => void;
   debugMode: boolean;
 }) {
@@ -534,8 +575,8 @@ function EthereumErc20Action({
     },
   });
 
-  if (!revokeEnabled) {
-    return <ReadOnlyAction title={revokeDisabledReason} />;
+  if (!rowRevokeEnabled) {
+    return <ReadOnlyAction title={rowRevokeDisabledReason} />;
   }
 
   return (
@@ -577,15 +618,15 @@ function EthereumErc20Action({
 function EthereumNftAction({
   approval,
   owner,
-  revokeEnabled,
-  revokeDisabledReason,
+  rowRevokeEnabled,
+  rowRevokeDisabledReason,
   onRevoked,
   debugMode,
 }: {
   approval: NftApproval;
   owner: Address;
-  revokeEnabled: boolean;
-  revokeDisabledReason: string;
+  rowRevokeEnabled: boolean;
+  rowRevokeDisabledReason: string;
   onRevoked: () => void;
   debugMode: boolean;
 }) {
@@ -599,8 +640,8 @@ function EthereumNftAction({
     },
   });
 
-  if (!revokeEnabled) {
-    return <ReadOnlyAction title={revokeDisabledReason} />;
+  if (!rowRevokeEnabled) {
+    return <ReadOnlyAction title={rowRevokeDisabledReason} />;
   }
 
   return (
@@ -728,6 +769,7 @@ function EthereumActionShell({
         type="button"
         onClick={onStart}
         disabled={isBusy}
+        title="Verified row; revoke available"
         className={`${base} bg-pulse-gradient text-pulse-bg shadow-glow hover:brightness-110 active:brightness-95`}
       >
         Revoke
@@ -1157,6 +1199,8 @@ function EthereumDiagnostics({
   scan,
   revokeEnabled,
   revokeDisabledReason,
+  rowRevokeEnabled,
+  rowRevokeDisabledReason,
 }: {
   enabled: boolean;
   owner: Address;
@@ -1165,6 +1209,8 @@ function EthereumDiagnostics({
   scan: ReturnType<typeof useEthereumApprovalScan>;
   revokeEnabled: boolean;
   revokeDisabledReason: string;
+  rowRevokeEnabled: boolean;
+  rowRevokeDisabledReason: string;
 }) {
   if (!enabled) return null;
 
@@ -1178,8 +1224,13 @@ function EthereumDiagnostics({
     ["Active scan mode", ETHEREUM_MAINNET_DISPLAY_NAME],
     ["API route", "/api/ethereum/approvals"],
     ["API status", response?.status ?? scan.status],
-    ["Wallet-side revoke enabled", revokeEnabled ? "Yes" : "No"],
+    ["Global scan revoke enabled", revokeEnabled ? "Yes" : "No"],
     ["Revoke unavailable reason", revokeEnabled ? "None" : revokeDisabledReason],
+    ["Verified row revoke enabled", rowRevokeEnabled ? "Yes" : "No"],
+    [
+      "Row revoke reason",
+      rowRevokeEnabled ? "Verified row; revoke available" : rowRevokeDisabledReason,
+    ],
     ["Chain ID", diagnostics?.chainId.toString() ?? "1"],
     ["RPC configured", diagnostics?.rpcConfigured ? "Yes" : "No / unknown"],
     [

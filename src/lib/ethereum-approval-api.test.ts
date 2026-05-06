@@ -343,6 +343,39 @@ describe("Ethereum approval API foundation", () => {
     expect(result.warnings.join(" ")).toContain("Do not treat this wallet as clear");
   });
 
+  it("keeps verified ERC-20 rows while unrelated NFT live reads fail", async () => {
+    const result = await scanEthereumApprovals(OWNER, {
+      env: env(),
+      discoverySource: fakeSource({ allowancePair: true, nftApproval: true }),
+      reader: {
+        readContract: vi.fn(async (call: { functionName?: string }) => {
+          if (call.functionName === "symbol") return "TOK";
+          if (call.functionName === "decimals") return 18;
+          if (call.functionName === "name") return "Token";
+          if (call.functionName === "allowance") return 5n;
+          if (call.functionName === "supportsInterface") return false;
+          if (call.functionName === "isApprovedForAll") {
+            throw new Error("nft rpc unavailable");
+          }
+          throw new Error(`Unexpected call ${call.functionName}`);
+        }),
+      },
+    });
+
+    expect(result.status).toBe("verification-incomplete");
+    expect(result.ok).toBe(false);
+    expect(result.approvals.erc20).toHaveLength(1);
+    expect(result.approvals.nft).toEqual([]);
+    expect(result.diagnostics.liveReadSuccessCount).toBe(1);
+    expect(result.diagnostics.liveReadFailureCount).toBe(1);
+    expect(result.diagnostics.skippedReasons).toMatchObject({
+      "nft-live-read-failure": 1,
+    });
+    expect(result.warnings.join(" ")).toContain(
+      "Ethereum NFT approval live reads failed for 1 approval candidate.",
+    );
+  });
+
   it("reports upstream explorer failures separately from clear states", async () => {
     const meta = {
       id: "broken-etherscan",
