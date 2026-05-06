@@ -1,12 +1,13 @@
 # Environment Variables
 
-Pulse Revoke is a frontend app. Variables prefixed with `NEXT_PUBLIC_` are
-embedded into the browser bundle and are visible to users. Do not store private
-secrets in these variables.
+Pulse Revoke is primarily a wallet-side frontend app, with a read-only
+Ethereum API route for server-side discovery. Variables prefixed with
+`NEXT_PUBLIC_` are embedded into the browser bundle and are visible to users.
+Do not store private secrets in these variables.
 
 ## Production Requirements
 
-For the live PulseChain + BSC + Base product, configure:
+For the live PulseChain + BSC + Base + Ethereum product, configure:
 
 | Variable | Production status | Notes |
 | --- | --- | --- |
@@ -19,6 +20,8 @@ For the live PulseChain + BSC + Base product, configure:
 | `NEXT_PUBLIC_BASE_EXPLORER_CHAIN_ID` | Recommended | Must be `8453` for Base Etherscan API V2 logs. Defaults to `8453`. |
 | `NEXT_PUBLIC_BASE_EXPLORER_API_KEY` | Required for reliable Base discovery | Use an Etherscan API V2 key with Base Mainnet access. |
 | `NEXT_PUBLIC_BASE_RPC_URL` | Recommended | Public fallback is available, but production should prefer a reliable RPC. |
+| `MAINNET_RPC_URL` / `ETHEREUM_RPC_URL` | Required for Ethereum scan | Server-only Ethereum RPC URL for `/api/ethereum/approvals`. |
+| `ETHERSCAN_API_KEY` | Required for Ethereum scan | Server-only Etherscan API key. Do not use a `NEXT_PUBLIC_` key for Ethereum server discovery. |
 
 PulseChain has defaults for RPC and explorer API, but hosted production can
 override them for reliability.
@@ -122,6 +125,27 @@ whether Base logs are available and how quickly requests are served.
 This is a public frontend variable. Treat it as a public API key, not a private
 secret. Restrict and monitor it through the provider if possible.
 
+### `MAINNET_RPC_URL` / `ETHEREUM_RPC_URL`
+
+Required for Ethereum Mainnet approval discovery. These are server-only values
+used by `/api/ethereum/approvals` for live RPC validation. Prefer
+`MAINNET_RPC_URL`; `ETHEREUM_RPC_URL` is accepted as a fallback name.
+
+### `ETHEREUM_EXPLORER_API_URL`
+
+Optional server-only Etherscan API V2 endpoint override for Ethereum Mainnet.
+If unset, the API route uses:
+
+```text
+https://api.etherscan.io/v2/api
+```
+
+### `ETHERSCAN_API_KEY`
+
+Required for Ethereum Mainnet approval discovery. This must be a server-only
+environment variable. Do not configure it as `NEXT_PUBLIC_ETHERSCAN_API_KEY`;
+the frontend does not need this key.
+
 ### `NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID`
 
 Optional. Enables WalletConnect QR pairing through Reown / WalletConnect. If
@@ -160,6 +184,10 @@ NEXT_PUBLIC_BASE_EXPLORER_CHAIN_ID=8453
 NEXT_PUBLIC_BASE_EXPLORER_API_KEY=replace_with_public_etherscan_v2_key
 NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID=
 NEXT_PUBLIC_TELEMETRY_ENABLED=
+MAINNET_RPC_URL=https://your-server-only-ethereum-rpc.example
+ETHEREUM_RPC_URL=
+ETHEREUM_EXPLORER_API_URL=https://api.etherscan.io/v2/api
+ETHERSCAN_API_KEY=replace_with_server_only_etherscan_key
 ```
 
 ## Provider Limitations

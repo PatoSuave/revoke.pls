@@ -16,6 +16,34 @@ export interface RevokeTarget {
   spenderAddress: Address;
 }
 
+export interface WalletRevokeGuardInput {
+  connectedAddress: Address | undefined;
+  ownerAddress: Address;
+  walletChainId: number | undefined;
+  targetChainId: number;
+}
+
+export function getWalletRevokeBlockReason({
+  connectedAddress,
+  ownerAddress,
+  walletChainId,
+  targetChainId,
+}: WalletRevokeGuardInput): string | null {
+  if (!connectedAddress) {
+    return "Connect the wallet that owns this approval before revoking.";
+  }
+
+  if (connectedAddress.toLowerCase() !== ownerAddress.toLowerCase()) {
+    return "Connected wallet does not match the scanned owner address.";
+  }
+
+  if (walletChainId !== targetChainId) {
+    return `Switch the connected wallet to chain ${targetChainId} before revoking.`;
+  }
+
+  return null;
+}
+
 /**
  * Build the `approve(spender, 0)` contract call used to revoke an ERC-20
  * allowance. Pure function — does not submit, does not simulate, does not

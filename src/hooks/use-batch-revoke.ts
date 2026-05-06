@@ -1,8 +1,8 @@
 "use client";
 
 import { getPublicClient } from "@wagmi/core";
-import { useCallback, useMemo, useRef, useState } from "react";
-import { useConfig, useWriteContract } from "wagmi";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useAccount, useConfig, useWriteContract } from "wagmi";
 import type { Address } from "viem";
 
 import type { Approval } from "@/lib/approvals";
@@ -11,6 +11,7 @@ import { normalizeRevokeError } from "@/lib/errors";
 import {
   applyGasEstimateToPreflight,
   batchPreflightContext,
+  blockedErc20Preflight,
   buildErc20PreflightRead,
   EMPTY_BATCH_PREFLIGHT_SUMMARY,
   evaluateErc20AllowancePreflight,
@@ -20,7 +21,7 @@ import {
   type BatchPreflightSummary,
   type Erc20PreflightResult,
 } from "@/lib/preflight";
-import { buildRevokeCall } from "@/lib/revoke";
+import { buildRevokeCall, getWalletRevokeBlockReason } from "@/lib/revoke";
 import { trackEvent } from "@/lib/telemetry";
 
 export type BatchItemStatus =
@@ -116,13 +117,32 @@ export function useBatchRevoke({
   const [blockedReason, setBlockedReason] = useState<string | null>(null);
 
   const config = useConfig();
+  const { address: connectedAddress, chainId: walletChainId } = useAccount();
   const { writeContractAsync } = useWriteContract();
   const stopRef = useRef(false);
   const preflightRunRef = useRef(0);
+  const walletStateRef = useRef({ connectedAddress, walletChainId });
+
+  useEffect(() => {
+    walletStateRef.current = { connectedAddress, walletChainId };
+  }, [connectedAddress, walletChainId]);
 
   const patch = useCallback((key: string, value: BatchItemResult) => {
     setResults((prev) => ({ ...prev, [key]: value }));
   }, []);
+
+  const walletRevokeBlockReason = useCallback(
+    (targetChainId: number) => {
+      const current = walletStateRef.current;
+      return getWalletRevokeBlockReason({
+        connectedAddress: current.connectedAddress,
+        ownerAddress,
+        walletChainId: current.walletChainId,
+        targetChainId,
+      });
+    },
+    [ownerAddress],
+  );
 
   const beginConfirm = useCallback((next: readonly Approval[]) => {
     if (next.length === 0) return;
@@ -153,6 +173,33 @@ export function useBatchRevoke({
       setState("confirming");
       return;
     }
+
+    const walletBlockReason = walletRevokeBlockReason(next[0]!.chainId);
+    if (walletBlockReason) {
+      const initial: Record<string, BatchItemResult> = {};
+      for (const a of next) {
+        initial[a.key] = {
+          status: "unverified",
+          error: walletBlockReason,
+          preflight: blockedErc20Preflight(walletBlockReason),
+        };
+      }
+      setItems(next);
+      setResults(initial);
+      setCurrentKey(null);
+      setPreflightSummary({
+        ...EMPTY_BATCH_PREFLIGHT_SUMMARY,
+        total: next.length,
+        attempted: next.length,
+        failed: next.length,
+        unverified: next.length,
+      });
+      setBlockedReason(walletBlockReason);
+      stopRef.current = false;
+      setState("confirming");
+      return;
+    }
+
     const runId = preflightRunRef.current + 1;
     preflightRunRef.current = runId;
     const initial: Record<string, BatchItemResult> = {};
@@ -171,10 +218,19 @@ export function useBatchRevoke({
 
     void (async () => {
       const reads = await Promise.all(
-        next.map(async (item) => [
-          item.key,
-          await refreshErc20PreflightForItem(config, ownerAddress, item),
-        ] as const),
+        next.map(async (item) => {
+          const blockReason = walletRevokeBlockReason(item.chainId);
+          return [
+            item.key,
+            blockReason
+              ? blockedErc20Preflight(blockReason)
+              : await refreshErc20PreflightForItem(
+                  config,
+                  ownerAddress,
+                  item,
+                ),
+          ] as const;
+        }),
       );
       if (preflightRunRef.current !== runId) return;
 
@@ -188,7 +244,7 @@ export function useBatchRevoke({
       setPreflightSummary(summarizeBatchPreflight(preflightResults));
       setState("confirming");
     })();
-  }, [config, ownerAddress]);
+  }, [config, ownerAddress, walletRevokeBlockReason]);
 
   const resetAll = useCallback(() => {
     preflightRunRef.current += 1;
@@ -253,6 +309,15 @@ export function useBatchRevoke({
 
       setCurrentKey(item.key);
       patch(item.key, { status: "refreshing" });
+      const preflightBlockReason = walletRevokeBlockReason(item.chainId);
+      if (preflightBlockReason) {
+        patch(item.key, {
+          status: "unverified",
+          error: preflightBlockReason,
+          preflight: blockedErc20Preflight(preflightBlockReason),
+        });
+        continue;
+      }
       const latest = await refreshErc20PreflightForItem(
         config,
         ownerAddress,
@@ -270,6 +335,16 @@ export function useBatchRevoke({
       );
       if (!safeGas.ok) {
         patch(item.key, resultFromPreflight(safeGas.preflight));
+        continue;
+      }
+
+      const submitBlockReason = walletRevokeBlockReason(item.chainId);
+      if (submitBlockReason) {
+        patch(item.key, {
+          status: "unverified",
+          error: submitBlockReason,
+          preflight: blockedErc20Preflight(submitBlockReason),
+        });
         continue;
       }
 
@@ -359,6 +434,7 @@ export function useBatchRevoke({
     writeContractAsync,
     patch,
     onComplete,
+    walletRevokeBlockReason,
   ]);
 
   const counts = useMemo<BatchCounts>(() => {

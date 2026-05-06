@@ -165,6 +165,9 @@ supports it.
 | `NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID` | Optional | Enables WalletConnect QR pairing. |
 | `NEXT_PUBLIC_SITE_URL` | Optional | Canonical public URL used by metadata and social images. Production should use `https://pulserevoke.com`. |
 | `NEXT_PUBLIC_TELEMETRY_ENABLED` | Optional | Enables the current telemetry sink in production when set to `true`. |
+| `MAINNET_RPC_URL` / `ETHEREUM_RPC_URL` | Required for Ethereum scan | Server-only Ethereum RPC URL used by `/api/ethereum/approvals`. |
+| `ETHEREUM_EXPLORER_API_URL` | Optional | Server-only Etherscan API V2 endpoint override. Defaults to `https://api.etherscan.io/v2/api`. |
+| `ETHERSCAN_API_KEY` | Required for Ethereum scan | Server-only Etherscan API key for Ethereum Mainnet approval discovery. Do not use a `NEXT_PUBLIC_` key for this route. |
 
 See [docs/ENVIRONMENT.md](docs/ENVIRONMENT.md) for details.
 
@@ -175,6 +178,10 @@ See [docs/ENVIRONMENT.md](docs/ENVIRONMENT.md) for details.
 - `src/lib/wagmi.ts` - registered wallet chains and transports
 - `src/lib/discovery.ts` - historical log discovery, pagination/windowing,
   Etherscan API V2 `chainid=56` / `chainid=8453` request construction
+- `src/app/api/ethereum/approvals/route.ts` - read-only Ethereum Mainnet
+  approval API route
+- `src/lib/ethereum-approval-api.ts` - server-only Ethereum discovery and live
+  validation
 - `src/lib/explorer.ts` - explorer URL generation
 - `src/lib/preflight.ts` - live validation helpers, BSC hard cap, high-gas
   warning classification

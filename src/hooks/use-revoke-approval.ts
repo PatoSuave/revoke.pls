@@ -2,7 +2,12 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { getPublicClient } from "@wagmi/core";
-import { useConfig, useWaitForTransactionReceipt, useWriteContract } from "wagmi";
+import {
+  useAccount,
+  useConfig,
+  useWaitForTransactionReceipt,
+  useWriteContract,
+} from "wagmi";
 import type { Address } from "viem";
 
 import { getChainConfig } from "@/lib/chains";
@@ -10,13 +15,18 @@ import type { WalletWriteChainId } from "@/lib/ethereum-approval-client";
 import { normalizeRevokeError } from "@/lib/errors";
 import {
   applyGasEstimateToPreflight,
+  blockedErc20Preflight,
   buildErc20PreflightRead,
   evaluateErc20AllowancePreflight,
   failedErc20Preflight,
   safeGasForRevokeRequest,
   type Erc20PreflightResult,
 } from "@/lib/preflight";
-import { buildRevokeCall, type RevokeTarget } from "@/lib/revoke";
+import {
+  buildRevokeCall,
+  getWalletRevokeBlockReason,
+  type RevokeTarget,
+} from "@/lib/revoke";
 import { trackEvent } from "@/lib/telemetry";
 
 export type RevokeStatus =
@@ -70,9 +80,11 @@ export function useRevokeApproval({
   onSuccess,
 }: UseRevokeApprovalOptions): UseRevokeApprovalResult {
   const config = useConfig();
+  const { address: connectedAddress, chainId: walletChainId } = useAccount();
   const write = useWriteContract();
   const [preflight, setPreflight] = useState<Erc20PreflightResult | null>(null);
   const [isRefreshingApproval, setIsRefreshingApproval] = useState(false);
+  const walletStateRef = useRef({ connectedAddress, walletChainId });
   const wait = useWaitForTransactionReceipt({
     hash: write.data,
     chainId: target.chainId as WalletWriteChainId,
@@ -119,6 +131,20 @@ export function useRevokeApproval({
   const lastStatusRef = useRef<RevokeStatus>("idle");
 
   useEffect(() => {
+    walletStateRef.current = { connectedAddress, walletChainId };
+  }, [connectedAddress, walletChainId]);
+
+  const walletRevokeBlockReason = useCallback(() => {
+    const current = walletStateRef.current;
+    return getWalletRevokeBlockReason({
+      connectedAddress: current.connectedAddress,
+      ownerAddress,
+      walletChainId: current.walletChainId,
+      targetChainId: target.chainId,
+    });
+  }, [ownerAddress, target.chainId]);
+
+  useEffect(() => {
     if (
       status === "success" &&
       write.data &&
@@ -149,6 +175,13 @@ export function useRevokeApproval({
   const refreshPreflight = useCallback(async () => {
     setIsRefreshingApproval(true);
     try {
+      const blockReason = walletRevokeBlockReason();
+      if (blockReason) {
+        const next = blockedErc20Preflight(blockReason);
+        setPreflight(next);
+        return next;
+      }
+
       const client = getPublicClient(config, {
         chainId: target.chainId as WalletWriteChainId,
       });
@@ -193,7 +226,14 @@ export function useRevokeApproval({
     } finally {
       setIsRefreshingApproval(false);
     }
-  }, [config, ownerAddress, target, tokenSymbol, tokenDecimals]);
+  }, [
+    config,
+    ownerAddress,
+    target,
+    tokenSymbol,
+    tokenDecimals,
+    walletRevokeBlockReason,
+  ]);
 
   const revoke = useCallback(async (options?: { allowHighGasWarning?: boolean }) => {
     notifiedHashRef.current = null;
@@ -209,13 +249,18 @@ export function useRevokeApproval({
       setPreflight(safeGas.preflight);
       return;
     }
+    const blockReason = walletRevokeBlockReason();
+    if (blockReason) {
+      setPreflight(blockedErc20Preflight(blockReason));
+      return;
+    }
     trackEvent("revoke_submitted", { kind: "erc20", chainId: target.chainId });
     write.writeContract({
       ...buildRevokeCall(target),
       chainId: target.chainId as WalletWriteChainId,
       ...(safeGas.gas !== undefined ? { gas: safeGas.gas } : {}),
     });
-  }, [refreshPreflight, target, write]);
+  }, [refreshPreflight, target, walletRevokeBlockReason, write]);
 
   const reset = useCallback(() => {
     notifiedHashRef.current = null;

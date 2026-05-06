@@ -36,11 +36,9 @@ export const ETHEREUM_EXPLORER_BASE_URL = "https://etherscan.io";
 const RPC_ENV_NAMES = [
   "MAINNET_RPC_URL",
   "ETHEREUM_RPC_URL",
-  "NEXT_PUBLIC_MAINNET_RPC_URL",
 ] as const;
 const API_KEY_ENV_NAMES = [
   "ETHERSCAN_API_KEY",
-  "NEXT_PUBLIC_ETHERSCAN_API_KEY",
 ] as const;
 const API_URL_ENV_NAMES = [
   "ETHEREUM_EXPLORER_API_URL",
@@ -285,7 +283,25 @@ function classifyStatus(input: {
 }
 
 function failureMessage(error: unknown): string {
-  return error instanceof Error ? error.message : String(error);
+  const raw = error instanceof Error ? error.message : String(error);
+  return redactSensitiveErrorText(raw);
+}
+
+function redactSensitiveErrorText(value: string): string {
+  return value
+    .replace(/([?&]apikey=)[^&\s)]+/gi, "$1[redacted]")
+    .replace(/([?&]api_key=)[^&\s)]+/gi, "$1[redacted]")
+    .replace(/([?&]key=)[^&\s)]+/gi, "$1[redacted]")
+    .replace(/https?:\/\/[^\s)]+/gi, (match) => {
+      try {
+        const url = new URL(match);
+        return `${url.protocol}//${url.host}${url.pathname}${
+          url.search ? "?[redacted]" : ""
+        }`;
+      } catch {
+        return "[url redacted]";
+      }
+    });
 }
 
 function serializeErc20Approval(approval: Approval): EthereumErc20ApprovalApi {

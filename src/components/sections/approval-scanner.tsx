@@ -34,7 +34,10 @@ import {
   type ApprovalSort,
   type ScoredApproval,
 } from "@/lib/risk";
-import { getErc20ResultState } from "@/lib/scanner-result-state";
+import {
+  getErc20ResultState,
+  getScanRevokeDisabledReason,
+} from "@/lib/scanner-result-state";
 
 /**
  * Connected-wallet approval scanner (PulseChain + BSC + Base).
@@ -294,6 +297,12 @@ function ConnectedScanner({
 }) {
   const scan = useApprovalDiscovery({ owner, chainId: chainConfig.chainId });
   const nft = useNftApprovalDiscovery({ owner, chainId: chainConfig.chainId });
+  const erc20RevokeDisabledReason = getScanRevokeDisabledReason({
+    status: scan.status,
+    failedLiveReads: scan.diagnostics.liveReadFailureCount,
+    discoveryTruncated: scan.truncated,
+    approvalLabel: chainConfig.standardLabels.fungible,
+  });
 
   const [query, setQuery] = useState("");
   const [sort, setSort] = useState<ApprovalSort>("risk");
@@ -382,8 +391,9 @@ function ConnectedScanner({
   );
 
   const onReviewBatch = useCallback(() => {
+    if (erc20RevokeDisabledReason) return;
     batch.beginConfirm(selectedApprovals);
-  }, [batch, selectedApprovals]);
+  }, [batch, erc20RevokeDisabledReason, selectedApprovals]);
 
   return (
     <div className="space-y-6">
@@ -395,6 +405,7 @@ function ConnectedScanner({
         highRiskCount={highRiskCount}
         status={scan.status}
         isFetching={scan.isFetching}
+        incomplete={Boolean(erc20RevokeDisabledReason)}
         batchActive={batchActive}
         onRescan={scan.refetch}
       />
@@ -419,6 +430,7 @@ function ConnectedScanner({
         selectedHighRisk={selectedHighRisk}
         selectedUnlimited={selectedUnlimited}
         onReviewBatch={onReviewBatch}
+        revokeDisabledReason={erc20RevokeDisabledReason}
         batch={batch}
       />
 
@@ -451,6 +463,7 @@ function ScannerSummary({
   highRiskCount,
   status,
   isFetching,
+  incomplete,
   batchActive,
   onRescan,
 }: {
@@ -461,11 +474,16 @@ function ScannerSummary({
   highRiskCount: number;
   status: ReturnType<typeof useApprovalDiscovery>["status"];
   isFetching: boolean;
+  incomplete: boolean;
   batchActive: boolean;
   onRescan: () => void;
 }) {
   const summary =
-    candidateCount > 0
+    incomplete
+      ? activeCount > 0
+        ? `${activeCount} active / verification incomplete`
+        : "Verification incomplete"
+      : candidateCount > 0
       ? `${activeCount} active / ${candidateCount} checked`
       : status === "pending"
       ? "Searching wallet history"
@@ -525,6 +543,12 @@ function NftSection({
 }) {
   const sorted = useMemo(() => sortNftApprovals(nft.approvals), [nft.approvals]);
   const highRisk = sorted.filter((a) => a.risk.level === "high").length;
+  const revokeDisabledReason = getScanRevokeDisabledReason({
+    status: nft.status,
+    failedLiveReads: nft.diagnostics.liveReadFailureCount,
+    discoveryTruncated: nft.truncated,
+    approvalLabel: "NFT approval",
+  });
 
   return (
     <section className="space-y-4 rounded-2xl border border-pulse-border bg-pulse-bg/45 p-4 sm:p-5">
@@ -568,6 +592,7 @@ function NftSection({
         owner={owner}
         sorted={sorted}
         chainConfig={chainConfig}
+        revokeDisabledReason={revokeDisabledReason}
       />
 
       <p className="text-xs text-pulse-muted">
@@ -594,11 +619,13 @@ function NftSectionBody({
   owner,
   sorted,
   chainConfig,
+  revokeDisabledReason,
 }: {
   nft: ReturnType<typeof useNftApprovalDiscovery>;
   owner: `0x${string}`;
   sorted: NftApproval[];
   chainConfig: SupportedChainConfig;
+  revokeDisabledReason: string | null;
 }) {
   if (nft.status === "pending") {
     return (
@@ -638,6 +665,18 @@ function NftSectionBody({
   }
 
   if (sorted.length === 0) {
+    if (revokeDisabledReason) {
+      return (
+        <NftVerificationIncompleteState
+          reason={revokeDisabledReason}
+          failedLiveReads={nft.diagnostics.liveReadFailureCount}
+          discoveryTruncated={nft.truncated}
+          chainName={chainConfig.displayName}
+          explorerName={chainConfig.explorer.name}
+        />
+      );
+    }
+
     return (
       <div className="rounded-2xl border border-dashed border-pulse-border/80 bg-pulse-bg/40 p-6 text-sm">
         <p className="text-xs font-semibold uppercase tracking-[0.18em] text-pulse-green">
@@ -663,23 +702,29 @@ function NftSectionBody({
   }
 
   return (
-    <div className="overflow-hidden rounded-2xl border border-pulse-border bg-pulse-bg/40">
-      <div className="hidden grid-cols-[1.2fr_1.5fr_1fr_auto] gap-4 border-b border-pulse-border bg-pulse-bg/60 px-4 py-3 text-xs font-semibold uppercase tracking-wider text-pulse-muted sm:grid">
-        <div>Collection</div>
-        <div>Operator</div>
-        <div>Permission / Risk</div>
-        <div className="text-right">Action</div>
+    <div className="space-y-3">
+      {revokeDisabledReason ? (
+        <ScanRevokeDisabledWarning reason={revokeDisabledReason} />
+      ) : null}
+      <div className="overflow-hidden rounded-2xl border border-pulse-border bg-pulse-bg/40">
+        <div className="hidden grid-cols-[1.2fr_1.5fr_1fr_auto] gap-4 border-b border-pulse-border bg-pulse-bg/60 px-4 py-3 text-xs font-semibold uppercase tracking-wider text-pulse-muted sm:grid">
+          <div>Collection</div>
+          <div>Operator</div>
+          <div>Permission / Risk</div>
+          <div className="text-right">Action</div>
+        </div>
+        <ul>
+          {sorted.map((approval) => (
+            <NftApprovalRow
+              key={approval.key}
+              approval={approval}
+              ownerAddress={owner}
+              onRevoked={nft.refetch}
+              revokeDisabledReason={revokeDisabledReason}
+            />
+          ))}
+        </ul>
       </div>
-      <ul>
-        {sorted.map((approval) => (
-          <NftApprovalRow
-            key={approval.key}
-            approval={approval}
-            ownerAddress={owner}
-            onRevoked={nft.refetch}
-          />
-        ))}
-      </ul>
     </div>
   );
 }
@@ -750,6 +795,7 @@ function ScanContent({
   selectedUnlimited,
   onReviewBatch,
   batch,
+  revokeDisabledReason,
 }: {
   scan: ReturnType<typeof useApprovalDiscovery>;
   owner: `0x${string}`;
@@ -771,14 +817,17 @@ function ScanContent({
   selectedUnlimited: number;
   onReviewBatch: () => void;
   batch: ReturnType<typeof useBatchRevoke>;
+  revokeDisabledReason: string | null;
 }) {
   const batchActive = batch.state === "running" || batch.state === "stopping";
   const batchInteracting = batch.state !== "idle";
+  const failedLiveReads = scan.diagnostics.liveReadFailureCount;
   const failedAllowanceReads = scan.diagnostics.liveReadFailures.allowance;
   const resultState = getErc20ResultState({
     activeApprovals: scored.length,
-    failedAllowanceReads,
+    failedAllowanceReads: failedLiveReads,
     discoveredPairs: scan.stats.candidates,
+    discoveryTruncated: scan.truncated,
   });
   if (scan.status === "pending") {
     return (
@@ -821,7 +870,9 @@ function ScanContent({
   if (resultState === "verification-incomplete") {
     return (
       <VerificationIncompleteState
+        failedLiveReads={failedLiveReads}
         failedAllowanceReads={failedAllowanceReads}
+        discoveryTruncated={scan.truncated}
         chainName={chainConfig.displayName}
         explorerName={chainConfig.explorer.name}
         standardLabel={chainConfig.standardLabels.fungible}
@@ -866,7 +917,9 @@ function ScanContent({
     <div className="space-y-4">
       <GuidancePanel />
 
-      {failedAllowanceReads > 0 ? (
+      {revokeDisabledReason ? (
+        <ScanRevokeDisabledWarning reason={revokeDisabledReason} />
+      ) : failedAllowanceReads > 0 ? (
         <AllowanceReadWarning
           count={failedAllowanceReads}
           explorerName={chainConfig.explorer.name}
@@ -894,7 +947,7 @@ function ScanContent({
         onSelectAllVisible={onToggleSelectAllVisible}
         onClear={onClearSelection}
         onReview={onReviewBatch}
-        disabled={batchInteracting}
+        disabled={batchInteracting || Boolean(revokeDisabledReason)}
       />
 
       <BatchRevokePanel batch={batch} />
@@ -921,9 +974,10 @@ function ScanContent({
                 onRevoked={scan.refetch}
                 selected={selected.has(approval.key)}
                 onToggleSelect={onToggleSelect}
-                selectionDisabled={batchInteracting}
+                selectionDisabled={batchInteracting || Boolean(revokeDisabledReason)}
                 batchActive={batchActive}
                 batchResult={batch.results[approval.key]}
+                revokeDisabledReason={revokeDisabledReason}
               />
             ))}
           </ul>
@@ -981,13 +1035,73 @@ function AllowanceReadWarning({
   );
 }
 
+function ScanRevokeDisabledWarning({ reason }: { reason: string }) {
+  return (
+    <div className="rounded-2xl border border-amber-400/40 bg-amber-400/10 p-4 text-sm">
+      <p className="font-semibold text-amber-200">
+        Revoke is disabled until verification completes.
+      </p>
+      <p className="mt-1 leading-6 text-pulse-muted">{reason}</p>
+    </div>
+  );
+}
+
+function NftVerificationIncompleteState({
+  reason,
+  failedLiveReads,
+  discoveryTruncated,
+  chainName,
+  explorerName,
+}: {
+  reason: string;
+  failedLiveReads: number;
+  discoveryTruncated: boolean;
+  chainName: string;
+  explorerName: string;
+}) {
+  return (
+    <div className="rounded-2xl border border-amber-400/45 bg-amber-400/10 p-6 text-sm">
+      <p className="text-xs font-semibold uppercase tracking-[0.18em] text-amber-300">
+        Verification incomplete
+      </p>
+      <p className="mt-2 text-lg font-semibold text-pulse-text">
+        No verified active NFT approvals were found.
+      </p>
+      <p className="mt-2 max-w-2xl leading-6 text-pulse-muted">
+        {reason} This wallet is not shown as clear, and NFT revoke actions stay
+        disabled.
+      </p>
+      <p className="mt-2 max-w-2xl leading-6 text-pulse-muted">
+        Rescan with a healthier {chainName} RPC or explorer response, or verify
+        directly on {explorerName}.
+      </p>
+      <div className="mt-4 grid gap-2 text-xs text-pulse-muted sm:grid-cols-3">
+        <EmptyStateStep
+          title={discoveryTruncated ? "Discovery truncated" : "Live reads failed"}
+          body={
+            discoveryTruncated
+              ? "History may be incomplete"
+              : `${failedLiveReads} unverified`
+          }
+        />
+        <EmptyStateStep title="Not marked clear" body="Verification is incomplete." />
+        <EmptyStateStep title="Next step" body={`Retry or check ${explorerName}.`} />
+      </div>
+    </div>
+  );
+}
+
 function VerificationIncompleteState({
+  failedLiveReads,
   failedAllowanceReads,
+  discoveryTruncated,
   chainName,
   explorerName,
   standardLabel,
 }: {
+  failedLiveReads: number;
   failedAllowanceReads: number;
+  discoveryTruncated: boolean;
   chainName: string;
   explorerName: string;
   standardLabel: string;
@@ -1001,23 +1115,31 @@ function VerificationIncompleteState({
         No verified active {standardLabel} approvals were found.
       </p>
       <p className="mt-2 max-w-2xl leading-6 text-pulse-muted">
-        Some allowance reads could not be verified live. Failed allowance reads
-        are not counted as safe or cleared.
+        {discoveryTruncated
+          ? "Discovery hit a per-wallet fetch cap, so verification did not cover the full approval history."
+          : "Some live reads could not be verified."}{" "}
+        Failed or missing verification is not counted as safe or cleared.
       </p>
       <p className="mt-2 max-w-2xl leading-6 text-pulse-muted">
         Rescan with a healthier {chainName} RPC, or verify the affected
         token/spender pairs directly on {explorerName}.
       </p>
-      <div className="mt-4">
-        <AllowanceReadWarning
-          count={failedAllowanceReads}
-          explorerName={explorerName}
-        />
-      </div>
+      {failedAllowanceReads > 0 ? (
+        <div className="mt-4">
+          <AllowanceReadWarning
+            count={failedAllowanceReads}
+            explorerName={explorerName}
+          />
+        </div>
+      ) : null}
       <div className="mt-4 grid gap-2 text-xs text-pulse-muted sm:grid-cols-3">
         <EmptyStateStep
-          title="Live reads failed"
-          body={`${failedAllowanceReads} unverified`}
+          title={discoveryTruncated ? "Discovery truncated" : "Live reads failed"}
+          body={
+            discoveryTruncated
+              ? "History may be incomplete"
+              : `${failedLiveReads} unverified`
+          }
         />
         <EmptyStateStep title="Not marked clear" body="Failed reads stay separate." />
         <EmptyStateStep title="Next step" body={`Retry RPC or check ${explorerName}.`} />
