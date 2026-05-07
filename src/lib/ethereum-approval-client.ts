@@ -3,6 +3,10 @@ import { defineChain, type Address } from "viem";
 import type { Approval } from "@/lib/approvals";
 import type { SupportedChainId } from "@/lib/chains";
 import type { NftApproval } from "@/lib/nft-approvals";
+import {
+  ADDRESS_SCAN_CONNECT_MATCHING_WALLET_COPY,
+  WALLET_MISMATCH_SCAN_TARGET_COPY,
+} from "@/lib/scan-target";
 
 export const ETHEREUM_MAINNET_CLIENT_CHAIN_ID = 1;
 export const ETHEREUM_MAINNET_DISPLAY_NAME = "Ethereum Mainnet";
@@ -451,8 +455,9 @@ export function ethereumWalletRevokeDisabledReason({
   walletChainId: number | undefined;
 }): string {
   if (!mapping) return "Ethereum approvals are still loading.";
+  if (walletChainId === undefined) return ADDRESS_SCAN_CONNECT_MATCHING_WALLET_COPY;
   if (walletChainId !== ETHEREUM_MAINNET_CLIENT_CHAIN_ID) {
-    return "Switch to Ethereum Mainnet.";
+    return "Switch to Ethereum Mainnet to revoke.";
   }
   return mapping.revokeDisabledReason ?? "Ethereum wallet revoke is available.";
 }
@@ -469,11 +474,12 @@ export function ethereumWalletRowRevokeDisabledReason({
   connectedAddress: Address | undefined;
 }): string {
   if (!mapping) return "Ethereum approvals are still loading.";
+  if (!connectedAddress) return ADDRESS_SCAN_CONNECT_MATCHING_WALLET_COPY;
   if (walletChainId !== ETHEREUM_MAINNET_CLIENT_CHAIN_ID) {
-    return "Switch to Ethereum Mainnet.";
+    return "Switch to Ethereum Mainnet to revoke.";
   }
   if (!ethereumAddressesMatch(ownerAddress, connectedAddress)) {
-    return "Connected wallet does not match scanned owner.";
+    return WALLET_MISMATCH_SCAN_TARGET_COPY;
   }
   return mapping.rowRevokeDisabledReason ?? "Verified row; revoke available.";
 }

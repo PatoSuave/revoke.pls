@@ -49,3 +49,43 @@ export function getScanRevokeDisabledReason(input: {
   }
   return null;
 }
+
+export function getRevokeDisabledNoticeCopy(
+  reason: string | null,
+): { title: string; body: string } | null {
+  if (!reason) return null;
+
+  if (reason.includes("verification completes")) {
+    return {
+      title:
+        "Verification incomplete — some rows cannot be revoked until fully verified.",
+      body: reason,
+    };
+  }
+
+  if (reason.startsWith("Address scan mode")) {
+    return {
+      title: "Address scan mode",
+      body: reason,
+    };
+  }
+
+  if (reason.startsWith("Connected wallet does not match")) {
+    return {
+      title: "Wallet mismatch",
+      body: reason,
+    };
+  }
+
+  if (reason.startsWith("Switch to ")) {
+    return {
+      title: "Wrong network",
+      body: reason,
+    };
+  }
+
+  return {
+    title: "Revoke unavailable",
+    body: reason,
+  };
+}
