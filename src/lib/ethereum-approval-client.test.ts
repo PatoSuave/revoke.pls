@@ -22,6 +22,10 @@ import {
   type EthereumApprovalApiResponse,
 } from "./ethereum-approval-client";
 import { supportedChainConfigList } from "./chains";
+import {
+  ADDRESS_SCAN_CONNECT_MATCHING_WALLET_COPY,
+  WALLET_MISMATCH_SCAN_TARGET_COPY,
+} from "./scan-target";
 
 const TOKEN = "0x2222222222222222222222222222222222222222";
 const SPENDER = "0x3333333333333333333333333333333333333333";
@@ -248,13 +252,13 @@ describe("Ethereum approval client mapping", () => {
         mapping: mapped,
         walletChainId: 369,
       }),
-    ).toBe("Switch to Ethereum Mainnet.");
+    ).toBe("Switch to Ethereum Mainnet to revoke.");
     expect(
       ethereumWalletRevokeDisabledReason({
         mapping: mapped,
         walletChainId: undefined,
       }),
-    ).toBe("Connect this wallet to revoke.");
+    ).toBe(ADDRESS_SCAN_CONNECT_MATCHING_WALLET_COPY);
     expect(
       ethereumWalletRowRevokeDisabledReason({
         mapping: mapped,
@@ -270,7 +274,7 @@ describe("Ethereum approval client mapping", () => {
         ownerAddress: OWNER,
         connectedAddress: "0x7777777777777777777777777777777777777777",
       }),
-    ).toBe("Connected wallet does not match scanned address.");
+    ).toBe(WALLET_MISMATCH_SCAN_TARGET_COPY);
     expect(
       ethereumWalletRowRevokeDisabledReason({
         mapping: mapped,
@@ -278,7 +282,7 @@ describe("Ethereum approval client mapping", () => {
         ownerAddress: OWNER,
         connectedAddress: undefined,
       }),
-    ).toBe("Connect this wallet to revoke.");
+    ).toBe(ADDRESS_SCAN_CONNECT_MATCHING_WALLET_COPY);
   });
 
   it("passes the explicit owner address to the Ethereum approvals API", async () => {

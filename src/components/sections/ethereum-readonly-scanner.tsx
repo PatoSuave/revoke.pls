@@ -40,6 +40,7 @@ import {
   requiresGasWarningAcknowledgement,
 } from "@/lib/revoke-gas";
 import { scoreApprovals, type RiskAssessment, type ScoredApproval } from "@/lib/risk";
+import { addressesEqual } from "@/lib/scan-target";
 
 export function EthereumReadOnlyScanner({
   owner,
@@ -162,6 +163,7 @@ export function EthereumReadOnlyScanner({
         revokeDisabledReason={revokeDisabledReason}
         rowRevokeEnabled={rowRevokeEnabled}
         rowRevokeDisabledReason={rowRevokeDisabledReason}
+        connectedAddress={connectedAddress}
       />
     </div>
   );
@@ -1201,9 +1203,11 @@ function EthereumDiagnostics({
   revokeDisabledReason,
   rowRevokeEnabled,
   rowRevokeDisabledReason,
+  connectedAddress,
 }: {
   enabled: boolean;
   owner: Address;
+  connectedAddress: Address | undefined;
   walletChainId: number | undefined;
   wagmiChainId: number | undefined;
   scan: ReturnType<typeof useEthereumApprovalScan>;
@@ -1217,11 +1221,28 @@ function EthereumDiagnostics({
   const response = scan.response;
   const diagnostics = response?.diagnostics;
   const skippedReasons = diagnostics?.skippedReasons ?? {};
+  const walletMatchesScanTarget = connectedAddress
+    ? addressesEqual(connectedAddress, owner)
+    : null;
+  const scanMode = walletMatchesScanTarget
+    ? "connected-wallet-matches-scanned-address"
+    : "address-only";
   const rows: readonly [string, string][] = [
-    ["Wallet", shortenAddress(owner)],
+    ["Scan mode", scanMode],
+    ["Scan target address", shortenAddress(owner)],
+    ["Wallet connected", connectedAddress ? "Yes" : "No"],
+    ["Wallet", connectedAddress ? shortenAddress(connectedAddress) : "Not connected"],
+    [
+      "Wallet matches scan target",
+      walletMatchesScanTarget === null
+        ? "Not connected"
+        : walletMatchesScanTarget
+          ? "Yes"
+          : "No",
+    ],
     ["Connected wallet chain ID", walletChainId?.toString() ?? "Unknown"],
     ["Wagmi state chain ID", wagmiChainId?.toString() ?? "Unknown"],
-    ["Active scan mode", ETHEREUM_MAINNET_DISPLAY_NAME],
+    ["Discovery target chain", ETHEREUM_MAINNET_DISPLAY_NAME],
     ["API route", "/api/ethereum/approvals"],
     ["API status", response?.status ?? scan.status],
     ["Global scan revoke enabled", revokeEnabled ? "Yes" : "No"],

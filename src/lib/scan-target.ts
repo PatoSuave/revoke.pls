@@ -5,6 +5,12 @@ export type ScanMode =
   | "address-only"
   | "connected-wallet-matches-scanned-address";
 
+export const ADDRESS_SCAN_CONNECT_MATCHING_WALLET_COPY =
+  "Address scan mode — connect the matching wallet to revoke.";
+
+export const WALLET_MISMATCH_SCAN_TARGET_COPY =
+  "Connected wallet does not match scanned address.";
+
 export interface ScanTarget {
   scanMode: ScanMode;
   scanTargetAddress: Address | undefined;
@@ -63,11 +69,11 @@ export function getScanTargetRevokeDisabledReason({
   rowChainId: number;
   chainName: string;
 }): string | null {
-  if (!connectedWalletAddress) return "Connect this wallet to revoke.";
+  if (!connectedWalletAddress) return ADDRESS_SCAN_CONNECT_MATCHING_WALLET_COPY;
   if (!addressesEqual(connectedWalletAddress, scanTargetAddress)) {
-    return "Connected wallet does not match scanned address.";
+    return WALLET_MISMATCH_SCAN_TARGET_COPY;
   }
-  if (walletChainId !== rowChainId) return `Switch to ${chainName}.`;
+  if (walletChainId !== rowChainId) return `Switch to ${chainName} to revoke.`;
   return null;
 }
 
