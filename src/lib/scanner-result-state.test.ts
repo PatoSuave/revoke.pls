@@ -2,8 +2,10 @@ import { describe, expect, it } from "vitest";
 
 import {
   getErc20ResultState,
+  getRevokeDisabledNoticeCopy,
   getScanRevokeDisabledReason,
 } from "./scanner-result-state";
+import { ADDRESS_SCAN_CONNECT_MATCHING_WALLET_COPY } from "./scan-target";
 
 describe("ERC-20 scanner result state", () => {
   it("uses verification incomplete when no active approvals exist but allowance reads failed", () => {
@@ -70,5 +72,31 @@ describe("ERC-20 scanner result state", () => {
         approvalLabel: "NFT",
       }),
     ).toBe("2 live reads failed - revoke unavailable until verification completes.");
+  });
+
+  it("does not label wallet-only address scan state as verification incomplete", () => {
+    expect(getRevokeDisabledNoticeCopy(ADDRESS_SCAN_CONNECT_MATCHING_WALLET_COPY)).toEqual({
+      title: "Address scan mode",
+      body: ADDRESS_SCAN_CONNECT_MATCHING_WALLET_COPY,
+    });
+  });
+
+  it("keeps verification-incomplete reasons explicit and separate", () => {
+    expect(
+      getRevokeDisabledNoticeCopy(
+        "2 live reads failed - revoke unavailable until verification completes.",
+      ),
+    ).toEqual({
+      title:
+        "Verification incomplete — some rows cannot be revoked until fully verified.",
+      body: "2 live reads failed - revoke unavailable until verification completes.",
+    });
+  });
+
+  it("uses wrong-chain copy when a matching wallet is on the wrong chain", () => {
+    expect(getRevokeDisabledNoticeCopy("Switch to BNB Smart Chain to revoke.")).toEqual({
+      title: "Wrong network",
+      body: "Switch to BNB Smart Chain to revoke.",
+    });
   });
 });

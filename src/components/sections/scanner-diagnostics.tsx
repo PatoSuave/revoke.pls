@@ -1,6 +1,7 @@
 import type { UseApprovalDiscoveryResult } from "@/hooks/use-approval-discovery";
 import type { UseBatchRevokeResult } from "@/hooks/use-batch-revoke";
 import type { UseNftApprovalDiscoveryResult } from "@/hooks/use-nft-approval-discovery";
+import type { Address } from "viem";
 import {
   getChainConfig,
   getSupportedChainShortNames,
@@ -8,6 +9,7 @@ import {
 } from "@/lib/chains";
 import { FUNGIBLE_APPROVAL_SHAPE_COPY } from "@/lib/diagnostic-copy";
 import { shortenAddress } from "@/lib/format";
+import type { ScanMode } from "@/lib/scan-target";
 
 interface ScannerDiagnosticsPanelProps {
   enabled: boolean;
@@ -18,6 +20,11 @@ interface ScannerDiagnosticsPanelProps {
   chainConfig: SupportedChainConfig | undefined;
   onSupportedChain: boolean;
   walletMatchesActiveChain: boolean | null;
+  scanMode?: ScanMode;
+  scanTargetAddress?: Address;
+  connectedWalletAddress?: Address;
+  walletMatchesScanTarget?: boolean | null;
+  revokeDisabledReason?: string | null;
   isConnected: boolean;
   erc20?: UseApprovalDiscoveryResult;
   nft?: UseNftApprovalDiscoveryResult;
@@ -33,6 +40,11 @@ export function ScannerDiagnosticsPanel({
   chainConfig,
   onSupportedChain,
   walletMatchesActiveChain,
+  scanMode = "connected-wallet",
+  scanTargetAddress,
+  connectedWalletAddress,
+  walletMatchesScanTarget,
+  revokeDisabledReason,
   isConnected,
   erc20,
   nft,
@@ -58,6 +70,14 @@ export function ScannerDiagnosticsPanel({
     chainConfig?.discovery.apiProviderKind === "etherscan-v2";
   const walletChainConfig = getChainConfig(walletChainId);
   const supportedChains = getSupportedChainShortNames();
+  const effectiveScanTarget = scanTargetAddress ?? owner;
+  const effectiveConnectedWallet = connectedWalletAddress ?? owner;
+  const effectiveWalletMatchesScanTarget =
+    walletMatchesScanTarget ??
+    (isConnected && effectiveConnectedWallet && effectiveScanTarget
+      ? effectiveConnectedWallet.toLowerCase() ===
+        effectiveScanTarget.toLowerCase()
+      : null);
   const discoveryTarget =
     chainConfig && activeChainId
       ? `${chainConfig.displayName} (${activeChainId})`
@@ -150,7 +170,27 @@ export function ScannerDiagnosticsPanel({
         <DiagnosticCard title="Wallet and source">
           <DiagnosticRows
             rows={[
-              ["Wallet", isConnected && owner ? shortenAddress(owner) : "Not connected"],
+              ["Scan mode", formatScanMode(scanMode)],
+              [
+                "Scan target address",
+                effectiveScanTarget ? shortenAddress(effectiveScanTarget) : "None",
+              ],
+              ["Wallet connected", isConnected ? "Yes" : "No"],
+              [
+                "Wallet",
+                isConnected && effectiveConnectedWallet
+                  ? shortenAddress(effectiveConnectedWallet)
+                  : "Not connected",
+              ],
+              [
+                "Wallet matches scan target",
+                effectiveWalletMatchesScanTarget === null
+                  ? "Not connected"
+                  : effectiveWalletMatchesScanTarget
+                    ? "Yes"
+                    : "No",
+              ],
+              ["Revoke disabled reason", revokeDisabledReason ?? "None"],
               [
                 "Connected wallet chain ID",
                 walletChainId?.toString() ?? "Unknown",
@@ -170,7 +210,7 @@ export function ScannerDiagnosticsPanel({
                     ? "Yes"
                     : "No",
               ],
-              ["Supported", onSupportedChain ? "Yes" : "No"],
+              ["Scanner chain supported", onSupportedChain ? "Yes" : "No"],
               ["Supported chains", supportedChains],
               ["Discovery target chain", discoveryTarget],
               ["Explorer links", chainConfig?.explorer.name ?? "Unavailable"],
@@ -604,6 +644,14 @@ function formatElapsed(ms: number | null) {
   if (ms === null) return "Not completed";
   if (ms < 1000) return `${ms} ms`;
   return `${(ms / 1000).toFixed(1)} s`;
+}
+
+function formatScanMode(scanMode: ScanMode): string {
+  if (scanMode === "connected-wallet") return "connected-wallet";
+  if (scanMode === "connected-wallet-matches-scanned-address") {
+    return "connected-wallet-matches-scanned-address";
+  }
+  return "address-only";
 }
 
 function formatGasAmount(value: bigint): string {

@@ -38,14 +38,18 @@ import {
 } from "@/lib/risk";
 import {
   getErc20ResultState,
+  getRevokeDisabledNoticeCopy,
   getScanRevokeDisabledReason,
 } from "@/lib/scanner-result-state";
 import {
+  ADDRESS_SCAN_CONNECT_MATCHING_WALLET_COPY,
+  WALLET_MISMATCH_SCAN_TARGET_COPY,
   addressesEqual,
   getScanTargetRevokeDisabledReason,
   normalizeScanInputAddress,
   resolveScanTarget,
   scanTargetSessionKey,
+  type ScanMode,
   type ScanTarget,
 } from "@/lib/scan-target";
 
@@ -237,8 +241,8 @@ function AddressScanPanel({
     ? scanTarget.isConnectedWalletSameAsScanTarget
       ? "Connected wallet matches scanned address."
       : scanTarget.connectedWalletAddress
-        ? "Connected wallet does not match scanned address."
-        : "Address scan mode — connect this wallet to revoke."
+        ? WALLET_MISMATCH_SCAN_TARGET_COPY
+        : ADDRESS_SCAN_CONNECT_MATCHING_WALLET_COPY
     : "Connected-wallet mode is used when no pasted address is active.";
 
   return (
@@ -463,6 +467,8 @@ function ScannerBody({
       walletChainId={walletChainId}
       wagmiChainId={wagmiChainId}
       walletMatchesActiveChain={walletMatchesActiveChain}
+      walletMatchesScanTarget={true}
+      scanMode="connected-wallet"
       isConnected={isConnected}
       debugMode={debugMode}
     />
@@ -483,11 +489,15 @@ function AddressOnlyScanResults({
   debugMode: boolean;
 }) {
   const walletMatchesOwner = addressesEqual(connectedAddress, owner);
+  const walletMatchesScanTarget = connectedAddress ? walletMatchesOwner : null;
+  const scanMode: ScanMode = walletMatchesOwner
+    ? "connected-wallet-matches-scanned-address"
+    : "address-only";
   const status = !connectedAddress
-    ? "Address scan mode — connect this wallet to revoke."
+    ? ADDRESS_SCAN_CONNECT_MATCHING_WALLET_COPY
     : walletMatchesOwner
       ? "Connected wallet matches scanned address."
-      : "Connected wallet does not match scanned address.";
+      : WALLET_MISMATCH_SCAN_TARGET_COPY;
 
   return (
     <div className="space-y-6">
@@ -533,8 +543,12 @@ function AddressOnlyScanResults({
           walletChainId={walletChainId}
           wagmiChainId={wagmiChainId}
           walletMatchesActiveChain={
-            walletChainId === chainConfig.chainId && walletMatchesOwner
+            connectedAddress
+              ? walletChainId === chainConfig.chainId && walletMatchesOwner
+              : null
           }
+          walletMatchesScanTarget={walletMatchesScanTarget}
+          scanMode={scanMode}
           isConnected={Boolean(connectedAddress)}
           debugMode={debugMode}
         />
@@ -550,6 +564,8 @@ function ConnectedScanner({
   walletChainId,
   wagmiChainId,
   walletMatchesActiveChain,
+  walletMatchesScanTarget,
+  scanMode,
   isConnected,
   debugMode,
 }: {
@@ -559,6 +575,8 @@ function ConnectedScanner({
   walletChainId: number | undefined;
   wagmiChainId: number | undefined;
   walletMatchesActiveChain: boolean | null;
+  walletMatchesScanTarget: boolean | null;
+  scanMode: ScanMode;
   isConnected: boolean;
   debugMode: boolean;
 }) {
@@ -719,8 +737,13 @@ function ConnectedScanner({
         wagmiChainId={wagmiChainId}
         activeChainId={chainConfig.chainId}
         chainConfig={chainConfig}
-        onSupportedChain={walletChainId === chainConfig.chainId}
+        onSupportedChain
         walletMatchesActiveChain={walletMatchesActiveChain}
+        scanMode={scanMode}
+        scanTargetAddress={owner}
+        connectedWalletAddress={connectedAddress}
+        walletMatchesScanTarget={walletMatchesScanTarget}
+        revokeDisabledReason={erc20RevokeDisabledReason}
         isConnected={isConnected}
         erc20={scan}
         nft={nft}
@@ -830,13 +853,14 @@ function NftSection({
 }) {
   const sorted = useMemo(() => sortNftApprovals(nft.approvals), [nft.approvals]);
   const highRisk = sorted.filter((a) => a.risk.level === "high").length;
+  const scanRevokeDisabledReason = getScanRevokeDisabledReason({
+    status: nft.status,
+    failedLiveReads: nft.diagnostics.liveReadFailureCount,
+    discoveryTruncated: nft.truncated,
+    approvalLabel: "NFT approval",
+  });
   const revokeDisabledReason =
-    getScanRevokeDisabledReason({
-      status: nft.status,
-      failedLiveReads: nft.diagnostics.liveReadFailureCount,
-      discoveryTruncated: nft.truncated,
-      approvalLabel: "NFT approval",
-    }) ?? walletRevokeDisabledReason;
+    scanRevokeDisabledReason ?? walletRevokeDisabledReason;
 
   return (
     <section className="space-y-4 rounded-2xl border border-pulse-border bg-pulse-bg/45 p-4 sm:p-5">
@@ -880,6 +904,7 @@ function NftSection({
         owner={owner}
         sorted={sorted}
         chainConfig={chainConfig}
+        scanRevokeDisabledReason={scanRevokeDisabledReason}
         revokeDisabledReason={revokeDisabledReason}
         debugMode={debugMode}
       />
@@ -908,6 +933,7 @@ function NftSectionBody({
   owner,
   sorted,
   chainConfig,
+  scanRevokeDisabledReason,
   revokeDisabledReason,
   debugMode,
 }: {
@@ -915,6 +941,7 @@ function NftSectionBody({
   owner: `0x${string}`;
   sorted: NftApproval[];
   chainConfig: SupportedChainConfig;
+  scanRevokeDisabledReason: string | null;
   revokeDisabledReason: string | null;
   debugMode: boolean;
 }) {
@@ -956,10 +983,10 @@ function NftSectionBody({
   }
 
   if (sorted.length === 0) {
-    if (revokeDisabledReason) {
+    if (scanRevokeDisabledReason) {
       return (
         <NftVerificationIncompleteState
-          reason={revokeDisabledReason}
+          reason={scanRevokeDisabledReason}
           failedLiveReads={nft.diagnostics.liveReadFailureCount}
           discoveryTruncated={nft.truncated}
           chainName={chainConfig.displayName}
@@ -1331,12 +1358,13 @@ function AllowanceReadWarning({
 }
 
 function ScanRevokeDisabledWarning({ reason }: { reason: string }) {
+  const notice = getRevokeDisabledNoticeCopy(reason);
+  if (!notice) return null;
+
   return (
     <div className="rounded-2xl border border-amber-400/40 bg-amber-400/10 p-4 text-sm">
-      <p className="font-semibold text-amber-200">
-        Revoke is disabled until verification completes.
-      </p>
-      <p className="mt-1 leading-6 text-pulse-muted">{reason}</p>
+      <p className="font-semibold text-amber-200">{notice.title}</p>
+      <p className="mt-1 leading-6 text-pulse-muted">{notice.body}</p>
     </div>
   );
 }

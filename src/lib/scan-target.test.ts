@@ -5,6 +5,8 @@ import { describe, expect, it } from "vitest";
 import { getAddress, type Address } from "viem";
 
 import {
+  ADDRESS_SCAN_CONNECT_MATCHING_WALLET_COPY,
+  WALLET_MISMATCH_SCAN_TARGET_COPY,
   addressesEqual,
   getScanTargetRevokeDisabledReason,
   normalizeScanInputAddress,
@@ -75,7 +77,7 @@ describe("scan target state", () => {
         rowChainId: 1,
         chainName: "Ethereum Mainnet",
       }),
-    ).toBe("Connect this wallet to revoke.");
+    ).toBe(ADDRESS_SCAN_CONNECT_MATCHING_WALLET_COPY);
     expect(
       getScanTargetRevokeDisabledReason({
         scanTargetAddress: OWNER,
@@ -84,7 +86,7 @@ describe("scan target state", () => {
         rowChainId: 1,
         chainName: "Ethereum Mainnet",
       }),
-    ).toBe("Connected wallet does not match scanned address.");
+    ).toBe(WALLET_MISMATCH_SCAN_TARGET_COPY);
     expect(
       getScanTargetRevokeDisabledReason({
         scanTargetAddress: OWNER,
@@ -93,7 +95,7 @@ describe("scan target state", () => {
         rowChainId: 1,
         chainName: "Ethereum Mainnet",
       }),
-    ).toBe("Switch to Ethereum Mainnet.");
+    ).toBe("Switch to Ethereum Mainnet to revoke.");
     expect(
       getScanTargetRevokeDisabledReason({
         scanTargetAddress: OWNER,
@@ -130,6 +132,27 @@ describe("scan target state", () => {
     expect(scanner).toContain("useNftApprovalDiscovery({ owner, chainId");
     expect(scanner).toContain("EthereumReadOnlyScanner");
     expect(scanner).toContain("getScanTargetRevokeDisabledReason");
+  });
+
+  it("keeps address-only debug labels separate from scanner failures", () => {
+    const diagnostics = readFileSync(
+      join(
+        process.cwd(),
+        "src",
+        "components",
+        "sections",
+        "scanner-diagnostics.tsx",
+      ),
+      "utf8",
+    );
+
+    expect(diagnostics).toContain('"Scan mode"');
+    expect(diagnostics).toContain('"Scan target address"');
+    expect(diagnostics).toContain('"Wallet connected"');
+    expect(diagnostics).toContain('"Wallet matches scan target"');
+    expect(diagnostics).toContain('"Revoke disabled reason"');
+    expect(diagnostics).toContain('"Discovery target chain"');
+    expect(diagnostics).toContain('"Scanner chain supported"');
   });
 
   it("does not add address-only API transaction submission or signing helpers", () => {
