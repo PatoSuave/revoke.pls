@@ -168,6 +168,12 @@ export function ApprovalRow({
               max uint256
             </span>
           ) : null}
+          <ApprovalProofDetails
+            approval={approval}
+            ownerAddress={ownerAddress}
+            chainName={chainConfig?.displayName ?? "the network"}
+            standardLabel={chainConfig?.standardLabels.fungible ?? "ERC-20"}
+          />
         </div>
 
         <div className="flex justify-stretch sm:justify-end">
@@ -226,6 +232,54 @@ export function ApprovalRow({
         />
       ) : null}
     </li>
+  );
+}
+
+function ApprovalProofDetails({
+  approval,
+  ownerAddress,
+  chainName,
+  standardLabel,
+}: {
+  approval: ScoredApproval;
+  ownerAddress: Address;
+  chainName: string;
+  standardLabel: string;
+}) {
+  return (
+    <details className="mt-2 text-left text-[11px] leading-5 text-pulse-muted">
+      <summary className="cursor-pointer font-semibold text-pulse-cyan">
+        Why is this approval shown?
+      </summary>
+      <div className="mt-2 rounded-lg border border-pulse-border/70 bg-pulse-bg/45 p-2">
+        <p>
+          This approval was discovered from historical approval events and
+          confirmed with a live allowance read before display.
+        </p>
+        <dl className="mt-2 grid gap-1 font-mono">
+          <ProofRow label="Chain" value={chainName} />
+          <ProofRow label="Type" value={`${standardLabel} approve allowance`} />
+          <ProofRow label="Token" value={approval.tokenAddress} />
+          <ProofRow label="Owner" value={ownerAddress} />
+          <ProofRow label="Spender" value={approval.spenderAddress} />
+          <ProofRow
+            label="Current live allowance"
+            value={approval.unlimited ? "Unlimited" : approval.formattedAllowance}
+          />
+          <ProofRow label="Live verification" value="allowance(owner, spender) > 0" />
+          <ProofRow label="Candidate source" value="Historical Approval events" />
+        </dl>
+      </div>
+    </details>
+  );
+}
+
+function ProofRow({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="grid gap-1">
+      <dt className="text-pulse-muted">{label}</dt>
+      <dd className="break-words text-pulse-text">{value}</dd>
+    </div>
   );
 }
 

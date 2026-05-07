@@ -451,6 +451,7 @@ export function ethereumWalletRevokeDisabledReason({
   walletChainId: number | undefined;
 }): string {
   if (!mapping) return "Ethereum approvals are still loading.";
+  if (walletChainId === undefined) return "Connect this wallet to revoke.";
   if (walletChainId !== ETHEREUM_MAINNET_CLIENT_CHAIN_ID) {
     return "Switch to Ethereum Mainnet.";
   }
@@ -469,11 +470,12 @@ export function ethereumWalletRowRevokeDisabledReason({
   connectedAddress: Address | undefined;
 }): string {
   if (!mapping) return "Ethereum approvals are still loading.";
+  if (!connectedAddress) return "Connect this wallet to revoke.";
   if (walletChainId !== ETHEREUM_MAINNET_CLIENT_CHAIN_ID) {
     return "Switch to Ethereum Mainnet.";
   }
   if (!ethereumAddressesMatch(ownerAddress, connectedAddress)) {
-    return "Connected wallet does not match scanned owner.";
+    return "Connected wallet does not match scanned address.";
   }
   return mapping.rowRevokeDisabledReason ?? "Verified row; revoke available.";
 }

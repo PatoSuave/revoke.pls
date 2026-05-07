@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useAccount, useChainId } from "wagmi";
+import type { Address } from "viem";
 
 import { ApprovalFilters } from "@/components/approvals/approval-filters";
 import { ApprovalRow } from "@/components/approvals/approval-row";
@@ -19,6 +20,7 @@ import { useNftApprovalDiscovery } from "@/hooks/use-nft-approval-discovery";
 import { resolveActiveChain, scannerSessionKey } from "@/lib/active-chain";
 import {
   getSupportedChainShortNames,
+  supportedChainConfigList,
   type SupportedChainConfig,
 } from "@/lib/chains";
 import {
@@ -38,6 +40,14 @@ import {
   getErc20ResultState,
   getScanRevokeDisabledReason,
 } from "@/lib/scanner-result-state";
+import {
+  addressesEqual,
+  getScanTargetRevokeDisabledReason,
+  normalizeScanInputAddress,
+  resolveScanTarget,
+  scanTargetSessionKey,
+  type ScanTarget,
+} from "@/lib/scan-target";
 
 /**
  * Connected-wallet approval scanner (PulseChain + BSC + Base).
@@ -62,6 +72,50 @@ export function ApprovalScanner() {
     wagmiChainId,
   });
   const debugMode = useDebugModeFromQuery();
+  const [scanInputAddress, setScanInputAddress] = useState("");
+  const [activeAddressOnlyAddress, setActiveAddressOnlyAddress] =
+    useState<Address | null>(null);
+  const [scanInputError, setScanInputError] = useState<string | null>(null);
+  const scanTarget = useMemo(
+    () =>
+      resolveScanTarget({
+        connectedWalletAddress: address,
+        activeAddressOnlyAddress,
+      }),
+    [address, activeAddressOnlyAddress],
+  );
+
+  const onScanInputChange = useCallback(
+    (value: string) => {
+      setScanInputAddress(value);
+      setScanInputError(null);
+      if (!activeAddressOnlyAddress) return;
+
+      const normalized = normalizeScanInputAddress(value);
+      if (!normalized || !addressesEqual(normalized, activeAddressOnlyAddress)) {
+        setActiveAddressOnlyAddress(null);
+      }
+    },
+    [activeAddressOnlyAddress],
+  );
+
+  const onScanAddress = useCallback(() => {
+    const normalized = normalizeScanInputAddress(scanInputAddress);
+    if (!normalized) {
+      setScanInputError("Enter a valid EVM wallet address.");
+      setActiveAddressOnlyAddress(null);
+      return;
+    }
+    setScanInputAddress(normalized);
+    setActiveAddressOnlyAddress(normalized);
+    setScanInputError(null);
+  }, [scanInputAddress]);
+
+  const onClearAddressScan = useCallback(() => {
+    setScanInputAddress("");
+    setActiveAddressOnlyAddress(null);
+    setScanInputError(null);
+  }, []);
 
   return (
     <section
@@ -93,6 +147,15 @@ export function ApprovalScanner() {
             aria-hidden
           />
           <div className="p-4 sm:p-6 lg:p-8">
+            <AddressScanPanel
+              inputAddress={scanInputAddress}
+              activeAddress={activeAddressOnlyAddress}
+              scanTarget={scanTarget}
+              inputError={scanInputError}
+              onInputChange={onScanInputChange}
+              onScan={onScanAddress}
+              onClear={onClearAddressScan}
+            />
             <ScannerBody
               accountStatus={accountStatus}
               address={address}
@@ -103,6 +166,7 @@ export function ApprovalScanner() {
               chainConfig={activeChain.activeChainConfig}
               onSupportedChain={activeChain.status === "supported"}
               walletMatchesActiveChain={activeChain.walletMatchesActiveChain}
+              scanTarget={scanTarget}
               debugMode={debugMode}
             />
           </div>
@@ -151,6 +215,110 @@ function SafetyStrip() {
   );
 }
 
+function AddressScanPanel({
+  inputAddress,
+  activeAddress,
+  scanTarget,
+  inputError,
+  onInputChange,
+  onScan,
+  onClear,
+}: {
+  inputAddress: string;
+  activeAddress: Address | null;
+  scanTarget: ScanTarget;
+  inputError: string | null;
+  onInputChange: (value: string) => void;
+  onScan: () => void;
+  onClear: () => void;
+}) {
+  const hasInput = inputAddress.trim().length > 0;
+  const statusCopy = activeAddress
+    ? scanTarget.isConnectedWalletSameAsScanTarget
+      ? "Connected wallet matches scanned address."
+      : scanTarget.connectedWalletAddress
+        ? "Connected wallet does not match scanned address."
+        : "Address scan mode — connect this wallet to revoke."
+    : "Connected-wallet mode is used when no pasted address is active.";
+
+  return (
+    <div className="mb-6 rounded-2xl border border-pulse-cyan/25 bg-pulse-cyan/5 p-4">
+      <div className="grid gap-4 lg:grid-cols-[1fr_auto] lg:items-end">
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-pulse-cyan">
+            Scan first. Connect only when ready to revoke.
+          </p>
+          <p className="mt-2 text-sm leading-6 text-pulse-muted">
+            Paste any EVM wallet address to inspect public approvals without
+            connecting. Connecting is only required when you choose to revoke.
+          </p>
+          <p className="mt-1 text-xs leading-5 text-pulse-muted">
+            Revoke is available only when the connected wallet matches the
+            scanned address.
+          </p>
+        </div>
+        <form
+          className="grid gap-2 sm:grid-cols-[minmax(0,1fr)_auto_auto]"
+          onSubmit={(event) => {
+            event.preventDefault();
+            onScan();
+          }}
+        >
+          <label className="sr-only" htmlFor="address-scan-input">
+            Wallet address to scan
+          </label>
+          <input
+            id="address-scan-input"
+            value={inputAddress}
+            onChange={(event) => onInputChange(event.target.value)}
+            placeholder="0x..."
+            autoComplete="off"
+            spellCheck={false}
+            className="min-h-10 rounded-xl border border-pulse-border bg-pulse-bg/80 px-3 py-2 font-mono text-sm text-pulse-text outline-none transition placeholder:text-pulse-muted/60 focus:border-pulse-cyan/60"
+          />
+          <button
+            type="submit"
+            className="inline-flex min-h-10 items-center justify-center rounded-xl border border-pulse-cyan/35 bg-pulse-cyan/10 px-3 py-2 text-xs font-semibold text-pulse-cyan transition hover:bg-pulse-cyan/15"
+          >
+            Scan address
+          </button>
+          <button
+            type="button"
+            onClick={onClear}
+            disabled={!hasInput && !activeAddress}
+            className="inline-flex min-h-10 items-center justify-center rounded-xl border border-pulse-border bg-white/5 px-3 py-2 text-xs font-semibold text-pulse-muted transition hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            Clear
+          </button>
+        </form>
+      </div>
+      <div className="mt-3 flex flex-wrap items-center gap-2 text-xs">
+        <span
+          className={`rounded-full border px-2.5 py-1 font-semibold ${
+            activeAddress
+              ? scanTarget.isConnectedWalletSameAsScanTarget
+                ? "border-pulse-green/35 bg-pulse-green/10 text-pulse-green"
+                : "border-amber-400/35 bg-amber-400/10 text-amber-200"
+              : "border-pulse-border bg-pulse-bg/60 text-pulse-muted"
+          }`}
+        >
+          {statusCopy}
+        </span>
+        {activeAddress ? (
+          <span className="rounded-full border border-pulse-border bg-pulse-bg/60 px-2.5 py-1 font-mono text-pulse-muted">
+            Scanning {shortenAddress(activeAddress)}
+          </span>
+        ) : null}
+      </div>
+      {inputError ? (
+        <p className="mt-2 text-xs font-semibold text-pulse-red">
+          {inputError}
+        </p>
+      ) : null}
+    </div>
+  );
+}
+
 function ScannerBody({
   accountStatus,
   address,
@@ -161,6 +329,7 @@ function ScannerBody({
   chainConfig,
   onSupportedChain,
   walletMatchesActiveChain,
+  scanTarget,
   debugMode,
 }: {
   accountStatus: ReturnType<typeof useAccount>["status"];
@@ -172,8 +341,25 @@ function ScannerBody({
   chainConfig: SupportedChainConfig | undefined;
   onSupportedChain: boolean;
   walletMatchesActiveChain: boolean | null;
+  scanTarget: ScanTarget;
   debugMode: boolean;
 }) {
+  if (
+    scanTarget.scanMode !== "connected-wallet" &&
+    scanTarget.scanTargetAddress
+  ) {
+    return (
+      <AddressOnlyScanResults
+        key={scanTargetSessionKey(scanTarget)}
+        owner={scanTarget.scanTargetAddress}
+        connectedAddress={scanTarget.connectedWalletAddress}
+        walletChainId={walletChainId}
+        wagmiChainId={wagmiChainId}
+        debugMode={debugMode}
+      />
+    );
+  }
+
   if (accountStatus === "reconnecting" || accountStatus === "connecting") {
     return (
       <div className="space-y-5">
@@ -272,38 +458,127 @@ function ScannerBody({
       // the newly active wallet chain.
       key={scannerSessionKey(address, chainConfig.chainId)}
       owner={address}
+      connectedAddress={address}
       chainConfig={chainConfig}
       walletChainId={walletChainId}
       wagmiChainId={wagmiChainId}
       walletMatchesActiveChain={walletMatchesActiveChain}
+      isConnected={isConnected}
       debugMode={debugMode}
     />
   );
 }
 
+function AddressOnlyScanResults({
+  owner,
+  connectedAddress,
+  walletChainId,
+  wagmiChainId,
+  debugMode,
+}: {
+  owner: Address;
+  connectedAddress: Address | undefined;
+  walletChainId: number | undefined;
+  wagmiChainId: number | undefined;
+  debugMode: boolean;
+}) {
+  const walletMatchesOwner = addressesEqual(connectedAddress, owner);
+  const status = !connectedAddress
+    ? "Address scan mode — connect this wallet to revoke."
+    : walletMatchesOwner
+      ? "Connected wallet matches scanned address."
+      : "Connected wallet does not match scanned address.";
+
+  return (
+    <div className="space-y-6">
+      <div className="rounded-2xl border border-pulse-border bg-pulse-bg/55 p-4 text-sm">
+        <p className="text-xs font-semibold uppercase tracking-[0.18em] text-pulse-cyan">
+          Address-only scan
+        </p>
+        <p className="mt-2 leading-6 text-pulse-muted">
+          Approvals are public blockchain state. You do not need to connect a
+          wallet to scan. Revoke buttons stay disabled until the connected
+          wallet exactly matches the scanned address and the row chain.
+        </p>
+        <div className="mt-3 flex flex-wrap items-center gap-2 text-xs">
+          <span className="rounded-full border border-pulse-border bg-pulse-panel/70 px-3 py-1 font-mono text-pulse-muted">
+            {shortenAddress(owner)}
+          </span>
+          <span
+            className={`rounded-full border px-3 py-1 font-semibold ${
+              walletMatchesOwner
+                ? "border-pulse-green/35 bg-pulse-green/10 text-pulse-green"
+                : "border-amber-400/35 bg-amber-400/10 text-amber-200"
+            }`}
+          >
+            {status}
+          </span>
+        </div>
+      </div>
+
+      <EthereumReadOnlyScanner
+        owner={owner}
+        connectedAddress={connectedAddress}
+        walletChainId={walletChainId}
+        wagmiChainId={wagmiChainId}
+        debugMode={debugMode}
+      />
+
+      {supportedChainConfigList.map((chainConfig) => (
+        <ConnectedScanner
+          key={scannerSessionKey(owner, chainConfig.chainId)}
+          owner={owner}
+          connectedAddress={connectedAddress}
+          chainConfig={chainConfig}
+          walletChainId={walletChainId}
+          wagmiChainId={wagmiChainId}
+          walletMatchesActiveChain={
+            walletChainId === chainConfig.chainId && walletMatchesOwner
+          }
+          isConnected={Boolean(connectedAddress)}
+          debugMode={debugMode}
+        />
+      ))}
+    </div>
+  );
+}
+
 function ConnectedScanner({
   owner,
+  connectedAddress,
   chainConfig,
   walletChainId,
   wagmiChainId,
   walletMatchesActiveChain,
+  isConnected,
   debugMode,
 }: {
   owner: `0x${string}`;
+  connectedAddress: Address | undefined;
   chainConfig: SupportedChainConfig;
   walletChainId: number | undefined;
   wagmiChainId: number | undefined;
   walletMatchesActiveChain: boolean | null;
+  isConnected: boolean;
   debugMode: boolean;
 }) {
   const scan = useApprovalDiscovery({ owner, chainId: chainConfig.chainId });
   const nft = useNftApprovalDiscovery({ owner, chainId: chainConfig.chainId });
-  const erc20RevokeDisabledReason = getScanRevokeDisabledReason({
+  const scanRevokeDisabledReason = getScanRevokeDisabledReason({
     status: scan.status,
     failedLiveReads: scan.diagnostics.liveReadFailureCount,
     discoveryTruncated: scan.truncated,
     approvalLabel: chainConfig.standardLabels.fungible,
   });
+  const walletRevokeDisabledReason = getScanTargetRevokeDisabledReason({
+    scanTargetAddress: owner,
+    connectedWalletAddress: connectedAddress,
+    walletChainId,
+    rowChainId: chainConfig.chainId,
+    chainName: chainConfig.displayName,
+  });
+  const erc20RevokeDisabledReason =
+    scanRevokeDisabledReason ?? walletRevokeDisabledReason;
 
   const [query, setQuery] = useState("");
   const [sort, setSort] = useState<ApprovalSort>("risk");
@@ -406,7 +681,7 @@ function ConnectedScanner({
         highRiskCount={highRiskCount}
         status={scan.status}
         isFetching={scan.isFetching}
-        incomplete={Boolean(erc20RevokeDisabledReason)}
+        incomplete={Boolean(scanRevokeDisabledReason)}
         batchActive={batchActive}
         onRescan={scan.refetch}
       />
@@ -444,9 +719,9 @@ function ConnectedScanner({
         wagmiChainId={wagmiChainId}
         activeChainId={chainConfig.chainId}
         chainConfig={chainConfig}
-        onSupportedChain
+        onSupportedChain={walletChainId === chainConfig.chainId}
         walletMatchesActiveChain={walletMatchesActiveChain}
-        isConnected
+        isConnected={isConnected}
         erc20={scan}
         nft={nft}
         batch={batch}
@@ -456,6 +731,7 @@ function ConnectedScanner({
         nft={nft}
         owner={owner}
         chainConfig={chainConfig}
+        walletRevokeDisabledReason={walletRevokeDisabledReason}
         debugMode={debugMode}
       />
     </div>
@@ -543,21 +819,24 @@ function NftSection({
   nft,
   owner,
   chainConfig,
+  walletRevokeDisabledReason,
   debugMode,
 }: {
   nft: ReturnType<typeof useNftApprovalDiscovery>;
   owner: `0x${string}`;
   chainConfig: SupportedChainConfig;
+  walletRevokeDisabledReason: string | null;
   debugMode: boolean;
 }) {
   const sorted = useMemo(() => sortNftApprovals(nft.approvals), [nft.approvals]);
   const highRisk = sorted.filter((a) => a.risk.level === "high").length;
-  const revokeDisabledReason = getScanRevokeDisabledReason({
-    status: nft.status,
-    failedLiveReads: nft.diagnostics.liveReadFailureCount,
-    discoveryTruncated: nft.truncated,
-    approvalLabel: "NFT approval",
-  });
+  const revokeDisabledReason =
+    getScanRevokeDisabledReason({
+      status: nft.status,
+      failedLiveReads: nft.diagnostics.liveReadFailureCount,
+      discoveryTruncated: nft.truncated,
+      approvalLabel: "NFT approval",
+    }) ?? walletRevokeDisabledReason;
 
   return (
     <section className="space-y-4 rounded-2xl border border-pulse-border bg-pulse-bg/45 p-4 sm:p-5">
