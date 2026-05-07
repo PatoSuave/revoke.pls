@@ -124,6 +124,11 @@ export function NftApprovalRow({
               ? "Collection-wide"
               : "Single NFT"}
           </span>
+          <NftProofDetails
+            approval={approval}
+            ownerAddress={ownerAddress}
+            chainName={chainName}
+          />
         </div>
 
         <div className="flex justify-stretch sm:justify-end">
@@ -176,6 +181,58 @@ export function NftApprovalRow({
         />
       ) : null}
     </li>
+  );
+}
+
+function NftProofDetails({
+  approval,
+  ownerAddress,
+  chainName,
+}: {
+  approval: NftApproval;
+  ownerAddress: Address;
+  chainName: string;
+}) {
+  const approvalType =
+    approval.kind === "approvalForAll"
+      ? `${approval.standard === "erc1155" ? "ERC-1155" : "ERC-721"} setApprovalForAll`
+      : "ERC-721 approve token";
+  const liveState =
+    approval.kind === "approvalForAll"
+      ? "isApprovedForAll(owner, operator) == true"
+      : `getApproved(${approval.tokenId?.toString() ?? "tokenId"}) == operator`;
+
+  return (
+    <details className="mt-2 text-left text-[11px] leading-5 text-pulse-muted">
+      <summary className="cursor-pointer font-semibold text-pulse-cyan">
+        Why is this approval shown?
+      </summary>
+      <div className="mt-2 rounded-lg border border-pulse-border/70 bg-pulse-bg/45 p-2">
+        <p>
+          This approval was discovered from historical approval events and
+          confirmed with a live approval read before display.
+        </p>
+        <dl className="mt-2 grid gap-1 font-mono">
+          <ProofRow label="Chain" value={chainName} />
+          <ProofRow label="Type" value={approvalType} />
+          <ProofRow label="Collection" value={approval.collectionAddress} />
+          <ProofRow label="Owner" value={ownerAddress} />
+          <ProofRow label="Operator" value={approval.operatorAddress} />
+          <ProofRow label="Current live approval" value={liveState} />
+          <ProofRow label="Live verification" value={liveState} />
+          <ProofRow label="Candidate source" value="Historical Approval events" />
+        </dl>
+      </div>
+    </details>
+  );
+}
+
+function ProofRow({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="grid gap-1">
+      <dt className="text-pulse-muted">{label}</dt>
+      <dd className="break-words text-pulse-text">{value}</dd>
+    </div>
   );
 }
 

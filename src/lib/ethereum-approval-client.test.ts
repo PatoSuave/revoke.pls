@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import {
   ETHEREUM_LIVE_VERIFICATION_LABEL,
@@ -15,6 +15,7 @@ import {
   ethereumWalletRowRevokeDisabledReason,
   ethereumWalletRevokeDisabledReason,
   ethereumMainnetWalletChain,
+  fetchEthereumApprovals,
   isEthereumReadOnlyChainId,
   mapEthereumApprovalApiResponse,
   resolveEthereumReadOnlyChainId,
@@ -27,6 +28,10 @@ const SPENDER = "0x3333333333333333333333333333333333333333";
 const COLLECTION = "0x4444444444444444444444444444444444444444";
 const OPERATOR = "0x5555555555555555555555555555555555555555";
 const OWNER = "0x6666666666666666666666666666666666666666";
+
+afterEach(() => {
+  vi.unstubAllGlobals();
+});
 
 function response(
   overrides: Partial<EthereumApprovalApiResponse>,
@@ -245,6 +250,12 @@ describe("Ethereum approval client mapping", () => {
       }),
     ).toBe("Switch to Ethereum Mainnet.");
     expect(
+      ethereumWalletRevokeDisabledReason({
+        mapping: mapped,
+        walletChainId: undefined,
+      }),
+    ).toBe("Connect this wallet to revoke.");
+    expect(
       ethereumWalletRowRevokeDisabledReason({
         mapping: mapped,
         walletChainId: ETHEREUM_MAINNET_CLIENT_CHAIN_ID,
@@ -259,7 +270,33 @@ describe("Ethereum approval client mapping", () => {
         ownerAddress: OWNER,
         connectedAddress: "0x7777777777777777777777777777777777777777",
       }),
-    ).toBe("Connected wallet does not match scanned owner.");
+    ).toBe("Connected wallet does not match scanned address.");
+    expect(
+      ethereumWalletRowRevokeDisabledReason({
+        mapping: mapped,
+        walletChainId: undefined,
+        ownerAddress: OWNER,
+        connectedAddress: undefined,
+      }),
+    ).toBe("Connect this wallet to revoke.");
+  });
+
+  it("passes the explicit owner address to the Ethereum approvals API", async () => {
+    const fetch = vi.fn(async (input: RequestInfo | URL) => {
+      expect(String(input)).toBe(
+        `/api/ethereum/approvals?owner=${encodeURIComponent(OWNER)}`,
+      );
+      return new Response(JSON.stringify(response({ status: "complete-clear" })), {
+        status: 200,
+        headers: { "content-type": "application/json" },
+      });
+    });
+    vi.stubGlobal("fetch", fetch);
+
+    const result = await fetchEthereumApprovals({ owner: OWNER });
+
+    expect(fetch).toHaveBeenCalledTimes(1);
+    expect(result.status).toBe("complete-clear");
   });
 
   it("shows clear only for complete-clear with no incomplete diagnostics", () => {
