@@ -7,12 +7,12 @@ export function AntiPhishingBanner() {
     <aside className="border-b border-pulse-border/60 bg-pulse-bg">
       <div className="mx-auto max-w-6xl px-4 py-3 sm:px-6">
         <div className="flex flex-col gap-3 rounded-2xl border border-pulse-cyan/25 bg-pulse-panel/70 px-4 py-3 text-sm shadow-glow sm:flex-row sm:items-center sm:justify-between">
-          <div className="flex items-start gap-3">
+          <div className="flex min-w-0 items-start gap-3">
             <span
               className="mt-2 h-2 w-2 shrink-0 rounded-full bg-pulse-green"
               aria-hidden
             />
-            <p className="leading-6 text-pulse-muted">
+            <p className="min-w-0 max-w-[18rem] break-words leading-6 text-pulse-muted sm:max-w-none">
               <span className="font-semibold text-pulse-text">
                 Official site: {OFFICIAL_DOMAIN}.
               </span>{" "}
@@ -23,7 +23,7 @@ export function AntiPhishingBanner() {
           </div>
           <Link
             href="/security"
-            className="inline-flex shrink-0 items-center justify-center rounded-xl border border-pulse-cyan/35 bg-pulse-cyan/10 px-3 py-2 text-xs font-semibold text-pulse-cyan transition hover:bg-pulse-cyan/15"
+            className="inline-flex w-full shrink-0 items-center justify-center rounded-xl border border-pulse-cyan/35 bg-pulse-cyan/10 px-3 py-2 text-xs font-semibold text-pulse-cyan transition hover:bg-pulse-cyan/15 sm:w-auto"
           >
             Security &amp; Trust
           </Link>

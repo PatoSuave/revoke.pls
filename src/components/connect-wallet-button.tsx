@@ -130,7 +130,7 @@ export function ConnectWalletButton({
   }, [isConnecting]);
 
   const base =
-    "inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold transition disabled:cursor-not-allowed disabled:opacity-60";
+    "inline-flex max-w-full items-center justify-center gap-2 whitespace-nowrap rounded-xl px-3 py-2 text-xs font-semibold transition disabled:cursor-not-allowed disabled:opacity-60 sm:px-4 sm:py-2.5 sm:text-sm";
 
   if (status === "reconnecting" || status === "connecting") {
     return (
@@ -227,7 +227,8 @@ export function ConnectWalletButton({
           disabled
           className={`${base} ${variantStyles[variant]}`}
         >
-          Connect Wallet
+          <span className="sm:hidden">Connect</span>
+          <span className="hidden sm:inline">Connect Wallet</span>
         </button>
         <span className="text-xs text-pulse-muted">
           {isDesktopBuild
@@ -253,7 +254,17 @@ export function ConnectWalletButton({
           }}
           className={`${base} ${variantStyles[variant]}`}
         >
-          {isConnecting ? "Confirm in wallet..." : "Connect Wallet"}
+          {isConnecting ? (
+            <>
+              <span className="sm:hidden">Confirm...</span>
+              <span className="hidden sm:inline">Confirm in wallet...</span>
+            </>
+          ) : (
+            <>
+              <span className="sm:hidden">Connect</span>
+              <span className="hidden sm:inline">Connect Wallet</span>
+            </>
+          )}
         </button>
         {error ? (
           <span className="max-w-xs truncate text-xs text-pulse-red">
@@ -275,7 +286,17 @@ export function ConnectWalletButton({
         aria-expanded={menuOpen}
         className={`${base} ${variantStyles[variant]}`}
       >
-        {isConnecting ? "Confirm in wallet..." : "Connect Wallet"}
+        {isConnecting ? (
+          <>
+            <span className="sm:hidden">Confirm...</span>
+            <span className="hidden sm:inline">Confirm in wallet...</span>
+          </>
+        ) : (
+          <>
+            <span className="sm:hidden">Connect</span>
+            <span className="hidden sm:inline">Connect Wallet</span>
+          </>
+        )}
       </button>
 
       {menuOpen ? (
