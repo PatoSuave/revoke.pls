@@ -15,22 +15,22 @@ export function Hero() {
       />
       <div className="relative mx-auto max-w-6xl px-4 pt-10 pb-9 sm:px-6 sm:pt-14 sm:pb-12">
         <div className="mx-auto max-w-3xl text-center">
-          <span className="flex w-full max-w-full items-center justify-center gap-2 rounded-full border border-pulse-cyan/30 bg-pulse-panel/70 px-3 py-1 text-xs font-semibold leading-5 text-pulse-cyan shadow-glow sm:inline-flex sm:w-auto">
+          <span className="flex w-full max-w-full flex-wrap items-center justify-center gap-2 rounded-full border border-pulse-cyan/30 bg-pulse-panel/70 px-3 py-1 text-center text-xs font-semibold leading-5 text-pulse-cyan shadow-glow sm:inline-flex sm:w-auto sm:flex-nowrap">
             <span
               className="h-1.5 w-1.5 shrink-0 rounded-full bg-pulse-green"
               aria-hidden
             />
-            <span className="min-w-0 break-words">
+            <span className="min-w-0 max-w-[15rem] break-words">
               PulseChain, BSC, Base, and Ethereum approval safety
             </span>
           </span>
 
-          <h1 className="mt-5 text-3xl font-bold tracking-tight sm:text-5xl">
+          <h1 className="mt-5 text-2xl font-bold tracking-tight sm:text-5xl">
             Review token permissions before they become{" "}
             <span className="text-gradient-pulse">wallet risk</span>.
           </h1>
 
-          <p className="mt-4 text-base leading-7 text-pulse-muted sm:text-lg">
+          <p className="mx-auto mt-4 max-w-[18rem] break-words text-sm leading-7 text-pulse-muted sm:max-w-none sm:text-lg">
             Pulse Revoke checks your public wallet history, verifies active
             allowances live on-chain, and helps you clear permissions you no
             longer need. You approve every revoke in your own wallet.

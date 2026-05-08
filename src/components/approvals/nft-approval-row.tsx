@@ -13,6 +13,10 @@ import {
   GasEstimateDetails,
   GasWarningDetails,
 } from "@/components/approvals/gas-estimate-details";
+import {
+  RevokeReceipt,
+  type RevokeReceiptDetails,
+} from "@/components/approvals/revoke-receipt";
 import { useRevokeNftApproval } from "@/hooks/use-revoke-nft-approval";
 import { getChainConfig, type SupportedChainConfig } from "@/lib/chains";
 import { explorerAddressUrl, explorerTxUrl } from "@/lib/explorer";
@@ -240,9 +244,19 @@ export function NftApprovalRow({
         <StatusPanel
           status={status}
           hash={hash}
-          chainId={chainId}
-          chainName={chainName}
           errorMessage={errorMessage}
+          receiptDetails={{
+            kind:
+              approval.kind === "approvalForAll"
+                ? "nft-operator"
+                : "nft-token",
+            chainId,
+            chainName,
+            assetLabel: "Collection / token",
+            assetValue: nftReceiptAssetValue(approval, tokenIdLabel),
+            counterpartyLabel: "Operator",
+            counterpartyValue: approval.operatorLabel,
+          }}
           onDismiss={reset}
         />
       ) : null}
@@ -308,6 +322,14 @@ function nftPermissionCopy(approval: NftApproval): string {
   }
 
   return "This operator can manage this NFT approval.";
+}
+
+function nftReceiptAssetValue(
+  approval: NftApproval,
+  tokenIdLabel: string | null,
+): string {
+  const collection = approval.collectionName ?? "Unnamed collection";
+  return tokenIdLabel ? `${collection} ${tokenIdLabel}` : collection;
 }
 
 function riskLevelLabel(level: RiskLevel): string {
@@ -785,16 +807,14 @@ function PreflightBox({
 function StatusPanel({
   status,
   hash,
-  chainId,
-  chainName,
   errorMessage,
+  receiptDetails,
   onDismiss,
 }: {
   status: ReturnType<typeof useRevokeNftApproval>["status"];
   hash?: `0x${string}`;
-  chainId: number;
-  chainName: string;
   errorMessage?: string;
+  receiptDetails: RevokeReceiptDetails;
   onDismiss: () => void;
 }) {
   if (status === "wallet") {
@@ -806,42 +826,43 @@ function StatusPanel({
   }
   if (status === "pending") {
     return (
-      <StatusRow tone="info">
-        Transaction submitted. Waiting for {chainName} confirmation.
-        {hash ? (
-          <>
-            {" "}
-            <TxLink chainId={chainId} hash={hash} />
-          </>
-        ) : null}
-      </StatusRow>
+      <RevokeReceipt
+        status={status}
+        hash={hash}
+        details={receiptDetails}
+      />
     );
   }
   if (status === "success") {
     return (
-      <StatusRow tone="success" onDismiss={onDismiss}>
-        NFT approval revoked on-chain.
-        {hash ? (
-          <>
-            {" "}
-            <TxLink chainId={chainId} hash={hash} tone="success" />
-          </>
-        ) : null}
-      </StatusRow>
+      <RevokeReceipt
+        status={status}
+        hash={hash}
+        details={receiptDetails}
+        onDismiss={onDismiss}
+      />
     );
   }
   if (status === "rejected") {
     return (
-      <StatusRow tone="muted" onDismiss={onDismiss}>
-        {errorMessage ?? "Transaction rejected in wallet."}
-      </StatusRow>
+      <RevokeReceipt
+        status={status}
+        hash={hash}
+        errorMessage={errorMessage}
+        details={receiptDetails}
+        onDismiss={onDismiss}
+      />
     );
   }
   if (status === "error") {
     return (
-      <StatusRow tone="error" onDismiss={onDismiss}>
-        {errorMessage ?? "Revoke failed."}
-      </StatusRow>
+      <RevokeReceipt
+        status={status}
+        hash={hash}
+        errorMessage={errorMessage}
+        details={receiptDetails}
+        onDismiss={onDismiss}
+      />
     );
   }
   return null;

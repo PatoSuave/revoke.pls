@@ -13,6 +13,10 @@ import {
   GasEstimateDetails,
   GasWarningDetails,
 } from "@/components/approvals/gas-estimate-details";
+import {
+  RevokeReceipt,
+  type RevokeReceiptDetails,
+} from "@/components/approvals/revoke-receipt";
 import type { BatchItemResult } from "@/hooks/use-batch-revoke";
 import { useRevokeApproval } from "@/hooks/use-revoke-approval";
 import { getChainConfig } from "@/lib/chains";
@@ -298,9 +302,19 @@ export function ApprovalRow({
         <StatusPanel
           status={status}
           hash={hash}
-          chainId={chainId}
-          chainName={chainConfig?.displayName ?? "the network"}
           errorMessage={errorMessage}
+          receiptDetails={{
+            kind: "erc20",
+            chainId,
+            chainName: chainConfig?.displayName ?? "the network",
+            assetLabel: "Token",
+            assetValue: displayOrFallback(approval.tokenSymbol, "Token"),
+            counterpartyLabel: "Spender",
+            counterpartyValue: displayOrFallback(
+              approval.spenderLabel,
+              "Unknown spender",
+            ),
+          }}
           onDismiss={reset}
         />
       ) : null}
@@ -854,16 +868,14 @@ function PreflightBox({
 function StatusPanel({
   status,
   hash,
-  chainId,
-  chainName,
   errorMessage,
+  receiptDetails,
   onDismiss,
 }: {
   status: ReturnType<typeof useRevokeApproval>["status"];
   hash?: `0x${string}`;
-  chainId: number;
-  chainName: string;
   errorMessage?: string;
+  receiptDetails: RevokeReceiptDetails;
   onDismiss: () => void;
 }) {
   if (status === "wallet") {
@@ -876,45 +888,46 @@ function StatusPanel({
 
   if (status === "pending") {
     return (
-      <StatusRow tone="info">
-        Transaction submitted. Waiting for {chainName} confirmation.
-        {hash ? (
-          <>
-            {" "}
-            <TxLink chainId={chainId} hash={hash} />
-          </>
-        ) : null}
-      </StatusRow>
+      <RevokeReceipt
+        status={status}
+        hash={hash}
+        details={receiptDetails}
+      />
     );
   }
 
   if (status === "success") {
     return (
-      <StatusRow tone="success" onDismiss={onDismiss}>
-        Approval revoked on-chain.
-        {hash ? (
-          <>
-            {" "}
-            <TxLink chainId={chainId} hash={hash} tone="success" />
-          </>
-        ) : null}
-      </StatusRow>
+      <RevokeReceipt
+        status={status}
+        hash={hash}
+        details={receiptDetails}
+        onDismiss={onDismiss}
+      />
     );
   }
 
   if (status === "rejected") {
     return (
-      <StatusRow tone="muted" onDismiss={onDismiss}>
-        {errorMessage ?? "Transaction rejected in wallet."}
-      </StatusRow>
+      <RevokeReceipt
+        status={status}
+        hash={hash}
+        errorMessage={errorMessage}
+        details={receiptDetails}
+        onDismiss={onDismiss}
+      />
     );
   }
 
   if (status === "error") {
     return (
-      <StatusRow tone="error" onDismiss={onDismiss}>
-        {errorMessage ?? "Revoke failed."}
-      </StatusRow>
+      <RevokeReceipt
+        status={status}
+        hash={hash}
+        errorMessage={errorMessage}
+        details={receiptDetails}
+        onDismiss={onDismiss}
+      />
     );
   }
 

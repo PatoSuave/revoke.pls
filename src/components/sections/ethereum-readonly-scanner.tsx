@@ -10,6 +10,10 @@ import {
   GasEstimateDetails,
   GasWarningDetails,
 } from "@/components/approvals/gas-estimate-details";
+import {
+  RevokeReceipt,
+  type RevokeReceiptDetails,
+} from "@/components/approvals/revoke-receipt";
 import { useEthereumApprovalScan } from "@/hooks/use-ethereum-approval-scan";
 import { useRevokeApproval } from "@/hooks/use-revoke-approval";
 import { useRevokeNftApproval } from "@/hooks/use-revoke-nft-approval";
@@ -649,6 +653,15 @@ function EthereumErc20Action({
       status={revoke.status}
       hash={revoke.hash}
       errorMessage={revoke.errorMessage}
+      receiptDetails={{
+        kind: "erc20",
+        chainId: approval.chainId,
+        chainName: ETHEREUM_MAINNET_DISPLAY_NAME,
+        assetLabel: "Token",
+        assetValue: ethereumTokenDisplaySymbol(approval.tokenSymbol),
+        counterpartyLabel: "Spender",
+        counterpartyValue: approval.spenderLabel,
+      }}
       isBusy={revoke.isBusy}
       confirming={confirming}
       onStart={() => {
@@ -714,6 +727,16 @@ function EthereumNftAction({
       status={revoke.status}
       hash={revoke.hash}
       errorMessage={revoke.errorMessage}
+      receiptDetails={{
+        kind:
+          approval.kind === "approvalForAll" ? "nft-operator" : "nft-token",
+        chainId: approval.chainId,
+        chainName: ETHEREUM_MAINNET_DISPLAY_NAME,
+        assetLabel: "Collection / token",
+        assetValue: ethereumNftReceiptAssetValue(approval),
+        counterpartyLabel: "Operator",
+        counterpartyValue: approval.operatorLabel,
+      }}
       isBusy={revoke.isBusy}
       confirming={confirming}
       onStart={() => {
@@ -745,10 +768,17 @@ function EthereumNftAction({
   );
 }
 
+function ethereumNftReceiptAssetValue(approval: NftApproval): string {
+  const collection = approval.collectionName ?? "Unnamed collection";
+  if (approval.kind !== "tokenApproval") return collection;
+  return `${collection} #${approval.tokenId?.toString() ?? "unknown"}`;
+}
+
 function EthereumActionShell({
   status,
   hash,
   errorMessage,
+  receiptDetails,
   isBusy,
   confirming,
   onStart,
@@ -760,6 +790,7 @@ function EthereumActionShell({
   status: ReturnType<typeof useRevokeApproval>["status"];
   hash?: `0x${string}`;
   errorMessage?: string;
+  receiptDetails: RevokeReceiptDetails;
   isBusy: boolean;
   confirming: boolean;
   onStart: () => void;
@@ -846,21 +877,29 @@ function EthereumActionShell({
     <div className="flex flex-col gap-2 sm:items-end">
       {action}
       {children}
-      {errorMessage && status === "error" ? (
-        <p className="max-w-[16rem] text-xs leading-5 text-pulse-red">
-          {errorMessage}
-        </p>
-      ) : null}
-      {status === "success" ? (
-        <button
-          type="button"
-          onClick={onDismiss}
-          className="text-xs font-semibold text-pulse-muted underline-offset-2 hover:text-pulse-cyan hover:underline"
-        >
-          Dismiss
-        </button>
+      {isReceiptStatus(status) ? (
+        <div className="w-full min-w-0 sm:max-w-sm">
+          <RevokeReceipt
+            status={status}
+            hash={hash}
+            errorMessage={errorMessage}
+            details={receiptDetails}
+            onDismiss={status === "pending" ? undefined : onDismiss}
+          />
+        </div>
       ) : null}
     </div>
+  );
+}
+
+function isReceiptStatus(
+  status: ReturnType<typeof useRevokeApproval>["status"],
+): status is "pending" | "success" | "rejected" | "error" {
+  return (
+    status === "pending" ||
+    status === "success" ||
+    status === "rejected" ||
+    status === "error"
   );
 }
 
