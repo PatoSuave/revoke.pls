@@ -4,6 +4,10 @@ import { useState } from "react";
 import type { Address } from "viem";
 
 import {
+  ApprovalMeaningPanel,
+  SummaryText,
+} from "@/components/approvals/approval-readability";
+import {
   GasEstimateDebugDetails,
   GasEstimateDetails,
   GasWarningDetails,
@@ -124,11 +128,6 @@ export function NftApprovalRow({
               ? "Collection-wide"
               : "Single NFT"}
           </span>
-          <NftProofDetails
-            approval={approval}
-            ownerAddress={ownerAddress}
-            chainName={chainName}
-          />
         </div>
 
         <div className="flex justify-stretch sm:justify-end">
@@ -152,6 +151,69 @@ export function NftApprovalRow({
           />
         </div>
       </div>
+
+      <ApprovalMeaningPanel
+        items={[
+          {
+            label: "Collection / token",
+            value: (
+              <SummaryText
+                primary={approval.collectionName ?? "Unnamed collection"}
+                secondary={
+                  tokenIdLabel
+                    ? `Token ${tokenIdLabel}`
+                    : approval.collectionAddress
+                }
+              />
+            ),
+          },
+          {
+            label: "Operator",
+            value: (
+              <SummaryText
+                primary={approval.operatorLabel}
+                secondary={
+                  approval.trusted ? "Identified operator" : "Unknown operator"
+                }
+              />
+            ),
+          },
+          {
+            label: "Permission type",
+            value: (
+              <SummaryText
+                primary={
+                  approval.kind === "approvalForAll"
+                    ? "Operator approval"
+                    : "Per-token approval"
+                }
+                secondary={nftPermissionCopy(approval)}
+              />
+            ),
+          },
+          {
+            label: "Risk level",
+            value: (
+              <SummaryText
+                primary={riskLevelLabel(approval.risk.level)}
+                secondary={approval.risk.reason}
+              />
+            ),
+          },
+          {
+            label: "Recommended action",
+            value:
+              "Revoke if you do not recognize this operator or no longer use the connected app.",
+          },
+        ]}
+        technicalDetails={
+          <NftProofDetails
+            approval={approval}
+            ownerAddress={ownerAddress}
+            chainName={chainName}
+          />
+        }
+      />
 
       {showConfirm ? (
         <ConfirmPanel
@@ -234,6 +296,18 @@ function ProofRow({ label, value }: { label: string; value: string }) {
       <dd className="break-words text-pulse-text">{value}</dd>
     </div>
   );
+}
+
+function nftPermissionCopy(approval: NftApproval): string {
+  if (approval.kind === "approvalForAll") {
+    return "This operator can manage all NFTs from this collection.";
+  }
+
+  return "This operator can manage this NFT approval.";
+}
+
+function riskLevelLabel(level: RiskLevel): string {
+  return `${level[0].toUpperCase()}${level.slice(1)} risk`;
 }
 
 const RISK_STYLES: Record<
