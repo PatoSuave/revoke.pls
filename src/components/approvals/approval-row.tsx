@@ -4,6 +4,10 @@ import { useState } from "react";
 import type { Address } from "viem";
 
 import {
+  ApprovalMeaningPanel,
+  SummaryText,
+} from "@/components/approvals/approval-readability";
+import {
   GasEstimateDebugDetails,
   GasEstimateDetails,
   GasWarningDetails,
@@ -148,7 +152,7 @@ export function ApprovalRow({
 
         <div className="flex flex-col items-start gap-1.5 rounded-xl border border-pulse-border/60 bg-pulse-panel/35 p-3 sm:border-0 sm:bg-transparent sm:p-0">
           <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-pulse-muted sm:hidden">
-            Exposure
+            Permission
           </p>
           {approval.unlimited ? (
             <span className="inline-flex items-center gap-1.5 rounded-full border border-pulse-red/40 bg-pulse-red/10 px-2.5 py-1 text-xs font-semibold text-pulse-red">
@@ -156,24 +160,23 @@ export function ApprovalRow({
                 className="h-1.5 w-1.5 rounded-full bg-pulse-red"
                 aria-hidden
               />
-              Unlimited
+              Unlimited approval
             </span>
           ) : (
-            <span className="font-mono text-sm text-pulse-text">
-              {approval.formattedAllowance}
-            </span>
+            <>
+              <span className="inline-flex items-center gap-1.5 rounded-full border border-pulse-cyan/35 bg-pulse-cyan/10 px-2.5 py-1 text-xs font-semibold text-pulse-cyan">
+                Limited approval
+              </span>
+              <span className="font-mono text-sm text-pulse-text">
+                {approval.formattedAllowance}
+              </span>
+            </>
           )}
           {approval.unlimited ? (
             <span className="font-mono text-[11px] text-pulse-muted">
               max uint256
             </span>
           ) : null}
-          <ApprovalProofDetails
-            approval={approval}
-            ownerAddress={ownerAddress}
-            chainName={chainConfig?.displayName ?? "the network"}
-            standardLabel={chainConfig?.standardLabels.fungible ?? "ERC-20"}
-          />
         </div>
 
         <div className="flex justify-stretch sm:justify-end">
@@ -201,6 +204,72 @@ export function ApprovalRow({
           )}
         </div>
       </div>
+
+      <ApprovalMeaningPanel
+        items={[
+          {
+            label: "Token",
+            value: (
+              <SummaryText
+                primary={displayOrFallback(approval.tokenSymbol, "Token")}
+                secondary={displayOrFallback(
+                  approval.tokenName,
+                  approval.tokenAddress,
+                )}
+              />
+            ),
+          },
+          {
+            label: "Spender",
+            value: (
+              <SummaryText
+                primary={displayOrFallback(
+                  approval.spenderLabel,
+                  "Unknown spender",
+                )}
+                secondary={
+                  approval.trusted ? "Identified spender" : "Unknown spender"
+                }
+              />
+            ),
+          },
+          {
+            label: "Permission",
+            value: (
+              <SummaryText
+                primary={
+                  approval.unlimited
+                    ? "Unlimited approval"
+                    : "Limited approval"
+                }
+                secondary={erc20PermissionCopy(approval)}
+              />
+            ),
+          },
+          {
+            label: "Risk level",
+            value: (
+              <SummaryText
+                primary={riskLevelLabel(approval.risk.level)}
+                secondary={approval.risk.reason}
+              />
+            ),
+          },
+          {
+            label: "Recommended action",
+            value:
+              "Revoke if you do not recognize this spender or no longer use the connected app.",
+          },
+        ]}
+        technicalDetails={
+          <ApprovalProofDetails
+            approval={approval}
+            ownerAddress={ownerAddress}
+            chainName={chainConfig?.displayName ?? "the network"}
+            standardLabel={chainConfig?.standardLabels.fungible ?? "ERC-20"}
+          />
+        }
+      />
 
       {showConfirm ? (
         <ConfirmPanel
@@ -281,6 +350,23 @@ function ProofRow({ label, value }: { label: string; value: string }) {
       <dd className="break-words text-pulse-text">{value}</dd>
     </div>
   );
+}
+
+function erc20PermissionCopy(approval: ScoredApproval): string {
+  if (approval.unlimited) {
+    return "This spender can use an unlimited amount of this token from your wallet.";
+  }
+
+  return `This spender can use up to ${approval.formattedAllowance} of this token from your wallet.`;
+}
+
+function riskLevelLabel(level: RiskLevel): string {
+  return `${level[0].toUpperCase()}${level.slice(1)} risk`;
+}
+
+function displayOrFallback(value: string | undefined, fallback: string): string {
+  const cleaned = value?.trim();
+  return cleaned || fallback;
 }
 
 const RISK_STYLES: Record<
