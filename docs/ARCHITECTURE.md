@@ -15,15 +15,21 @@ Active supported chains are configured in `src/lib/chains.ts`:
 - BSC / BNB Smart Chain, chain ID `56`, native gas token `BNB`, explorer
   `BscScan`
 - Base, chain ID `8453`, native gas token `ETH`, explorer `BaseScan`
+- Ethereum Mainnet, chain ID `1`, native gas token `ETH`, explorer `Etherscan`
 
-Ethereum Mainnet is not an active supported chain.
+Ethereum Mainnet is wallet-enabled for the Ethereum read-only discovery and
+wallet-side revoke lane. It is not handled by the default supported-chain
+scanner path.
 
 ## Web3 Layer
 
-- `src/lib/wagmi.ts` registers PulseChain, BSC, and Base with wagmi.
+- `src/lib/wagmi.ts` registers PulseChain, BSC, Base, and Ethereum Mainnet with
+  wagmi. Ethereum is used by the separate Ethereum lane.
 - PulseChain RPC defaults to `https://rpc.pulsechain.com`.
 - BSC RPC defaults to `https://bsc-dataseed.bnbchain.org`.
 - Base RPC defaults to `https://mainnet.base.org`.
+- Ethereum wallet RPC defaults to `https://ethereum-rpc.publicnode.com` unless
+  overridden for the wallet client.
 - RPCs can be overridden with public env vars.
 - Live reads and writes always include the approval record's `chainId`.
 - When connected, the wallet account `chainId` is the active scanner source of
@@ -57,6 +63,11 @@ Base historical discovery uses the same Etherscan API V2 logs path with
 approval discovery. BaseScan remains the explorer for address, token, and
 transaction links.
 
+Ethereum historical discovery is exposed through `/api/ethereum/approvals` so
+the Etherscan key stays server-only. The route is read-only, uses bounded
+discovery and live-validation caps, and never signs, relays, or submits
+transactions.
+
 ## Explorer APIs
 
 - PulseChain discovery API default:
@@ -75,6 +86,10 @@ transaction links.
   `NEXT_PUBLIC_BASE_EXPLORER_CHAIN_ID=8453`
 - Base API key env var:
   `NEXT_PUBLIC_BASE_EXPLORER_API_KEY`
+- Ethereum server RPC env vars:
+  `MAINNET_RPC_URL` / `ETHEREUM_RPC_URL`
+- Ethereum server API key env var:
+  `ETHERSCAN_API_KEY`
 
 The old BscScan V1 endpoint `https://api.bscscan.com/api` is deprecated for
 BSC log discovery. If it is configured or returned by a custom endpoint, debug
@@ -118,6 +133,10 @@ NFT revoke:
   approvals
 
 Batch revoke is sequential. Mixed-chain batches are blocked.
+Ethereum revoke uses the same wallet-side approval-clearing calls, but only
+after server-read-only discovery and row-level live verification have identified
+an active approval. Global batch revoke stays disabled when global Ethereum
+verification is incomplete.
 
 ## BSC Gas Safety
 

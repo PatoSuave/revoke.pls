@@ -114,13 +114,13 @@ export const BSC_SPENDER_REGISTRY: readonly SpenderEntry[] = [] as const;
 export const BASE_SPENDER_REGISTRY: readonly SpenderEntry[] = [] as const;
 
 /**
- * Dormant Ethereum mainnet spender registry retained from the earlier app
- * scaffold. Ethereum is not an active supported chain in Pulse Revoke.
+ * Ethereum mainnet spender registry used as enrichment only. Discovery and
+ * revoke safety still come from live API/RPC validation and wallet gates.
  */
-const DORMANT_MAINNET_CHAIN_ID = 1;
+const MAINNET_CHAIN_ID = 1;
 export const MAINNET_SPENDER_REGISTRY: readonly SpenderEntry[] = [
   {
-    chainId: DORMANT_MAINNET_CHAIN_ID,
+    chainId: MAINNET_CHAIN_ID,
     address: "0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D",
     label: "Uniswap V2 Router 02",
     protocol: "Uniswap",
@@ -134,7 +134,7 @@ export const MAINNET_SPENDER_REGISTRY: readonly SpenderEntry[] = [
     source: "https://docs.uniswap.org",
   },
   {
-    chainId: DORMANT_MAINNET_CHAIN_ID,
+    chainId: MAINNET_CHAIN_ID,
     address: "0xE592427A0AEce92De3Edee1F18E0157C05861564",
     label: "Uniswap V3 SwapRouter",
     protocol: "Uniswap",
@@ -148,7 +148,7 @@ export const MAINNET_SPENDER_REGISTRY: readonly SpenderEntry[] = [
     source: "https://docs.uniswap.org",
   },
   {
-    chainId: DORMANT_MAINNET_CHAIN_ID,
+    chainId: MAINNET_CHAIN_ID,
     address: "0x68b3465833fb72A70ecDF485E0e4C7bD8665Fc45",
     label: "Uniswap V3 SwapRouter02",
     protocol: "Uniswap",
@@ -163,7 +163,7 @@ export const MAINNET_SPENDER_REGISTRY: readonly SpenderEntry[] = [
     source: "https://docs.uniswap.org",
   },
   {
-    chainId: DORMANT_MAINNET_CHAIN_ID,
+    chainId: MAINNET_CHAIN_ID,
     address: "0x000000000022D473030F116dDEE9F6B43aC78BA3",
     label: "Permit2",
     protocol: "Uniswap",
@@ -178,7 +178,7 @@ export const MAINNET_SPENDER_REGISTRY: readonly SpenderEntry[] = [
     source: "https://docs.uniswap.org",
   },
   {
-    chainId: DORMANT_MAINNET_CHAIN_ID,
+    chainId: MAINNET_CHAIN_ID,
     address: "0xC36442b4a4522E871399CD717aBDD847Ab11FE88",
     label: "Uniswap V3 NonfungiblePositionManager",
     protocol: "Uniswap",

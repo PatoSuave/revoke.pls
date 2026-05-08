@@ -68,6 +68,15 @@ export interface EthereumApprovalApiDiagnostics {
   skippedApprovalCount: number;
   skippedReasons: Record<string, number>;
   discoveryTruncated: boolean;
+  requestTimedOut: boolean;
+  rateLimited: boolean;
+  candidateCapHit: boolean;
+  liveReadCandidateCap: number;
+  liveReadCandidatesTotal: number;
+  liveReadCandidatesProcessed: number;
+  rpcReadConcurrency: number;
+  upstreamRetryCount: number;
+  incompleteReasons: string[];
 }
 
 export type EthereumErc20ApprovalApi = Omit<Approval, "rawAllowance"> & {
@@ -134,6 +143,15 @@ const EMPTY_DIAGNOSTICS: EthereumApprovalApiDiagnostics = {
   skippedApprovalCount: 0,
   skippedReasons: {},
   discoveryTruncated: false,
+  requestTimedOut: false,
+  rateLimited: false,
+  candidateCapHit: false,
+  liveReadCandidateCap: 0,
+  liveReadCandidatesTotal: 0,
+  liveReadCandidatesProcessed: 0,
+  rpcReadConcurrency: 0,
+  upstreamRetryCount: 0,
+  incompleteReasons: [],
 };
 
 export function emptyEthereumApprovalApiResponse(
@@ -218,7 +236,10 @@ export function mapEthereumApprovalApiResponse(
   const incomplete =
     response.diagnostics.liveReadFailureCount > 0 ||
     response.diagnostics.incompleteVerificationCount > 0 ||
-    response.diagnostics.discoveryTruncated;
+    response.diagnostics.discoveryTruncated ||
+    response.diagnostics.requestTimedOut ||
+    response.diagnostics.rateLimited ||
+    response.diagnostics.candidateCapHit;
   const apiVerifiedForRevoke =
     response.status === "active-approvals-found" &&
     response.ok &&
@@ -382,6 +403,21 @@ function ethereumIncompleteVerificationReason(
 
   if (diagnostics.discoveryTruncated || (reasons["discovery-truncated"] ?? 0) > 0) {
     details.push("discovery was truncated");
+  }
+  if (diagnostics.requestTimedOut || (reasons["request-timed-out"] ?? 0) > 0) {
+    details.push("request timed out");
+  }
+  if (diagnostics.rateLimited) {
+    details.push("upstream rate limited");
+  }
+  if (diagnostics.candidateCapHit || (reasons["candidate-cap-hit"] ?? 0) > 0) {
+    const processed = diagnostics.liveReadCandidatesProcessed;
+    const total = diagnostics.liveReadCandidatesTotal;
+    details.push(
+      total > 0
+        ? `candidate cap hit; ${processed} of ${total} checked`
+        : "candidate cap hit",
+    );
   }
   if (erc20LiveReadFailures > 0) {
     details.push(

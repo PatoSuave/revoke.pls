@@ -10,8 +10,11 @@ Current active supported networks should be exactly:
 - PulseChain, chain ID `369`
 - BSC / BNB Smart Chain, chain ID `56`
 - Base, chain ID `8453`
+- Ethereum Mainnet, chain ID `1`
 
-Ethereum Mainnet should remain inactive.
+Ethereum Mainnet uses server-read-only discovery and wallet-side revoke. It is
+wallet-enabled, but it must not introduce server-side signing, relayers, private
+keys, or API route transaction submission.
 
 ## Key Files
 
@@ -28,12 +31,17 @@ Ethereum Mainnet should remain inactive.
 | Registry enrichment | `src/lib/registry/` |
 | Telemetry/privacy | `src/lib/telemetry.ts` |
 | Diagnostics UI | `src/components/sections/scanner-diagnostics.tsx` |
+| Ethereum API controls | `src/app/api/ethereum/approvals/route.ts`, `src/lib/ethereum-approval-api.ts`, `src/lib/ethereum-approval-api-controls.ts` |
+| Address-only scan controls | `src/lib/address-only-scan.ts`, `src/components/sections/approval-scanner.tsx` |
 
 ## Chain Safety Questions
 
-- Are active supported chains exactly PulseChain, BSC, and Base?
-- Does `src/lib/wagmi.ts` register only PulseChain, BSC, and Base?
-- Is Ethereum Mainnet absent from active supported-chain lists?
+- Are active supported chains exactly PulseChain, BSC, Base, and wallet-enabled
+  Ethereum Mainnet?
+- Does `src/lib/wagmi.ts` register Ethereum only for the wallet-side Ethereum
+  lane and keep chain lists scoped correctly?
+- Is Ethereum Mainnet protected by owner, chain, preflight, gas, and row-level
+  verification gates?
 - Do approval records carry `chainId` through discovery, validation, display,
   revoke, and batch revoke?
 - Is the connected wallet account `chainId` the active scanner source of truth?
@@ -41,6 +49,25 @@ Ethereum Mainnet should remain inactive.
   state, and diagnostics?
 - Are unsupported networks blocked from scan/revoke flows?
 - Are mixed-chain batch selections blocked or skipped safely?
+- Does address-only scan default to one selected chain instead of firing every
+  network scanner at once?
+- If scan-all is used, does it require an explicit user action and run with
+  concurrency `1`?
+
+## Ethereum Discovery Questions
+
+- Does `/api/ethereum/approvals` reject invalid owners with `400`?
+- Does route-level rate limiting return `429` with non-clear JSON?
+- Does the public API use server-side discovery caps, request timeout, live-read
+  candidate caps, and RPC read concurrency limits?
+- Do timeout, cap-hit, rate-limit, truncation, malformed rows, and live-read
+  failures return non-clear states?
+- Does a candidate cap preserve already verified rows while marking the global
+  scan incomplete?
+- Does row-level verified Ethereum ERC-20 revoke remain available when unrelated
+  NFT verification fails?
+- Is the Ethereum API free of `writeContract`, `sendTransaction`, signing,
+  private key, seed phrase, mnemonic, or relayer logic?
 
 ## BSC Discovery Questions
 
@@ -115,6 +142,13 @@ Ethereum Mainnet should remain inactive.
 - Are telemetry fields limited to product-health events, supported chain IDs,
   safe enums, and aggregate counts?
 
+## CSP Follow-Up
+
+- Track CSP tightening as a separate CSP report-only pass before enforcement.
+- Do not blindly narrow `connect-src`, `frame-src`, or `script-src`; verify
+  injected wallets, WalletConnect, RPC providers, explorer APIs, and the Tauri
+  shell before enforcing stricter policy.
+
 ## Suggested Verification Commands
 
 ```powershell
@@ -131,6 +165,11 @@ npm.cmd run build
 - Load `/app` on PulseChain and run a scan.
 - Load `/app` on BSC and run a scan.
 - Load `/app` on Base and run a scan.
+- Paste an address in address-only mode and confirm only the selected network
+  scans by default.
+- Use address-only scan-all and confirm networks start one at a time.
+- Load `/app` on Ethereum Mainnet and confirm Ethereum discovery is read-only
+  until a matching wallet-side revoke is explicitly reviewed.
 - Test a low-gas BSC revoke and confirm the wallet receives `gas` below the
   hard cap.
 - Test or simulate a high-gas BSC revoke and confirm the in-app warning appears
