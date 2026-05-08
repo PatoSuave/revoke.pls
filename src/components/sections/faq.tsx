@@ -41,7 +41,8 @@ const QUESTIONS: ReadonlyArray<{ q: string; a: React.ReactNode }> = [
         Revoking is an on-chain state change: it writes a new allowance value to
         the token contract. Every state change requires a transaction, paid in
         the chain&apos;s native gas token (PLS on PulseChain, BNB on BSC, ETH on
-        Base). Pulse Revoke does not take a fee; you pay only the network cost.
+        Base and Ethereum). Pulse Revoke does not take a fee; you pay only the
+        network cost.
       </>
     ),
   },
@@ -49,9 +50,10 @@ const QUESTIONS: ReadonlyArray<{ q: string; a: React.ReactNode }> = [
     q: "What chains and tokens are supported?",
     a: (
       <>
-        PulseChain mainnet (chainId 369), BSC / BNB Smart Chain (chainId 56),
-        and Base (chainId 8453). Discovery uses each chain&apos;s explorer API,
-        PulseScan on PulseChain,{" "}
+        PulseChain mainnet (chainId 369), Ethereum Mainnet (chainId 1), BSC /
+        BNB Smart Chain (chainId 56), and Base (chainId 8453). Discovery uses
+        each chain&apos;s explorer/API path, PulseScan on PulseChain, Etherscan for
+        Ethereum,{" "}
         <a
           className="underline underline-offset-2 hover:text-pulse-cyan"
           href="https://bscscan.com"
@@ -70,9 +72,10 @@ const QUESTIONS: ReadonlyArray<{ q: string; a: React.ReactNode }> = [
           BaseScan
         </a>{" "}
         on Base, and every discovered allowance is re-verified live on-chain
-        before display. Known protocol labels come from a chain-scoped curated
-        registry, so a PulseChain address is never mislabeled from a BSC or Base
-        entry.
+        before display. Ethereum revoke is wallet-side and available only for
+        rows that pass the current live-verification gates. Known protocol
+        labels come from a chain-scoped curated registry, so a PulseChain
+        address is never mislabeled from another chain entry.
       </>
     ),
   },

@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import type { ReactNode } from "react";
 
+import { AntiPhishingBanner } from "@/components/sections/anti-phishing-banner";
 import { PulseMark } from "@/components/pulse-mark";
 import {
   currentRelease,
@@ -131,6 +132,7 @@ export default function LauncherPage() {
       <SiteHeader desktopReady={desktopReady} />
       <main>
         <Hero desktopReady={desktopReady} />
+        <AntiPhishingBanner />
         <TrustStrip />
         <HowItWorks />
         <DesktopSection release={release} desktopReady={desktopReady} />
@@ -167,6 +169,9 @@ function SiteHeader({ desktopReady }: { desktopReady: boolean }) {
           <a href="#ipfs" className="transition hover:text-pulse-text">
             IPFS
           </a>
+          <Link href="/security" className="transition hover:text-pulse-text">
+            Security
+          </Link>
           <a href="#faq" className="transition hover:text-pulse-text">
             FAQ
           </a>
@@ -389,26 +394,40 @@ function ChoiceCard({
 function TrustStrip() {
   return (
     <section className="border-b border-pulse-border/60 bg-pulse-bg py-8">
-      <div className="mx-auto grid max-w-6xl gap-3 px-4 sm:grid-cols-2 sm:px-6 lg:grid-cols-4">
-        {TRUST_POINTS.map((point) => (
-          <div
-            key={point.title}
-            className="rounded-2xl border border-pulse-border bg-pulse-panel/55 p-4"
-          >
-            <div className="flex items-center gap-2">
-              <span
-                className="h-1.5 w-1.5 rounded-full bg-pulse-green"
-                aria-hidden
-              />
-              <p className="text-sm font-semibold text-pulse-text">
-                {point.title}
+      <div className="mx-auto max-w-6xl px-4 sm:px-6">
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          {TRUST_POINTS.map((point) => (
+            <div
+              key={point.title}
+              className="rounded-2xl border border-pulse-border bg-pulse-panel/55 p-4"
+            >
+              <div className="flex items-center gap-2">
+                <span
+                  className="h-1.5 w-1.5 rounded-full bg-pulse-green"
+                  aria-hidden
+                />
+                <p className="text-sm font-semibold text-pulse-text">
+                  {point.title}
+                </p>
+              </div>
+              <p className="mt-2 text-xs leading-5 text-pulse-muted">
+                {point.body}
               </p>
             </div>
-            <p className="mt-2 text-xs leading-5 text-pulse-muted">
-              {point.body}
-            </p>
-          </div>
-        ))}
+          ))}
+        </div>
+        <div className="mt-4 flex flex-col gap-3 rounded-2xl border border-pulse-border bg-pulse-panel/45 p-4 text-sm text-pulse-muted sm:flex-row sm:items-center sm:justify-between">
+          <p>
+            Review official-domain, wallet-connection, revoke, privacy, and
+            supported-chain guidance before signing.
+          </p>
+          <Link
+            href="/security"
+            className="inline-flex shrink-0 items-center justify-center rounded-xl border border-pulse-cyan/35 bg-pulse-cyan/10 px-3 py-2 text-xs font-semibold text-pulse-cyan transition hover:bg-pulse-cyan/15"
+          >
+            Security &amp; Trust
+          </Link>
+        </div>
       </div>
     </section>
   );
@@ -682,6 +701,9 @@ function SiteFooter({ desktopReady }: { desktopReady: boolean }) {
         <nav className="flex flex-wrap gap-4 text-xs">
           <Link href="/app" className="transition hover:text-pulse-text">
             Launch Scanner
+          </Link>
+          <Link href="/security" className="transition hover:text-pulse-text">
+            Security &amp; Trust
           </Link>
           <a
             href={siteConfig.links.github}

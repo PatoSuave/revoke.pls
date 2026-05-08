@@ -7,7 +7,7 @@ const STEPS = [
   {
     n: "02",
     title: "Review your approvals",
-    body: "Pulse Revoke pulls your wallet's historical Approval events from PulseScan on PulseChain and Etherscan API V2 for BSC and Base logs, re-verifies every allowance live on-chain, and labels known spenders from a curated registry so you can judge risk at a glance.",
+    body: "Pulse Revoke pulls your wallet's historical Approval events from PulseScan on PulseChain, Etherscan API V2 for BSC and Base logs, and the Ethereum read-only API for Ethereum Mainnet, then re-verifies every allowance live on-chain before display.",
   },
   {
     n: "03",
