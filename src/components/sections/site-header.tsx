@@ -6,15 +6,15 @@ import { siteConfig } from "@/lib/site";
 
 export function SiteHeader() {
   return (
-    <header className="sticky top-0 z-40 w-full border-b border-pulse-border/60 bg-pulse-bg/80 backdrop-blur">
-      <div className="mx-auto flex h-16 max-w-6xl items-center justify-between gap-4 px-4 sm:px-6">
+    <header className="sticky top-0 z-40 w-full overflow-hidden border-b border-pulse-border/60 bg-pulse-bg/80 backdrop-blur">
+      <div className="mx-auto flex h-16 w-full min-w-0 max-w-6xl items-center justify-between gap-4 px-4 sm:px-6">
         <Link
           href="/"
-          className="flex items-center gap-2.5 text-pulse-text"
+          className="flex min-w-0 items-center gap-2.5 text-pulse-text"
           aria-label={`${siteConfig.name} home`}
         >
-          <PulseMark className="h-8 w-8" />
-          <span className="text-base font-semibold tracking-tight sm:text-lg">
+          <PulseMark className="h-8 w-8 shrink-0" />
+          <span className="truncate text-base font-semibold tracking-tight sm:text-lg">
             Pulse<span className="text-gradient-pulse"> Revoke</span>
           </span>
         </Link>
@@ -31,7 +31,7 @@ export function SiteHeader() {
           ))}
         </nav>
 
-        <ConnectWalletButton />
+        <ConnectWalletButton className="shrink-0" />
       </div>
     </header>
   );
