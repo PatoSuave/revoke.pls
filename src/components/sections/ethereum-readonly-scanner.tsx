@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import type { ReactNode } from "react";
 import type { Address } from "viem";
 
@@ -48,12 +48,14 @@ export function EthereumReadOnlyScanner({
   walletChainId,
   wagmiChainId,
   debugMode,
+  onScanSettled,
 }: {
   owner: Address;
   connectedAddress: Address | undefined;
   walletChainId: number | undefined;
   wagmiChainId: number | undefined;
   debugMode: boolean;
+  onScanSettled?: () => void;
 }) {
   const scan = useEthereumApprovalScan({ owner });
   const scoredErc20 = useMemo(
@@ -85,6 +87,12 @@ export function EthereumReadOnlyScanner({
     ownerAddress: owner,
     connectedAddress,
   });
+
+  useEffect(() => {
+    if (scan.status === "success" || scan.status === "error") {
+      onScanSettled?.();
+    }
+  }, [onScanSettled, scan.status]);
 
   return (
     <div className="space-y-6">
@@ -1189,6 +1197,12 @@ function EthereumCoverageNote({
       {diagnostics?.discoveryTruncated
         ? " Discovery reported truncation, so this is not a complete clear state."
         : ""}
+      {diagnostics?.candidateCapHit
+        ? " The public API candidate cap was reached, so this is not a complete clear state."
+        : ""}
+      {diagnostics?.requestTimedOut
+        ? " The request timed out before all checks completed, so this is not a complete clear state."
+        : ""}
     </p>
   );
 }
@@ -1307,6 +1321,35 @@ function EthereumDiagnostics({
     [
       "Discovery truncated",
       diagnostics ? (diagnostics.discoveryTruncated ? "Yes" : "No") : "Unknown",
+    ],
+    [
+      "Request timed out",
+      diagnostics ? (diagnostics.requestTimedOut ? "Yes" : "No") : "Unknown",
+    ],
+    ["Rate limited", diagnostics ? (diagnostics.rateLimited ? "Yes" : "No") : "Unknown"],
+    [
+      "Candidate cap hit",
+      diagnostics ? (diagnostics.candidateCapHit ? "Yes" : "No") : "Unknown",
+    ],
+    [
+      "Live-read candidate cap",
+      diagnostics?.liveReadCandidateCap.toString() ?? "Not returned",
+    ],
+    [
+      "Live-read candidates total",
+      diagnostics?.liveReadCandidatesTotal.toString() ?? "Not returned",
+    ],
+    [
+      "Live-read candidates checked",
+      diagnostics?.liveReadCandidatesProcessed.toString() ?? "Not returned",
+    ],
+    [
+      "RPC read concurrency",
+      diagnostics?.rpcReadConcurrency.toString() ?? "Not returned",
+    ],
+    [
+      "Incomplete reasons",
+      diagnostics?.incompleteReasons.join("; ") || "None",
     ],
   ];
 

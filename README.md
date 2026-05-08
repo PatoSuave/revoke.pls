@@ -1,7 +1,7 @@
 # Pulse Revoke / revoke.pls
 
 Pulse Revoke is a non-custodial approval scanner and revoker for PulseChain,
-BSC / BNB Smart Chain, and Base.
+BSC / BNB Smart Chain, Base, and Ethereum Mainnet.
 
 Live app: <https://pulserevoke.com>
 
@@ -15,14 +15,18 @@ Active supported networks are intentionally limited to:
 - PulseChain mainnet, chain ID `369`, gas token `PLS`, explorer `PulseScan`
 - BSC / BNB Smart Chain, chain ID `56`, gas token `BNB`, explorer `BscScan`
 - Base Mainnet, chain ID `8453`, gas token `ETH`, explorer `BaseScan`
+- Ethereum Mainnet, chain ID `1`, gas token `ETH`, explorer `Etherscan`
 
-Ethereum Mainnet is not an active supported product chain.
+Ethereum discovery uses a server-read-only API, while Ethereum revoke remains
+wallet-side only with owner, chain, preflight, gas, and row-level verification
+gates.
 
 ## What It Can Scan And Revoke
 
 - PulseChain PRC-20 / ERC-20-compatible fungible token approvals
 - BSC BEP-20 fungible token approvals
 - Base ERC-20 fungible token approvals
+- Ethereum ERC-20 fungible token approvals
 - NFT operator approvals where supported by the app pipeline
 - NFT per-token approvals where supported by the app pipeline
 - Sequential batch revoke for fungible token approvals on one chain at a time

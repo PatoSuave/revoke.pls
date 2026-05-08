@@ -129,6 +129,53 @@ function fakeSource(options?: {
   };
 }
 
+function numberedAddress(value: number): Address {
+  return getAddress(`0x${value.toString(16).padStart(40, "0")}`);
+}
+
+function fakeBulkErc20Source(count: number): DiscoverySource {
+  const source = {
+    id: "ethereum-bulk-test",
+    name: "Ethereum Bulk Test",
+    url: "https://etherscan.io",
+    chainId: ETHEREUM_MAINNET_CHAIN_ID,
+  };
+
+  const pairs = Array.from({ length: count }, (_, index) => ({
+    chainId: ETHEREUM_MAINNET_CHAIN_ID,
+    approvalType: "fungible" as const,
+    tokenAddress: TOKEN,
+    ownerAddress: getAddress(OWNER),
+    spenderAddress: numberedAddress(1000 + index),
+    rawApprovalValue: 100n,
+  }));
+
+  return {
+    meta: source,
+    async discover() {
+      return {
+        source,
+        pairs,
+        rawCount: pairs.length,
+        truncated: false,
+        windows: 1,
+        requests: 1,
+        erc20Parse: emptyErc20Parse(pairs.length),
+      };
+    },
+    async discoverNftApprovals() {
+      return {
+        source,
+        approvals: [],
+        rawCount: 0,
+        truncated: false,
+        windows: 1,
+        requests: 1,
+      };
+    },
+  };
+}
+
 afterEach(() => {
   vi.unstubAllGlobals();
 });
@@ -374,6 +421,105 @@ describe("Ethereum approval API foundation", () => {
     expect(result.warnings.join(" ")).toContain(
       "Ethereum NFT approval live reads failed for 1 approval candidate.",
     );
+  });
+
+  it("returns timeout as an incomplete non-clear state", async () => {
+    const controller = new AbortController();
+    setTimeout(() => controller.abort(), 5);
+
+    const result = await scanEthereumApprovals(OWNER, {
+      env: env(),
+      discoverySource: fakeSource({ allowancePair: true }),
+      signal: controller.signal,
+      reader: {
+        readContract: vi.fn(() => new Promise(() => undefined)),
+      },
+    });
+
+    expect(result.status).toBe("verification-incomplete");
+    expect(result.ok).toBe(false);
+    expect(result.diagnostics.requestTimedOut).toBe(true);
+    expect(result.diagnostics.incompleteVerificationCount).toBeGreaterThan(0);
+    expect(result.status).not.toBe("complete-clear");
+  });
+
+  it("returns candidate cap hits as verification-incomplete, not complete-clear", async () => {
+    const result = await scanEthereumApprovals(OWNER, {
+      env: env(),
+      discoverySource: fakeBulkErc20Source(3),
+      liveReadCandidateCap: 1,
+      reader: {
+        readContract: vi.fn(async (call: { functionName?: string }) => {
+          if (call.functionName === "symbol") return "TOK";
+          if (call.functionName === "decimals") return 18;
+          if (call.functionName === "name") return "Token";
+          if (call.functionName === "allowance") return 0n;
+          throw new Error(`Unexpected call ${call.functionName}`);
+        }),
+      },
+    });
+
+    expect(result.status).toBe("verification-incomplete");
+    expect(result.ok).toBe(false);
+    expect(result.approvals.erc20).toEqual([]);
+    expect(result.diagnostics.candidateCapHit).toBe(true);
+    expect(result.diagnostics.liveReadCandidatesTotal).toBe(3);
+    expect(result.diagnostics.liveReadCandidatesProcessed).toBe(1);
+    expect(result.diagnostics.skippedReasons).toMatchObject({
+      "candidate-cap-hit": 2,
+    });
+  });
+
+  it("preserves verified rows when the live-read cap marks the scan incomplete", async () => {
+    const result = await scanEthereumApprovals(OWNER, {
+      env: env(),
+      discoverySource: fakeBulkErc20Source(3),
+      liveReadCandidateCap: 1,
+      reader: {
+        readContract: vi.fn(async (call: { functionName?: string }) => {
+          if (call.functionName === "symbol") return "TOK";
+          if (call.functionName === "decimals") return 18;
+          if (call.functionName === "name") return "Token";
+          if (call.functionName === "allowance") return 5n;
+          throw new Error(`Unexpected call ${call.functionName}`);
+        }),
+      },
+    });
+
+    expect(result.status).toBe("verification-incomplete");
+    expect(result.ok).toBe(false);
+    expect(result.approvals.erc20).toHaveLength(1);
+    expect(result.diagnostics.candidateCapHit).toBe(true);
+    expect(result.diagnostics.liveReadSuccessCount).toBe(1);
+  });
+
+  it("limits Ethereum RPC live-read concurrency", async () => {
+    let activeReads = 0;
+    let maxActiveReads = 0;
+
+    const result = await scanEthereumApprovals(OWNER, {
+      env: env(),
+      discoverySource: fakeBulkErc20Source(5),
+      rpcReadConcurrency: 2,
+      reader: {
+        readContract: vi.fn(async (call: { functionName?: string }) => {
+          activeReads += 1;
+          maxActiveReads = Math.max(maxActiveReads, activeReads);
+          await new Promise((resolve) => setTimeout(resolve, 1));
+          activeReads -= 1;
+
+          if (call.functionName === "symbol") return "TOK";
+          if (call.functionName === "decimals") return 18;
+          if (call.functionName === "name") return "Token";
+          if (call.functionName === "allowance") return 5n;
+          throw new Error(`Unexpected call ${call.functionName}`);
+        }),
+      },
+    });
+
+    expect(result.status).toBe("active-approvals-found");
+    expect(maxActiveReads).toBeLessThanOrEqual(2);
+    expect(result.diagnostics.rpcReadConcurrency).toBe(2);
   });
 
   it("reports upstream explorer failures separately from clear states", async () => {

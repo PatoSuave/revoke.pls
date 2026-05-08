@@ -2,9 +2,18 @@ import { NextResponse } from "next/server";
 
 import {
   ETHEREUM_MAINNET_CHAIN_ID,
+  createEthereumApprovalApiFailureResponse,
   normalizeEthereumOwner,
   scanEthereumApprovals,
 } from "@/lib/ethereum-approval-api";
+import {
+  ETHEREUM_APPROVAL_API_DISCOVERY_LIMITS,
+  ETHEREUM_APPROVAL_API_LIVE_READ_CANDIDATE_CAP,
+  ETHEREUM_APPROVAL_API_RATE_LIMIT,
+  ETHEREUM_APPROVAL_API_REQUEST_TIMEOUT_MS,
+  ETHEREUM_APPROVAL_API_RPC_READ_CONCURRENCY,
+  checkEthereumApprovalApiRateLimit,
+} from "@/lib/ethereum-approval-api-controls";
 
 export const runtime = "nodejs";
 
@@ -57,7 +66,40 @@ export async function GET(request: Request) {
     );
   }
 
-  const result = await scanEthereumApprovals(owner);
+  const rateLimit = checkEthereumApprovalApiRateLimit(rateLimitKey(request));
+  if (!rateLimit.allowed) {
+    const result = createEthereumApprovalApiFailureResponse({
+      status: "upstream-failure",
+      errors: [
+        "Ethereum approvals API rate limit exceeded. Try again shortly.",
+      ],
+      diagnostics: {
+        rateLimited: true,
+        liveReadCandidateCap: ETHEREUM_APPROVAL_API_LIVE_READ_CANDIDATE_CAP,
+        rpcReadConcurrency: ETHEREUM_APPROVAL_API_RPC_READ_CONCURRENCY,
+        incompleteVerificationCount: 1,
+        incompleteReasons: ["route rate limit exceeded"],
+      },
+    });
+
+    return NextResponse.json(result, {
+      status: 429,
+      headers: rateLimitHeaders(rateLimit, { includeRetryAfter: true }),
+    });
+  }
+
+  const controller = new AbortController();
+  const timeout = setTimeout(
+    () => controller.abort(),
+    ETHEREUM_APPROVAL_API_REQUEST_TIMEOUT_MS,
+  );
+
+  const result = await scanEthereumApprovals(owner, {
+    signal: controller.signal,
+    discoveryLimits: ETHEREUM_APPROVAL_API_DISCOVERY_LIMITS,
+    liveReadCandidateCap: ETHEREUM_APPROVAL_API_LIVE_READ_CANDIDATE_CAP,
+    rpcReadConcurrency: ETHEREUM_APPROVAL_API_RPC_READ_CONCURRENCY,
+  }).finally(() => clearTimeout(timeout));
   const httpStatus =
     result.status === "config-missing"
       ? 503
@@ -65,5 +107,45 @@ export async function GET(request: Request) {
         ? 502
         : 200;
 
-  return NextResponse.json(result, { status: httpStatus });
+  return NextResponse.json(result, {
+    status: httpStatus,
+    headers: {
+      ...rateLimitHeaders(rateLimit),
+      "X-Ethereum-Approval-Timeout-Ms":
+        ETHEREUM_APPROVAL_API_REQUEST_TIMEOUT_MS.toString(),
+      "X-Ethereum-Approval-Live-Read-Cap":
+        ETHEREUM_APPROVAL_API_LIVE_READ_CANDIDATE_CAP.toString(),
+    },
+  });
+}
+
+function rateLimitKey(request: Request): string {
+  const forwardedFor = request.headers.get("x-forwarded-for");
+  const forwardedIp = forwardedFor?.split(",")[0]?.trim();
+  return (
+    request.headers.get("cf-connecting-ip")?.trim() ||
+    request.headers.get("x-real-ip")?.trim() ||
+    forwardedIp ||
+    "unknown-client"
+  );
+}
+
+function rateLimitHeaders(
+  rateLimit: {
+    limit: number;
+    remaining: number;
+    resetAt: number;
+    retryAfterSeconds: number;
+  },
+  options: { includeRetryAfter?: boolean } = {},
+): HeadersInit {
+  return {
+    ...(options.includeRetryAfter
+      ? { "Retry-After": rateLimit.retryAfterSeconds.toString() }
+      : {}),
+    "X-RateLimit-Limit": rateLimit.limit.toString(),
+    "X-RateLimit-Remaining": rateLimit.remaining.toString(),
+    "X-RateLimit-Reset": Math.ceil(rateLimit.resetAt / 1000).toString(),
+    "X-RateLimit-Window-Ms": ETHEREUM_APPROVAL_API_RATE_LIMIT.windowMs.toString(),
+  };
 }
