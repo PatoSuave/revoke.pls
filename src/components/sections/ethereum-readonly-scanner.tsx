@@ -35,6 +35,7 @@ import type {
   Erc20PreflightResult,
   NftPreflightResult,
 } from "@/lib/preflight";
+import type { SpenderProtocolMetadata } from "@/lib/registry";
 import {
   WALLET_PROMPT_SAFETY_COPY,
   requiresGasWarningAcknowledgement,
@@ -429,6 +430,9 @@ function ReadOnlyErc20Table({
               <p className="mt-1 text-[11px] text-pulse-muted">
                 {approval.trusted ? "Registry label" : "Unknown spender"}
               </p>
+              <ProtocolMetadataSummary
+                metadata={approval.spenderProtocolMetadata}
+              />
             </div>
 
             <div className="flex flex-col items-start gap-1.5 rounded-xl border border-pulse-border/60 bg-pulse-panel/35 p-3 sm:border-0 sm:bg-transparent sm:p-0">
@@ -459,6 +463,54 @@ function ReadOnlyErc20Table({
         ))}
       </ul>
     </section>
+  );
+}
+
+function ProtocolMetadataSummary({
+  metadata,
+}: {
+  metadata?: SpenderProtocolMetadata;
+}) {
+  if (!metadata) return null;
+
+  return (
+    <dl className="mt-2 grid gap-1 rounded-lg border border-pulse-border/60 bg-pulse-bg/45 p-2 text-[11px] leading-5 text-pulse-muted">
+      <MetadataRow label="Known protocol" value={metadata.protocolName} />
+      <MetadataRow
+        label="Contract status"
+        value={
+          metadata.contractStatus === "legacy"
+            ? "Legacy contract"
+            : "Current contract"
+        }
+      />
+      <div className="grid gap-0.5">
+        <dt className="font-semibold uppercase tracking-[0.12em]">Source</dt>
+        <dd>
+          <a
+            href={metadata.sourceUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="font-semibold text-pulse-cyan underline underline-offset-2 hover:text-pulse-text"
+          >
+            {metadata.sourceLabel}
+          </a>
+        </dd>
+      </div>
+      {metadata.assetLabel ? (
+        <MetadataRow label="Documented asset" value={metadata.assetLabel} />
+      ) : null}
+      {metadata.note ? <MetadataRow label="Note" value={metadata.note} /> : null}
+    </dl>
+  );
+}
+
+function MetadataRow({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="grid gap-0.5">
+      <dt className="font-semibold uppercase tracking-[0.12em]">{label}</dt>
+      <dd className="break-words">{value}</dd>
+    </div>
   );
 }
 
@@ -525,6 +577,9 @@ function ReadOnlyNftTable({
               <p className="mt-1 text-[11px] text-pulse-muted">
                 {approval.trusted ? "Registry label" : "Unknown operator"}
               </p>
+              <ProtocolMetadataSummary
+                metadata={approval.operatorProtocolMetadata}
+              />
             </div>
 
             <div className="flex flex-col items-start gap-1.5 rounded-xl border border-pulse-border/60 bg-pulse-panel/35 p-3 sm:border-0 sm:bg-transparent sm:p-0">

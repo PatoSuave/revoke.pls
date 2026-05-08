@@ -6,6 +6,7 @@ import type { Address } from "viem";
 import {
   ApprovalMeaningPanel,
   SummaryText,
+  protocolMetadataItems,
 } from "@/components/approvals/approval-readability";
 import {
   GasEstimateDebugDetails,
@@ -173,11 +174,14 @@ export function NftApprovalRow({
               <SummaryText
                 primary={approval.operatorLabel}
                 secondary={
-                  approval.trusted ? "Identified operator" : "Unknown operator"
+                  approval.trusted || approval.operatorProtocolMetadata
+                    ? "Identified operator"
+                    : "Unknown operator"
                 }
               />
             ),
           },
+          ...protocolMetadataItems(approval.operatorProtocolMetadata),
           {
             label: "Permission type",
             value: (

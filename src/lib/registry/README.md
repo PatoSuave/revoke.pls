@@ -16,7 +16,7 @@ explicit explorer/source verification.
 src/lib/registry/
   index.ts      # public re-exports
   tokens.ts     # TOKEN_REGISTRY + TokenEntry + TokenCategory
-  spenders.ts   # SPENDER_REGISTRY + SpenderEntry + SpenderCategory
+  spenders.ts   # SPENDER_REGISTRY + metadata-only spender labels
   validate.ts   # dev-time sanity checks (addresses, required fields, decimals)
   README.md     # this file
 ```
@@ -25,6 +25,11 @@ src/lib/registry/
 test it **throws** on duplicates, malformed addresses, empty required
 fields, or bogus decimals. In production it logs and continues — this keeps
 loud failures at dev time and graceful failures at runtime.
+
+`getSpendersForChain` returns the active registry-constrained scan targets.
+`getSpenderMetadataEntry` is the chain-aware enrichment lookup used for labels
+on approvals discovered from historical events. Metadata-only entries identify
+a documented address without expanding scanner coverage.
 
 ## Adding a token
 

@@ -1,5 +1,7 @@
 import type { ReactNode } from "react";
 
+import type { SpenderProtocolMetadata } from "@/lib/registry";
+
 export interface ApprovalMeaningItem {
   label: string;
   value: ReactNode;
@@ -60,3 +62,54 @@ export function SummaryText({
   );
 }
 
+export function protocolMetadataItems(
+  metadata: SpenderProtocolMetadata | undefined,
+): ApprovalMeaningItem[] {
+  if (!metadata) return [];
+
+  const items: ApprovalMeaningItem[] = [
+    {
+      label: "Known protocol",
+      value: <SummaryText primary={metadata.protocolName} />,
+    },
+    {
+      label: "Contract status",
+      value: <SummaryText primary={contractStatusLabel(metadata.contractStatus)} />,
+    },
+    {
+      label: "Source",
+      value: (
+        <a
+          href={metadata.sourceUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="font-semibold text-pulse-cyan underline underline-offset-2 hover:text-pulse-text"
+        >
+          {metadata.sourceLabel}
+        </a>
+      ),
+    },
+  ];
+
+  if (metadata.assetLabel) {
+    items.push({
+      label: "Documented asset",
+      value: <SummaryText primary={metadata.assetLabel} />,
+    });
+  }
+
+  if (metadata.note) {
+    items.push({
+      label: "Note",
+      value: metadata.note,
+    });
+  }
+
+  return items;
+}
+
+function contractStatusLabel(
+  contractStatus: SpenderProtocolMetadata["contractStatus"],
+): string {
+  return contractStatus === "legacy" ? "Legacy contract" : "Current contract";
+}

@@ -6,6 +6,7 @@ import type { Address } from "viem";
 import {
   ApprovalMeaningPanel,
   SummaryText,
+  protocolMetadataItems,
 } from "@/components/approvals/approval-readability";
 import {
   GasEstimateDebugDetails,
@@ -228,11 +229,14 @@ export function ApprovalRow({
                   "Unknown spender",
                 )}
                 secondary={
-                  approval.trusted ? "Identified spender" : "Unknown spender"
+                  approval.trusted || approval.spenderProtocolMetadata
+                    ? "Identified spender"
+                    : "Unknown spender"
                 }
               />
             ),
           },
+          ...protocolMetadataItems(approval.spenderProtocolMetadata),
           {
             label: "Permission",
             value: (

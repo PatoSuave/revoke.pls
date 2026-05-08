@@ -1,8 +1,20 @@
 import type { Address } from "viem";
 
-import { pulsechain } from "@/lib/chains";
+import {
+  BASE_CHAIN_ID,
+  BSC_CHAIN_ID,
+  PULSECHAIN_CHAIN_ID,
+} from "@/lib/chains";
 
 import { validateAddresses, validateRequiredStrings } from "./validate";
+
+export const ETHEREUM_MAINNET_CHAIN_ID = 1;
+export const ARBITRUM_ONE_CHAIN_ID = 42161;
+export const LIBERTYSWAP_SOURCE_LABEL = "Official LibertySwap docs";
+export const LIBERTYSWAP_SOURCE_URL =
+  "https://docs.libertyswap.finance/liberty-swap-2.0/cross-chain-swaps";
+export const LIBERTYSWAP_LEGACY_NOTE =
+  "This appears in LibertySwap's old-address list. Review whether this approval is still needed.";
 
 /**
  * Functional classification for a spender contract. Drives optional UI
@@ -26,6 +38,17 @@ export type SpenderCategory =
   | "farm"
   | "permit2"
   | "unknown";
+
+export type SpenderContractStatus = "current" | "legacy";
+
+export interface SpenderProtocolMetadata {
+  protocolName: string;
+  contractStatus: SpenderContractStatus;
+  sourceLabel: string;
+  sourceUrl: string;
+  assetLabel?: string;
+  note?: string;
+}
 
 /**
  * Metadata for a known spender contract.
@@ -64,9 +87,58 @@ export interface SpenderEntry {
   verificationMethod?: string;
   /** Source the address was pulled from (docs URL, official tweet, etc). */
   source?: string;
+  /** Optional protocol provenance shown in approval-card readability panels. */
+  protocolMetadata?: SpenderProtocolMetadata;
   /** Free-form note about when/how the entry was last reviewed. Leave
    *  absent if unknown — do not fabricate dates. */
   lastReviewed?: string;
+}
+
+function libertySwapMetadata(
+  contractStatus: SpenderContractStatus,
+  assetLabel?: string,
+): SpenderProtocolMetadata {
+  return {
+    protocolName: "LibertySwap",
+    contractStatus,
+    sourceLabel: LIBERTYSWAP_SOURCE_LABEL,
+    sourceUrl: LIBERTYSWAP_SOURCE_URL,
+    ...(assetLabel ? { assetLabel } : {}),
+    ...(contractStatus === "legacy" ? { note: LIBERTYSWAP_LEGACY_NOTE } : {}),
+  };
+}
+
+function libertySwapEntry({
+  chainId,
+  address,
+  contractStatus,
+  assetLabel,
+}: {
+  chainId: number;
+  address: Address;
+  contractStatus: SpenderContractStatus;
+  assetLabel?: string;
+}): SpenderEntry {
+  return {
+    chainId,
+    address,
+    label: assetLabel
+      ? `LibertySwap ${assetLabel}`
+      : "LibertySwap legacy contract",
+    protocol: "LibertySwap",
+    protocolSlug: "libertyswap",
+    category: "bridge",
+    isTrusted: true,
+    url: LIBERTYSWAP_SOURCE_URL,
+    notes:
+      contractStatus === "legacy"
+        ? LIBERTYSWAP_LEGACY_NOTE
+        : "Current LibertySwap contract listed in the official cross-chain swaps docs.",
+    verificationMethod:
+      "Matched chain-scoped address against LibertySwap's official cross-chain swaps docs.",
+    source: LIBERTYSWAP_SOURCE_URL,
+    protocolMetadata: libertySwapMetadata(contractStatus, assetLabel),
+  };
 }
 
 /**
@@ -78,7 +150,7 @@ export interface SpenderEntry {
  */
 export const PULSECHAIN_SPENDER_REGISTRY: readonly SpenderEntry[] = [
   {
-    chainId: pulsechain.id,
+    chainId: PULSECHAIN_CHAIN_ID,
     address: "0x165C3410fC91EF562C50559f7d2289fEbed552d9",
     label: "PulseX Router v2",
     protocol: "PulseX",
@@ -92,7 +164,7 @@ export const PULSECHAIN_SPENDER_REGISTRY: readonly SpenderEntry[] = [
     source: "https://pulsex.com",
   },
   {
-    chainId: pulsechain.id,
+    chainId: PULSECHAIN_CHAIN_ID,
     address: "0x98bf93ebf5c380C0e6Ae8e192A7e2AE08edAcc02",
     label: "PulseX Router v1",
     protocol: "PulseX",
@@ -113,14 +185,168 @@ export const BSC_SPENDER_REGISTRY: readonly SpenderEntry[] = [] as const;
 /** Base spender labels start empty by design. Add only manually verified entries. */
 export const BASE_SPENDER_REGISTRY: readonly SpenderEntry[] = [] as const;
 
+const LIBERTYSWAP_PULSECHAIN_SPENDER_METADATA_REGISTRY: readonly SpenderEntry[] = [
+  libertySwapEntry({
+    chainId: PULSECHAIN_CHAIN_ID,
+    address: "0xe7EE706a6708b691a232452c9cb267d186942F09",
+    contractStatus: "current",
+    assetLabel: "USDC",
+  }),
+  libertySwapEntry({
+    chainId: PULSECHAIN_CHAIN_ID,
+    address: "0x80C2C603d72ea17A0D85B670D4489eB3012035Cd",
+    contractStatus: "current",
+    assetLabel: "WETH",
+  }),
+  libertySwapEntry({
+    chainId: PULSECHAIN_CHAIN_ID,
+    address: "0x8dC4aBf5Bc294dEF5c4bB1D3398528D28f714416",
+    contractStatus: "legacy",
+  }),
+  libertySwapEntry({
+    chainId: PULSECHAIN_CHAIN_ID,
+    address: "0xC1fBB3a198917FF62342d2D00407Eab56Ee4c99A",
+    contractStatus: "legacy",
+  }),
+  libertySwapEntry({
+    chainId: PULSECHAIN_CHAIN_ID,
+    address: "0x0E0eDDaE092176d851d5C70A49b5d83e2510e72f",
+    contractStatus: "legacy",
+  }),
+  libertySwapEntry({
+    chainId: PULSECHAIN_CHAIN_ID,
+    address: "0x63F334D054236e51C241E0bf6b095E67448A4366",
+    contractStatus: "legacy",
+  }),
+] as const;
+
+const LIBERTYSWAP_BASE_SPENDER_METADATA_REGISTRY: readonly SpenderEntry[] = [
+  libertySwapEntry({
+    chainId: BASE_CHAIN_ID,
+    address: "0x8871de4668D3CF1FB7F93Baf4a78FEB0d1E13869",
+    contractStatus: "current",
+    assetLabel: "USDC",
+  }),
+  libertySwapEntry({
+    chainId: BASE_CHAIN_ID,
+    address: "0x59deC8b4733F333937039ca2d171c87Ff4590429",
+    contractStatus: "legacy",
+  }),
+  libertySwapEntry({
+    chainId: BASE_CHAIN_ID,
+    address: "0xC1fBB3a198917FF62342d2D00407Eab56Ee4c99A",
+    contractStatus: "legacy",
+  }),
+  libertySwapEntry({
+    chainId: BASE_CHAIN_ID,
+    address: "0x1A19B9f2687C390a130a261d1E9f0B34f5ABf312",
+    contractStatus: "legacy",
+  }),
+] as const;
+
+const LIBERTYSWAP_BSC_SPENDER_METADATA_REGISTRY: readonly SpenderEntry[] = [
+  libertySwapEntry({
+    chainId: BSC_CHAIN_ID,
+    address: "0x43f403972080406e3e6602793A5072DBc4389bAb",
+    contractStatus: "current",
+    assetLabel: "USDC",
+  }),
+  libertySwapEntry({
+    chainId: BSC_CHAIN_ID,
+    address: "0xc438D51F296fF3e53d061293D2bC4Bb9fb2f7f19",
+    contractStatus: "current",
+    assetLabel: "USDT",
+  }),
+  libertySwapEntry({
+    chainId: BSC_CHAIN_ID,
+    address: "0xA5ebb6f9329096465EE4Ba3DB7b04f0fBf5CB2d4",
+    contractStatus: "legacy",
+  }),
+  libertySwapEntry({
+    chainId: BSC_CHAIN_ID,
+    address: "0xA377f83BB5F63cb03f1ED7F9C1edB4BEC8db9CBC",
+    contractStatus: "legacy",
+  }),
+  libertySwapEntry({
+    chainId: BSC_CHAIN_ID,
+    address: "0x36eF9AC33A138D6b5452fd6211f23bBb51c889c6",
+    contractStatus: "legacy",
+  }),
+] as const;
+
+const LIBERTYSWAP_ARBITRUM_SPENDER_METADATA_REGISTRY: readonly SpenderEntry[] = [
+  libertySwapEntry({
+    chainId: ARBITRUM_ONE_CHAIN_ID,
+    address: "0x05216280d45Bb8E8dcb863186E4762090bab7b6F",
+    contractStatus: "current",
+    assetLabel: "USDC",
+  }),
+  libertySwapEntry({
+    chainId: ARBITRUM_ONE_CHAIN_ID,
+    address: "0x895BaDA008609619394107AaBD81bDb611DFB4ed",
+    contractStatus: "legacy",
+  }),
+  libertySwapEntry({
+    chainId: ARBITRUM_ONE_CHAIN_ID,
+    address: "0xfFf6bf6a8B42B3A4ba833FD3A0875154B885D4fc",
+    contractStatus: "legacy",
+  }),
+] as const;
+
+const LIBERTYSWAP_ETHEREUM_SPENDER_METADATA_REGISTRY: readonly SpenderEntry[] = [
+  libertySwapEntry({
+    chainId: ETHEREUM_MAINNET_CHAIN_ID,
+    address: "0x06291eeE038e94E8DEC2b3bfB6e030c0b5615506",
+    contractStatus: "current",
+    assetLabel: "USDC",
+  }),
+  libertySwapEntry({
+    chainId: ETHEREUM_MAINNET_CHAIN_ID,
+    address: "0x12352B55e0b4305Dd83A349A5d7845bE9B5a2Eea",
+    contractStatus: "current",
+    assetLabel: "USDT",
+  }),
+  libertySwapEntry({
+    chainId: ETHEREUM_MAINNET_CHAIN_ID,
+    address: "0xAA7a195D69327a894eeb969D3bCb89116FC78A14",
+    contractStatus: "current",
+    assetLabel: "DAI",
+  }),
+  libertySwapEntry({
+    chainId: ETHEREUM_MAINNET_CHAIN_ID,
+    address: "0x60FDAf9198eFCD6fAF27D50E955e1A42905f2eeb",
+    contractStatus: "current",
+    assetLabel: "ETH",
+  }),
+  libertySwapEntry({
+    chainId: ETHEREUM_MAINNET_CHAIN_ID,
+    address: "0x317DD5Ab50C6948f6486b9Ed65c4Ba1eb678a529",
+    contractStatus: "legacy",
+  }),
+  libertySwapEntry({
+    chainId: ETHEREUM_MAINNET_CHAIN_ID,
+    address: "0xA06Bb3F88c3F4A8D92342799dC2D27Ba12174315",
+    contractStatus: "legacy",
+  }),
+  libertySwapEntry({
+    chainId: ETHEREUM_MAINNET_CHAIN_ID,
+    address: "0x79e5EBA07ccBf03506c871f6114a112f3A879418",
+    contractStatus: "legacy",
+  }),
+  libertySwapEntry({
+    chainId: ETHEREUM_MAINNET_CHAIN_ID,
+    address: "0xFfCA0FebFc9B9C73dB9e2b2C5FA453656668a402",
+    contractStatus: "legacy",
+  }),
+] as const;
+
 /**
  * Ethereum mainnet spender registry used as enrichment only. Discovery and
  * revoke safety still come from live API/RPC validation and wallet gates.
  */
-const MAINNET_CHAIN_ID = 1;
 export const MAINNET_SPENDER_REGISTRY: readonly SpenderEntry[] = [
   {
-    chainId: MAINNET_CHAIN_ID,
+    chainId: ETHEREUM_MAINNET_CHAIN_ID,
     address: "0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D",
     label: "Uniswap V2 Router 02",
     protocol: "Uniswap",
@@ -134,7 +360,7 @@ export const MAINNET_SPENDER_REGISTRY: readonly SpenderEntry[] = [
     source: "https://docs.uniswap.org",
   },
   {
-    chainId: MAINNET_CHAIN_ID,
+    chainId: ETHEREUM_MAINNET_CHAIN_ID,
     address: "0xE592427A0AEce92De3Edee1F18E0157C05861564",
     label: "Uniswap V3 SwapRouter",
     protocol: "Uniswap",
@@ -148,7 +374,7 @@ export const MAINNET_SPENDER_REGISTRY: readonly SpenderEntry[] = [
     source: "https://docs.uniswap.org",
   },
   {
-    chainId: MAINNET_CHAIN_ID,
+    chainId: ETHEREUM_MAINNET_CHAIN_ID,
     address: "0x68b3465833fb72A70ecDF485E0e4C7bD8665Fc45",
     label: "Uniswap V3 SwapRouter02",
     protocol: "Uniswap",
@@ -163,7 +389,7 @@ export const MAINNET_SPENDER_REGISTRY: readonly SpenderEntry[] = [
     source: "https://docs.uniswap.org",
   },
   {
-    chainId: MAINNET_CHAIN_ID,
+    chainId: ETHEREUM_MAINNET_CHAIN_ID,
     address: "0x000000000022D473030F116dDEE9F6B43aC78BA3",
     label: "Permit2",
     protocol: "Uniswap",
@@ -178,7 +404,7 @@ export const MAINNET_SPENDER_REGISTRY: readonly SpenderEntry[] = [
     source: "https://docs.uniswap.org",
   },
   {
-    chainId: MAINNET_CHAIN_ID,
+    chainId: ETHEREUM_MAINNET_CHAIN_ID,
     address: "0xC36442b4a4522E871399CD717aBDD847Ab11FE88",
     label: "Uniswap V3 NonfungiblePositionManager",
     protocol: "Uniswap",
@@ -202,17 +428,54 @@ export const SPENDER_REGISTRY: readonly SpenderEntry[] = [
   ...MAINNET_SPENDER_REGISTRY,
 ] as const;
 
+export const LIBERTYSWAP_SPENDER_METADATA_REGISTRY: readonly SpenderEntry[] = [
+  ...LIBERTYSWAP_PULSECHAIN_SPENDER_METADATA_REGISTRY,
+  ...LIBERTYSWAP_BASE_SPENDER_METADATA_REGISTRY,
+  ...LIBERTYSWAP_BSC_SPENDER_METADATA_REGISTRY,
+  ...LIBERTYSWAP_ARBITRUM_SPENDER_METADATA_REGISTRY,
+  ...LIBERTYSWAP_ETHEREUM_SPENDER_METADATA_REGISTRY,
+] as const;
+
+/**
+ * Label/enrichment registry. Metadata-only entries here do not expand the
+ * registry-constrained scanner target list returned by `getSpendersForChain`.
+ */
+export const SPENDER_METADATA_REGISTRY: readonly SpenderEntry[] = [
+  ...SPENDER_REGISTRY,
+  ...LIBERTYSWAP_SPENDER_METADATA_REGISTRY,
+] as const;
+
 // Dev-time sanity checks. Scoped per chain so that the same address appearing
 // on two chains (legitimate) does not trip the duplicate-address check.
 validateAddresses(PULSECHAIN_SPENDER_REGISTRY, "SPENDER_REGISTRY[pulsechain]");
 validateAddresses(BSC_SPENDER_REGISTRY, "SPENDER_REGISTRY[bsc]");
 validateAddresses(BASE_SPENDER_REGISTRY, "SPENDER_REGISTRY[base]");
 validateAddresses(MAINNET_SPENDER_REGISTRY, "SPENDER_REGISTRY[mainnet]");
-for (const s of SPENDER_REGISTRY) {
+validateAddresses(
+  LIBERTYSWAP_PULSECHAIN_SPENDER_METADATA_REGISTRY,
+  "LIBERTYSWAP_SPENDER_METADATA_REGISTRY[pulsechain]",
+);
+validateAddresses(
+  LIBERTYSWAP_BASE_SPENDER_METADATA_REGISTRY,
+  "LIBERTYSWAP_SPENDER_METADATA_REGISTRY[base]",
+);
+validateAddresses(
+  LIBERTYSWAP_BSC_SPENDER_METADATA_REGISTRY,
+  "LIBERTYSWAP_SPENDER_METADATA_REGISTRY[bsc]",
+);
+validateAddresses(
+  LIBERTYSWAP_ARBITRUM_SPENDER_METADATA_REGISTRY,
+  "LIBERTYSWAP_SPENDER_METADATA_REGISTRY[arbitrum]",
+);
+validateAddresses(
+  LIBERTYSWAP_ETHEREUM_SPENDER_METADATA_REGISTRY,
+  "LIBERTYSWAP_SPENDER_METADATA_REGISTRY[ethereum]",
+);
+for (const s of SPENDER_METADATA_REGISTRY) {
   validateRequiredStrings(
     s as unknown as Record<string, unknown>,
     ["label", "protocol", "category"],
-    "SPENDER_REGISTRY",
+    "SPENDER_METADATA_REGISTRY",
     `${s.chainId}:${s.address}`,
   );
 }
