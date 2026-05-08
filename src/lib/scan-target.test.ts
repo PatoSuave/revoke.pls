@@ -121,17 +121,20 @@ describe("scan target state", () => {
     expect(addressesEqual(OWNER, OWNER.toUpperCase() as Address)).toBe(true);
   });
 
-  it("keeps address-only scanning wired to existing explicit-owner pipelines", () => {
+  it("keeps address-only scanning gated by selected explicit-owner pipelines", () => {
     const scanner = readFileSync(
       join(process.cwd(), "src", "components", "sections", "approval-scanner.tsx"),
       "utf8",
     );
 
-    expect(scanner).toContain("supportedChainConfigList.map");
+    expect(scanner).toContain("AddressOnlyChainSelector");
+    expect(scanner).toContain("getAddressOnlyActiveScanChainIds");
+    expect(scanner).toContain("scanAllStarted");
     expect(scanner).toContain("useApprovalDiscovery({ owner, chainId");
     expect(scanner).toContain("useNftApprovalDiscovery({ owner, chainId");
     expect(scanner).toContain("EthereumReadOnlyScanner");
     expect(scanner).toContain("getScanTargetRevokeDisabledReason");
+    expect(scanner).not.toContain("{supportedChainConfigList.map((chainConfig)");
   });
 
   it("keeps address-only debug labels separate from scanner failures", () => {

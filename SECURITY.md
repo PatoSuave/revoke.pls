@@ -12,7 +12,7 @@ It is open for review, but it is not claiming an external audit.
 - Always verify the connected site URL before connecting a wallet.
 - Always review transaction details in your wallet before signing.
 - When unsure, verify token, spender, operator, and transaction links on
-  PulseScan, BscScan, or BaseScan.
+  PulseScan, BscScan, BaseScan, or Etherscan.
 
 ## What Revoke Transactions Do
 
@@ -33,8 +33,16 @@ Current active supported networks:
 - PulseChain, chain ID `369`
 - BSC / BNB Smart Chain, chain ID `56`
 - Base, chain ID `8453`
+- Ethereum Mainnet, chain ID `1`
 
-Ethereum Mainnet is not an active supported product chain.
+Ethereum server-read-only discovery uses an API for historical logs and live RPC
+validation. Ethereum revoke transactions are still wallet-side only: there is
+no server-side signing, private key handling, relayer, or API route transaction
+submission. Ethereum wallet-side revoke remains protected by owner, chain,
+preflight, gas, and row-level verification gates.
+
+Address-only scanning is read-only until a connected wallet exactly matches the
+scanned owner address and is on the row's chain.
 
 ## Reporting Vulnerabilities
 
@@ -57,3 +65,7 @@ Explorer APIs and RPC providers can rate-limit, cap, or fail. Pulse Revoke
 should surface incomplete discovery or validation rather than displaying a false
 "clear" result. Registry labels are enrichment only and are not proof that a
 spender is safe.
+
+CSP tightening is tracked as a separate report-only hardening pass. Wallet apps
+can break if `connect-src`, `frame-src`, or script policies are narrowed without
+connector-specific testing.

@@ -172,13 +172,13 @@ export const BSC_TOKEN_REGISTRY: readonly TokenEntry[] = [] as const;
 export const BASE_TOKEN_REGISTRY: readonly TokenEntry[] = [] as const;
 
 /**
- * Dormant Ethereum mainnet token registry retained from the earlier app
- * scaffold. Ethereum is not an active supported chain in Pulse Revoke.
+ * Ethereum mainnet token registry used as enrichment only. Discovery and revoke
+ * safety still come from live API/RPC validation and wallet gates.
  */
-const DORMANT_MAINNET_CHAIN_ID = 1;
+const MAINNET_CHAIN_ID = 1;
 export const MAINNET_TOKEN_REGISTRY: readonly TokenEntry[] = [
   {
-    chainId: DORMANT_MAINNET_CHAIN_ID,
+    chainId: MAINNET_CHAIN_ID,
     address: "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2",
     symbol: "WETH",
     name: "Wrapped Ether",
@@ -188,7 +188,7 @@ export const MAINNET_TOKEN_REGISTRY: readonly TokenEntry[] = [
     source: "https://etherscan.io",
   },
   {
-    chainId: DORMANT_MAINNET_CHAIN_ID,
+    chainId: MAINNET_CHAIN_ID,
     address: "0x6B175474E89094C44Da98b954EedeAC495271d0F",
     symbol: "DAI",
     name: "Dai Stablecoin",
@@ -197,7 +197,7 @@ export const MAINNET_TOKEN_REGISTRY: readonly TokenEntry[] = [
     source: "https://etherscan.io",
   },
   {
-    chainId: DORMANT_MAINNET_CHAIN_ID,
+    chainId: MAINNET_CHAIN_ID,
     address: "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
     symbol: "USDC",
     name: "USD Coin",
@@ -206,7 +206,7 @@ export const MAINNET_TOKEN_REGISTRY: readonly TokenEntry[] = [
     source: "https://etherscan.io",
   },
   {
-    chainId: DORMANT_MAINNET_CHAIN_ID,
+    chainId: MAINNET_CHAIN_ID,
     address: "0xdAC17F958D2ee523a2206206994597C13D831ec7",
     symbol: "USDT",
     name: "Tether USD",
@@ -215,7 +215,7 @@ export const MAINNET_TOKEN_REGISTRY: readonly TokenEntry[] = [
     source: "https://etherscan.io",
   },
   {
-    chainId: DORMANT_MAINNET_CHAIN_ID,
+    chainId: MAINNET_CHAIN_ID,
     address: "0x2260FAC5E5542a773Aa44fBCfeDf7C193bc2C599",
     symbol: "WBTC",
     name: "Wrapped BTC",

@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useAccount, useChainId } from "wagmi";
 import type { Address } from "viem";
 
@@ -19,8 +19,15 @@ import { useBatchRevoke } from "@/hooks/use-batch-revoke";
 import { useNftApprovalDiscovery } from "@/hooks/use-nft-approval-discovery";
 import { resolveActiveChain, scannerSessionKey } from "@/lib/active-chain";
 import {
+  addressOnlyScanOptions,
+  getAddressOnlyActiveScanChainIds,
+  getAddressOnlyScanOption,
+  getSupportedAddressOnlyChainConfig,
+  resolveDefaultAddressOnlyScanChainId,
+  type AddressOnlyScanChainId,
+} from "@/lib/address-only-scan";
+import {
   getSupportedChainShortNames,
-  supportedChainConfigList,
   type SupportedChainConfig,
 } from "@/lib/chains";
 import {
@@ -493,11 +500,71 @@ function AddressOnlyScanResults({
   const scanMode: ScanMode = walletMatchesOwner
     ? "connected-wallet-matches-scanned-address"
     : "address-only";
+  const defaultChainId = useMemo(
+    () =>
+      resolveDefaultAddressOnlyScanChainId({
+        walletChainId,
+        wagmiChainId,
+      }),
+    [walletChainId, wagmiChainId],
+  );
+  const [selectedChainId, setSelectedChainId] =
+    useState<AddressOnlyScanChainId>(defaultChainId);
+  const [userSelectedChain, setUserSelectedChain] = useState(false);
+  const [scanAllStarted, setScanAllStarted] = useState(false);
+  const [scanAllIndex, setScanAllIndex] = useState(0);
+  const previousOwnerRef = useRef(owner);
+
+  useEffect(() => {
+    if (previousOwnerRef.current === owner) return;
+    previousOwnerRef.current = owner;
+    setSelectedChainId(defaultChainId);
+    setUserSelectedChain(false);
+    setScanAllStarted(false);
+    setScanAllIndex(0);
+  }, [defaultChainId, owner]);
+
+  useEffect(() => {
+    if (!userSelectedChain && !scanAllStarted) {
+      setSelectedChainId(defaultChainId);
+    }
+  }, [defaultChainId, scanAllStarted, userSelectedChain]);
+
   const status = !connectedAddress
     ? ADDRESS_SCAN_CONNECT_MATCHING_WALLET_COPY
     : walletMatchesOwner
       ? "Connected wallet matches scanned address."
       : WALLET_MISMATCH_SCAN_TARGET_COPY;
+  const activeChainIds = getAddressOnlyActiveScanChainIds({
+    selectedChainId,
+    scanAllStarted,
+    scanAllIndex,
+  });
+  const selectedOption = getAddressOnlyScanOption(selectedChainId);
+
+  const selectChain = useCallback((chainId: AddressOnlyScanChainId) => {
+    setSelectedChainId(chainId);
+    setUserSelectedChain(true);
+    setScanAllStarted(false);
+    setScanAllIndex(0);
+  }, []);
+
+  const startScanAll = useCallback(() => {
+    setScanAllStarted(true);
+    setScanAllIndex(0);
+  }, []);
+
+  const onAddressOnlyChainSettled = useCallback(
+    (chainId: AddressOnlyScanChainId) => {
+      if (!scanAllStarted) return;
+      const currentChainId = addressOnlyScanOptions[scanAllIndex]?.chainId;
+      if (chainId !== currentChainId) return;
+      setScanAllIndex((current) =>
+        Math.min(current + 1, addressOnlyScanOptions.length - 1),
+      );
+    },
+    [scanAllIndex, scanAllStarted],
+  );
 
   return (
     <div className="space-y-6">
@@ -526,34 +593,166 @@ function AddressOnlyScanResults({
         </div>
       </div>
 
+      <AddressOnlyChainSelector
+        selectedChainId={selectedChainId}
+        selectedLabel={selectedOption.displayName}
+        scanAllStarted={scanAllStarted}
+        scanAllIndex={scanAllIndex}
+        onSelect={selectChain}
+        onScanAll={startScanAll}
+      />
+
+      {activeChainIds.map((chainId) => (
+        <AddressOnlyChainScan
+          key={`${owner}-${chainId}`}
+          chainId={chainId}
+          owner={owner}
+          connectedAddress={connectedAddress}
+          walletChainId={walletChainId}
+          wagmiChainId={wagmiChainId}
+          walletMatchesOwner={walletMatchesOwner}
+          walletMatchesScanTarget={walletMatchesScanTarget}
+          scanMode={scanMode}
+          debugMode={debugMode}
+          onScanSettled={onAddressOnlyChainSettled}
+        />
+      ))}
+    </div>
+  );
+}
+
+function AddressOnlyChainSelector({
+  selectedChainId,
+  selectedLabel,
+  scanAllStarted,
+  scanAllIndex,
+  onSelect,
+  onScanAll,
+}: {
+  selectedChainId: AddressOnlyScanChainId;
+  selectedLabel: string;
+  scanAllStarted: boolean;
+  scanAllIndex: number;
+  onSelect: (chainId: AddressOnlyScanChainId) => void;
+  onScanAll: () => void;
+}) {
+  const scanAllComplete =
+    scanAllStarted && scanAllIndex >= addressOnlyScanOptions.length - 1;
+  const scanAllStatus = scanAllStarted
+    ? scanAllComplete
+      ? "All networks have been started one at a time."
+      : `Scanning network ${scanAllIndex + 1} of ${addressOnlyScanOptions.length}.`
+    : `Scanning ${selectedLabel}.`;
+
+  return (
+    <div className="rounded-2xl border border-pulse-border bg-pulse-bg/55 p-4 text-sm">
+      <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-pulse-cyan">
+            Select network
+          </p>
+          <p className="mt-1 text-sm leading-6 text-pulse-muted">
+            Address-only mode scans one network by default. Multi-network scans
+            start only after you request them.
+          </p>
+          <p className="mt-1 text-xs text-pulse-muted">{scanAllStatus}</p>
+        </div>
+        <button
+          type="button"
+          onClick={onScanAll}
+          disabled={scanAllStarted && !scanAllComplete}
+          className="inline-flex min-h-10 items-center justify-center rounded-xl border border-pulse-cyan/35 bg-pulse-cyan/10 px-3 py-2 text-xs font-semibold text-pulse-cyan transition hover:bg-pulse-cyan/15 disabled:cursor-not-allowed disabled:opacity-60"
+        >
+          Scan all supported networks
+        </button>
+      </div>
+      <div className="mt-3 flex flex-wrap gap-2">
+        {addressOnlyScanOptions.map((option) => {
+          const selected = selectedChainId === option.chainId && !scanAllStarted;
+          return (
+            <button
+              key={option.chainId}
+              type="button"
+              onClick={() => onSelect(option.chainId)}
+              className={`inline-flex min-h-9 items-center rounded-xl border px-3 py-1.5 text-xs font-semibold transition ${
+                selected
+                  ? "border-pulse-green/40 bg-pulse-green/10 text-pulse-green"
+                  : "border-pulse-border bg-white/5 text-pulse-muted hover:bg-white/10"
+              }`}
+              aria-pressed={selected}
+            >
+              {option.shortName}
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+function AddressOnlyChainScan({
+  chainId,
+  owner,
+  connectedAddress,
+  walletChainId,
+  wagmiChainId,
+  walletMatchesOwner,
+  walletMatchesScanTarget,
+  scanMode,
+  debugMode,
+  onScanSettled,
+}: {
+  chainId: AddressOnlyScanChainId;
+  owner: Address;
+  connectedAddress: Address | undefined;
+  walletChainId: number | undefined;
+  wagmiChainId: number | undefined;
+  walletMatchesOwner: boolean;
+  walletMatchesScanTarget: boolean | null;
+  scanMode: ScanMode;
+  debugMode: boolean;
+  onScanSettled: (chainId: AddressOnlyScanChainId) => void;
+}) {
+  const handleScanSettled = useCallback(
+    () => onScanSettled(chainId),
+    [chainId, onScanSettled],
+  );
+
+  if (chainId === ETHEREUM_MAINNET_CLIENT_CHAIN_ID) {
+    return (
       <EthereumReadOnlyScanner
         owner={owner}
         connectedAddress={connectedAddress}
         walletChainId={walletChainId}
         wagmiChainId={wagmiChainId}
         debugMode={debugMode}
+        onScanSettled={handleScanSettled}
       />
+    );
+  }
 
-      {supportedChainConfigList.map((chainConfig) => (
-        <ConnectedScanner
-          key={scannerSessionKey(owner, chainConfig.chainId)}
-          owner={owner}
-          connectedAddress={connectedAddress}
-          chainConfig={chainConfig}
-          walletChainId={walletChainId}
-          wagmiChainId={wagmiChainId}
-          walletMatchesActiveChain={
-            connectedAddress
-              ? walletChainId === chainConfig.chainId && walletMatchesOwner
-              : null
-          }
-          walletMatchesScanTarget={walletMatchesScanTarget}
-          scanMode={scanMode}
-          isConnected={Boolean(connectedAddress)}
-          debugMode={debugMode}
-        />
-      ))}
-    </div>
+  const chainConfig = getSupportedAddressOnlyChainConfig(chainId);
+  if (!chainConfig) return null;
+
+  return (
+    <ConnectedScanner
+      key={scannerSessionKey(owner, chainConfig.chainId)}
+      owner={owner}
+      connectedAddress={connectedAddress}
+      chainConfig={chainConfig}
+      walletChainId={walletChainId}
+      wagmiChainId={wagmiChainId}
+      walletMatchesActiveChain={
+        connectedAddress
+          ? walletChainId === chainConfig.chainId && walletMatchesOwner
+          : null
+      }
+      walletMatchesScanTarget={walletMatchesScanTarget}
+      scanMode={scanMode}
+      isConnected={Boolean(connectedAddress)}
+      debugMode={debugMode}
+      onScanSettled={handleScanSettled}
+    />
   );
 }
 
@@ -568,6 +767,7 @@ function ConnectedScanner({
   scanMode,
   isConnected,
   debugMode,
+  onScanSettled,
 }: {
   owner: `0x${string}`;
   connectedAddress: Address | undefined;
@@ -579,6 +779,7 @@ function ConnectedScanner({
   scanMode: ScanMode;
   isConnected: boolean;
   debugMode: boolean;
+  onScanSettled?: () => void;
 }) {
   const scan = useApprovalDiscovery({ owner, chainId: chainConfig.chainId });
   const nft = useNftApprovalDiscovery({ owner, chainId: chainConfig.chainId });
@@ -669,6 +870,12 @@ function ConnectedScanner({
   const batch = useBatchRevoke({ ownerAddress: owner, onComplete: scan.refetch });
   const batchActive =
     batch.state === "running" || batch.state === "stopping";
+
+  useEffect(() => {
+    const erc20Settled = scan.status === "success" || scan.status === "error";
+    const nftSettled = nft.status === "success" || nft.status === "error";
+    if (erc20Settled && nftSettled) onScanSettled?.();
+  }, [nft.status, onScanSettled, scan.status]);
 
   const selectedApprovals = useMemo(
     () => scored.filter((a) => selected.has(a.key)),
