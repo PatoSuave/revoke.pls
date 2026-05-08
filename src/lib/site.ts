@@ -125,10 +125,11 @@ export const siteConfig = {
   ] as const,
   /** Anchor targets for primary nav. */
   nav: [
-    { href: "#scanner", label: "Scanner" },
-    { href: "#how-it-works", label: "How it works" },
-    { href: "#safety", label: "Safety" },
-    { href: "#faq", label: "FAQ" },
+    { href: "/app#scanner", label: "Scanner" },
+    { href: "/app#how-it-works", label: "How it works" },
+    { href: "/app#safety", label: "Safety" },
+    { href: "/security", label: "Security" },
+    { href: "/app#faq", label: "FAQ" },
   ] as const,
   /** External / utility links. */
   links: {

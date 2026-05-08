@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 
+import { AntiPhishingBanner } from "@/components/sections/anti-phishing-banner";
 import { ApprovalScanner } from "@/components/sections/approval-scanner";
 import { FAQ } from "@/components/sections/faq";
 import { Hero } from "@/components/sections/hero";
@@ -34,6 +35,7 @@ export default function AppPage() {
       <SiteHeader />
       <main>
         <Hero />
+        <AntiPhishingBanner />
         <ApprovalScanner />
         <HowItWorks />
         <TrustSafety />

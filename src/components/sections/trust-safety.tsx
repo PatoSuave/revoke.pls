@@ -1,3 +1,5 @@
+import Link from "next/link";
+
 const PILLARS = [
   {
     title: "Non-custodial by design",
@@ -9,7 +11,7 @@ const PILLARS = [
   },
   {
     title: "Minimal, legible transactions",
-    body: "Every revoke calls approve(spender, 0) on the token contract itself. There are no proxy rewrites, no hidden calls, and no custom routing.",
+    body: "ERC-20 style revokes call approve(spender, 0). NFT revokes clear the approved operator or token approval. There are no proxy rewrites, hidden calls, or custom routing.",
   },
   {
     title: "Verifiable spenders",
@@ -20,8 +22,8 @@ const PILLARS = [
 const NON_GOALS = [
   "No seed-phrase entry, ever.",
   "No custody of funds or approvals.",
-  "No analytics, tracking scripts, or cookies.",
-  "No fee on top of network gas.",
+  "No app-level wallet or approval-history database.",
+  "No app fee on top of network gas.",
 ];
 
 export function TrustSafety() {
@@ -64,9 +66,17 @@ export function TrustSafety() {
         </ul>
 
         <div className="mt-10 rounded-2xl border border-pulse-border/70 bg-pulse-bg/60 p-6">
-          <p className="text-xs font-semibold uppercase tracking-[0.16em] text-pulse-text">
-            What Pulse Revoke does not do
-          </p>
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <p className="text-xs font-semibold uppercase tracking-[0.16em] text-pulse-text">
+              What Pulse Revoke does not do
+            </p>
+            <Link
+              href="/security"
+              className="inline-flex items-center justify-center rounded-xl border border-pulse-cyan/35 bg-pulse-cyan/10 px-3 py-2 text-xs font-semibold text-pulse-cyan transition hover:bg-pulse-cyan/15"
+            >
+              Full Security &amp; Trust guide
+            </Link>
+          </div>
           <ul className="mt-3 grid gap-2 text-sm text-pulse-muted sm:grid-cols-2">
             {NON_GOALS.map((line) => (
               <li key={line} className="flex items-start gap-2">
