@@ -28,6 +28,10 @@ import {
   safeGasForRevokeRequest,
   type NftPreflightResult,
 } from "@/lib/preflight";
+import {
+  verifyNftPostRevokeCleared,
+  type PostRevokeVerificationState,
+} from "@/lib/post-revoke-verification";
 import { getWalletRevokeBlockReason } from "@/lib/revoke";
 import { shouldEstimateRevokeGas } from "@/lib/revoke-gas";
 import { trackEvent } from "@/lib/telemetry";
@@ -39,6 +43,7 @@ export interface UseRevokeNftApprovalResult {
   hash?: `0x${string}`;
   errorMessage?: string;
   preflight: NftPreflightResult | null;
+  postRevokeVerificationState: PostRevokeVerificationState;
   isBusy: boolean;
   isRefreshingApproval: boolean;
   refreshPreflight: () => Promise<NftPreflightResult>;
@@ -71,7 +76,11 @@ export function useRevokeNftApproval({
   const write = useWriteContract();
   const [preflight, setPreflight] = useState<NftPreflightResult | null>(null);
   const [isRefreshingApproval, setIsRefreshingApproval] = useState(false);
+  const [postRevokeVerificationState, setPostRevokeVerificationState] =
+    useState<PostRevokeVerificationState>("not-run");
   const walletStateRef = useRef({ connectedAddress, walletChainId });
+  const postVerificationRunRef = useRef(0);
+  const postVerifiedHashRef = useRef<`0x${string}` | null>(null);
   const wait = useWaitForTransactionReceipt({
     hash: write.data,
     chainId: target.chainId as WalletWriteChainId,
@@ -141,6 +150,65 @@ export function useRevokeNftApproval({
       onSuccess?.(write.data);
     }
   }, [status, write.data, onSuccess]);
+
+  useEffect(() => {
+    if (status === "pending" && write.data) {
+      setPostRevokeVerificationState("not-run");
+    }
+  }, [status, write.data]);
+
+  useEffect(() => {
+    if (status !== "success" || !write.data) return;
+    if (postVerifiedHashRef.current === write.data) return;
+
+    const hash = write.data;
+    const runId = postVerificationRunRef.current + 1;
+    postVerificationRunRef.current = runId;
+    postVerifiedHashRef.current = hash;
+    setPostRevokeVerificationState("pending");
+
+    const setIfCurrent = (next: PostRevokeVerificationState) => {
+      if (
+        postVerificationRunRef.current === runId &&
+        postVerifiedHashRef.current === hash
+      ) {
+        setPostRevokeVerificationState(next);
+      }
+    };
+
+    async function verify() {
+      const blockReason = walletRevokeBlockReason();
+      if (blockReason) {
+        setIfCurrent("incomplete");
+        return;
+      }
+
+      const client = getPublicClient(config, {
+        chainId: target.chainId as WalletWriteChainId,
+      });
+      if (!client) {
+        setIfCurrent("incomplete");
+        return;
+      }
+
+      const result = await verifyNftPostRevokeCleared({
+        client,
+        ownerAddress,
+        target,
+      });
+      setIfCurrent(result.state);
+    }
+
+    void verify();
+  }, [
+    config,
+    ownerAddress,
+    status,
+    target,
+    target.chainId,
+    walletRevokeBlockReason,
+    write.data,
+  ]);
 
   const telemetryKind =
     target.kind === "approvalForAll" ? "nft-operator" : "nft-token";
@@ -248,6 +316,9 @@ export function useRevokeNftApproval({
 
   const revoke = useCallback(async (options?: { allowHighGasWarning?: boolean }) => {
     notifiedHashRef.current = null;
+    postVerifiedHashRef.current = null;
+    postVerificationRunRef.current += 1;
+    setPostRevokeVerificationState("not-run");
     const latest = await refreshPreflight();
     if (latest.status !== "active" && latest.status !== "highGasWarning") return;
     const chainConfig = getChainConfig(target.chainId);
@@ -285,6 +356,9 @@ export function useRevokeNftApproval({
 
   const reset = useCallback(() => {
     notifiedHashRef.current = null;
+    postVerifiedHashRef.current = null;
+    postVerificationRunRef.current += 1;
+    setPostRevokeVerificationState("not-run");
     setPreflight(null);
     write.reset();
   }, [write]);
@@ -294,6 +368,7 @@ export function useRevokeNftApproval({
     hash: write.data,
     errorMessage,
     preflight,
+    postRevokeVerificationState,
     isBusy:
       status === "refreshing" || status === "wallet" || status === "pending",
     isRefreshingApproval,

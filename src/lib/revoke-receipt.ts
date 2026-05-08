@@ -1,12 +1,12 @@
+import type { PostRevokeVerificationState } from "@/lib/post-revoke-verification";
+
 export type RevokeReceiptKind = "erc20" | "nft-operator" | "nft-token";
+export type RevokeReceiptVerificationState = PostRevokeVerificationState;
 export type RevokeReceiptStatus =
   | "pending"
   | "success"
   | "rejected"
   | "error";
-export type RevokeReceiptVerificationState =
-  | "confirmed-cleared"
-  | "incomplete";
 
 export interface RevokeReceiptCopy {
   title: string;
@@ -30,7 +30,7 @@ export function getRevokeReceiptCopy({
 }: {
   status: RevokeReceiptStatus;
   kind: RevokeReceiptKind;
-  verificationState?: RevokeReceiptVerificationState;
+  verificationState?: PostRevokeVerificationState;
 }): RevokeReceiptCopy {
   const method = revokeMethodLabel(kind);
   const verification = verificationLabel(status, verificationState);
@@ -90,14 +90,21 @@ export function revokeSummary(kind: RevokeReceiptKind): string {
 
 function verificationLabel(
   status: RevokeReceiptStatus,
-  verificationState: RevokeReceiptVerificationState,
+  verificationState: PostRevokeVerificationState,
 ): string {
-  if (verificationState === "confirmed-cleared") {
+  if (status === "success" && verificationState === "confirmed-cleared") {
     return LIVE_VERIFICATION_CONFIRMED_COPY;
   }
 
   if (status === "pending") {
     return "Waiting for chain confirmation. Rescan this wallet after confirmation.";
+  }
+
+  if (
+    status === "success" &&
+    (verificationState === "not-run" || verificationState === "pending")
+  ) {
+    return "Checking live approval state...";
   }
 
   if (status === "success") {

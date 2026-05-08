@@ -36,6 +36,9 @@ describe("revoke receipt UI source", () => {
     expect(erc20Source).toContain("<RevokeReceipt");
     expect(nftSource).toContain("<RevokeReceipt");
     expect(ethereumSource).toContain("<RevokeReceipt");
+    expect(erc20Source).toContain("postRevokeVerificationState");
+    expect(nftSource).toContain("postRevokeVerificationState");
+    expect(ethereumSource).toContain("postRevokeVerificationState");
   });
 
   it("keeps existing unavailable states visible", () => {

@@ -661,6 +661,7 @@ function EthereumErc20Action({
         assetValue: ethereumTokenDisplaySymbol(approval.tokenSymbol),
         counterpartyLabel: "Spender",
         counterpartyValue: approval.spenderLabel,
+        verificationState: revoke.postRevokeVerificationState,
       }}
       isBusy={revoke.isBusy}
       confirming={confirming}
@@ -736,6 +737,7 @@ function EthereumNftAction({
         assetValue: ethereumNftReceiptAssetValue(approval),
         counterpartyLabel: "Operator",
         counterpartyValue: approval.operatorLabel,
+        verificationState: revoke.postRevokeVerificationState,
       }}
       isBusy={revoke.isBusy}
       confirming={confirming}
