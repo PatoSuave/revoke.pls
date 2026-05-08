@@ -9,6 +9,7 @@ ship.
 - PulseChain support
 - BSC / BNB Smart Chain support
 - Base support
+- Ethereum Mainnet read-only discovery and wallet-side revoke
 - Browser wallet connection
 - WalletConnect when configured
 - Historical approval log discovery
@@ -19,14 +20,19 @@ ship.
 - Chain-scoped token and spender registry enrichment
 - BSC Etherscan API V2 discovery with `chainid=56`
 - Base Etherscan API V2 discovery with `chainid=8453`
+- Ethereum server-read-only Etherscan API V2 discovery with `chainid=1`
 - BSC hard gas-cap block and high-gas warning UX
 
 ## Active Guardrails
 
-- Ethereum Mainnet is not an active supported chain.
+- Ethereum Mainnet must remain server-read-only for discovery and wallet-side
+  only for revoke. Do not add server-side signing, relayers, private keys, or
+  API route transaction submission.
 - Do not broaden into unsupported networks without explicit review.
 - Do not treat registry labels as proof of safety.
 - Do not show a clear state when discovery or validation is incomplete.
+- Do not auto-run every address-only network scan from a pasted address; require
+  a selected network or an explicit sequenced scan-all action.
 - Do not publish desktop or IPFS artifacts until real signed artifacts,
   checksums, and release metadata exist.
 

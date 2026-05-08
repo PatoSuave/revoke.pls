@@ -17,9 +17,15 @@ import {
 import {
   createBlockscoutDiscoverySource,
   type DiscoveryResult,
+  type DiscoveryLimits,
   type DiscoverySource,
   type NftDiscoveryResult,
 } from "@/lib/discovery";
+import {
+  ETHEREUM_APPROVAL_API_DISCOVERY_LIMITS,
+  ETHEREUM_APPROVAL_API_LIVE_READ_CANDIDATE_CAP,
+  ETHEREUM_APPROVAL_API_RPC_READ_CONCURRENCY,
+} from "@/lib/ethereum-approval-api-controls";
 import {
   buildNftValidationContracts,
   parseNftValidationResults,
@@ -65,6 +71,15 @@ export interface EthereumApprovalApiDiagnostics {
   skippedApprovalCount: number;
   skippedReasons: Record<string, number>;
   discoveryTruncated: boolean;
+  requestTimedOut: boolean;
+  rateLimited: boolean;
+  candidateCapHit: boolean;
+  liveReadCandidateCap: number;
+  liveReadCandidatesTotal: number;
+  liveReadCandidatesProcessed: number;
+  rpcReadConcurrency: number;
+  upstreamRetryCount: number;
+  incompleteReasons: string[];
 }
 
 export type EthereumErc20ApprovalApi = Omit<Approval, "rawAllowance"> & {
@@ -93,6 +108,10 @@ export interface EthereumApprovalApiOptions {
   env?: NodeJS.ProcessEnv;
   discoverySource?: DiscoverySource;
   reader?: ContractReader;
+  signal?: AbortSignal;
+  discoveryLimits?: DiscoveryLimits;
+  liveReadCandidateCap?: number;
+  rpcReadConcurrency?: number;
 }
 
 interface EthereumApiConfig {
@@ -153,6 +172,7 @@ export function resolveEthereumApiConfig(
 
 export function createEthereumDiscoverySource(
   config: Pick<EthereumApiConfig, "apiUrl" | "apiKey">,
+  limits: DiscoveryLimits = ETHEREUM_APPROVAL_API_DISCOVERY_LIMITS,
 ): DiscoverySource {
   const source: DiscoverySourceConfig = {
     id: "ethereum-mainnet-etherscan-v2",
@@ -181,6 +201,7 @@ export function createEthereumDiscoverySource(
   return createBlockscoutDiscoverySource({
     chainId: ETHEREUM_MAINNET_CHAIN_ID,
     source,
+    limits,
   });
 }
 
@@ -201,29 +222,94 @@ function createEthereumReader(rpcUrl: string): ContractReader {
   });
 }
 
+interface ContractReadOutput {
+  results: ReadResult[];
+  requestTimedOut: boolean;
+}
+
 async function readContracts(
   reader: ContractReader,
   contracts: readonly unknown[],
-): Promise<ReadResult[]> {
-  const settled = await Promise.allSettled(
-    contracts.map((contract) => reader.readContract(contract)),
-  );
+  options: {
+    concurrency: number;
+    signal?: AbortSignal;
+  },
+): Promise<ContractReadOutput> {
+  const results: ReadResult[] = [];
+  const concurrency = Math.max(1, Math.floor(options.concurrency));
+  let requestTimedOut = Boolean(options.signal?.aborted);
 
-  return settled.map((result) =>
-    result.status === "fulfilled"
-      ? { status: "success", result: result.value }
-      : {
-          status: "failure",
-          error:
-            result.reason instanceof Error
-              ? result.reason
-              : new Error(String(result.reason)),
-        },
-  );
+  for (let i = 0; i < contracts.length; i += concurrency) {
+    if (options.signal?.aborted) {
+      requestTimedOut = true;
+      appendTimedOutReads(results, contracts.length - results.length);
+      break;
+    }
+
+    const chunk = contracts.slice(i, i + concurrency);
+    const chunkResults = await Promise.all(
+      chunk.map((contract) =>
+        readContractWithAbort(reader, contract, options.signal),
+      ),
+    );
+    results.push(...chunkResults);
+    requestTimedOut ||= Boolean(options.signal?.aborted);
+  }
+
+  if (results.length < contracts.length) {
+    appendTimedOutReads(results, contracts.length - results.length);
+    requestTimedOut = true;
+  }
+
+  return { results, requestTimedOut };
+}
+
+async function readContractWithAbort(
+  reader: ContractReader,
+  contract: unknown,
+  signal: AbortSignal | undefined,
+): Promise<ReadResult> {
+  if (signal?.aborted) return requestTimedOutReadFailure();
+
+  const read = reader
+    .readContract(contract)
+    .then<ReadResult>((result) => ({ status: "success", result }))
+    .catch<ReadResult>((error) => ({
+      status: "failure",
+      error: error instanceof Error ? error : new Error(String(error)),
+    }));
+
+  if (!signal) return read;
+
+  let abort: (() => void) | undefined;
+  const aborted = new Promise<ReadResult>((resolve) => {
+    abort = () => resolve(requestTimedOutReadFailure());
+    signal.addEventListener("abort", abort, { once: true });
+  });
+
+  try {
+    return await Promise.race([read, aborted]);
+  } finally {
+    if (abort) signal.removeEventListener("abort", abort);
+  }
+}
+
+function appendTimedOutReads(results: ReadResult[], count: number) {
+  for (let i = 0; i < count; i += 1) {
+    results.push(requestTimedOutReadFailure());
+  }
+}
+
+function requestTimedOutReadFailure(): ReadResult {
+  return {
+    status: "failure",
+    error: new Error("Ethereum approval request timed out."),
+  };
 }
 
 function emptyDiagnostics(
   config: Pick<EthereumApiConfig, "rpcUrl" | "apiUrl" | "apiKey">,
+  overrides: Partial<EthereumApprovalApiDiagnostics> = {},
 ): EthereumApprovalApiDiagnostics {
   return {
     chainId: ETHEREUM_MAINNET_CHAIN_ID,
@@ -238,6 +324,44 @@ function emptyDiagnostics(
     skippedApprovalCount: 0,
     skippedReasons: {},
     discoveryTruncated: false,
+    requestTimedOut: false,
+    rateLimited: false,
+    candidateCapHit: false,
+    liveReadCandidateCap: ETHEREUM_APPROVAL_API_LIVE_READ_CANDIDATE_CAP,
+    liveReadCandidatesTotal: 0,
+    liveReadCandidatesProcessed: 0,
+    rpcReadConcurrency: ETHEREUM_APPROVAL_API_RPC_READ_CONCURRENCY,
+    upstreamRetryCount: 0,
+    incompleteReasons: [],
+    ...overrides,
+  };
+}
+
+export function createEthereumApprovalApiFailureResponse({
+  status,
+  errors,
+  warnings = [],
+  missingConfig = [],
+  diagnostics = {},
+}: {
+  status: Exclude<EthereumApprovalApiStatus, "active-approvals-found" | "complete-clear">;
+  errors: string[];
+  warnings?: string[];
+  missingConfig?: string[];
+  diagnostics?: Partial<EthereumApprovalApiDiagnostics>;
+}): EthereumApprovalApiResponse {
+  return {
+    ok: false,
+    status,
+    chainId: ETHEREUM_MAINNET_CHAIN_ID,
+    approvals: { erc20: [], nft: [] },
+    diagnostics: emptyDiagnostics(
+      { rpcUrl: undefined, apiUrl: undefined, apiKey: undefined },
+      diagnostics,
+    ),
+    errors,
+    warnings,
+    missingConfig,
   };
 }
 
@@ -277,8 +401,15 @@ function classifyStatus(input: {
   liveReadSuccessCount: number;
   liveReadFailureCount: number;
   discoveryTruncated: boolean;
+  candidateCapHit: boolean;
+  requestTimedOut: boolean;
 }): EthereumApprovalApiStatus {
-  if (input.liveReadFailureCount > 0 || input.discoveryTruncated) {
+  if (
+    input.liveReadFailureCount > 0 ||
+    input.discoveryTruncated ||
+    input.candidateCapHit ||
+    input.requestTimedOut
+  ) {
     return "verification-incomplete";
   }
   if (input.activeCount > 0) return "active-approvals-found";
@@ -288,6 +419,16 @@ function classifyStatus(input: {
 function failureMessage(error: unknown): string {
   const raw = error instanceof Error ? error.message : String(error);
   return redactSensitiveErrorText(raw);
+}
+
+function isUpstreamRateLimit(error: unknown): boolean {
+  const message = error instanceof Error ? error.message : String(error);
+  const lower = message.toLowerCase();
+  return (
+    lower.includes("rate limit") ||
+    lower.includes("too many requests") ||
+    lower.includes("http 429")
+  );
 }
 
 function redactSensitiveErrorText(value: string): string {
@@ -322,12 +463,46 @@ function serializeNftApproval(approval: NftApproval): EthereumNftApprovalApi {
   };
 }
 
+function buildIncompleteReasons(input: {
+  discoveryTruncated: boolean;
+  candidateCapHit: boolean;
+  requestTimedOut: boolean;
+  erc20LiveReadFailures: number;
+  nftLiveReadFailures: number;
+  liveReadCandidatesTotal: number;
+  liveReadCandidatesProcessed: number;
+}): string[] {
+  const reasons: string[] = [];
+  if (input.discoveryTruncated) reasons.push("discovery was truncated");
+  if (input.candidateCapHit) {
+    reasons.push(
+      `candidate cap hit (${input.liveReadCandidatesProcessed}/${input.liveReadCandidatesTotal} checked)`,
+    );
+  }
+  if (input.requestTimedOut) reasons.push("request timed out");
+  if (input.erc20LiveReadFailures > 0) {
+    reasons.push(`${input.erc20LiveReadFailures} ERC-20 live reads failed`);
+  }
+  if (input.nftLiveReadFailures > 0) {
+    reasons.push(`${input.nftLiveReadFailures} NFT live reads failed`);
+  }
+  return reasons;
+}
+
 export async function scanEthereumApprovals(
   owner: Address,
   options: EthereumApprovalApiOptions = {},
 ): Promise<EthereumApprovalApiResponse> {
   const config = resolveEthereumApiConfig(options.env);
   const warnings: string[] = [];
+  const liveReadCandidateCap =
+    options.liveReadCandidateCap ?? ETHEREUM_APPROVAL_API_LIVE_READ_CANDIDATE_CAP;
+  const rpcReadConcurrency =
+    options.rpcReadConcurrency ?? ETHEREUM_APPROVAL_API_RPC_READ_CONCURRENCY;
+  const baseDiagnostics = {
+    liveReadCandidateCap,
+    rpcReadConcurrency,
+  };
 
   if (config.missingConfig.length > 0) {
     return {
@@ -335,7 +510,7 @@ export async function scanEthereumApprovals(
       status: "config-missing",
       chainId: ETHEREUM_MAINNET_CHAIN_ID,
       approvals: { erc20: [], nft: [] },
-      diagnostics: emptyDiagnostics(config),
+      diagnostics: emptyDiagnostics(config, baseDiagnostics),
       errors: [
         "Ethereum approval discovery is not configured. Set the missing server env vars.",
       ],
@@ -345,54 +520,108 @@ export async function scanEthereumApprovals(
   }
 
   const source =
-    options.discoverySource ?? createEthereumDiscoverySource(config);
+    options.discoverySource ??
+    createEthereumDiscoverySource(
+      config,
+      options.discoveryLimits ?? ETHEREUM_APPROVAL_API_DISCOVERY_LIMITS,
+    );
   const reader = options.reader ?? createEthereumReader(config.rpcUrl!);
 
   let erc20Discovery: DiscoveryResult;
   let nftDiscovery: NftDiscoveryResult;
   try {
     [erc20Discovery, nftDiscovery] = await Promise.all([
-      source.discover(owner),
-      source.discoverNftApprovals(owner),
+      source.discover(owner, { signal: options.signal }),
+      source.discoverNftApprovals(owner, { signal: options.signal }),
     ]);
   } catch (error) {
+    const rateLimited = isUpstreamRateLimit(error);
+    const requestTimedOut = Boolean(options.signal?.aborted);
     return {
       ok: false,
       status: "upstream-failure",
       chainId: ETHEREUM_MAINNET_CHAIN_ID,
       approvals: { erc20: [], nft: [] },
-      diagnostics: emptyDiagnostics(config),
-      errors: [`Ethereum explorer discovery failed: ${failureMessage(error)}`],
+      diagnostics: emptyDiagnostics(config, {
+        ...baseDiagnostics,
+        requestTimedOut,
+        rateLimited,
+        incompleteVerificationCount: 1,
+        incompleteReasons: [
+          requestTimedOut
+            ? "request timed out during explorer discovery"
+            : rateLimited
+              ? "upstream explorer rate limited discovery"
+              : "upstream explorer discovery failed",
+        ],
+      }),
+      errors: [
+        requestTimedOut
+          ? "Ethereum approval discovery timed out before it completed."
+          : `Ethereum explorer discovery failed: ${failureMessage(error)}`,
+      ],
       warnings,
       missingConfig: [],
     };
   }
 
+  const liveReadCandidatesTotal =
+    erc20Discovery.pairs.length + nftDiscovery.approvals.length;
+  const normalizedCandidateCap = Math.max(0, Math.floor(liveReadCandidateCap));
+  const erc20PairsForRead = erc20Discovery.pairs.slice(
+    0,
+    normalizedCandidateCap,
+  );
+  const nftCandidateAllowance = Math.max(
+    normalizedCandidateCap - erc20PairsForRead.length,
+    0,
+  );
+  const nftApprovalsForRead = nftDiscovery.approvals.slice(
+    0,
+    nftCandidateAllowance,
+  );
+  const liveReadCandidatesProcessed =
+    erc20PairsForRead.length + nftApprovalsForRead.length;
+  const candidateCapHit =
+    liveReadCandidatesTotal > liveReadCandidatesProcessed;
+
   const { contracts: erc20Contracts, uniqueTokens } = buildDiscoveryContracts(
     owner,
-    erc20Discovery.pairs,
+    erc20PairsForRead,
     ETHEREUM_MAINNET_CHAIN_ID,
   );
   const { contracts: nftContracts, uniqueCollections } =
     buildNftValidationContracts(
       owner,
-      nftDiscovery.approvals,
+      nftApprovalsForRead,
       ETHEREUM_MAINNET_CHAIN_ID,
     );
 
-  const [erc20Reads, nftReads] = await Promise.all([
-    readContracts(reader, erc20Contracts),
-    readContracts(reader, nftContracts),
+  const [erc20ReadOutput, nftReadOutput] = await Promise.all([
+    readContracts(reader, erc20Contracts, {
+      concurrency: rpcReadConcurrency,
+      signal: options.signal,
+    }),
+    readContracts(reader, nftContracts, {
+      concurrency: rpcReadConcurrency,
+      signal: options.signal,
+    }),
   ]);
+  const erc20Reads = erc20ReadOutput.results;
+  const nftReads = nftReadOutput.results;
+  const requestTimedOut =
+    erc20ReadOutput.requestTimedOut ||
+    nftReadOutput.requestTimedOut ||
+    Boolean(options.signal?.aborted);
 
   const erc20ReadFailures = collectDiscoveryReadFailures(
     erc20Reads,
-    erc20Discovery.pairs,
+    erc20PairsForRead,
     uniqueTokens,
   );
   const nftLiveReads = countNftLiveReads(
     nftReads,
-    nftDiscovery.approvals.length,
+    nftApprovalsForRead.length,
     uniqueCollections.length,
   );
 
@@ -400,19 +629,21 @@ export async function scanEthereumApprovals(
     erc20Reads,
     owner,
     ETHEREUM_MAINNET_CHAIN_ID,
-    erc20Discovery.pairs,
+    erc20PairsForRead,
   );
   const nftParsed = parseNftValidationResults(
     nftReads,
     owner,
     ETHEREUM_MAINNET_CHAIN_ID,
-    nftDiscovery.approvals,
+    nftApprovalsForRead,
   );
 
   const activeCount =
     erc20Parsed.approvals.length + nftParsed.approvals.length;
   const decodedCount =
     erc20Discovery.pairs.length + nftDiscovery.approvals.length;
+  const processedDecodedCount =
+    erc20PairsForRead.length + nftApprovalsForRead.length;
   const liveReadSuccessCount =
     erc20ReadFailures.allowanceSucceeded + nftLiveReads.success;
   const liveReadFailureCount =
@@ -421,7 +652,7 @@ export async function scanEthereumApprovals(
     erc20Discovery.truncated || nftDiscovery.truncated;
   const skippedReasons: Record<string, number> = {};
   const inactiveOrRevoked = Math.max(
-    decodedCount - activeCount - liveReadFailureCount,
+    processedDecodedCount - activeCount - liveReadFailureCount,
     0,
   );
   addReason(skippedReasons, "inactive-or-revoked", inactiveOrRevoked);
@@ -433,10 +664,26 @@ export async function scanEthereumApprovals(
   addReason(skippedReasons, "nft-live-read-failure", nftLiveReads.failure);
   addReason(skippedReasons, "metadata-read-failure", erc20ReadFailures.metadataFailed);
   addReason(skippedReasons, "discovery-truncated", discoveryTruncated ? 1 : 0);
+  addReason(
+    skippedReasons,
+    "candidate-cap-hit",
+    candidateCapHit ? liveReadCandidatesTotal - liveReadCandidatesProcessed : 0,
+  );
+  addReason(skippedReasons, "request-timed-out", requestTimedOut ? 1 : 0);
 
   if (discoveryTruncated) {
     warnings.push(
       "Ethereum discovery hit explorer pagination/windowing limits. Verification is incomplete.",
+    );
+  }
+  if (candidateCapHit) {
+    warnings.push(
+      `Ethereum live validation reached the public API candidate cap; checked ${liveReadCandidatesProcessed} of ${liveReadCandidatesTotal} discovered approval candidates.`,
+    );
+  }
+  if (requestTimedOut) {
+    warnings.push(
+      "Ethereum approval scanning timed out before every discovered approval could be verified.",
     );
   }
   if (liveReadFailureCount > 0) {
@@ -458,12 +705,31 @@ export async function scanEthereumApprovals(
       "Ethereum live validation did not complete for every discovered approval. Do not treat this wallet as clear.",
     );
   }
+  if (
+    (discoveryTruncated || candidateCapHit || requestTimedOut) &&
+    liveReadFailureCount === 0
+  ) {
+    warnings.push(
+      "Ethereum live validation did not complete for every discovered approval. Do not treat this wallet as clear.",
+    );
+  }
 
   const status = classifyStatus({
     activeCount,
     liveReadSuccessCount,
     liveReadFailureCount,
     discoveryTruncated,
+    candidateCapHit,
+    requestTimedOut,
+  });
+  const incompleteReasons = buildIncompleteReasons({
+    discoveryTruncated,
+    candidateCapHit,
+    requestTimedOut,
+    erc20LiveReadFailures: erc20ReadFailures.allowanceFailed,
+    nftLiveReadFailures: nftLiveReads.failure,
+    liveReadCandidatesTotal,
+    liveReadCandidatesProcessed,
   });
   const diagnostics: EthereumApprovalApiDiagnostics = {
     chainId: ETHEREUM_MAINNET_CHAIN_ID,
@@ -475,10 +741,24 @@ export async function scanEthereumApprovals(
     liveReadSuccessCount,
     liveReadFailureCount,
     incompleteVerificationCount:
-      liveReadFailureCount + (discoveryTruncated ? 1 : 0),
+      liveReadFailureCount +
+      (discoveryTruncated ? 1 : 0) +
+      (candidateCapHit
+        ? liveReadCandidatesTotal - liveReadCandidatesProcessed
+        : 0) +
+      (requestTimedOut ? 1 : 0),
     skippedApprovalCount: Math.max(decodedCount - activeCount, 0),
     skippedReasons,
     discoveryTruncated,
+    requestTimedOut,
+    rateLimited: false,
+    candidateCapHit,
+    liveReadCandidateCap: normalizedCandidateCap,
+    liveReadCandidatesTotal,
+    liveReadCandidatesProcessed,
+    rpcReadConcurrency,
+    upstreamRetryCount: 0,
+    incompleteReasons,
   };
 
   return {
