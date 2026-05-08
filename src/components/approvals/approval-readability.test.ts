@@ -51,8 +51,23 @@ describe("approval row readability copy", () => {
     );
   });
 
+  it("includes source-grounded protocol metadata labels", () => {
+    expect(helperSource).toContain("Known protocol");
+    expect(helperSource).toContain("Contract status");
+    expect(helperSource).toContain("Current contract");
+    expect(helperSource).toContain("Legacy contract");
+    expect(helperSource).toContain("Documented asset");
+    expect(helperSource).toContain("Source");
+    expect(erc20Source).toContain(
+      "protocolMetadataItems(approval.spenderProtocolMetadata)",
+    );
+    expect(nftSource).toContain(
+      "protocolMetadataItems(approval.operatorProtocolMetadata)",
+    );
+  });
+
   it("does not claim spenders or operators are safe", () => {
-    const combined = `${erc20Source}\n${nftSource}`.toLowerCase();
+    const combined = `${erc20Source}\n${nftSource}\n${helperSource}`.toLowerCase();
 
     expect(combined).not.toContain("spender is safe");
     expect(combined).not.toContain("operator is safe");

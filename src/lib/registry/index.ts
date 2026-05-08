@@ -11,6 +11,7 @@ import {
   BASE_SPENDER_REGISTRY,
   BSC_SPENDER_REGISTRY,
   PULSECHAIN_SPENDER_REGISTRY,
+  SPENDER_METADATA_REGISTRY,
   SPENDER_REGISTRY,
   type SpenderEntry,
 } from "./spenders";
@@ -32,13 +33,22 @@ export {
   type TokenEntry,
 } from "./tokens";
 export {
+  ARBITRUM_ONE_CHAIN_ID,
   BASE_SPENDER_REGISTRY,
   BSC_SPENDER_REGISTRY,
+  ETHEREUM_MAINNET_CHAIN_ID,
+  LIBERTYSWAP_LEGACY_NOTE,
+  LIBERTYSWAP_SOURCE_LABEL,
+  LIBERTYSWAP_SOURCE_URL,
+  LIBERTYSWAP_SPENDER_METADATA_REGISTRY,
   MAINNET_SPENDER_REGISTRY,
   PULSECHAIN_SPENDER_REGISTRY,
+  SPENDER_METADATA_REGISTRY,
   SPENDER_REGISTRY,
+  type SpenderContractStatus,
   type SpenderCategory,
   type SpenderEntry,
+  type SpenderProtocolMetadata,
 } from "./spenders";
 export { RegistryValidationError } from "./validate";
 
@@ -51,6 +61,9 @@ const TOKEN_BY_CHAIN_ADDRESS = new Map<string, TokenEntry>(
 );
 const SPENDER_BY_CHAIN_ADDRESS = new Map<string, SpenderEntry>(
   SPENDER_REGISTRY.map((s) => [keyFor(s.chainId, s.address), s]),
+);
+const SPENDER_METADATA_BY_CHAIN_ADDRESS = new Map<string, SpenderEntry>(
+  SPENDER_METADATA_REGISTRY.map((s) => [keyFor(s.chainId, s.address), s]),
 );
 
 /** O(1) case-insensitive lookup scoped to a chain. */
@@ -74,6 +87,13 @@ export function getSpenderEntry(
   }
 
   return SPENDER_BY_CHAIN_ADDRESS.get(keyFor(chainId, address));
+}
+
+export function getSpenderMetadataEntry(
+  chainId: number,
+  address: Address,
+): SpenderEntry | undefined {
+  return SPENDER_METADATA_BY_CHAIN_ADDRESS.get(keyFor(chainId, address));
 }
 
 /** Returns tokens in the curated registry for a given chain. */

@@ -6,6 +6,7 @@ import {
   parseDiscoveryResults,
   type ReadResult,
 } from "./approvals";
+import { BSC_CHAIN_ID } from "./chains";
 import { FUNGIBLE_APPROVAL_SHAPE_COPY } from "./diagnostic-copy";
 import type { DiscoveredPair } from "./discovery";
 
@@ -14,6 +15,8 @@ const TOKEN = "0x1111111111111111111111111111111111111111" as Address;
 const SPENDER = "0x2222222222222222222222222222222222222222" as Address;
 const OTHER_SPENDER =
   "0x3333333333333333333333333333333333333333" as Address;
+const LIBERTYSWAP_BSC_USDT =
+  "0xc438D51F296fF3e53d061293D2bC4Bb9fb2f7f19" as Address;
 const CHAIN_ID = 56;
 
 function pair(
@@ -99,6 +102,32 @@ describe("ERC-20 discovery live-read diagnostics", () => {
       tokenDecimals: null,
       spenderLabel: "Unknown spender",
       formattedAllowance: "Raw allowance: 123 units",
+    });
+  });
+
+  it("enriches discovered approvals with LibertySwap protocol metadata", () => {
+    const pairs: DiscoveredPair[] = [
+      pair(TOKEN, LIBERTYSWAP_BSC_USDT, BSC_CHAIN_ID),
+    ];
+    const parsed = parseDiscoveryResults(
+      [success("TOK"), success(18), success("Token"), success(1n)],
+      OWNER,
+      BSC_CHAIN_ID,
+      pairs,
+    );
+
+    expect(parsed.stats.registryMatched).toBe(1);
+    expect(parsed.approvals[0]).toMatchObject({
+      spenderAddress: LIBERTYSWAP_BSC_USDT,
+      spenderLabel: "LibertySwap USDT",
+      protocol: "LibertySwap",
+      trusted: true,
+      spenderProtocolMetadata: {
+        protocolName: "LibertySwap",
+        contractStatus: "current",
+        sourceLabel: "Official LibertySwap docs",
+        assetLabel: "USDT",
+      },
     });
   });
 

@@ -4,8 +4,9 @@ import type { SupportedChainId } from "@/lib/chains";
 import type { DiscoveredPair } from "@/lib/discovery";
 import { erc20Abi, formatAllowance, isUnlimitedAllowance } from "@/lib/erc20";
 import {
-  getSpenderEntry,
+  getSpenderMetadataEntry,
   getTokenEntry,
+  type SpenderProtocolMetadata,
   type SpenderCategory,
   type SpenderEntry,
   type TokenCategory,
@@ -40,6 +41,7 @@ export interface Approval {
   /** Mirrors `SpenderEntry.verificationMethod`. Surfaced in UI tooltips
    * as the source of any "known / trusted" claim. */
   spenderVerificationMethod?: string;
+  spenderProtocolMetadata?: SpenderProtocolMetadata;
   rawAllowance: bigint;
   formattedAllowance: string;
   unlimited: boolean;
@@ -264,6 +266,7 @@ export function parseScanResults(
         spenderUrl: spender.url,
         spenderNotes: spender.notes,
         spenderVerificationMethod: spender.verificationMethod,
+        spenderProtocolMetadata: spender.protocolMetadata,
         rawAllowance: raw,
         formattedAllowance: unlimited
           ? "Unlimited"
@@ -483,7 +486,7 @@ export function parseDiscoveryResults(
     if (!meta) return;
 
     const unlimited = isUnlimitedAllowance(raw);
-    const spenderEntry = getSpenderEntry(chainId, pair.spenderAddress);
+    const spenderEntry = getSpenderMetadataEntry(chainId, pair.spenderAddress);
     if (spenderEntry) registryMatched += 1;
 
     approvals.push({
@@ -502,6 +505,7 @@ export function parseDiscoveryResults(
       spenderUrl: spenderEntry?.url,
       spenderNotes: spenderEntry?.notes,
       spenderVerificationMethod: spenderEntry?.verificationMethod,
+      spenderProtocolMetadata: spenderEntry?.protocolMetadata,
       rawAllowance: raw,
       formattedAllowance: formatValidatedAllowance(
         raw,

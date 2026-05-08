@@ -40,12 +40,12 @@ export function classifyApprovalRisk(input: {
       return {
         level: "medium",
         reason:
-          "Trusted spender, but the allowance is unlimited. Consider reducing it unless actively used.",
+          "Identified spender, but the allowance is unlimited. Review whether this approval is still needed.",
       };
     }
     return {
       level: "low",
-      reason: "Trusted spender with a bounded allowance.",
+      reason: "Identified spender with a bounded allowance.",
     };
   }
 

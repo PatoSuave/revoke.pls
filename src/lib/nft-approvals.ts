@@ -2,7 +2,10 @@ import type { Abi, Address } from "viem";
 
 import type { SupportedChainId } from "@/lib/chains";
 import type { NftApprovalKind, NftDiscoveredApproval } from "@/lib/discovery";
-import { getSpenderEntry } from "@/lib/registry";
+import {
+  getSpenderMetadataEntry,
+  type SpenderProtocolMetadata,
+} from "@/lib/registry";
 import type { RiskAssessment, RiskLevel } from "@/lib/risk";
 
 /**
@@ -94,6 +97,7 @@ export interface NftApproval {
   operatorVerificationMethod?: string;
   operatorNotes?: string;
   operatorUrl?: string;
+  operatorProtocolMetadata?: SpenderProtocolMetadata;
   /** Present only for per-token ERC-721 approvals. */
   tokenId?: bigint;
   risk: RiskAssessment;
@@ -224,7 +228,7 @@ export function classifyNftRisk(input: {
       return {
         level: "medium" as RiskLevel,
         reason:
-          "Trusted operator with collection-wide approval. Review periodically if the position is no longer active.",
+          "Identified operator with collection-wide approval. Review periodically if the position is no longer active.",
       };
     }
     return {
@@ -236,7 +240,7 @@ export function classifyNftRisk(input: {
   if (input.trusted) {
     return {
       level: "low" as RiskLevel,
-      reason: "Trusted operator approved for a single NFT.",
+      reason: "Identified operator approved for a single NFT.",
     };
   }
   return {
@@ -314,7 +318,7 @@ export function parseNftValidationResults(
       candidate.kind,
     );
 
-    const registry = getSpenderEntry(chainId, candidate.operatorAddress);
+    const registry = getSpenderMetadataEntry(chainId, candidate.operatorAddress);
     if (registry) registryMatched += 1;
 
     const keyParts = [
@@ -339,6 +343,7 @@ export function parseNftValidationResults(
       operatorVerificationMethod: registry?.verificationMethod,
       operatorNotes: registry?.notes,
       operatorUrl: registry?.url,
+      operatorProtocolMetadata: registry?.protocolMetadata,
       tokenId: candidate.tokenId,
       risk: classifyNftRisk({
         kind: candidate.kind,
