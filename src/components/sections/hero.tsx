@@ -15,12 +15,14 @@ export function Hero() {
       />
       <div className="relative mx-auto max-w-6xl px-4 pt-10 pb-9 sm:px-6 sm:pt-14 sm:pb-12">
         <div className="mx-auto max-w-3xl text-center">
-          <span className="inline-flex items-center gap-2 rounded-full border border-pulse-cyan/30 bg-pulse-panel/70 px-3 py-1 text-xs font-semibold text-pulse-cyan shadow-glow">
+          <span className="flex w-full max-w-full items-center justify-center gap-2 rounded-full border border-pulse-cyan/30 bg-pulse-panel/70 px-3 py-1 text-xs font-semibold leading-5 text-pulse-cyan shadow-glow sm:inline-flex sm:w-auto">
             <span
-              className="h-1.5 w-1.5 rounded-full bg-pulse-green"
+              className="h-1.5 w-1.5 shrink-0 rounded-full bg-pulse-green"
               aria-hidden
             />
-            PulseChain, BSC, Base, and Ethereum approval safety
+            <span className="min-w-0 break-words">
+              PulseChain, BSC, Base, and Ethereum approval safety
+            </span>
           </span>
 
           <h1 className="mt-5 text-3xl font-bold tracking-tight sm:text-5xl">
@@ -38,13 +40,13 @@ export function Hero() {
             {HERO_BULLETS.map((b) => (
               <li
                 key={b}
-                className="inline-flex items-center gap-1.5 rounded-full border border-pulse-border/70 bg-pulse-panel/55 px-3 py-1"
+                className="inline-flex w-full max-w-full items-center justify-center gap-1.5 rounded-full border border-pulse-border/70 bg-pulse-panel/55 px-3 py-1 sm:w-auto"
               >
                 <span
                   aria-hidden
-                  className="h-1.5 w-1.5 rounded-full bg-pulse-cyan/80"
+                  className="h-1.5 w-1.5 shrink-0 rounded-full bg-pulse-cyan/80"
                 />
-                {b}
+                <span className="min-w-0 break-words">{b}</span>
               </li>
             ))}
           </ul>
