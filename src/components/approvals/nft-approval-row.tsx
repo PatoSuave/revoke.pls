@@ -52,6 +52,7 @@ export function NftApprovalRow({
     errorMessage,
     isBusy,
     preflight,
+    postRevokeVerificationState,
     isRefreshingApproval,
     refreshPreflight,
     revoke,
@@ -256,6 +257,7 @@ export function NftApprovalRow({
             assetValue: nftReceiptAssetValue(approval, tokenIdLabel),
             counterpartyLabel: "Operator",
             counterpartyValue: approval.operatorLabel,
+            verificationState: postRevokeVerificationState,
           }}
           onDismiss={reset}
         />

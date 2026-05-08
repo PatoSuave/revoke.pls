@@ -66,6 +66,7 @@ export function ApprovalRow({
     errorMessage,
     isBusy,
     preflight,
+    postRevokeVerificationState,
     isRefreshingApproval,
     refreshPreflight,
     revoke,
@@ -314,6 +315,7 @@ export function ApprovalRow({
               approval.spenderLabel,
               "Unknown spender",
             ),
+            verificationState: postRevokeVerificationState,
           }}
           onDismiss={reset}
         />

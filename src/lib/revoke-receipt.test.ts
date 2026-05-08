@@ -76,6 +76,39 @@ describe("revoke receipt copy", () => {
     ).toBe(LIVE_VERIFICATION_INCOMPLETE_COPY);
   });
 
+  it("shows pending live verification without saying confirmed cleared", () => {
+    const copy = getRevokeReceiptCopy({
+      status: "success",
+      kind: "erc20",
+      verificationState: "pending",
+    });
+
+    expect(copy.verification).toBe("Checking live approval state...");
+    expect(copy.verification).not.toContain(LIVE_VERIFICATION_CONFIRMED_COPY);
+  });
+
+  it.each([
+    { status: "pending", verificationState: "confirmed-cleared" },
+    { status: "rejected", verificationState: "confirmed-cleared" },
+    { status: "error", verificationState: "confirmed-cleared" },
+    { status: "success", verificationState: "not-run" },
+    { status: "success", verificationState: "pending" },
+    { status: "success", verificationState: "incomplete" },
+    { status: "success", verificationState: "failed" },
+    { status: "success", verificationState: "mismatch" },
+  ] as const)(
+    "does not show confirmed cleared for $status / $verificationState",
+    ({ status, verificationState }) => {
+      expect(
+        getRevokeReceiptCopy({
+          status,
+          kind: "erc20",
+          verificationState,
+        }).verification,
+      ).not.toBe(LIVE_VERIFICATION_CONFIRMED_COPY);
+    },
+  );
+
   it("keeps failure and rejection wording calm and precise", () => {
     expect(
       getRevokeReceiptCopy({ status: "rejected", kind: "erc20" }).title,
@@ -99,6 +132,16 @@ describe("revoke receipt copy", () => {
       LIVE_VERIFICATION_INCOMPLETE_COPY,
       getRevokeReceiptCopy({ status: "error", kind: "erc20" }).body,
       getRevokeReceiptCopy({ status: "rejected", kind: "erc20" }).body,
+      getRevokeReceiptCopy({
+        status: "success",
+        kind: "erc20",
+        verificationState: "mismatch",
+      }).verification,
+      getRevokeReceiptCopy({
+        status: "success",
+        kind: "erc20",
+        verificationState: "failed",
+      }).verification,
     ].join(" ");
 
     expect(combined.toLowerCase()).not.toMatch(

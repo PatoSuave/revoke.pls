@@ -24,6 +24,10 @@ import {
   type Erc20PreflightResult,
 } from "@/lib/preflight";
 import {
+  verifyErc20PostRevokeCleared,
+  type PostRevokeVerificationState,
+} from "@/lib/post-revoke-verification";
+import {
   buildRevokeCall,
   getWalletRevokeBlockReason,
   type RevokeTarget,
@@ -45,6 +49,7 @@ export interface UseRevokeApprovalResult {
   hash?: `0x${string}`;
   errorMessage?: string;
   preflight: Erc20PreflightResult | null;
+  postRevokeVerificationState: PostRevokeVerificationState;
   /** True while the wallet is open or the tx is confirming on-chain. */
   isBusy: boolean;
   isRefreshingApproval: boolean;
@@ -86,7 +91,11 @@ export function useRevokeApproval({
   const write = useWriteContract();
   const [preflight, setPreflight] = useState<Erc20PreflightResult | null>(null);
   const [isRefreshingApproval, setIsRefreshingApproval] = useState(false);
+  const [postRevokeVerificationState, setPostRevokeVerificationState] =
+    useState<PostRevokeVerificationState>("not-run");
   const walletStateRef = useRef({ connectedAddress, walletChainId });
+  const postVerificationRunRef = useRef(0);
+  const postVerifiedHashRef = useRef<`0x${string}` | null>(null);
   const wait = useWaitForTransactionReceipt({
     hash: write.data,
     chainId: target.chainId as WalletWriteChainId,
@@ -156,6 +165,70 @@ export function useRevokeApproval({
       onSuccess?.(write.data);
     }
   }, [status, write.data, onSuccess]);
+
+  useEffect(() => {
+    if (status === "pending" && write.data) {
+      setPostRevokeVerificationState("not-run");
+    }
+  }, [status, write.data]);
+
+  useEffect(() => {
+    if (status !== "success" || !write.data) return;
+    if (postVerifiedHashRef.current === write.data) return;
+
+    const hash = write.data;
+    const runId = postVerificationRunRef.current + 1;
+    postVerificationRunRef.current = runId;
+    postVerifiedHashRef.current = hash;
+    setPostRevokeVerificationState("pending");
+
+    const setIfCurrent = (next: PostRevokeVerificationState) => {
+      if (
+        postVerificationRunRef.current === runId &&
+        postVerifiedHashRef.current === hash
+      ) {
+        setPostRevokeVerificationState(next);
+      }
+    };
+
+    async function verify() {
+      const blockReason = walletRevokeBlockReason();
+      if (blockReason) {
+        setIfCurrent("incomplete");
+        return;
+      }
+
+      const client = getPublicClient(config, {
+        chainId: target.chainId as WalletWriteChainId,
+      });
+      if (!client) {
+        setIfCurrent("incomplete");
+        return;
+      }
+
+      const result = await verifyErc20PostRevokeCleared({
+        client,
+        ownerAddress,
+        target: {
+          chainId: target.chainId,
+          tokenAddress: target.tokenAddress,
+          spenderAddress: target.spenderAddress,
+        },
+      });
+      setIfCurrent(result.state);
+    }
+
+    void verify();
+  }, [
+    config,
+    ownerAddress,
+    status,
+    target.chainId,
+    target.spenderAddress,
+    target.tokenAddress,
+    walletRevokeBlockReason,
+    write.data,
+  ]);
 
   useEffect(() => {
     const prev = lastStatusRef.current;
@@ -262,6 +335,9 @@ export function useRevokeApproval({
 
   const revoke = useCallback(async (options?: { allowHighGasWarning?: boolean }) => {
     notifiedHashRef.current = null;
+    postVerifiedHashRef.current = null;
+    postVerificationRunRef.current += 1;
+    setPostRevokeVerificationState("not-run");
     const latest = await refreshPreflight();
     if (latest.status !== "active" && latest.status !== "highGasWarning") return;
     const chainConfig = getChainConfig(target.chainId);
@@ -289,6 +365,9 @@ export function useRevokeApproval({
 
   const reset = useCallback(() => {
     notifiedHashRef.current = null;
+    postVerifiedHashRef.current = null;
+    postVerificationRunRef.current += 1;
+    setPostRevokeVerificationState("not-run");
     setPreflight(null);
     write.reset();
   }, [write]);
@@ -298,6 +377,7 @@ export function useRevokeApproval({
     hash: write.data,
     errorMessage,
     preflight,
+    postRevokeVerificationState,
     isBusy:
       status === "refreshing" || status === "wallet" || status === "pending",
     isRefreshingApproval,
