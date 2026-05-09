@@ -5,8 +5,15 @@ import type { Address } from "viem";
 
 import {
   ApprovalMeaningPanel,
+  CurrentApprovalStateInline,
+  CurrentApprovalStateSummary,
   SummaryText,
+  VerificationTechnicalExplainer,
+  ZeroAddressInline,
+  ZeroAddressSummary,
+  isCurrentApprovalStateUnverifiedReason,
   protocolMetadataItems,
+  type ApprovalVerificationKind,
 } from "@/components/approvals/approval-readability";
 import {
   GasEstimateDebugDetails,
@@ -21,7 +28,7 @@ import { useRevokeNftApproval } from "@/hooks/use-revoke-nft-approval";
 import { getChainConfig, type SupportedChainConfig } from "@/lib/chains";
 import { explorerAddressUrl, explorerTxUrl } from "@/lib/explorer";
 import { shortenAddress } from "@/lib/format";
-import type { NftApproval, NftStandard } from "@/lib/nft-approvals";
+import { ZERO_ADDRESS, type NftApproval, type NftStandard } from "@/lib/nft-approvals";
 import {
   BSC_GAS_CAP_BODY,
   BSC_GAS_CAP_HELPER,
@@ -80,6 +87,12 @@ export function NftApprovalRow({
     approval.kind === "tokenApproval" && approval.tokenId !== undefined
       ? `#${approval.tokenId.toString()}`
       : null;
+  const verificationKind: ApprovalVerificationKind =
+    approval.kind === "approvalForAll" ? "nft-operator" : "nft-token";
+  const showCurrentStateNotice =
+    isCurrentApprovalStateUnverifiedReason(revokeDisabledReason);
+  const zeroAddressShown =
+    approval.operatorAddress.toLowerCase() === ZERO_ADDRESS;
 
   return (
     <li className="border-b border-pulse-border/60 transition last:border-b-0 hover:bg-white/[0.025]">
@@ -112,6 +125,7 @@ export function NftApprovalRow({
           <p className="truncate text-xs text-pulse-muted">
             <ExplorerLink chainId={chainId} address={approval.operatorAddress} inline />
           </p>
+          {zeroAddressShown ? <ZeroAddressInline className="mt-2" /> : null}
           <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
             <StandardBadge standard={approval.standard} chainConfig={chainConfig} />
             <KindBadge kind={approval.kind} />
@@ -154,6 +168,7 @@ export function NftApprovalRow({
               void refreshPreflight();
             }}
             revokeDisabledReason={revokeDisabledReason}
+            verificationKind={verificationKind}
           />
         </div>
       </div>
@@ -186,6 +201,14 @@ export function NftApprovalRow({
               />
             ),
           },
+          ...(zeroAddressShown
+            ? [
+                {
+                  label: "Zero address",
+                  value: <ZeroAddressSummary />,
+                },
+              ]
+            : []),
           ...protocolMetadataItems(approval.operatorProtocolMetadata),
           {
             label: "Permission type",
@@ -200,6 +223,14 @@ export function NftApprovalRow({
               />
             ),
           },
+          ...(showCurrentStateNotice
+            ? [
+                {
+                  label: "Current state",
+                  value: <CurrentApprovalStateSummary kind={verificationKind} />,
+                },
+              ]
+            : []),
           {
             label: "Risk level",
             value: (
@@ -294,6 +325,7 @@ function NftProofDetails({
           This approval was discovered from historical approval events and
           confirmed with a live approval read before display.
         </p>
+        <VerificationTechnicalExplainer />
         <dl className="mt-2 grid gap-1 font-mono">
           <ProofRow label="Chain" value={chainName} />
           <ProofRow label="Type" value={approvalType} />
@@ -462,6 +494,7 @@ function RowAction({
   onCancel,
   onRetry,
   revokeDisabledReason,
+  verificationKind,
 }: {
   status: ReturnType<typeof useRevokeNftApproval>["status"];
   hash?: `0x${string}`;
@@ -472,6 +505,7 @@ function RowAction({
   onCancel: () => void;
   onRetry: () => void;
   revokeDisabledReason?: string | null;
+  verificationKind: ApprovalVerificationKind;
 }) {
   const base =
     "inline-flex w-full items-center justify-center gap-2 rounded-xl px-3 py-2 text-xs font-semibold transition disabled:cursor-not-allowed sm:w-auto";
@@ -516,13 +550,24 @@ function RowAction({
     );
   }
   if (revokeDisabledReason) {
+    const showVerificationHint =
+      isCurrentApprovalStateUnverifiedReason(revokeDisabledReason);
+
     return (
-      <span
-        className={`${base} border border-amber-400/40 bg-amber-400/10 text-amber-200`}
-        title={revokeDisabledReason}
-      >
-        Revoke unavailable
-      </span>
+      <div className="flex w-full flex-col items-stretch gap-1 sm:items-end">
+        <span
+          className={`${base} border border-amber-400/40 bg-amber-400/10 text-amber-200`}
+          title={revokeDisabledReason}
+        >
+          Revoke unavailable
+        </span>
+        {showVerificationHint ? (
+          <CurrentApprovalStateInline
+            kind={verificationKind}
+            className="sm:text-right"
+          />
+        ) : null}
+      </div>
     );
   }
   if (status === "error") {
