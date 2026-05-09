@@ -88,9 +88,35 @@ describe("ERC-20 scanner result state", () => {
       ),
     ).toEqual({
       title:
-        "Verification incomplete — some rows cannot be revoked until fully verified.",
-      body: "2 live reads failed - revoke unavailable until verification completes.",
+        "Verification incomplete - current approval state could not be fully confirmed.",
+      body: "Revoke.PLS found approval history, but some live contract reads failed. Those rows stay disabled because the app could not confirm whether the approval is active right now. Try rescanning; if the message remains, the token or NFT contract may be nonstandard, temporarily unavailable, or failing live approval reads.",
+      detail:
+        "2 live reads failed - revoke unavailable until verification completes.",
     });
+  });
+
+  it("explains truncated discovery without claiming approval state", () => {
+    expect(
+      getRevokeDisabledNoticeCopy(
+        "ERC-20 discovery was truncated - revoke unavailable until verification completes.",
+      ),
+    ).toEqual({
+      title:
+        "Verification incomplete - current approval state could not be fully confirmed.",
+      body: "Revoke.PLS found approval history, but discovery ended before every current approval state could be confirmed. Affected rows stay disabled because the app could not confirm whether the approval is active right now. Try rescanning; if the message remains, the explorer response may be capped or temporarily unavailable.",
+      detail:
+        "ERC-20 discovery was truncated - revoke unavailable until verification completes.",
+    });
+  });
+
+  it("does not use safe wording in verification-incomplete notice copy", () => {
+    const notice = getRevokeDisabledNoticeCopy(
+      "2 live reads failed - revoke unavailable until verification completes.",
+    );
+
+    expect(`${notice?.title} ${notice?.body}`.toLowerCase()).not.toMatch(
+      /\bsafe\b/,
+    );
   });
 
   it("uses wrong-chain copy when a matching wallet is on the wrong chain", () => {

@@ -1196,7 +1196,6 @@ function NftSectionBody({
           reason={scanRevokeDisabledReason}
           failedLiveReads={nft.diagnostics.liveReadFailureCount}
           discoveryTruncated={nft.truncated}
-          chainName={chainConfig.displayName}
           explorerName={chainConfig.explorer.name}
         />
       );
@@ -1401,7 +1400,6 @@ function ScanContent({
         failedLiveReads={failedLiveReads}
         failedAllowanceReads={failedAllowanceReads}
         discoveryTruncated={scan.truncated}
-        chainName={chainConfig.displayName}
         explorerName={chainConfig.explorer.name}
         standardLabel={chainConfig.standardLabels.fungible}
       />
@@ -1556,9 +1554,9 @@ function AllowanceReadWarning({
         {count} allowance read{count === 1 ? "" : "s"} could not be verified live.
       </p>
       <p className="mt-1 leading-6 text-pulse-muted">
-        Failed allowance reads are not counted as safe or cleared. Rescan with a
-        healthier RPC, or verify the affected token/spender pairs directly on{" "}
-        {explorerName}.
+        Failed allowance reads are kept separate from confirmed results. Rescan
+        with a healthier RPC, or verify the affected token/spender pairs
+        directly on {explorerName}.
       </p>
     </div>
   );
@@ -1572,6 +1570,11 @@ function ScanRevokeDisabledWarning({ reason }: { reason: string }) {
     <div className="rounded-2xl border border-amber-400/40 bg-amber-400/10 p-4 text-sm">
       <p className="font-semibold text-amber-200">{notice.title}</p>
       <p className="mt-1 leading-6 text-pulse-muted">{notice.body}</p>
+      {notice.detail ? (
+        <p className="mt-2 font-mono text-xs text-amber-100">
+          Technical detail: {notice.detail}
+        </p>
+      ) : null}
     </div>
   );
 }
@@ -1580,13 +1583,11 @@ function NftVerificationIncompleteState({
   reason,
   failedLiveReads,
   discoveryTruncated,
-  chainName,
   explorerName,
 }: {
   reason: string;
   failedLiveReads: number;
   discoveryTruncated: boolean;
-  chainName: string;
   explorerName: string;
 }) {
   return (
@@ -1595,15 +1596,18 @@ function NftVerificationIncompleteState({
         Verification incomplete
       </p>
       <p className="mt-2 text-lg font-semibold text-pulse-text">
-        No verified active NFT approvals were found.
+        Current NFT approval state could not be fully confirmed.
       </p>
       <p className="mt-2 max-w-2xl leading-6 text-pulse-muted">
-        {reason} This wallet is not shown as clear, and NFT revoke actions stay
-        disabled.
+        Revoke.PLS found approval history, but some live contract reads failed
+        or discovery did not finish. NFT revoke actions stay disabled because
+        the app could not confirm whether the approval is active right now.
       </p>
       <p className="mt-2 max-w-2xl leading-6 text-pulse-muted">
-        Rescan with a healthier {chainName} RPC or explorer response, or verify
-        directly on {explorerName}.
+        Try rescanning. If the message remains, the NFT contract may be
+        nonstandard, temporarily unavailable, or failing live approval reads.
+        Technical detail: {reason} Verify directly on {explorerName} when you
+        need another source.
       </p>
       <div className="mt-4 grid gap-2 text-xs text-pulse-muted sm:grid-cols-3">
         <EmptyStateStep
@@ -1614,7 +1618,10 @@ function NftVerificationIncompleteState({
               : `${failedLiveReads} unverified`
           }
         />
-        <EmptyStateStep title="Not marked clear" body="Verification is incomplete." />
+        <EmptyStateStep
+          title="Current state unknown"
+          body="Revoke disabled until verified."
+        />
         <EmptyStateStep title="Next step" body={`Retry or check ${explorerName}.`} />
       </div>
     </div>
@@ -1625,14 +1632,12 @@ function VerificationIncompleteState({
   failedLiveReads,
   failedAllowanceReads,
   discoveryTruncated,
-  chainName,
   explorerName,
   standardLabel,
 }: {
   failedLiveReads: number;
   failedAllowanceReads: number;
   discoveryTruncated: boolean;
-  chainName: string;
   explorerName: string;
   standardLabel: string;
 }) {
@@ -1642,17 +1647,20 @@ function VerificationIncompleteState({
         Verification incomplete
       </p>
       <p className="mt-2 text-lg font-semibold text-pulse-text">
-        No verified active {standardLabel} approvals were found.
+        Current {standardLabel} approval state could not be fully confirmed.
       </p>
       <p className="mt-2 max-w-2xl leading-6 text-pulse-muted">
         {discoveryTruncated
-          ? "Discovery hit a per-wallet fetch cap, so verification did not cover the full approval history."
-          : "Some live reads could not be verified."}{" "}
-        Failed or missing verification is not counted as safe or cleared.
+          ? "Discovery hit a per-wallet fetch cap before every current approval state could be confirmed."
+          : "Revoke.PLS found approval history, but some live contract reads failed."}{" "}
+        Revoke stays disabled because the app could not confirm whether the
+        approval is active right now.
       </p>
       <p className="mt-2 max-w-2xl leading-6 text-pulse-muted">
-        Rescan with a healthier {chainName} RPC, or verify the affected
-        token/spender pairs directly on {explorerName}.
+        Try rescanning. If the message remains, the token contract may be
+        nonstandard, temporarily unavailable, or failing live approval reads.
+        Verify the affected token/spender pairs directly on {explorerName} when
+        you need another source.
       </p>
       {failedAllowanceReads > 0 ? (
         <div className="mt-4">
@@ -1671,7 +1679,10 @@ function VerificationIncompleteState({
               : `${failedLiveReads} unverified`
           }
         />
-        <EmptyStateStep title="Not marked clear" body="Failed reads stay separate." />
+        <EmptyStateStep
+          title="Current state unknown"
+          body="Revoke disabled until verified."
+        />
         <EmptyStateStep title="Next step" body={`Retry RPC or check ${explorerName}.`} />
       </div>
     </div>

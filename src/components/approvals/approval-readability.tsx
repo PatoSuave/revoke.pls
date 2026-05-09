@@ -1,6 +1,24 @@
 import type { ReactNode } from "react";
 
+import {
+  CURRENT_APPROVAL_STATE_UNVERIFIED_TITLE,
+  ZERO_ADDRESS_EXPLANATION_BODY,
+  ZERO_ADDRESS_EXPLANATION_TITLE,
+  getCurrentApprovalStateCopy,
+  type ApprovalVerificationKind,
+} from "@/lib/approval-verification-copy";
 import type { SpenderProtocolMetadata } from "@/lib/registry";
+
+export {
+  CURRENT_APPROVAL_STATE_UNVERIFIED_BODY,
+  CURRENT_APPROVAL_STATE_UNVERIFIED_TITLE,
+  ZERO_ADDRESS_EXPLANATION_BODY,
+  ZERO_ADDRESS_EXPLANATION_TITLE,
+  getCurrentApprovalStateCopy,
+  isCurrentApprovalStateUnverifiedReason,
+} from "@/lib/approval-verification-copy";
+
+export type { ApprovalVerificationKind } from "@/lib/approval-verification-copy";
 
 export interface ApprovalMeaningItem {
   label: string;
@@ -37,6 +55,116 @@ export function ApprovalMeaningPanel({
           {technicalDetails}
         </div>
       ) : null}
+    </div>
+  );
+}
+
+export function CurrentApprovalStateSummary({
+  kind,
+}: {
+  kind: ApprovalVerificationKind;
+}) {
+  const copy = getCurrentApprovalStateCopy(kind);
+
+  return (
+    <SummaryText
+      primary={copy.title}
+      secondary={
+        <span className="block">
+          <span className="block">{copy.body}</span>
+          <span className="mt-1 block">{copy.method}</span>
+        </span>
+      }
+    />
+  );
+}
+
+export function CurrentApprovalStateInline({
+  kind,
+  className = "",
+}: {
+  kind: ApprovalVerificationKind;
+  className?: string;
+}) {
+  const copy = getCurrentApprovalStateCopy(kind);
+
+  return (
+    <p className={`max-w-[16rem] text-[11px] leading-5 text-pulse-muted ${className}`}>
+      <span className="font-semibold text-pulse-text">
+        {CURRENT_APPROVAL_STATE_UNVERIFIED_TITLE}.
+      </span>{" "}
+      Revoke disabled until verified by a live contract read.{" "}
+      {copy.method}
+    </p>
+  );
+}
+
+export function ZeroAddressSummary() {
+  return (
+    <SummaryText
+      primary={ZERO_ADDRESS_EXPLANATION_TITLE}
+      secondary={ZERO_ADDRESS_EXPLANATION_BODY}
+    />
+  );
+}
+
+export function ZeroAddressInline({ className = "" }: { className?: string }) {
+  return (
+    <p
+      className={`rounded-lg border border-amber-400/30 bg-amber-400/10 p-2 text-[11px] leading-5 text-amber-100 ${className}`}
+    >
+      <span className="font-semibold text-amber-200">
+        {ZERO_ADDRESS_EXPLANATION_TITLE}.
+      </span>{" "}
+      {ZERO_ADDRESS_EXPLANATION_BODY}
+    </p>
+  );
+}
+
+export function VerificationTechnicalExplainer() {
+  return (
+    <div className="mt-2 rounded-lg border border-pulse-border/70 bg-pulse-panel/35 p-2">
+      <p className="font-semibold text-pulse-text">What needs to be verified?</p>
+      <dl className="mt-2 grid gap-2">
+        <div>
+          <dt className="font-semibold text-pulse-muted">ERC-20 approvals</dt>
+          <dd>
+            The app reads{" "}
+            <span className="font-mono text-pulse-text">
+              allowance(owner, spender)
+            </span>
+            . A value greater than zero means the approval is still active.
+          </dd>
+        </div>
+        <div>
+          <dt className="font-semibold text-pulse-muted">
+            ERC-721 per-token approvals
+          </dt>
+          <dd>
+            The app reads{" "}
+            <span className="font-mono text-pulse-text">
+              getApproved(tokenId)
+            </span>
+            . The zero address means no current per-token approved address.
+          </dd>
+        </div>
+        <div>
+          <dt className="font-semibold text-pulse-muted">
+            ERC-721 / ERC-1155 operator approvals
+          </dt>
+          <dd>
+            The app reads{" "}
+            <span className="font-mono text-pulse-text">
+              isApprovedForAll(owner, operator)
+            </span>
+            . A false result means the operator approval is no longer enabled.
+          </dd>
+        </div>
+      </dl>
+      <p className="mt-2">
+        If these reads fail, Revoke.PLS keeps revoke disabled instead of
+        guessing.
+      </p>
     </div>
   );
 }

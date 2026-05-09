@@ -3,6 +3,15 @@ import { join } from "node:path";
 
 import { describe, expect, it } from "vitest";
 
+import {
+  CURRENT_APPROVAL_STATE_UNVERIFIED_BODY,
+  CURRENT_APPROVAL_STATE_UNVERIFIED_TITLE,
+  ZERO_ADDRESS_EXPLANATION_BODY,
+  ZERO_ADDRESS_EXPLANATION_TITLE,
+  getCurrentApprovalStateCopy,
+  isCurrentApprovalStateUnverifiedReason,
+} from "../../lib/approval-verification-copy";
+
 describe("approval row readability copy", () => {
   const erc20Source = readFileSync(
     join(process.cwd(), "src", "components", "approvals", "approval-row.tsx"),
@@ -19,6 +28,16 @@ describe("approval row readability copy", () => {
       "components",
       "approvals",
       "approval-readability.tsx",
+    ),
+    "utf8",
+  );
+  const ethereumSource = readFileSync(
+    join(
+      process.cwd(),
+      "src",
+      "components",
+      "sections",
+      "ethereum-readonly-scanner.tsx",
     ),
     "utf8",
   );
@@ -66,6 +85,85 @@ describe("approval row readability copy", () => {
     );
   });
 
+  it("explains unverified ERC-20 current approval state", () => {
+    const copy = getCurrentApprovalStateCopy("erc20");
+
+    expect(copy.title).toBe(CURRENT_APPROVAL_STATE_UNVERIFIED_TITLE);
+    expect(copy.body).toBe(CURRENT_APPROVAL_STATE_UNVERIFIED_BODY);
+    expect(copy.method).toBe(
+      "To verify this row, the app must read allowance(owner, spender).",
+    );
+    expect(erc20Source).toContain("CurrentApprovalStateSummary kind=\"erc20\"");
+    expect(erc20Source).toContain("verificationKind=\"erc20\"");
+  });
+
+  it("explains unverified NFT per-token and operator current approval state", () => {
+    expect(getCurrentApprovalStateCopy("nft-token").method).toBe(
+      "To verify this row, the app must read getApproved(tokenId).",
+    );
+    expect(getCurrentApprovalStateCopy("nft-operator").method).toBe(
+      "To verify this row, the app must read isApprovedForAll(owner, operator).",
+    );
+    expect(nftSource).toContain("\"nft-token\"");
+    expect(nftSource).toContain("\"nft-operator\"");
+    expect(ethereumSource).toContain("\"nft-token\"");
+    expect(ethereumSource).toContain("\"nft-operator\"");
+  });
+
+  it("explains zero-address NFT rows without changing row visibility", () => {
+    expect(ZERO_ADDRESS_EXPLANATION_TITLE).toBe("Zero address shown");
+    expect(ZERO_ADDRESS_EXPLANATION_BODY).toContain('"no approved address"');
+    expect(ZERO_ADDRESS_EXPLANATION_BODY).toContain(
+      "could not complete the required live read",
+    );
+    expect(nftSource).toContain("ZeroAddressInline");
+    expect(nftSource).toContain("ZeroAddressSummary");
+    expect(ethereumSource).toContain("ZERO_ADDRESS");
+    expect(ethereumSource).toContain("ZeroAddressInline");
+  });
+
+  it("includes the technical verification explainer", () => {
+    expect(helperSource).toContain("What needs to be verified?");
+    expect(helperSource).toContain("allowance(owner, spender)");
+    expect(helperSource).toContain("getApproved(tokenId)");
+    expect(helperSource).toContain("isApprovedForAll(owner, operator)");
+    expect(helperSource).toContain(
+      "Revoke.PLS keeps revoke disabled instead of",
+    );
+    expect(erc20Source).toContain("VerificationTechnicalExplainer");
+    expect(nftSource).toContain("VerificationTechnicalExplainer");
+    expect(ethereumSource).toContain("VerificationTechnicalExplainer");
+  });
+
+  it("detects only verification-related disabled reasons for row hints", () => {
+    expect(
+      isCurrentApprovalStateUnverifiedReason(
+        "This row was not fully verified.",
+      ),
+    ).toBe(true);
+    expect(
+      isCurrentApprovalStateUnverifiedReason(
+        "2 live reads failed - revoke unavailable until verification completes.",
+      ),
+    ).toBe(true);
+    expect(
+      isCurrentApprovalStateUnverifiedReason(
+        "Verified row; revoke available.",
+      ),
+    ).toBe(false);
+    expect(
+      isCurrentApprovalStateUnverifiedReason(
+        "Switch to Ethereum Mainnet to revoke.",
+      ),
+    ).toBe(false);
+  });
+
+  it("keeps existing revoke-disabled UI represented", () => {
+    expect(erc20Source).toContain("Revoke unavailable");
+    expect(nftSource).toContain("Revoke unavailable");
+    expect(ethereumSource).toContain("ReadOnlyAction");
+  });
+
   it("does not claim spenders or operators are safe", () => {
     const combined = `${erc20Source}\n${nftSource}\n${helperSource}`.toLowerCase();
 
@@ -73,5 +171,19 @@ describe("approval row readability copy", () => {
     expect(combined).not.toContain("operator is safe");
     expect(combined).not.toContain("safe spender");
     expect(combined).not.toContain("safe operator");
+  });
+
+  it("does not introduce the word safe in verification-incomplete copy", () => {
+    const verificationCopy = [
+      CURRENT_APPROVAL_STATE_UNVERIFIED_TITLE,
+      CURRENT_APPROVAL_STATE_UNVERIFIED_BODY,
+      ZERO_ADDRESS_EXPLANATION_TITLE,
+      ZERO_ADDRESS_EXPLANATION_BODY,
+      getCurrentApprovalStateCopy("erc20").method,
+      getCurrentApprovalStateCopy("nft-token").method,
+      getCurrentApprovalStateCopy("nft-operator").method,
+    ].join(" ");
+
+    expect(verificationCopy.toLowerCase()).not.toMatch(/\bsafe\b/);
   });
 });

@@ -5,8 +5,13 @@ import type { Address } from "viem";
 
 import {
   ApprovalMeaningPanel,
+  CurrentApprovalStateInline,
+  CurrentApprovalStateSummary,
   SummaryText,
+  VerificationTechnicalExplainer,
+  isCurrentApprovalStateUnverifiedReason,
   protocolMetadataItems,
+  type ApprovalVerificationKind,
 } from "@/components/approvals/approval-readability";
 import {
   GasEstimateDebugDetails,
@@ -88,6 +93,8 @@ export function ApprovalRow({
 
   const chainConfig = getChainConfig(approval.chainId);
   const chainId = approval.chainId;
+  const showCurrentStateNotice =
+    isCurrentApprovalStateUnverifiedReason(revokeDisabledReason);
   const showConfirm =
     confirming &&
     (status === "idle" || status === "refreshing") &&
@@ -206,6 +213,7 @@ export function ApprovalRow({
                 void refreshPreflight();
               }}
               revokeDisabledReason={revokeDisabledReason}
+              verificationKind="erc20"
             />
           )}
         </div>
@@ -255,6 +263,14 @@ export function ApprovalRow({
               />
             ),
           },
+          ...(showCurrentStateNotice
+            ? [
+                {
+                  label: "Current state",
+                  value: <CurrentApprovalStateSummary kind="erc20" />,
+                },
+              ]
+            : []),
           {
             label: "Risk level",
             value: (
@@ -345,6 +361,7 @@ function ApprovalProofDetails({
           This approval was discovered from historical approval events and
           confirmed with a live allowance read before display.
         </p>
+        <VerificationTechnicalExplainer />
         <dl className="mt-2 grid gap-1 font-mono">
           <ProofRow label="Chain" value={chainName} />
           <ProofRow label="Type" value={`${standardLabel} approve allowance`} />
@@ -516,6 +533,7 @@ function RowAction({
   onCancel,
   onRetry,
   revokeDisabledReason,
+  verificationKind,
 }: {
   status: ReturnType<typeof useRevokeApproval>["status"];
   hash?: `0x${string}`;
@@ -526,6 +544,7 @@ function RowAction({
   onCancel: () => void;
   onRetry: () => void;
   revokeDisabledReason?: string | null;
+  verificationKind: ApprovalVerificationKind;
 }) {
   const base =
     "inline-flex w-full items-center justify-center gap-2 rounded-xl px-3 py-2 text-xs font-semibold transition disabled:cursor-not-allowed sm:w-auto";
@@ -573,13 +592,24 @@ function RowAction({
   }
 
   if (revokeDisabledReason) {
+    const showVerificationHint =
+      isCurrentApprovalStateUnverifiedReason(revokeDisabledReason);
+
     return (
-      <span
-        className={`${base} border border-amber-400/40 bg-amber-400/10 text-amber-200`}
-        title={revokeDisabledReason}
-      >
-        Revoke unavailable
-      </span>
+      <div className="flex w-full flex-col items-stretch gap-1 sm:items-end">
+        <span
+          className={`${base} border border-amber-400/40 bg-amber-400/10 text-amber-200`}
+          title={revokeDisabledReason}
+        >
+          Revoke unavailable
+        </span>
+        {showVerificationHint ? (
+          <CurrentApprovalStateInline
+            kind={verificationKind}
+            className="sm:text-right"
+          />
+        ) : null}
+      </div>
     );
   }
 

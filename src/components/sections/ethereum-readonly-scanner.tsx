@@ -5,6 +5,13 @@ import type { ReactNode } from "react";
 import type { Address } from "viem";
 
 import {
+  CurrentApprovalStateInline,
+  VerificationTechnicalExplainer,
+  ZeroAddressInline,
+  isCurrentApprovalStateUnverifiedReason,
+  type ApprovalVerificationKind,
+} from "@/components/approvals/approval-readability";
+import {
   EthereumGasDisclosure,
   GasEstimateDebugDetails,
   GasEstimateDetails,
@@ -34,7 +41,7 @@ import {
   ethereumWalletRevokeDisabledReason,
 } from "@/lib/ethereum-approval-client";
 import { shortenAddress } from "@/lib/format";
-import type { NftApproval } from "@/lib/nft-approvals";
+import { ZERO_ADDRESS, type NftApproval } from "@/lib/nft-approvals";
 import type {
   Erc20PreflightResult,
   NftPreflightResult,
@@ -212,8 +219,8 @@ function ReadOnlyNotice({
         {revokeEnabled
           ? "These Ethereum approvals were live-validated before revoke became available. Transactions still come from your connected wallet on Ethereum Mainnet; the API cannot sign, submit, or move funds."
           : rowRevokeEnabled
-            ? `Ethereum verification is incomplete, so this is not a clear wallet state and batch revoke stays unavailable. Rows that were individually live-verified can still be revoked one at a time from your connected wallet. Global scan status: ${formatGlobalScanReason(revokeDisabledReason)}`
-          : `Ethereum approvals are checked through a read-only API and live RPC validation. ${revokeDisabledReason} The scanner will not request signatures or submit transactions until revoke is available.`}
+            ? `Ethereum verification is incomplete because some live contract reads failed or discovery did not finish. Rows that were individually confirmed by a live read can still be revoked one at a time from your connected wallet. Global scan status: ${formatGlobalScanReason(revokeDisabledReason)}`
+          : `Ethereum approvals are checked through a read-only API and live RPC validation. ${revokeDisabledReason} Revoke stays disabled until current approval state can be confirmed.`}
       </p>
     </div>
   );
@@ -293,11 +300,11 @@ function EthereumScanContent({
       <StatePanel
         tone="warning"
         eyebrow="Verification incomplete"
-        title="No verified active Ethereum approvals were found"
-        body="Some discovery or live validation work did not complete, so this wallet is not shown as clear. Retry later or verify directly on Etherscan."
+        title="Current approval state could not be fully confirmed"
+        body="Revoke.PLS found approval history, but some live contract reads failed or discovery did not finish. The app could not confirm whether those approvals are active right now, so revoke stays disabled. Try rescanning; if the message remains, the contract or RPC may be temporarily unavailable or failing live approval reads."
       >
         <DetailList
-          title="Why this is incomplete"
+          title="Technical detail"
           items={
             warnings.length > 0
               ? warnings
@@ -324,13 +331,13 @@ function EthereumScanContent({
       {scan.mapped.state === "verification-incomplete" ? (
         <div className="rounded-2xl border border-amber-400/40 bg-amber-400/10 p-4 text-sm">
           <p className="font-semibold text-amber-200">
-            Ethereum verification is incomplete.
+            Verification incomplete - current approval state could not be fully confirmed.
           </p>
           <p className="mt-1 leading-6 text-pulse-muted">
-            Active approvals below were returned by the API, but at least one
-            discovery or live-read check did not complete. This is not a clear
-            wallet state. Verified rows may still be revoked individually after
-            a fresh preflight; rows that were not fully verified remain
+            Revoke.PLS found approval history, but some live contract reads
+            failed or discovery did not finish. Rows that were individually
+            confirmed by a live read can still be revoked one at a time; rows
+            whose current approval state could not be confirmed remain
             unavailable.
           </p>
           <p className="mt-2 font-mono text-xs text-amber-100">
@@ -578,6 +585,9 @@ function ReadOnlyNftTable({
               >
                 {shortenAddress(approval.operatorAddress)}
               </a>
+              {approval.operatorAddress.toLowerCase() === ZERO_ADDRESS ? (
+                <ZeroAddressInline className="mt-2" />
+              ) : null}
               <p className="mt-1 text-[11px] text-pulse-muted">
                 {approval.trusted ? "Registry label" : "Unknown operator"}
               </p>
@@ -645,7 +655,12 @@ function EthereumErc20Action({
   });
 
   if (!rowRevokeEnabled) {
-    return <ReadOnlyAction title={rowRevokeDisabledReason} />;
+    return (
+      <ReadOnlyAction
+        title={rowRevokeDisabledReason}
+        verificationKind="erc20"
+      />
+    );
   }
 
   return (
@@ -720,7 +735,14 @@ function EthereumNftAction({
   });
 
   if (!rowRevokeEnabled) {
-    return <ReadOnlyAction title={rowRevokeDisabledReason} />;
+    return (
+      <ReadOnlyAction
+        title={rowRevokeDisabledReason}
+        verificationKind={
+          approval.kind === "approvalForAll" ? "nft-operator" : "nft-token"
+        }
+      />
+    );
   }
 
   return (
@@ -1176,6 +1198,7 @@ function EthereumErc20ProofDetails({
           confirmed with a live RPC read. Other approval tools may use different
           indexes, filters, token lists, or spam protections.
         </p>
+        <VerificationTechnicalExplainer />
         <dl className="mt-2 grid gap-1 font-mono">
           <ProofRow label="Type" value="ERC-20 approve allowance" />
           <ProofRow label="Token" value={approval.tokenAddress} />
@@ -1220,6 +1243,7 @@ function EthereumNftProofDetails({
           confirmed with a live RPC read. Other approval tools may use different
           indexes, filters, token lists, or spam protections.
         </p>
+        <VerificationTechnicalExplainer />
         <dl className="mt-2 grid gap-1 font-mono">
           <ProofRow label="Type" value={type} />
           <ProofRow label="Collection" value={approval.collectionAddress} />
@@ -1245,12 +1269,28 @@ function ProofRow({ label, value }: { label: string; value: string }) {
   );
 }
 
-function ReadOnlyAction({ title }: { title?: string }) {
+function ReadOnlyAction({
+  title,
+  verificationKind,
+}: {
+  title?: string;
+  verificationKind?: ApprovalVerificationKind;
+}) {
+  const showVerificationHint =
+    verificationKind !== undefined &&
+    isCurrentApprovalStateUnverifiedReason(title);
+
   return (
-    <div className="flex justify-stretch sm:justify-end">
+    <div className="flex flex-col items-stretch gap-1 sm:items-end">
       <span className="inline-flex w-full items-center justify-center rounded-xl border border-pulse-border bg-white/5 px-3 py-2 text-xs font-semibold text-pulse-muted sm:w-auto">
         <span title={title}>Revoke unavailable</span>
       </span>
+      {showVerificationHint && verificationKind ? (
+        <CurrentApprovalStateInline
+          kind={verificationKind}
+          className="sm:text-right"
+        />
+      ) : null}
     </div>
   );
 }
