@@ -5,8 +5,36 @@ BSC / BNB Smart Chain, Base, and Ethereum Mainnet.
 
 Live app: <https://pulserevoke.com>
 
-The working scanner is at `/app`. The `/` route is the launcher, trust, and
-distribution page.
+Production routes:
+
+- Scanner workspace: [`/app`](https://pulserevoke.com/app)
+- Security and trust guide: [`/security`](https://pulserevoke.com/security)
+- Manual QA checklist: [docs/MANUAL-QA-CHECKLIST.md](docs/MANUAL-QA-CHECKLIST.md)
+
+The `/app` route is the focused scanner workspace. The `/` route is the
+launcher, trust, and distribution page.
+
+## Current Production Status
+
+Revoke.PLS is live as a non-custodial approval review and revoke tool for
+PulseChain, BSC / BNB Smart Chain, Base, and Ethereum Mainnet. The current
+production checkpoint includes:
+
+- A focused `/app` scanner workspace with address-only scan and connected-wallet
+  scan modes.
+- Live-read verification for scanner and revoke decisions where available.
+- Ethereum Mainnet read-only discovery with wallet-side row-level revoke only
+  for live-verified rows.
+- Verification-incomplete copy for approvals that cannot be fully confirmed.
+- Collapsed approval explanation panels inside result rows.
+- LibertySwap current and legacy contract metadata labels.
+- Revoke receipts with post-revoke live verification status.
+- A public `/security` page with anti-phishing, supported-chain, and wallet
+  safety guidance.
+
+Revoke.PLS never asks for seed phrases or private keys. Revoke actions require
+the connected wallet to show and confirm the transaction before anything is
+submitted on-chain.
 
 ## Live Supported Networks
 
@@ -40,8 +68,7 @@ handling uses ERC-compatible EVM interfaces where appropriate.
 - Does not take custody of funds
 - Does not ask for seed phrases or private keys
 - Does not require token transfers
-- Does not support Ethereum Mainnet right now
-- Does not use a backend/indexer for the approval path
+- Does not use server-side signing, private-key handling, or a relayer
 - Does not guarantee complete discovery if explorer/API providers are
   rate-limited, capped, unavailable, or return malformed data
 - Does not treat registry labels as proof that a spender is safe
@@ -58,9 +85,13 @@ handling uses ERC-compatible EVM interfaces where appropriate.
 5. Show currently active approvals only.
 6. Prepare revoke transactions only after the user chooses to revoke.
 
-Discovery failure, API caps, rate limits, or live validation failures are
-reported as incomplete/unverified states. The app should not show a false
-"clear" state when discovery or validation did not complete.
+Scanner and revoke behavior is verified through live reads where available:
+fungible approvals use `allowance(owner, spender)`, NFT operator approvals use
+`isApprovedForAll(owner, operator)`, and NFT per-token approvals use
+`getApproved(tokenId)` where supported. Discovery failure, API caps, rate
+limits, or live validation failures are reported as incomplete/unverified
+states. The app should not show a false "clear" state when discovery or
+validation did not complete.
 
 ## How Revoking Works
 
@@ -74,6 +105,7 @@ wallet:
 The app sets the transaction `chainId` from the approval record. PulseChain
 revokes use PLS gas wording and PulseScan links. BSC revokes use BNB gas wording
 and BscScan links. Base revokes use ETH gas wording and BaseScan links.
+Every revoke requires wallet confirmation before the transaction is submitted.
 
 ## BSC Implementation Notes
 
@@ -146,6 +178,23 @@ npm.cmd run lint
 npm.cmd run build
 ```
 
+## Before Production Push
+
+Run the full production checklist before pushing a release branch or `main`:
+
+```powershell
+npm.cmd run build
+npx.cmd tsc --noEmit
+npx.cmd vitest run
+npm.cmd run lint
+npm.cmd audit --omit=dev
+git diff --check
+git diff -- src/hooks src/app/api src/lib/wagmi.ts src/lib/preflight.ts
+```
+
+The sensitive-path diff should be empty unless the release explicitly changes
+scanner, wallet, API, preflight, or execution behavior.
+
 ## Environment Variables
 
 All `NEXT_PUBLIC_` variables are bundled into the frontend and visible in the
@@ -206,3 +255,4 @@ See [docs/AUDIT-GUIDE.md](docs/AUDIT-GUIDE.md) for a practical audit checklist.
 - [Security policy](SECURITY.md)
 - [Transparency notes](docs/TRANSPARENCY.md)
 - [Scanner QA checklist](docs/scanner-qa-checklist.md)
+- [Manual production QA checklist](docs/MANUAL-QA-CHECKLIST.md)
