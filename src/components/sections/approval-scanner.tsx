@@ -131,28 +131,23 @@ export function ApprovalScanner() {
   return (
     <section
       id="scanner"
-      className="relative bg-gradient-to-b from-pulse-bg via-pulse-panel/20 to-pulse-bg py-14 sm:py-20"
+      className="relative bg-gradient-to-b from-pulse-bg via-pulse-panel/20 to-pulse-bg py-7 sm:py-10"
     >
       <div className="mx-auto max-w-6xl px-4 sm:px-6">
-        <div className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
-          <div className="max-w-2xl">
-            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-pulse-cyan">
-              Wallet safety console
-            </p>
-            <h2 className="mt-2 text-3xl font-bold tracking-tight sm:text-4xl">
-              Approval <span className="text-gradient-pulse">scanner</span>
-            </h2>
-            <p className="mt-3 leading-7 text-pulse-muted">
-              Connect on Ethereum, PulseChain, BNB Smart Chain, or Base to find
-              token allowances and NFT operator approvals from your wallet
-              history. Every result is re-checked live before it is shown as
-              active.
-            </p>
-          </div>
-          <SafetyStrip />
+        <div className="max-w-3xl">
+          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-pulse-cyan">
+            Scanner controls
+          </p>
+          <h2 className="mt-2 text-2xl font-bold tracking-tight text-pulse-text sm:text-3xl">
+            Choose a wallet to review
+          </h2>
+          <p className="mt-2 text-sm leading-6 text-pulse-muted">
+            Paste an address for read-only review, or connect the matching
+            wallet when you are ready to revoke verified approvals.
+          </p>
         </div>
 
-        <div className="relative mt-8 overflow-hidden rounded-2xl border border-pulse-border bg-pulse-panel/80 shadow-glow">
+        <div className="relative mt-5 overflow-hidden rounded-2xl border border-pulse-border bg-pulse-panel/80 shadow-glow">
           <div
             className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-pulse-cyan/70 to-transparent"
             aria-hidden
@@ -199,31 +194,6 @@ function useDebugModeFromQuery() {
   }, []);
 
   return debugMode;
-}
-
-function SafetyStrip() {
-  const items = [
-    "No custody",
-    "No seed phrases",
-    "User-approved writes only",
-    "Curated labels, still verify",
-  ];
-  return (
-    <div className="grid grid-cols-2 gap-2 rounded-2xl border border-pulse-border bg-pulse-bg/60 p-2 text-[11px] text-pulse-muted sm:grid-cols-4 lg:max-w-xl">
-      {items.map((item) => (
-        <span
-          key={item}
-          className="flex items-center gap-2 rounded-xl bg-pulse-panel/70 px-3 py-2"
-        >
-          <span
-            className="h-1.5 w-1.5 rounded-full bg-pulse-green"
-            aria-hidden
-          />
-          {item}
-        </span>
-      ))}
-    </div>
-  );
 }
 
 function AddressScanPanel({
