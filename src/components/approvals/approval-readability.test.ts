@@ -70,6 +70,23 @@ describe("approval row readability copy", () => {
     );
   });
 
+  it("renders the approval meaning panel as a collapsed details control", () => {
+    expect(helperSource).toContain("<details");
+    expect(helperSource).toContain("<summary");
+    expect(helperSource).toContain("What this approval means");
+    expect(helperSource).toContain("focus-visible:outline-pulse-cyan");
+    expect(helperSource).toContain("group-open:rotate-45");
+    expect(helperSource).not.toContain("<details open");
+  });
+
+  it("keeps approval meaning content available inside the collapsible panel", () => {
+    expect(helperSource).toContain("<dl");
+    expect(helperSource).toContain("{items.map((item)");
+    expect(helperSource).toContain("Technical details");
+    expect(erc20Source).toContain("<ApprovalMeaningPanel");
+    expect(nftSource).toContain("<ApprovalMeaningPanel");
+  });
+
   it("includes source-grounded protocol metadata labels", () => {
     expect(helperSource).toContain("Known protocol");
     expect(helperSource).toContain("Contract status");
@@ -77,6 +94,8 @@ describe("approval row readability copy", () => {
     expect(helperSource).toContain("Legacy contract");
     expect(helperSource).toContain("Documented asset");
     expect(helperSource).toContain("Source");
+    expect(helperSource).toContain("metadata.protocolName");
+    expect(helperSource).toContain("metadata.sourceLabel");
     expect(erc20Source).toContain(
       "protocolMetadataItems(approval.spenderProtocolMetadata)",
     );
