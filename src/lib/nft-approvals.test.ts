@@ -48,6 +48,32 @@ describe("NFT revoke builders", () => {
     });
   });
 
+  it("does not surface cleared ERC-721 token approvals as active approvals", () => {
+    const candidate: NftDiscoveredApproval = {
+      chainId: BSC_CHAIN_ID,
+      kind: "tokenApproval",
+      collectionAddress: COLLECTION,
+      ownerAddress: OWNER,
+      operatorAddress: ZERO_ADDRESS,
+      tokenId: 7n,
+    };
+
+    const parsed = parseNftValidationResults(
+      [
+        success(true),
+        success(false),
+        success("Collection"),
+        success(ZERO_ADDRESS),
+      ],
+      OWNER,
+      BSC_CHAIN_ID,
+      [candidate],
+    );
+
+    expect(parsed.approvals).toHaveLength(0);
+    expect(parsed.stats.active).toBe(0);
+  });
+
   it("enriches NFT operators with LibertySwap protocol metadata", () => {
     const candidate: NftDiscoveredApproval = {
       chainId: BSC_CHAIN_ID,

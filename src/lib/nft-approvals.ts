@@ -78,6 +78,7 @@ export const nftRevokeAbi: Abi = [
 /** ERC-165 interface IDs used for standard detection. */
 export const INTERFACE_ID_ERC721 = "0x80ac58cd";
 export const INTERFACE_ID_ERC1155 = "0xd9b67a26";
+export const ZERO_ADDRESS: Address = "0x0000000000000000000000000000000000000000";
 
 export type NftStandard = "erc721" | "erc1155" | "unknown";
 
@@ -303,9 +304,12 @@ export function parseNftValidationResults(
       if (liveRes.result !== true) return;
     } else {
       if (typeof liveRes.result !== "string") return;
+      const approvedLower = liveRes.result.toLowerCase();
+      const operatorLower = candidate.operatorAddress.toLowerCase();
       if (
-        liveRes.result.toLowerCase() !==
-        candidate.operatorAddress.toLowerCase()
+        approvedLower === ZERO_ADDRESS ||
+        operatorLower === ZERO_ADDRESS ||
+        approvedLower !== operatorLower
       ) {
         return;
       }
@@ -384,7 +388,6 @@ export function buildSetApprovalForAllRevoke(args: {
  * single-token approval on ERC-721 — the caller must still own the NFT
  * or be approved-for-all on the collection, or the transaction will revert.
  */
-export const ZERO_ADDRESS: Address = "0x0000000000000000000000000000000000000000";
 
 export function buildErc721TokenRevoke(args: {
   collectionAddress: Address;
