@@ -10,6 +10,7 @@ import {
   BatchActionBar,
   BatchRevokePanel,
 } from "@/components/approvals/batch-revoke-panel";
+import { ArbitrumReadOnlyScanner } from "@/components/sections/arbitrum-readonly-scanner";
 import { EthereumReadOnlyScanner } from "@/components/sections/ethereum-readonly-scanner";
 import { NftApprovalRow } from "@/components/approvals/nft-approval-row";
 import { ConnectWalletButton } from "@/components/connect-wallet-button";
@@ -30,6 +31,10 @@ import {
   getSupportedChainShortNames,
   type SupportedChainConfig,
 } from "@/lib/chains";
+import {
+  ARBITRUM_ONE_CLIENT_CHAIN_ID,
+  resolveArbitrumReadOnlyChainId,
+} from "@/lib/arbitrum-approval-client";
 import {
   ETHEREUM_MAINNET_CLIENT_CHAIN_ID,
   resolveEthereumReadOnlyChainId,
@@ -406,6 +411,23 @@ function ScannerBody({
     );
   }
 
+  const arbitrumReadOnlyChainId = resolveArbitrumReadOnlyChainId({
+    walletChainId,
+    wagmiChainId,
+  });
+
+  if (arbitrumReadOnlyChainId === ARBITRUM_ONE_CLIENT_CHAIN_ID) {
+    return (
+      <ArbitrumReadOnlyScanner
+        owner={address}
+        connectedAddress={address}
+        walletChainId={walletChainId}
+        wagmiChainId={wagmiChainId}
+        debugMode={debugMode}
+      />
+    );
+  }
+
   if (!onSupportedChain || !chainConfig) {
     const names = getSupportedChainShortNames();
     return (
@@ -691,6 +713,19 @@ function AddressOnlyChainScan({
   if (chainId === ETHEREUM_MAINNET_CLIENT_CHAIN_ID) {
     return (
       <EthereumReadOnlyScanner
+        owner={owner}
+        connectedAddress={connectedAddress}
+        walletChainId={walletChainId}
+        wagmiChainId={wagmiChainId}
+        debugMode={debugMode}
+        onScanSettled={handleScanSettled}
+      />
+    );
+  }
+
+  if (chainId === ARBITRUM_ONE_CLIENT_CHAIN_ID) {
+    return (
+      <ArbitrumReadOnlyScanner
         owner={owner}
         connectedAddress={connectedAddress}
         walletChainId={walletChainId}

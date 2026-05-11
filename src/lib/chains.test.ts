@@ -21,6 +21,7 @@ import {
   supportedChains,
 } from "./chains";
 import { explorerAddressUrl, explorerTokenUrl, explorerTxUrl } from "./explorer";
+import { ARBITRUM_ONE_CLIENT_CHAIN_ID } from "./arbitrum-approval-client";
 import { ETHEREUM_MAINNET_CLIENT_CHAIN_ID } from "./ethereum-approval-client";
 import {
   getSpenderEntry,
@@ -60,6 +61,7 @@ describe("supported chain config", () => {
     ]);
     expect(getSupportedChainShortNames()).toBe("PulseChain, BSC, or Base");
     expect(isSupportedChainId(1)).toBe(false);
+    expect(isSupportedChainId(ARBITRUM_ONE_CLIENT_CHAIN_ID)).toBe(false);
   });
 
   it("configures BSC identity, gas, standards, and API defaults", () => {
@@ -188,6 +190,19 @@ describe("supported chain config", () => {
     );
   });
 
+  it("builds Arbiscan links for read-only Arbitrum without activating Arbitrum", () => {
+    expect(isSupportedChainId(ARBITRUM_ONE_CLIENT_CHAIN_ID)).toBe(false);
+    expect(explorerAddressUrl(ARBITRUM_ONE_CLIENT_CHAIN_ID, SPENDER)).toBe(
+      `https://arbiscan.io/address/${SPENDER}`,
+    );
+    expect(explorerTokenUrl(ARBITRUM_ONE_CLIENT_CHAIN_ID, TOKEN)).toBe(
+      `https://arbiscan.io/token/${TOKEN}`,
+    );
+    expect(explorerTxUrl(ARBITRUM_ONE_CLIENT_CHAIN_ID, "0xabc")).toBe(
+      "https://arbiscan.io/tx/0xabc",
+    );
+  });
+
   it("does not leak PulseChain registry labels onto BSC", () => {
     expect(getSpenderEntry(PULSECHAIN_CHAIN_ID, PULSEX_ROUTER)?.label).toBe(
       "PulseX Router v2",
@@ -299,7 +314,7 @@ describe("supported chain config", () => {
     });
   });
 
-  it("presents Ethereum in public product copy without adding it to active chain config", () => {
+  it("presents Ethereum and Arbitrum in public product copy without adding them to active chain config", () => {
     const copy = [
       siteConfig.tagline,
       siteConfig.description,
@@ -310,7 +325,9 @@ describe("supported chain config", () => {
     expect(copy).toContain("BSC");
     expect(copy).toContain("Base");
     expect(copy).toContain("Ethereum");
+    expect(copy).toContain("Arbitrum");
     expect(isSupportedChainId(1)).toBe(false);
+    expect(isSupportedChainId(ARBITRUM_ONE_CLIENT_CHAIN_ID)).toBe(false);
     expect(copy).not.toContain("Etherscan");
   });
 

@@ -133,6 +133,9 @@ describe("scan target state", () => {
     expect(scanner).toContain("useApprovalDiscovery({ owner, chainId");
     expect(scanner).toContain("useNftApprovalDiscovery({ owner, chainId");
     expect(scanner).toContain("EthereumReadOnlyScanner");
+    expect(scanner).toContain("ArbitrumReadOnlyScanner");
+    expect(scanner).toContain("owner={owner}");
+    expect(scanner).toContain("connectedAddress={connectedAddress}");
     expect(scanner).toContain("getScanTargetRevokeDisabledReason");
     expect(scanner).not.toContain("{supportedChainConfigList.map((chainConfig)");
   });
@@ -159,12 +162,16 @@ describe("scan target state", () => {
   });
 
   it("does not add address-only API transaction submission or signing helpers", () => {
-    const apiRoute = readFileSync(
+    const ethereumRoute = readFileSync(
       join(process.cwd(), "src", "app", "api", "ethereum", "approvals", "route.ts"),
       "utf8",
     );
+    const arbitrumRoute = readFileSync(
+      join(process.cwd(), "src", "app", "api", "arbitrum", "approvals", "route.ts"),
+      "utf8",
+    );
 
-    expect(apiRoute).not.toMatch(
+    expect(`${ethereumRoute}\n${arbitrumRoute}`).not.toMatch(
       /writeContract|sendTransaction|signTransaction|privateKey|mnemonic|seed/i,
     );
   });

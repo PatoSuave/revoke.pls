@@ -1,7 +1,8 @@
 # Transparency Notes
 
 Pulse Revoke is public code for reviewing and clearing wallet approvals on
-PulseChain, BSC / BNB Smart Chain, and Base.
+PulseChain, BSC / BNB Smart Chain, Base, and Ethereum Mainnet verified rows,
+with Arbitrum One read-only beta scanning.
 
 ## What The App Does
 
@@ -13,6 +14,8 @@ PulseChain, BSC / BNB Smart Chain, and Base.
 - Adds chain-scoped registry labels where known
 - Prepares standard approval-clearing transactions when the user chooses to
   revoke
+- Scans Arbitrum One through a server-side read-only API without enabling
+  Arbitrum revoke
 
 ## What The App Does Not Do
 
@@ -20,7 +23,8 @@ PulseChain, BSC / BNB Smart Chain, and Base.
 - Does not ask for private keys
 - Does not take custody of funds
 - Does not require token transfers
-- Does not support Ethereum Mainnet right now
+- Does not support Arbitrum revoke yet
+- Does not use server-side signing, relayers, or private-key handling
 - Does not guarantee complete discovery when explorer APIs are capped,
   rate-limited, unavailable, or malformed
 - Does not claim that known registry labels make a spender safe
@@ -28,7 +32,8 @@ PulseChain, BSC / BNB Smart Chain, and Base.
 ## How Users Can Verify Behavior
 
 - Review the active chain shown in the app.
-- Open token and spender links on PulseScan, BscScan, or BaseScan.
+- Open token and spender links on PulseScan, BscScan, BaseScan, Etherscan, or
+  Arbiscan.
 - Check that revoke wallet prompts match the intended approval-clearing call.
 - Confirm BSC transactions use BNB gas and BscScan links.
 - Confirm PulseChain transactions use PLS gas and PulseScan links.
@@ -46,7 +51,9 @@ and then uses live RPC reads to validate current state.
 For BSC, historical discovery uses Etherscan API V2 with `chainid=56`. BscScan
 is still used for public explorer links. For Base, historical discovery uses
 Etherscan API V2 with `chainid=8453`. BaseScan is still used for public
-explorer links.
+explorer links. Ethereum and Arbitrum discovery use server-side read-only API
+routes so managed RPC URLs and explorer API keys do not need to be exposed to
+the browser; Arbitrum requests use `chainid=42161` and Arbiscan links.
 
 ## Why Live Validation Matters
 
@@ -75,6 +82,8 @@ not automatically mean safe.
 - Some token and NFT contracts are nonstandard.
 - NFT per-token discovery can be limited by contract behavior and historical
   event availability.
+- Arbitrum One is read-only beta; verified rows can be reviewed, but revoke is
+  not enabled.
 - BSC revokes above `16,777,216` estimated gas are blocked because BNB Smart
   Chain rejects individual transactions above the Osaka/Mendel cap.
 - BSC revokes above `1,000,000` estimated gas show a warning before the wallet

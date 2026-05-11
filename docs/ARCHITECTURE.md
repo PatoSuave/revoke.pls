@@ -16,20 +16,28 @@ Active supported chains are configured in `src/lib/chains.ts`:
   `BscScan`
 - Base, chain ID `8453`, native gas token `ETH`, explorer `BaseScan`
 - Ethereum Mainnet, chain ID `1`, native gas token `ETH`, explorer `Etherscan`
+- Arbitrum One, chain ID `42161`, native gas token `ETH`, explorer `Arbiscan`
 
 Ethereum Mainnet is wallet-enabled for the Ethereum read-only discovery and
 wallet-side revoke lane. It is not handled by the default supported-chain
 scanner path.
 
+Arbitrum One is wallet-enabled only so the app can recognize the connected
+network and run the Arbitrum read-only scanner lane. It is not part of the
+default supported-chain scanner path, and Arbitrum revoke is not enabled.
+
 ## Web3 Layer
 
-- `src/lib/wagmi.ts` registers PulseChain, BSC, Base, and Ethereum Mainnet with
-  wagmi. Ethereum is used by the separate Ethereum lane.
+- `src/lib/wagmi.ts` registers PulseChain, BSC, Base, Ethereum Mainnet, and
+  Arbitrum One with wagmi. Ethereum and Arbitrum use separate scanner lanes.
 - PulseChain RPC defaults to `https://rpc.pulsechain.com`.
 - BSC RPC defaults to `https://bsc-dataseed.bnbchain.org`.
 - Base RPC defaults to `https://mainnet.base.org`.
 - Ethereum wallet RPC defaults to `https://ethereum-rpc.publicnode.com` unless
   overridden for the wallet client.
+- Arbitrum wallet chain recognition uses `https://arb1.arbitrum.io/rpc`.
+  Production Arbitrum approval discovery uses server-only RPC/API settings
+  through `/api/arbitrum/approvals`.
 - RPCs can be overridden with public env vars.
 - Live reads and writes always include the approval record's `chainId`.
 - When connected, the wallet account `chainId` is the active scanner source of
@@ -68,6 +76,13 @@ the Etherscan key stays server-only. The route is read-only, uses bounded
 discovery and live-validation caps, and never signs, relays, or submits
 transactions.
 
+Arbitrum One historical discovery is exposed through
+`/api/arbitrum/approvals` so managed RPC URLs and Arbiscan keys stay
+server-only. The route is read-only, uses bounded discovery and
+live-validation caps, requires `chainid=42161`, and never signs, relays, or
+submits transactions. Arbitrum rows can be shown only after live reads verify
+current approval state.
+
 ## Explorer APIs
 
 - PulseChain discovery API default:
@@ -90,6 +105,14 @@ transactions.
   `MAINNET_RPC_URL` / `ETHEREUM_RPC_URL`
 - Ethereum server API key env var:
   `ETHERSCAN_API_KEY`
+- Arbitrum server RPC env vars:
+  `ARBITRUM_ONE_RPC_URL` / `ARBITRUM_RPC_URL`
+- Arbitrum server discovery API default:
+  `https://api.etherscan.io/v2/api`
+- Arbitrum server discovery API chain id:
+  `ARBITRUM_EXPLORER_CHAIN_ID=42161`
+- Arbitrum server API key env var:
+  `ARBISCAN_API_KEY`
 
 The old BscScan V1 endpoint `https://api.bscscan.com/api` is deprecated for
 BSC log discovery. If it is configured or returned by a custom endpoint, debug
@@ -115,6 +138,15 @@ User-facing Base copy uses:
 - `ERC-1155` for multi-token NFT / semi-fungible approvals
 - `ETH` for gas
 
+User-facing Arbitrum copy uses:
+
+- `ERC-20` for fungible token approvals
+- `ERC-721` for NFT approvals
+- `ERC-1155` for multi-token NFT / semi-fungible approvals
+- `ETH` for gas
+- `Read-only beta` for scan state
+- `Revoke not enabled` for all Arbitrum rows
+
 ## Transaction Flow
 
 Fungible token revoke:
@@ -137,6 +169,10 @@ Ethereum revoke uses the same wallet-side approval-clearing calls, but only
 after server-read-only discovery and row-level live verification have identified
 an active approval. Global batch revoke stays disabled when global Ethereum
 verification is incomplete.
+
+Arbitrum revoke is intentionally unavailable in the current phase. Arbitrum
+rows are returned from the server-side read-only API for review only; they do
+not route through single-row revoke, NFT revoke, or batch revoke hooks.
 
 ## BSC Gas Safety
 

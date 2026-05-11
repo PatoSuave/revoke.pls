@@ -6,6 +6,7 @@ import {
   getAddressOnlyActiveScanChainIds,
   resolveDefaultAddressOnlyScanChainId,
 } from "@/lib/address-only-scan";
+import { ARBITRUM_ONE_CLIENT_CHAIN_ID } from "@/lib/arbitrum-approval-client";
 import { BASE_CHAIN_ID, BSC_CHAIN_ID, PULSECHAIN_CHAIN_ID } from "@/lib/chains";
 import { ETHEREUM_MAINNET_CLIENT_CHAIN_ID } from "@/lib/ethereum-approval-client";
 
@@ -28,6 +29,15 @@ describe("address-only scan selection", () => {
     ).toBe(BSC_CHAIN_ID);
   });
 
+  it("defaults to Arbitrum when the connected wallet is on Arbitrum One", () => {
+    expect(
+      resolveDefaultAddressOnlyScanChainId({
+        walletChainId: ARBITRUM_ONE_CLIENT_CHAIN_ID,
+        wagmiChainId: ETHEREUM_MAINNET_CLIENT_CHAIN_ID,
+      }),
+    ).toBe(ARBITRUM_ONE_CLIENT_CHAIN_ID);
+  });
+
   it("scans only the selected chain by default", () => {
     expect(
       getAddressOnlyActiveScanChainIds({
@@ -41,6 +51,7 @@ describe("address-only scan selection", () => {
   it("requires explicit scan-all state before multiple chains are active", () => {
     expect(addressOnlyScanOptions.map((option) => option.chainId)).toEqual([
       ETHEREUM_MAINNET_CLIENT_CHAIN_ID,
+      ARBITRUM_ONE_CLIENT_CHAIN_ID,
       PULSECHAIN_CHAIN_ID,
       BSC_CHAIN_ID,
       BASE_CHAIN_ID,
@@ -59,6 +70,6 @@ describe("address-only scan selection", () => {
         scanAllStarted: true,
         scanAllIndex: 1,
       }),
-    ).toEqual([ETHEREUM_MAINNET_CLIENT_CHAIN_ID, PULSECHAIN_CHAIN_ID]);
+    ).toEqual([ETHEREUM_MAINNET_CLIENT_CHAIN_ID, ARBITRUM_ONE_CLIENT_CHAIN_ID]);
   });
 });

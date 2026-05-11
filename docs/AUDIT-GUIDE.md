@@ -11,10 +11,16 @@ Current active supported networks should be exactly:
 - BSC / BNB Smart Chain, chain ID `56`
 - Base, chain ID `8453`
 - Ethereum Mainnet, chain ID `1`
+- Arbitrum One, chain ID `42161`, read-only beta
 
 Ethereum Mainnet uses server-read-only discovery and wallet-side revoke. It is
 wallet-enabled, but it must not introduce server-side signing, relayers, private
 keys, or API route transaction submission.
+
+Arbitrum One uses server-read-only discovery only. It is wallet-enabled for
+network recognition and address-only scan selection, but Arbitrum revoke,
+batch revoke, server-side signing, relayers, private keys, and API route
+transaction submission must stay unavailable.
 
 ## Key Files
 
@@ -32,14 +38,15 @@ keys, or API route transaction submission.
 | Telemetry/privacy | `src/lib/telemetry.ts` |
 | Diagnostics UI | `src/components/sections/scanner-diagnostics.tsx` |
 | Ethereum API controls | `src/app/api/ethereum/approvals/route.ts`, `src/lib/ethereum-approval-api.ts`, `src/lib/ethereum-approval-api-controls.ts` |
+| Arbitrum API controls | `src/app/api/arbitrum/approvals/route.ts`, `src/lib/arbitrum-approval-api.ts`, `src/lib/arbitrum-approval-api-controls.ts` |
 | Address-only scan controls | `src/lib/address-only-scan.ts`, `src/components/sections/approval-scanner.tsx` |
 
 ## Chain Safety Questions
 
 - Are active supported chains exactly PulseChain, BSC, Base, and wallet-enabled
-  Ethereum Mainnet?
-- Does `src/lib/wagmi.ts` register Ethereum only for the wallet-side Ethereum
-  lane and keep chain lists scoped correctly?
+  Ethereum Mainnet plus read-only Arbitrum One?
+- Does `src/lib/wagmi.ts` register Ethereum and Arbitrum only for their
+  separate lanes and keep chain lists scoped correctly?
 - Is Ethereum Mainnet protected by owner, chain, preflight, gas, and row-level
   verification gates?
 - Do approval records carry `chainId` through discovery, validation, display,
@@ -68,6 +75,20 @@ keys, or API route transaction submission.
   NFT verification fails?
 - Is the Ethereum API free of `writeContract`, `sendTransaction`, signing,
   private key, seed phrase, mnemonic, or relayer logic?
+
+## Arbitrum Discovery Questions
+
+- Does `/api/arbitrum/approvals` reject invalid owners with `400`?
+- Does route-level rate limiting return `429` with non-clear JSON?
+- Does every Arbitrum historical log request use Etherscan API V2 with
+  `chainid=42161`?
+- Are Arbitrum explorer links built with `https://arbiscan.io`?
+- Are Arbitrum RPC and Arbiscan API keys server-only values, with no
+  browser-exposed Arbitrum variables?
+- Do timeout, cap-hit, rate-limit, truncation, malformed rows, and live-read
+  failures return non-clear states?
+- Are Arbitrum rows read-only with no single-row revoke, NFT revoke, batch
+  revoke, `writeContract`, or `sendTransaction` path?
 
 ## BSC Discovery Questions
 
@@ -111,6 +132,7 @@ keys, or API route transaction submission.
 - Do BSC revokes use BNB wording and BscScan links?
 - Do PulseChain revokes use PLS wording and PulseScan links?
 - Do Base revokes use ETH wording and BaseScan links?
+- Does Arbitrum continue to show read-only beta and no revoke action?
 
 ## BSC Gas Safety Questions
 
@@ -170,6 +192,8 @@ npm.cmd run build
 - Use address-only scan-all and confirm networks start one at a time.
 - Load `/app` on Ethereum Mainnet and confirm Ethereum discovery is read-only
   until a matching wallet-side revoke is explicitly reviewed.
+- Load `/app` on Arbitrum One and confirm discovery is read-only beta with no
+  revoke or batch revoke action.
 - Test a low-gas BSC revoke and confirm the wallet receives `gas` below the
   hard cap.
 - Test or simulate a high-gas BSC revoke and confirm the in-app warning appears

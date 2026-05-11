@@ -16,14 +16,48 @@ describe("hardening source invariants", () => {
   });
 
   it("keeps API routes free of server-side write, signing, or relayer logic", () => {
-    const route = readFileSync(
+    const ethereumRoute = readFileSync(
       join(process.cwd(), "src", "app", "api", "ethereum", "approvals", "route.ts"),
       "utf8",
     );
+    const arbitrumRoute = readFileSync(
+      join(process.cwd(), "src", "app", "api", "arbitrum", "approvals", "route.ts"),
+      "utf8",
+    );
 
-    expect(route).not.toMatch(
+    expect(`${ethereumRoute}\n${arbitrumRoute}`).not.toMatch(
       /writeContract|sendTransaction|signTransaction|privateKey|mnemonic|seed|relayer/i,
     );
+  });
+
+  it("keeps Arbitrum read-only UI out of revoke hooks", () => {
+    const component = readFileSync(
+      join(
+        process.cwd(),
+        "src",
+        "components",
+        "sections",
+        "arbitrum-readonly-scanner.tsx",
+      ),
+      "utf8",
+    );
+    const hook = readFileSync(
+      join(process.cwd(), "src", "hooks", "use-arbitrum-approval-scan.ts"),
+      "utf8",
+    );
+    const client = readFileSync(
+      join(process.cwd(), "src", "lib", "arbitrum-approval-client.ts"),
+      "utf8",
+    );
+
+    expect(`${component}\n${hook}\n${client}`).not.toMatch(
+      /useRevokeApproval|useRevokeNftApproval|useBatchRevoke|writeContract|sendTransaction/i,
+    );
+    expect(client).toContain("revokeEnabled: false");
+    expect(client).toContain("/api/arbitrum/approvals?owner=");
+    expect(hook).toContain('queryKey: ["arbitrum-approval-api"');
+    expect(hook).toContain('emptyArbitrumApprovalApiResponse("upstream-failure"');
+    expect(`${component}\n${client}`).not.toMatch(/\bsafe\b/i);
   });
 
   it("keeps Ethereum security docs current", () => {
@@ -35,7 +69,10 @@ describe("hardening source invariants", () => {
 
     expect(security).toContain("Ethereum Mainnet, chain ID `1`");
     expect(security).toContain("server-read-only discovery");
+    expect(security).toContain("Arbitrum One, chain ID `42161`");
+    expect(security).toContain("Arbitrum revoke is not enabled");
     expect(auditGuide).toContain("Ethereum Mainnet, chain ID `1`");
+    expect(auditGuide).toContain("Arbitrum One, chain ID `42161`");
     expect(auditGuide).toContain("CSP report-only");
     expect(`${security}\n${auditGuide}`).not.toContain(
       "Ethereum Mainnet should remain inactive",

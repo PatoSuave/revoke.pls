@@ -1,7 +1,8 @@
 # Pulse Revoke / revoke.pls
 
 Pulse Revoke is a non-custodial approval scanner and revoker for PulseChain,
-BSC / BNB Smart Chain, Base, and Ethereum Mainnet.
+BSC / BNB Smart Chain, Base, and Ethereum Mainnet, with Arbitrum One
+read-only beta scanning.
 
 Live app: <https://pulserevoke.com>
 
@@ -17,14 +18,16 @@ launcher, trust, and distribution page.
 ## Current Production Status
 
 Revoke.PLS is live as a non-custodial approval review and revoke tool for
-PulseChain, BSC / BNB Smart Chain, Base, and Ethereum Mainnet. The current
-production checkpoint includes:
+PulseChain, BSC / BNB Smart Chain, Base, Ethereum Mainnet, and Arbitrum One
+read-only beta scanning. The current production checkpoint includes:
 
 - A focused `/app` scanner workspace with address-only scan and connected-wallet
   scan modes.
 - Live-read verification for scanner and revoke decisions where available.
 - Ethereum Mainnet read-only discovery with wallet-side row-level revoke only
   for live-verified rows.
+- Arbitrum One read-only approval discovery and live verification preview;
+  Arbitrum revoke is not enabled.
 - Verification-incomplete copy for approvals that cannot be fully confirmed.
 - Collapsed approval explanation panels inside result rows.
 - LibertySwap current and legacy contract metadata labels.
@@ -38,16 +41,20 @@ submitted on-chain.
 
 ## Live Supported Networks
 
-Active supported networks are intentionally limited to:
+Active scan networks are intentionally limited to:
 
 - PulseChain mainnet, chain ID `369`, gas token `PLS`, explorer `PulseScan`
 - BSC / BNB Smart Chain, chain ID `56`, gas token `BNB`, explorer `BscScan`
 - Base Mainnet, chain ID `8453`, gas token `ETH`, explorer `BaseScan`
 - Ethereum Mainnet, chain ID `1`, gas token `ETH`, explorer `Etherscan`
+- Arbitrum One, chain ID `42161`, gas token `ETH`, explorer `Arbiscan`
+  (read-only beta; revoke not enabled)
 
 Ethereum discovery uses a server-read-only API, while Ethereum revoke remains
 wallet-side only with owner, chain, preflight, gas, and row-level verification
 gates.
+Arbitrum discovery also uses a server-read-only API, and Arbitrum revoke stays
+unavailable in this phase.
 
 ## What It Can Scan And Revoke
 
@@ -55,6 +62,7 @@ gates.
 - BSC BEP-20 fungible token approvals
 - Base ERC-20 fungible token approvals
 - Ethereum ERC-20 fungible token approvals
+- Arbitrum ERC-20 fungible token approvals in read-only beta
 - NFT operator approvals where supported by the app pipeline
 - NFT per-token approvals where supported by the app pipeline
 - Sequential batch revoke for fungible token approvals on one chain at a time
@@ -62,6 +70,7 @@ gates.
 User-facing BSC labels are `BEP-20`, `BEP-721`, and `BEP-1155`. User-facing
 Base labels are `ERC-20`, `ERC-721`, and `ERC-1155`. Internal ABI and event
 handling uses ERC-compatible EVM interfaces where appropriate.
+User-facing Arbitrum labels are `ERC-20`, `ERC-721`, and `ERC-1155`.
 
 ## What It Does Not Do
 
@@ -106,6 +115,8 @@ The app sets the transaction `chainId` from the approval record. PulseChain
 revokes use PLS gas wording and PulseScan links. BSC revokes use BNB gas wording
 and BscScan links. Base revokes use ETH gas wording and BaseScan links.
 Every revoke requires wallet confirmation before the transaction is submitted.
+Arbitrum rows are read-only in the current phase and do not expose revoke
+actions.
 
 ## BSC Implementation Notes
 
@@ -133,6 +144,17 @@ Every revoke requires wallet confirmation before the transaction is submitted.
 - Base does not inherit BSC's Osaka/Mendel gas cap or high-gas warning
   thresholds.
 
+## Arbitrum Implementation Notes
+
+- Arbitrum One is chain ID `42161`.
+- Historical Arbitrum approval discovery uses the server-side
+  `/api/arbitrum/approvals` route.
+- The route uses Etherscan-compatible logs with `chainid=42161` and Arbiscan
+  links for user-facing address, token, and transaction URLs.
+- Arbitrum RPC and API keys are server-only values. Do not put managed
+  Arbitrum RPC URLs or API keys in `NEXT_PUBLIC_*` variables.
+- Arbitrum revoke is not enabled yet; scan results are read-only beta rows.
+
 ## Security Model
 
 - Wallet interactions are client-side through wagmi/viem connectors.
@@ -145,7 +167,7 @@ Every revoke requires wallet confirmation before the transaction is submitted.
   is not a safety guarantee.
 
 Always verify token, spender, operator, and transaction details in your wallet
-and on PulseScan, BscScan, or BaseScan before signing.
+and on PulseScan, BscScan, BaseScan, Etherscan, or Arbiscan before signing.
 
 ## Privacy Posture
 
@@ -221,6 +243,10 @@ supports it.
 | `MAINNET_RPC_URL` / `ETHEREUM_RPC_URL` | Required for Ethereum scan | Server-only Ethereum RPC URL used by `/api/ethereum/approvals`. |
 | `ETHEREUM_EXPLORER_API_URL` | Optional | Server-only Etherscan API V2 endpoint override. Defaults to `https://api.etherscan.io/v2/api`. |
 | `ETHERSCAN_API_KEY` | Required for Ethereum scan | Server-only Etherscan API key for Ethereum Mainnet approval discovery. Do not use a `NEXT_PUBLIC_` key for this route. |
+| `ARBITRUM_ONE_RPC_URL` / `ARBITRUM_RPC_URL` | Required for Arbitrum scan | Server-only Arbitrum RPC URL used by `/api/arbitrum/approvals`. |
+| `ARBITRUM_EXPLORER_API_URL` | Optional | Server-only Etherscan-compatible API V2 endpoint override. Defaults to `https://api.etherscan.io/v2/api`. |
+| `ARBITRUM_EXPLORER_CHAIN_ID` | Optional | Etherscan API V2 chain ID for Arbitrum One logs. Defaults to `42161`; keep it at `42161`. |
+| `ARBISCAN_API_KEY` | Required for Arbitrum scan | Server-only Arbiscan/Etherscan-compatible API key for Arbitrum One approval discovery. Do not use a `NEXT_PUBLIC_` key for this route. |
 
 See [docs/ENVIRONMENT.md](docs/ENVIRONMENT.md) for details.
 
@@ -233,7 +259,11 @@ See [docs/ENVIRONMENT.md](docs/ENVIRONMENT.md) for details.
   Etherscan API V2 `chainid=56` / `chainid=8453` request construction
 - `src/app/api/ethereum/approvals/route.ts` - read-only Ethereum Mainnet
   approval API route
+- `src/app/api/arbitrum/approvals/route.ts` - read-only Arbitrum One approval
+  API route
 - `src/lib/ethereum-approval-api.ts` - server-only Ethereum discovery and live
+  validation
+- `src/lib/arbitrum-approval-api.ts` - server-only Arbitrum discovery and live
   validation
 - `src/lib/explorer.ts` - explorer URL generation
 - `src/lib/preflight.ts` - live validation helpers, BSC hard cap, high-gas

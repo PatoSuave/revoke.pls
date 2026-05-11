@@ -47,11 +47,15 @@ describe("security content", () => {
     expect(rowsByChain.get("Ethereum Mainnet")?.revoke).toContain(
       "live-verified rows",
     );
-    expect(rowsByChain.get("Arbitrum")).toMatchObject({
-      scan: "No",
-      revoke: "No",
-      status: "Not enabled",
+    expect(rowsByChain.get("Arbitrum One")).toMatchObject({
+      chainId: "42161",
+      scan: "Read-only beta",
+      revoke: "Not yet",
+      status: "Read-only beta",
     });
+    expect(rowsByChain.get("Arbitrum One")?.note).toContain(
+      "Approval discovery and live verification preview",
+    );
     expect(rowsByChain.get("Solana")).toMatchObject({
       scan: "No",
       revoke: "No",
@@ -78,5 +82,8 @@ describe("security content", () => {
     );
     expect(WALLET_VERIFICATION_ITEMS.join(" ")).toContain("Gas fee");
     expect(WALLET_VERIFICATION_ITEMS.join(" ")).toContain("transfer");
+    expect(JSON.stringify(SECURITY_CHAIN_STATUS_ROWS).toLowerCase()).not.toContain(
+      "safe",
+    );
   });
 });

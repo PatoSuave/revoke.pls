@@ -44,9 +44,9 @@ export const WALLET_SAFETY_RECOMMENDATIONS = [
 export interface ChainStatusRow {
   chain: string;
   chainId: string;
-  scan: "Yes" | "No";
+  scan: "Yes" | "No" | "Read-only beta";
   revoke: string;
-  status: "Live" | "Not enabled" | "Not supported";
+  status: "Live" | "Read-only beta" | "Not enabled" | "Not supported";
   note: string;
 }
 
@@ -84,12 +84,12 @@ export const SECURITY_CHAIN_STATUS_ROWS: readonly ChainStatusRow[] = [
     note: "Shared scanner and wallet-side revoke flow using Base explorer discovery and live verification.",
   },
   {
-    chain: "Arbitrum",
+    chain: "Arbitrum One",
     chainId: "42161",
-    scan: "No",
-    revoke: "No",
-    status: "Not enabled",
-    note: "Not wired into the production scanner or wallet write paths.",
+    scan: "Read-only beta",
+    revoke: "Not yet",
+    status: "Read-only beta",
+    note: "Approval discovery and live verification preview. Arbitrum revoke is not enabled.",
   },
   {
     chain: "Solana",
@@ -100,4 +100,3 @@ export const SECURITY_CHAIN_STATUS_ROWS: readonly ChainStatusRow[] = [
     note: "Solana approval mechanics need a separate design and are not supported by the current EVM revoke flow.",
   },
 ] as const;
-
