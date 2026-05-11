@@ -39,6 +39,12 @@ remain ERC-compatible because BSC is EVM-compatible.
 Base user-facing copy uses ERC-20, ERC-721, ERC-1155, and ETH. Base is
 EVM-compatible, but it is not Ethereum Mainnet support.
 
+## Arbitrum Naming
+Arbitrum user-facing copy uses ERC-20, ERC-721, ERC-1155, and ETH. Arbitrum One
+is read-only beta in the current product; the app may read `allowance`,
+`isApprovedForAll`, and `getApproved`, but Arbitrum revoke writes are not
+enabled yet.
+
 ## Known Limitations
 - Not all tokens behave perfectly
 - Some non-standard tokens may revert or behave differently

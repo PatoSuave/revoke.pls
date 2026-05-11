@@ -4,6 +4,11 @@ import {
   type SupportedChainId,
 } from "@/lib/chains";
 import {
+  ARBITRUM_ONE_CLIENT_CHAIN_ID,
+  ARBITRUM_ONE_DISPLAY_NAME,
+  ARBITRUM_ONE_SHORT_NAME,
+} from "@/lib/arbitrum-approval-client";
+import {
   ETHEREUM_MAINNET_CLIENT_CHAIN_ID,
   ETHEREUM_MAINNET_DISPLAY_NAME,
   ETHEREUM_MAINNET_SHORT_NAME,
@@ -11,13 +16,14 @@ import {
 
 export type AddressOnlyScanChainId =
   | typeof ETHEREUM_MAINNET_CLIENT_CHAIN_ID
+  | typeof ARBITRUM_ONE_CLIENT_CHAIN_ID
   | SupportedChainId;
 
 export interface AddressOnlyScanOption {
   chainId: AddressOnlyScanChainId;
   displayName: string;
   shortName: string;
-  kind: "ethereum" | "supported";
+  kind: "ethereum" | "arbitrum" | "supported";
 }
 
 export const ADDRESS_ONLY_SCAN_ALL_CONCURRENCY = 1;
@@ -28,6 +34,12 @@ export const addressOnlyScanOptions: readonly AddressOnlyScanOption[] = [
     displayName: ETHEREUM_MAINNET_DISPLAY_NAME,
     shortName: ETHEREUM_MAINNET_SHORT_NAME,
     kind: "ethereum",
+  },
+  {
+    chainId: ARBITRUM_ONE_CLIENT_CHAIN_ID,
+    displayName: ARBITRUM_ONE_DISPLAY_NAME,
+    shortName: ARBITRUM_ONE_SHORT_NAME,
+    kind: "arbitrum",
   },
   ...supportedChainConfigList.map((chain) => ({
     chainId: chain.chainId,

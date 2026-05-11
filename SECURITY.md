@@ -34,12 +34,18 @@ Current active supported networks:
 - BSC / BNB Smart Chain, chain ID `56`
 - Base, chain ID `8453`
 - Ethereum Mainnet, chain ID `1`
+- Arbitrum One, chain ID `42161`, read-only beta
 
 Ethereum server-read-only discovery uses an API for historical logs and live RPC
 validation. Ethereum revoke transactions are still wallet-side only: there is
 no server-side signing, private key handling, relayer, or API route transaction
 submission. Ethereum wallet-side revoke remains protected by owner, chain,
 preflight, gas, and row-level verification gates.
+
+Arbitrum One server-read-only discovery uses `/api/arbitrum/approvals` for
+historical logs and live RPC validation. Arbitrum revoke is not enabled: there
+is no Arbitrum wallet-write path, batch revoke path, server-side signing,
+private key handling, relayer, or API route transaction submission.
 
 Address-only scanning is read-only until a connected wallet exactly matches the
 scanned owner address and is on the row's chain.

@@ -1,5 +1,13 @@
 import type { Address } from "viem";
 
+import {
+  ARBITRUM_ONE_CLIENT_CHAIN_ID,
+  ARBITRUM_ONE_EXPLORER_BASE_URL,
+  ARBITRUM_ONE_EXPLORER_NAME,
+  arbitrumExplorerAddressUrl,
+  arbitrumExplorerTokenUrl,
+  arbitrumExplorerTxUrl,
+} from "@/lib/arbitrum-approval-client";
 import { getChainConfig, pulsechain } from "@/lib/chains";
 import {
   ETHEREUM_MAINNET_CLIENT_CHAIN_ID,
@@ -11,6 +19,9 @@ import {
 } from "@/lib/ethereum-approval-client";
 
 function baseUrlFor(chainId: number | undefined): string {
+  if (chainId === ARBITRUM_ONE_CLIENT_CHAIN_ID) {
+    return ARBITRUM_ONE_EXPLORER_BASE_URL;
+  }
   if (chainId === ETHEREUM_MAINNET_CLIENT_CHAIN_ID) {
     return ETHEREUM_MAINNET_EXPLORER_BASE_URL;
   }
@@ -23,6 +34,9 @@ export function explorerAddressUrl(
   chainId: number | undefined,
   address: Address | string,
 ): string {
+  if (chainId === ARBITRUM_ONE_CLIENT_CHAIN_ID) {
+    return arbitrumExplorerAddressUrl(address);
+  }
   if (chainId === ETHEREUM_MAINNET_CLIENT_CHAIN_ID) {
     return ethereumExplorerAddressUrl(address);
   }
@@ -34,6 +48,9 @@ export function explorerTokenUrl(
   chainId: number | undefined,
   address: Address | string,
 ): string {
+  if (chainId === ARBITRUM_ONE_CLIENT_CHAIN_ID) {
+    return arbitrumExplorerTokenUrl(address);
+  }
   if (chainId === ETHEREUM_MAINNET_CLIENT_CHAIN_ID) {
     return ethereumExplorerTokenUrl(address);
   }
@@ -45,6 +62,9 @@ export function explorerTxUrl(
   chainId: number | undefined,
   hash: string,
 ): string {
+  if (chainId === ARBITRUM_ONE_CLIENT_CHAIN_ID) {
+    return arbitrumExplorerTxUrl(hash);
+  }
   if (chainId === ETHEREUM_MAINNET_CLIENT_CHAIN_ID) {
     return ethereumExplorerTxUrl(hash);
   }
@@ -54,6 +74,9 @@ export function explorerTxUrl(
 
 /** Display name for the active chain's explorer (falls back to PulseScan). */
 export function explorerName(chainId: number | undefined): string {
+  if (chainId === ARBITRUM_ONE_CLIENT_CHAIN_ID) {
+    return ARBITRUM_ONE_EXPLORER_NAME;
+  }
   if (chainId === ETHEREUM_MAINNET_CLIENT_CHAIN_ID) {
     return ETHEREUM_MAINNET_EXPLORER_NAME;
   }

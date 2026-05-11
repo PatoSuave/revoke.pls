@@ -46,6 +46,7 @@ function AppWorkspaceIntro() {
     "BNB Smart Chain",
     "Base",
     "Ethereum Mainnet",
+    "Arbitrum One read-only beta",
   ];
 
   return (
@@ -77,8 +78,8 @@ function AppWorkspaceIntro() {
               ))}
             </div>
             <p className="max-w-xl leading-5 lg:max-w-sm lg:text-right">
-              Read-only until you choose a revoke. No seed phrases or private
-              keys.{" "}
+              Scans are read-only. Revoke actions appear only on enabled
+              networks after verification. No seed phrases or private keys.{" "}
               <Link
                 href="/security"
                 className="font-semibold text-pulse-cyan underline underline-offset-2 hover:text-pulse-text"

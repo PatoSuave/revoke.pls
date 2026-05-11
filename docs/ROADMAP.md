@@ -10,6 +10,7 @@ ship.
 - BSC / BNB Smart Chain support
 - Base support
 - Ethereum Mainnet read-only discovery and wallet-side revoke
+- Arbitrum One read-only beta discovery
 - Browser wallet connection
 - WalletConnect when configured
 - Historical approval log discovery
@@ -21,6 +22,7 @@ ship.
 - BSC Etherscan API V2 discovery with `chainid=56`
 - Base Etherscan API V2 discovery with `chainid=8453`
 - Ethereum server-read-only Etherscan API V2 discovery with `chainid=1`
+- Arbitrum server-read-only Etherscan API V2 discovery with `chainid=42161`
 - BSC hard gas-cap block and high-gas warning UX
 
 ## Active Guardrails
@@ -28,6 +30,10 @@ ship.
 - Ethereum Mainnet must remain server-read-only for discovery and wallet-side
   only for revoke. Do not add server-side signing, relayers, private keys, or
   API route transaction submission.
+- Arbitrum One must remain read-only beta until row-level revoke is explicitly
+  implemented and reviewed. Do not add Arbitrum wallet writes, batch revoke,
+  server-side signing, relayers, private keys, or API route transaction
+  submission.
 - Do not broaden into unsupported networks without explicit review.
 - Do not treat registry labels as proof of safety.
 - Do not show a clear state when discovery or validation is incomplete.
@@ -39,6 +45,8 @@ ship.
 ## Future Ideas Requiring Review
 
 - More manually verified PulseChain, BSC, and Base registry labels
+- Future Arbitrum verified-row revoke after read-only discovery and live
+  verification are proven in QA
 - Additional suspicious-spender heuristics
 - Better unsupported-network guidance
 - More focused manual QA fixtures for BSC high-gas cases

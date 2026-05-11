@@ -6,11 +6,12 @@ import {
   PULSECHAIN_CHAIN_ID,
   supportedChains,
 } from "./chains";
+import { ARBITRUM_ONE_CLIENT_CHAIN_ID } from "./arbitrum-approval-client";
 import { ETHEREUM_MAINNET_CLIENT_CHAIN_ID } from "./ethereum-approval-client";
 import { walletChains } from "./wagmi";
 
 describe("wagmi wallet chains", () => {
-  it("keeps active product chains separate from the Ethereum wallet-only chain", () => {
+  it("keeps active product chains separate from read-only wallet-recognition chains", () => {
     expect(supportedChains.map((chain) => chain.id)).toEqual([
       PULSECHAIN_CHAIN_ID,
       BSC_CHAIN_ID,
@@ -22,6 +23,7 @@ describe("wagmi wallet chains", () => {
       BSC_CHAIN_ID,
       BASE_CHAIN_ID,
       ETHEREUM_MAINNET_CLIENT_CHAIN_ID,
+      ARBITRUM_ONE_CLIENT_CHAIN_ID,
     ]);
   });
 });

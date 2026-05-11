@@ -23,6 +23,10 @@ Expected sensitive-path result: no diff output for `src/hooks`,
 `src/app/api`, `src/lib/wagmi.ts`, or `src/lib/preflight.ts` unless the change
 explicitly intends to modify execution behavior.
 
+For Arbitrum read-only scanner work, expected sensitive-path output includes
+the Arbitrum API route and read-only hook/client, but no new wallet-write,
+server-signing, relayer, or browser-exposed Arbitrum secret exposure.
+
 ## 1. Production Smoke
 
 - [ ] `/` loads without a framework error overlay.
@@ -62,6 +66,9 @@ explicitly intends to modify execution behavior.
       the scanned address and the required chain.
 - [ ] In `/app?debug=1`, confirm address-only diagnostics show scan mode, scan
       target address, wallet match status, and revoke-disabled reason.
+- [ ] Select Arbitrum One in address-only mode and confirm the pasted scan
+      target is preserved even when a different wallet is connected.
+- [ ] Confirm no wallet is required to start an Arbitrum address-only scan.
 
 ## 4. PulseChain Approval Scanning
 
@@ -138,11 +145,31 @@ explicitly intends to modify execution behavior.
       verification-incomplete copy remains accurate.
 - [ ] Confirm Ethereum explorer links open Etherscan.
 
-## 8. Security And Trust
+## 8. Arbitrum One Read-Only Beta
+
+- [ ] Connect on Arbitrum One and confirm `/app` shows the Arbitrum read-only
+      beta scanner, not the generic revoke scanner.
+- [ ] Confirm `/api/arbitrum/approvals` discovery uses server-side settings
+      and reports `chainId` / `chainid` `42161`.
+- [ ] Confirm active Arbitrum ERC-20 rows appear only after `allowance(owner,
+      spender)` live verification.
+- [ ] Confirm active Arbitrum NFT rows appear only after `getApproved(tokenId)`
+      or `isApprovedForAll(owner, operator)` live verification.
+- [ ] Confirm failed reads, truncation, caps, rate limits, and upstream
+      failures show verification-incomplete copy instead of a clear state.
+- [ ] Confirm every Arbitrum row says revoke is not enabled and exposes no
+      revoke, batch revoke, or wallet-write action.
+- [ ] Confirm Arbitrum explorer links open Arbiscan.
+- [ ] In `/app?debug=1`, confirm diagnostics show scan target, connected
+      wallet, wallet chain ID, API status, config presence, incomplete
+      reasons, and `Revoke enabled: No`.
+
+## 9. Security And Trust
 
 - [ ] Anti-phishing banner is visible on production pages.
 - [ ] `/security` loads and remains readable on desktop and mobile.
-- [ ] Supported-chain matrix lists only the intended current production scope.
+- [ ] Supported-chain matrix lists Arbitrum One as `Read-only beta` / `Not yet`
+      and does not claim Arbitrum revoke is live.
 - [ ] The app never requests a seed phrase, private key, mnemonic, or raw
       signing secret.
 - [ ] No spender or protocol is described as safe, unsafe, endorsed, or trusted
@@ -152,7 +179,7 @@ explicitly intends to modify execution behavior.
 - [ ] Wallet prompts show expected revoke functions, not transfers, swaps,
       bridges, or unrelated approvals.
 
-## 9. Regression Guardrails
+## 10. Regression Guardrails
 
 - [ ] No server-side signing was introduced.
 - [ ] No private key, seed phrase, or mnemonic handling was introduced.
@@ -164,6 +191,8 @@ explicitly intends to modify execution behavior.
       reviewed.
 - [ ] No Ethereum API route behavior changed unless explicitly intended and
       reviewed.
+- [ ] No Arbitrum API route write, signing, relayer, or private-key behavior
+      was introduced.
 - [ ] No address-only scan gating changed unless explicitly intended and
       reviewed.
 - [ ] No LibertySwap registry labels changed unless explicitly intended and

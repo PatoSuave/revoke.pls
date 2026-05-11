@@ -1,6 +1,10 @@
 import { createConfig, http } from "wagmi";
 import { injected, walletConnect } from "wagmi/connectors";
 
+import {
+  ARBITRUM_ONE_PUBLIC_RPC_URL,
+  arbitrumOneWalletChain,
+} from "@/lib/arbitrum-approval-client";
 import { base, bsc, pulsechain, supportedChains } from "@/lib/chains";
 import {
   ETHEREUM_MAINNET_PUBLIC_RPC_URL,
@@ -18,6 +22,10 @@ import {
  * Ethereum Mainnet (1) is registered as a wallet-only chain for the
  * Ethereum scanner/revoke flow. It is intentionally not part of the active
  * `supportedChains` product list used by the default scanner.
+ *
+ * Arbitrum One (42161) is registered for wallet chain recognition only. The
+ * Arbitrum approval scanner uses the server-side read-only API and never
+ * routes through the generic scanner/revoke path.
  *
  * Connectors:
  *  - Injected (MetaMask, Rabby, Brave, etc.)
@@ -38,7 +46,7 @@ export const hasWalletConnect: boolean = Boolean(walletConnectProjectId);
 const WALLETCONNECT_METADATA = {
   name: "Pulse Revoke",
   description:
-    "Review and revoke token approvals on PulseChain, BSC, Base, and Ethereum.",
+    "Review token approvals on PulseChain, BSC, Base, Ethereum, and Arbitrum.",
   url: "https://pulserevoke.com",
   icons: ["https://pulserevoke.com/icon.png"],
 };
@@ -59,6 +67,7 @@ const connectors = [
 export const walletChains = [
   ...supportedChains,
   ethereumMainnetWalletChain,
+  arbitrumOneWalletChain,
 ] as const;
 
 export const wagmiConfig = createConfig({
@@ -75,6 +84,7 @@ export const wagmiConfig = createConfig({
         process.env.NEXT_PUBLIC_ETHEREUM_RPC_URL ??
         ETHEREUM_MAINNET_PUBLIC_RPC_URL,
     ),
+    [arbitrumOneWalletChain.id]: http(ARBITRUM_ONE_PUBLIC_RPC_URL),
   },
   ssr: true,
 });
