@@ -439,7 +439,7 @@ function HowItWorks() {
       <SectionHeader
         eyebrow="How it works"
         title="A narrow flow for approval review"
-        body="The product does three things: connect, review, and revoke. Nothing else needs custody or hidden signing."
+        body="The product does three things: connect, review, and revoke. No account, no custody, and no third-party analytics SDK."
       />
       <div className="mx-auto mt-10 grid max-w-6xl gap-4 px-4 sm:px-6 lg:grid-cols-3">
         {HOW_IT_WORKS.map((item) => (
