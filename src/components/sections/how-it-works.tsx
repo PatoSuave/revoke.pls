@@ -33,7 +33,8 @@ export function HowItWorks() {
           </h2>
           <p className="mt-4 text-pulse-muted">
             Pulse Revoke is built around the minimum surface area needed to
-            manage approvals safely. No account, no tracking, no custody.
+            manage approvals safely. No account, no custody, and no
+            third-party analytics SDK.
           </p>
         </div>
 
