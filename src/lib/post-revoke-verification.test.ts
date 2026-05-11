@@ -61,6 +61,28 @@ describe("post-revoke live verification", () => {
     expect(result.state).toBe("failed");
   });
 
+  it("uses allowance(owner, spender) for Arbitrum ERC-20 post-revoke checks", async () => {
+    const reads: unknown[] = [];
+    const result = await verifyErc20PostRevokeCleared({
+      client: mockReadClient(async (parameters) => {
+        reads.push(parameters);
+        return 0n;
+      }),
+      ownerAddress: OWNER,
+      target: {
+        ...erc20Target(),
+        chainId: 42161,
+      },
+    });
+
+    expect(result.state).toBe("confirmed-cleared");
+    expect(reads[0]).toMatchObject({
+      address: TOKEN,
+      functionName: "allowance",
+      args: [OWNER, SPENDER],
+    });
+  });
+
   it("confirms NFT operator revoke only when isApprovedForAll returns false", async () => {
     const reads: unknown[] = [];
     const result = await verifyNftPostRevokeCleared({

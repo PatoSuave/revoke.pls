@@ -10,7 +10,7 @@ ship.
 - BSC / BNB Smart Chain support
 - Base support
 - Ethereum Mainnet read-only discovery and wallet-side revoke
-- Arbitrum One read-only beta discovery
+- Arbitrum One ERC-20 verified-row revoke beta
 - Browser wallet connection
 - WalletConnect when configured
 - Historical approval log discovery
@@ -30,10 +30,10 @@ ship.
 - Ethereum Mainnet must remain server-read-only for discovery and wallet-side
   only for revoke. Do not add server-side signing, relayers, private keys, or
   API route transaction submission.
-- Arbitrum One must remain read-only beta until row-level revoke is explicitly
-  implemented and reviewed. Do not add Arbitrum wallet writes, batch revoke,
-  server-side signing, relayers, private keys, or API route transaction
-  submission.
+- Arbitrum One must remain limited to ERC-20 verified-row revoke until NFT and
+  batch revoke are explicitly planned, implemented, and reviewed. Do not add
+  Arbitrum NFT revoke, batch revoke, server-side signing, relayers, private
+  keys, or API route transaction submission.
 - Do not broaden into unsupported networks without explicit review.
 - Do not treat registry labels as proof of safety.
 - Do not show a clear state when discovery or validation is incomplete.
@@ -45,8 +45,7 @@ ship.
 ## Future Ideas Requiring Review
 
 - More manually verified PulseChain, BSC, and Base registry labels
-- Future Arbitrum verified-row revoke after read-only discovery and live
-  verification are proven in QA
+- Future Arbitrum NFT and batch revoke only after separate planning and QA
 - Additional suspicious-spender heuristics
 - Better unsupported-network guidance
 - More focused manual QA fixtures for BSC high-gas cases
