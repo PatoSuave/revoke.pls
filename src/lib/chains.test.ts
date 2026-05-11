@@ -190,7 +190,7 @@ describe("supported chain config", () => {
     );
   });
 
-  it("builds Arbiscan links for read-only Arbitrum without activating Arbitrum", () => {
+  it("builds Arbiscan links for separate-lane Arbitrum without activating Arbitrum", () => {
     expect(isSupportedChainId(ARBITRUM_ONE_CLIENT_CHAIN_ID)).toBe(false);
     expect(explorerAddressUrl(ARBITRUM_ONE_CLIENT_CHAIN_ID, SPENDER)).toBe(
       `https://arbiscan.io/address/${SPENDER}`,

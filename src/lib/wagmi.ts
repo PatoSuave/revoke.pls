@@ -24,8 +24,9 @@ import {
  * `supportedChains` product list used by the default scanner.
  *
  * Arbitrum One (42161) is registered for wallet chain recognition only. The
- * Arbitrum approval scanner uses the server-side read-only API and never
- * routes through the generic scanner/revoke path.
+ * Arbitrum approval scanner uses the server-side read-only API and only its
+ * live-verified ERC-20 rows may route through the controlled single-row revoke
+ * hook. It never routes through the generic scanner/revoke path.
  *
  * Connectors:
  *  - Injected (MetaMask, Rabby, Brave, etc.)

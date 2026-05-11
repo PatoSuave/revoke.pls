@@ -55,6 +55,22 @@ describe("approval revoke preflight", () => {
     });
   });
 
+  it("uses the same Arbitrum ERC-20 preflight gate for active versus zero allowance", () => {
+    const active = evaluateErc20AllowancePreflight(1n, {
+      tokenSymbol: "ARB",
+      tokenDecimals: 18,
+    });
+    const cleared = evaluateErc20AllowancePreflight(0n, {
+      tokenSymbol: "ARB",
+      tokenDecimals: 18,
+    });
+
+    expect(active.status).toBe("active");
+    expect(cleared.status).toBe("cleared");
+    expect(safeGasForRevokeRequest(active, undefined).ok).toBe(true);
+    expect(safeGasForRevokeRequest(cleared, undefined).ok).toBe(false);
+  });
+
   it("marks a failed ERC-20 allowance read as unverified", () => {
     const error = new Error("rpc failed");
     error.name = "RpcRequestError";

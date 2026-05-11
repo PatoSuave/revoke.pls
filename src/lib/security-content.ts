@@ -46,7 +46,7 @@ export interface ChainStatusRow {
   chainId: string;
   scan: "Yes" | "No" | "Read-only beta";
   revoke: string;
-  status: "Live" | "Read-only beta" | "Not enabled" | "Not supported";
+  status: "Live" | "Beta" | "Read-only beta" | "Not enabled" | "Not supported";
   note: string;
 }
 
@@ -86,10 +86,10 @@ export const SECURITY_CHAIN_STATUS_ROWS: readonly ChainStatusRow[] = [
   {
     chain: "Arbitrum One",
     chainId: "42161",
-    scan: "Read-only beta",
-    revoke: "Not yet",
-    status: "Read-only beta",
-    note: "Approval discovery and live verification preview. Arbitrum revoke is not enabled.",
+    scan: "Yes",
+    revoke: "ERC-20 verified rows only",
+    status: "Beta",
+    note: "Server-side approval discovery and live verification. NFT revoke and batch revoke are not enabled on Arbitrum.",
   },
   {
     chain: "Solana",

@@ -46,7 +46,7 @@ function AppWorkspaceIntro() {
     "BNB Smart Chain",
     "Base",
     "Ethereum Mainnet",
-    "Arbitrum One read-only beta",
+    "Arbitrum One ERC-20 beta",
   ];
 
   return (

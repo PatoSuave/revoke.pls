@@ -1,13 +1,13 @@
 # Environment Variables
 
-Pulse Revoke is primarily a wallet-side frontend app, with a read-only
-Ethereum API route for server-side discovery. Variables prefixed with
+Pulse Revoke is primarily a wallet-side frontend app, with server-side
+Ethereum and Arbitrum API routes for discovery. Variables prefixed with
 `NEXT_PUBLIC_` are embedded into the browser bundle and are visible to users.
 Do not store private secrets in these variables.
 
 ## Production Requirements
 
-For the live PulseChain + BSC + Base + Ethereum + Arbitrum read-only product,
+For the live PulseChain + BSC + Base + Ethereum + Arbitrum ERC-20 beta product,
 configure:
 
 | Variable | Production status | Notes |
@@ -151,13 +151,14 @@ the frontend does not need this key.
 
 ### `ARBITRUM_ONE_RPC_URL` / `ARBITRUM_RPC_URL`
 
-Required for Arbitrum One read-only approval discovery. These are server-only
+Required for Arbitrum One approval discovery. These are server-only
 values used by `/api/arbitrum/approvals` for live RPC validation. Prefer
 `ARBITRUM_ONE_RPC_URL`; `ARBITRUM_RPC_URL` is accepted as a fallback name.
 
 Do not configure managed or secret-key Arbitrum RPC URLs as `NEXT_PUBLIC_*`
-variables. Arbitrum revoke is not enabled in this phase, and approval scanning
-uses the server route.
+variables. Arbitrum approval scanning uses the server route; ERC-20 row revoke
+uses the user's wallet and the existing client-side approval-clearing hook.
+Arbitrum NFT and batch revoke are not enabled.
 
 ### `ARBITRUM_EXPLORER_API_URL`
 
@@ -182,7 +183,7 @@ diagnostic warning.
 
 ### `ARBISCAN_API_KEY`
 
-Required for Arbitrum One read-only approval discovery. This must be a
+Required for Arbitrum One approval discovery. This must be a
 server-only environment variable. Do not configure it as
 `NEXT_PUBLIC_ARBISCAN_API_KEY`; the frontend does not need this key.
 

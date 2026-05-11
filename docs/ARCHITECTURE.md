@@ -22,9 +22,10 @@ Ethereum Mainnet is wallet-enabled for the Ethereum read-only discovery and
 wallet-side revoke lane. It is not handled by the default supported-chain
 scanner path.
 
-Arbitrum One is wallet-enabled only so the app can recognize the connected
-network and run the Arbitrum read-only scanner lane. It is not part of the
-default supported-chain scanner path, and Arbitrum revoke is not enabled.
+Arbitrum One is wallet-enabled so the app can recognize the connected network
+and run the separate Arbitrum scanner lane. It is not part of the default
+supported-chain scanner path. Only live-verified ERC-20 rows can route through
+the controlled wallet-side revoke hook; NFT and batch revoke remain disabled.
 
 ## Web3 Layer
 
@@ -144,8 +145,9 @@ User-facing Arbitrum copy uses:
 - `ERC-721` for NFT approvals
 - `ERC-1155` for multi-token NFT / semi-fungible approvals
 - `ETH` for gas
-- `Read-only beta` for scan state
-- `Revoke not enabled` for all Arbitrum rows
+- `Verified-row revoke beta` for ERC-20 row state
+- `NFT revoke not enabled` for Arbitrum NFT rows
+- `Batch revoke disabled` for Arbitrum batch/global actions
 
 ## Transaction Flow
 
@@ -155,8 +157,8 @@ Fungible token revoke:
 2. App refreshes live allowance on the same chain.
 3. App prepares `approve(spender, 0)`.
 4. Wallet signs and submits on the approval's `chainId`.
-5. UI links the transaction to PulseScan, BscScan, or BaseScan and rescans
-   after success.
+5. UI links the transaction to PulseScan, BscScan, BaseScan, Etherscan, or
+   Arbiscan and rescans after success.
 
 NFT revoke:
 
@@ -170,9 +172,10 @@ after server-read-only discovery and row-level live verification have identified
 an active approval. Global batch revoke stays disabled when global Ethereum
 verification is incomplete.
 
-Arbitrum revoke is intentionally unavailable in the current phase. Arbitrum
-rows are returned from the server-side read-only API for review only; they do
-not route through single-row revoke, NFT revoke, or batch revoke hooks.
+Arbitrum ERC-20 revoke is limited to live-verified rows from the server-side
+Arbitrum API. It uses the same controlled ERC-20 `approve(spender, 0)` hook,
+including owner, chain, preflight, and post-revoke verification gates.
+Arbitrum NFT revoke and batch revoke remain unavailable.
 
 ## BSC Gas Safety
 

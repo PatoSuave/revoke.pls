@@ -11,16 +11,17 @@ Current active supported networks should be exactly:
 - BSC / BNB Smart Chain, chain ID `56`
 - Base, chain ID `8453`
 - Ethereum Mainnet, chain ID `1`
-- Arbitrum One, chain ID `42161`, read-only beta
+- Arbitrum One, chain ID `42161`, ERC-20 verified-row beta
 
 Ethereum Mainnet uses server-read-only discovery and wallet-side revoke. It is
 wallet-enabled, but it must not introduce server-side signing, relayers, private
 keys, or API route transaction submission.
 
-Arbitrum One uses server-read-only discovery only. It is wallet-enabled for
-network recognition and address-only scan selection, but Arbitrum revoke,
-batch revoke, server-side signing, relayers, private keys, and API route
-transaction submission must stay unavailable.
+Arbitrum One uses server-read-only discovery and wallet-side ERC-20 row revoke
+only after row-level live verification, matching owner, chain, preflight, and
+post-revoke verification gates pass. Arbitrum NFT revoke, batch revoke,
+server-side signing, relayers, private keys, and API route transaction
+submission must stay unavailable.
 
 ## Key Files
 
@@ -43,8 +44,8 @@ transaction submission must stay unavailable.
 
 ## Chain Safety Questions
 
-- Are active supported chains exactly PulseChain, BSC, Base, and wallet-enabled
-  Ethereum Mainnet plus read-only Arbitrum One?
+- Are active supported chains exactly PulseChain, BSC, Base, wallet-enabled
+  Ethereum Mainnet, and Arbitrum One's separate ERC-20 row-revoke lane?
 - Does `src/lib/wagmi.ts` register Ethereum and Arbitrum only for their
   separate lanes and keep chain lists scoped correctly?
 - Is Ethereum Mainnet protected by owner, chain, preflight, gas, and row-level
@@ -87,8 +88,10 @@ transaction submission must stay unavailable.
   browser-exposed Arbitrum variables?
 - Do timeout, cap-hit, rate-limit, truncation, malformed rows, and live-read
   failures return non-clear states?
-- Are Arbitrum rows read-only with no single-row revoke, NFT revoke, batch
-  revoke, `writeContract`, or `sendTransaction` path?
+- Are Arbitrum ERC-20 row revoke actions available only for live-verified rows
+  with matching wallet and chain `42161`?
+- Do Arbitrum NFT rows, batch revoke, server signing, arbitrary
+  `writeContract`, and `sendTransaction` paths remain unavailable?
 
 ## BSC Discovery Questions
 
@@ -132,7 +135,8 @@ transaction submission must stay unavailable.
 - Do BSC revokes use BNB wording and BscScan links?
 - Do PulseChain revokes use PLS wording and PulseScan links?
 - Do Base revokes use ETH wording and BaseScan links?
-- Does Arbitrum continue to show read-only beta and no revoke action?
+- Does Arbitrum show only ERC-20 verified-row revoke beta while NFT and batch
+  revoke remain unavailable?
 
 ## BSC Gas Safety Questions
 
@@ -192,8 +196,8 @@ npm.cmd run build
 - Use address-only scan-all and confirm networks start one at a time.
 - Load `/app` on Ethereum Mainnet and confirm Ethereum discovery is read-only
   until a matching wallet-side revoke is explicitly reviewed.
-- Load `/app` on Arbitrum One and confirm discovery is read-only beta with no
-  revoke or batch revoke action.
+- Load `/app` on Arbitrum One and confirm only live-verified ERC-20 rows can
+  open the revoke review panel; NFT and batch revoke remain unavailable.
 - Test a low-gas BSC revoke and confirm the wallet receives `gas` below the
   hard cap.
 - Test or simulate a high-gas BSC revoke and confirm the in-app warning appears

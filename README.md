@@ -1,8 +1,8 @@
 # Pulse Revoke / revoke.pls
 
 Pulse Revoke is a non-custodial approval scanner and revoker for PulseChain,
-BSC / BNB Smart Chain, Base, and Ethereum Mainnet, with Arbitrum One
-read-only beta scanning.
+BSC / BNB Smart Chain, Base, Ethereum Mainnet, and Arbitrum One ERC-20
+verified-row revoke beta.
 
 Live app: <https://pulserevoke.com>
 
@@ -19,15 +19,15 @@ launcher, trust, and distribution page.
 
 Revoke.PLS is live as a non-custodial approval review and revoke tool for
 PulseChain, BSC / BNB Smart Chain, Base, Ethereum Mainnet, and Arbitrum One
-read-only beta scanning. The current production checkpoint includes:
+ERC-20 verified-row revoke beta. The current production checkpoint includes:
 
 - A focused `/app` scanner workspace with address-only scan and connected-wallet
   scan modes.
 - Live-read verification for scanner and revoke decisions where available.
 - Ethereum Mainnet read-only discovery with wallet-side row-level revoke only
   for live-verified rows.
-- Arbitrum One read-only approval discovery and live verification preview;
-  Arbitrum revoke is not enabled.
+- Arbitrum One server-side approval discovery with ERC-20 verified-row revoke
+  beta; Arbitrum NFT and batch revoke are not enabled.
 - Verification-incomplete copy for approvals that cannot be fully confirmed.
 - Collapsed approval explanation panels inside result rows.
 - LibertySwap current and legacy contract metadata labels.
@@ -48,13 +48,13 @@ Active scan networks are intentionally limited to:
 - Base Mainnet, chain ID `8453`, gas token `ETH`, explorer `BaseScan`
 - Ethereum Mainnet, chain ID `1`, gas token `ETH`, explorer `Etherscan`
 - Arbitrum One, chain ID `42161`, gas token `ETH`, explorer `Arbiscan`
-  (read-only beta; revoke not enabled)
+  (ERC-20 verified-row revoke beta; NFT and batch revoke not enabled)
 
 Ethereum discovery uses a server-read-only API, while Ethereum revoke remains
 wallet-side only with owner, chain, preflight, gas, and row-level verification
 gates.
 Arbitrum discovery also uses a server-read-only API, and Arbitrum revoke stays
-unavailable in this phase.
+limited to live-verified ERC-20 rows in this beta.
 
 ## What It Can Scan And Revoke
 
@@ -62,7 +62,7 @@ unavailable in this phase.
 - BSC BEP-20 fungible token approvals
 - Base ERC-20 fungible token approvals
 - Ethereum ERC-20 fungible token approvals
-- Arbitrum ERC-20 fungible token approvals in read-only beta
+- Arbitrum ERC-20 fungible token approvals with verified-row revoke beta
 - NFT operator approvals where supported by the app pipeline
 - NFT per-token approvals where supported by the app pipeline
 - Sequential batch revoke for fungible token approvals on one chain at a time
@@ -115,8 +115,8 @@ The app sets the transaction `chainId` from the approval record. PulseChain
 revokes use PLS gas wording and PulseScan links. BSC revokes use BNB gas wording
 and BscScan links. Base revokes use ETH gas wording and BaseScan links.
 Every revoke requires wallet confirmation before the transaction is submitted.
-Arbitrum rows are read-only in the current phase and do not expose revoke
-actions.
+Arbitrum revoke is limited to live-verified ERC-20 rows in the current beta.
+Arbitrum NFT rows and batch revoke do not expose revoke actions.
 
 ## BSC Implementation Notes
 
@@ -153,7 +153,10 @@ actions.
   links for user-facing address, token, and transaction URLs.
 - Arbitrum RPC and API keys are server-only values. Do not put managed
   Arbitrum RPC URLs or API keys in `NEXT_PUBLIC_*` variables.
-- Arbitrum revoke is not enabled yet; scan results are read-only beta rows.
+- Arbitrum ERC-20 revoke uses the same wallet-side `approve(spender, 0)` path
+  as other EVM ERC-20 revokes, with owner, chain, preflight, and post-revoke
+  live verification gates.
+- Arbitrum NFT revoke and batch revoke are not enabled.
 
 ## Security Model
 
@@ -260,7 +263,7 @@ See [docs/ENVIRONMENT.md](docs/ENVIRONMENT.md) for details.
 - `src/app/api/ethereum/approvals/route.ts` - read-only Ethereum Mainnet
   approval API route
 - `src/app/api/arbitrum/approvals/route.ts` - read-only Arbitrum One approval
-  API route
+  discovery API route
 - `src/lib/ethereum-approval-api.ts` - server-only Ethereum discovery and live
   validation
 - `src/lib/arbitrum-approval-api.ts` - server-only Arbitrum discovery and live
