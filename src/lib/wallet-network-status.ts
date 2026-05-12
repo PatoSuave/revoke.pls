@@ -16,6 +16,8 @@ import {
 } from "@/lib/ethereum-approval-client";
 
 export const ARBITRUM_HEADER_STATUS_LABEL = "Arbitrum One ERC-20 beta";
+export const ARBITRUM_HEADER_STATUS_SHORT_HELPER =
+  "ERC-20 only. NFT and batch off.";
 export const ARBITRUM_HEADER_STATUS_HELPER =
   "Verified ERC-20 rows can be revoked on Arbitrum. NFT and batch revoke are not enabled.";
 
@@ -35,6 +37,7 @@ export type HeaderNetworkStatus =
       kind: "arbitrum";
       chainId: typeof ARBITRUM_ONE_CLIENT_CHAIN_ID;
       label: typeof ARBITRUM_HEADER_STATUS_LABEL;
+      shortHelper: typeof ARBITRUM_HEADER_STATUS_SHORT_HELPER;
       helper: typeof ARBITRUM_HEADER_STATUS_HELPER;
     }
   | {
@@ -71,6 +74,7 @@ export function resolveHeaderNetworkStatus({
       kind: "arbitrum",
       chainId: ARBITRUM_ONE_CLIENT_CHAIN_ID,
       label: ARBITRUM_HEADER_STATUS_LABEL,
+      shortHelper: ARBITRUM_HEADER_STATUS_SHORT_HELPER,
       helper: ARBITRUM_HEADER_STATUS_HELPER,
     };
   }

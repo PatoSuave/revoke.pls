@@ -66,18 +66,21 @@ function AppWorkspaceIntro() {
             </p>
           </div>
 
-          <div className="flex flex-col gap-3 text-xs text-pulse-muted lg:items-end">
-            <div className="flex flex-wrap gap-2">
+          <div className="flex flex-col gap-2 text-[11px] text-pulse-muted lg:items-end">
+            <p className="font-semibold uppercase tracking-[0.16em] text-pulse-muted/80">
+              Supported lanes
+            </p>
+            <div className="flex flex-wrap gap-1.5 lg:justify-end">
               {statusItems.map((item) => (
                 <span
                   key={item}
-                  className="rounded-full border border-pulse-border bg-pulse-panel/65 px-3 py-1 font-semibold"
+                  className="rounded-full border border-pulse-border/70 bg-pulse-panel/40 px-2.5 py-1 font-medium text-pulse-muted"
                 >
                   {item}
                 </span>
               ))}
             </div>
-            <p className="max-w-xl leading-5 lg:max-w-sm lg:text-right">
+            <p className="max-w-xl text-xs leading-5 lg:max-w-sm lg:text-right">
               Scans are read-only. Revoke actions appear only on enabled
               networks after verification. No seed phrases or private keys.{" "}
               <Link

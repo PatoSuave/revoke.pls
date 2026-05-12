@@ -10,6 +10,7 @@ import {
 import { ETHEREUM_MAINNET_CLIENT_CHAIN_ID } from "@/lib/ethereum-approval-client";
 import {
   ARBITRUM_HEADER_STATUS_LABEL,
+  ARBITRUM_HEADER_STATUS_SHORT_HELPER,
   resolveHeaderNetworkStatus,
 } from "@/lib/wallet-network-status";
 
@@ -24,9 +25,13 @@ describe("wallet header network status", () => {
     expect(status.label).toBe(ARBITRUM_HEADER_STATUS_LABEL);
     expect(JSON.stringify(status)).not.toContain("Unsupported network");
     expect(status).toMatchObject({
+      shortHelper: ARBITRUM_HEADER_STATUS_SHORT_HELPER,
       helper:
         "Verified ERC-20 rows can be revoked on Arbitrum. NFT and batch revoke are not enabled.",
     });
+    expect(ARBITRUM_HEADER_STATUS_SHORT_HELPER).toBe(
+      "ERC-20 only. NFT and batch off.",
+    );
   });
 
   it("keeps truly unsupported chains unsupported", () => {
