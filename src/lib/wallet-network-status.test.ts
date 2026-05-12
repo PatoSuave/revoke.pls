@@ -15,7 +15,7 @@ import {
 } from "@/lib/wallet-network-status";
 
 describe("wallet header network status", () => {
-  it("shows Arbitrum One as ERC-20 beta instead of unsupported", () => {
+  it("shows Arbitrum One as verified-row beta instead of unsupported", () => {
     const status = resolveHeaderNetworkStatus({
       walletChainId: ARBITRUM_ONE_CLIENT_CHAIN_ID,
       wagmiChainId: ARBITRUM_ONE_CLIENT_CHAIN_ID,
@@ -27,10 +27,10 @@ describe("wallet header network status", () => {
     expect(status).toMatchObject({
       shortHelper: ARBITRUM_HEADER_STATUS_SHORT_HELPER,
       helper:
-        "Verified ERC-20 rows can be revoked on Arbitrum. NFT and batch revoke are not enabled.",
+        "Verified ERC-20 and NFT rows can be revoked on Arbitrum. Batch revoke is not enabled.",
     });
     expect(ARBITRUM_HEADER_STATUS_SHORT_HELPER).toBe(
-      "ERC-20 only. NFT and batch off.",
+      "ERC-20 and NFT rows only. Batch off.",
     );
   });
 

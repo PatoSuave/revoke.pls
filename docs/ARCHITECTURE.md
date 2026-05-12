@@ -24,8 +24,8 @@ scanner path.
 
 Arbitrum One is wallet-enabled so the app can recognize the connected network
 and run the separate Arbitrum scanner lane. It is not part of the default
-supported-chain scanner path. Only live-verified ERC-20 rows can route through
-the controlled wallet-side revoke hook; NFT and batch revoke remain disabled.
+supported-chain scanner path. Only live-verified ERC-20 and NFT rows can route
+through controlled wallet-side revoke hooks; batch revoke remains disabled.
 
 ## Web3 Layer
 
@@ -145,8 +145,8 @@ User-facing Arbitrum copy uses:
 - `ERC-721` for NFT approvals
 - `ERC-1155` for multi-token NFT / semi-fungible approvals
 - `ETH` for gas
-- `Verified-row revoke beta` for ERC-20 row state
-- `NFT revoke not enabled` for Arbitrum NFT rows
+- `Verified-row revoke beta` for ERC-20 and NFT row state
+- `NFT row revoke beta` for Arbitrum NFT rows
 - `Batch revoke disabled` for Arbitrum batch/global actions
 
 ## Transaction Flow
@@ -172,10 +172,10 @@ after server-read-only discovery and row-level live verification have identified
 an active approval. Global batch revoke stays disabled when global Ethereum
 verification is incomplete.
 
-Arbitrum ERC-20 revoke is limited to live-verified rows from the server-side
-Arbitrum API. It uses the same controlled ERC-20 `approve(spender, 0)` hook,
-including owner, chain, preflight, and post-revoke verification gates.
-Arbitrum NFT revoke and batch revoke remain unavailable.
+Arbitrum revoke is limited to live-verified ERC-20 and NFT rows from the
+server-side Arbitrum API. It uses the same controlled ERC-20 and NFT revoke
+hooks, including owner, chain, preflight, and post-revoke verification gates.
+Arbitrum batch revoke remains unavailable.
 
 ## BSC Gas Safety
 

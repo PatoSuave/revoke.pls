@@ -41,9 +41,9 @@ EVM-compatible, but it is not Ethereum Mainnet support.
 
 ## Arbitrum Naming
 Arbitrum user-facing copy uses ERC-20, ERC-721, ERC-1155, and ETH. Arbitrum One
-is read-only beta in the current product; the app may read `allowance`,
-`isApprovedForAll`, and `getApproved`, but Arbitrum revoke writes are not
-enabled yet.
+uses a separate verified-row beta lane in the current product; the app reads
+`allowance`, `isApprovedForAll`, and `getApproved`, then only enables matching
+wallet row-level revoke after live verification.
 
 ## Known Limitations
 - Not all tokens behave perfectly

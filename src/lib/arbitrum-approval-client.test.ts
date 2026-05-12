@@ -10,11 +10,13 @@ import {
   ARBITRUM_NFT_REVOKE_UNAVAILABLE_COPY,
   ARBITRUM_REVOKE_UNAVAILABLE_COPY,
   arbitrumErc20RowRevokeDisabledReasonForWallet,
+  arbitrumNftRowRevokeDisabledReasonForWallet,
   arbitrumExplorerAddressUrl,
   arbitrumExplorerTokenUrl,
   arbitrumExplorerTxUrl,
   arbitrumOneWalletChain,
   canEnableArbitrumErc20RowRevoke,
+  canEnableArbitrumNftRowRevoke,
   fetchArbitrumApprovals,
   isArbitrumReadOnlyChainId,
   mapArbitrumApprovalApiResponse,
@@ -101,7 +103,7 @@ describe("Arbitrum approval client mapping", () => {
     );
   });
 
-  it("builds Arbiscan links without enabling Arbitrum batch or NFT revoke", () => {
+  it("builds Arbiscan links without enabling Arbitrum global or batch revoke", () => {
     expect(ARBITRUM_ONE_EXPLORER_BASE_URL).toBe("https://arbiscan.io");
     expect(arbitrumExplorerAddressUrl(SPENDER)).toBe(
       `https://arbiscan.io/address/${SPENDER}`,
@@ -192,6 +194,8 @@ describe("Arbitrum approval client mapping", () => {
     expect(mapped.revokeUnavailableReason).toBe(ARBITRUM_REVOKE_UNAVAILABLE_COPY);
     expect(mapped.erc20RowRevokeEnabled).toBe(true);
     expect(mapped.erc20RowRevokeDisabledReason).toBeNull();
+    expect(mapped.nftRowRevokeEnabled).toBe(true);
+    expect(mapped.nftRowRevokeDisabledReason).toBeNull();
     expect(mapped.nftRevokeEnabled).toBe(false);
     expect(mapped.nftRevokeUnavailableReason).toBe(
       ARBITRUM_NFT_REVOKE_UNAVAILABLE_COPY,
@@ -327,7 +331,7 @@ describe("Arbitrum approval client mapping", () => {
     ).toBe(false);
   });
 
-  it("keeps Arbitrum NFT rows revoke unavailable", () => {
+  it("enables Arbitrum NFT row revoke only for matching wallet on chain 42161", () => {
     const mapped = mapArbitrumApprovalApiResponse(
       response({
         status: "active-approvals-found",
@@ -360,10 +364,103 @@ describe("Arbitrum approval client mapping", () => {
     );
 
     expect(mapped.erc20RowRevokeEnabled).toBe(false);
+    expect(mapped.nftRowRevokeEnabled).toBe(true);
+    expect(mapped.nftRowRevokeDisabledReason).toBeNull();
     expect(mapped.nftRevokeEnabled).toBe(false);
     expect(mapped.nftRevokeUnavailableReason).toBe(
       ARBITRUM_NFT_REVOKE_UNAVAILABLE_COPY,
     );
+    expect(
+      canEnableArbitrumNftRowRevoke({
+        mapping: mapped,
+        walletChainId: ARBITRUM_ONE_CLIENT_CHAIN_ID,
+        ownerAddress: OWNER,
+        connectedAddress: OWNER,
+      }),
+    ).toBe(true);
+    expect(
+      canEnableArbitrumNftRowRevoke({
+        mapping: mapped,
+        walletChainId: 1,
+        ownerAddress: OWNER,
+        connectedAddress: OWNER,
+      }),
+    ).toBe(false);
+    expect(
+      arbitrumNftRowRevokeDisabledReasonForWallet({
+        mapping: mapped,
+        walletChainId: 1,
+        ownerAddress: OWNER,
+        connectedAddress: OWNER,
+      }),
+    ).toBe("Switch to Arbitrum One to revoke.");
+    expect(
+      canEnableArbitrumNftRowRevoke({
+        mapping: mapped,
+        walletChainId: ARBITRUM_ONE_CLIENT_CHAIN_ID,
+        ownerAddress: OWNER,
+        connectedAddress: SPENDER,
+      }),
+    ).toBe(false);
+    expect(
+      canEnableArbitrumNftRowRevoke({
+        mapping: mapped,
+        walletChainId: ARBITRUM_ONE_CLIENT_CHAIN_ID,
+        ownerAddress: OWNER,
+        connectedAddress: undefined,
+      }),
+    ).toBe(false);
+  });
+
+  it("keeps Arbitrum NFT row revoke disabled when live verification is incomplete", () => {
+    const mapped = mapArbitrumApprovalApiResponse(
+      response({
+        status: "verification-incomplete",
+        approvals: {
+          erc20: [],
+          nft: [
+            {
+              key: `${ARBITRUM_ONE_CLIENT_CHAIN_ID}-approvalForAll-${COLLECTION}-${OPERATOR}`,
+              chainId: ARBITRUM_ONE_CLIENT_CHAIN_ID,
+              kind: "approvalForAll",
+              standard: "erc721",
+              collectionAddress: COLLECTION,
+              collectionName: "Arbitrum Collection",
+              operatorAddress: OPERATOR,
+              operatorLabel: "Unknown operator",
+              protocol: "Unknown",
+              trusted: false,
+              risk: {
+                level: "high",
+                reason: "Unknown operator approved for all NFTs.",
+              },
+            },
+          ],
+        },
+        diagnostics: {
+          ...response({}).diagnostics,
+          liveReadSuccessCount: 0,
+          liveReadFailureCount: 1,
+          incompleteVerificationCount: 1,
+          skippedReasons: { "nft-live-read-failure": 1 },
+        },
+      }),
+    );
+
+    expect(mapped.state).toBe("verification-incomplete");
+    expect(mapped.nftRowRevokeEnabled).toBe(false);
+    expect(mapped.nftRowRevokeDisabledReason).toContain(
+      "current approval state is verified",
+    );
+    expect(mapped.incompleteReason).toContain("1 NFT live read failed");
+    expect(
+      canEnableArbitrumNftRowRevoke({
+        mapping: mapped,
+        walletChainId: ARBITRUM_ONE_CLIENT_CHAIN_ID,
+        ownerAddress: OWNER,
+        connectedAddress: OWNER,
+      }),
+    ).toBe(false);
   });
 
   it("shows clear only for complete-clear with no incomplete diagnostics", () => {
@@ -375,6 +472,7 @@ describe("Arbitrum approval client mapping", () => {
     expect(mapped.canShowClear).toBe(true);
     expect(mapped.revokeEnabled).toBe(false);
     expect(mapped.erc20RowRevokeEnabled).toBe(false);
+    expect(mapped.nftRowRevokeEnabled).toBe(false);
   });
 
   it("never maps failed Arbitrum live reads to clear", () => {
@@ -396,6 +494,7 @@ describe("Arbitrum approval client mapping", () => {
     expect(mapped.canShowClear).toBe(false);
     expect(mapped.revokeEnabled).toBe(false);
     expect(mapped.erc20RowRevokeEnabled).toBe(false);
+    expect(mapped.nftRowRevokeEnabled).toBe(false);
     expect(mapped.incompleteReason).toContain("1 ERC-20 live read failed");
   });
 
@@ -454,5 +553,6 @@ describe("Arbitrum approval client mapping", () => {
     expect(malformed.malformedResponse).toBe(true);
     expect(malformed.canShowClear).toBe(false);
     expect(malformed.erc20RowRevokeEnabled).toBe(false);
+    expect(malformed.nftRowRevokeEnabled).toBe(false);
   });
 });

@@ -17,9 +17,9 @@ export const ARBITRUM_ONE_EXPLORER_NAME = "Arbiscan";
 export const ARBITRUM_ONE_EXPLORER_BASE_URL = "https://arbiscan.io";
 export const ARBITRUM_ONE_PUBLIC_RPC_URL = "https://arb1.arbitrum.io/rpc";
 export const ARBITRUM_REVOKE_UNAVAILABLE_COPY =
-  "Arbitrum ERC-20 revoke is available only for live-verified rows in this beta.";
+  "Arbitrum revoke is available only for live-verified ERC-20 and NFT rows in this beta.";
 export const ARBITRUM_NFT_REVOKE_UNAVAILABLE_COPY =
-  "Arbitrum NFT revoke is not enabled yet.";
+  "Arbitrum NFT revoke is available only for live-verified rows in this beta.";
 export const ARBITRUM_BATCH_REVOKE_UNAVAILABLE_COPY =
   "Batch revoke is not enabled for Arbitrum.";
 
@@ -113,6 +113,9 @@ export interface ArbitrumApprovalClientMapping {
   /** True only for live-verified active ERC-20 rows. */
   erc20RowRevokeEnabled: boolean;
   erc20RowRevokeDisabledReason: string | null;
+  /** True only for live-verified active NFT rows. Global NFT revoke stays unavailable. */
+  nftRowRevokeEnabled: boolean;
+  nftRowRevokeDisabledReason: string | null;
   nftRevokeEnabled: false;
   nftRevokeUnavailableReason: string;
   batchRevokeEnabled: false;
@@ -234,6 +237,7 @@ export function mapArbitrumApprovalApiResponse(
   const erc20ActiveApprovalCount = erc20.filter(
     isArbitrumErc20ApprovalLiveActive,
   ).length;
+  const nftActiveApprovalCount = nft.filter(isArbitrumNftApprovalLiveActive).length;
   const incomplete =
     response.diagnostics.liveReadFailureCount > 0 ||
     response.diagnostics.incompleteVerificationCount > 0 ||
@@ -256,6 +260,12 @@ export function mapArbitrumApprovalApiResponse(
     !malformedResponse &&
     erc20ActiveApprovalCount > 0 &&
     response.diagnostics.liveReadSuccessCount >= activeApprovalCount;
+  const nftRowVerifiedForRevoke =
+    (response.status === "active-approvals-found" ||
+      response.status === "verification-incomplete") &&
+    !malformedResponse &&
+    nftActiveApprovalCount > 0 &&
+    response.diagnostics.liveReadSuccessCount >= activeApprovalCount;
   const base = {
     revokeEnabled: false as const,
     revokeUnavailableReason: ARBITRUM_REVOKE_UNAVAILABLE_COPY,
@@ -265,6 +275,14 @@ export function mapArbitrumApprovalApiResponse(
       rowVerifiedForRevoke: erc20RowVerifiedForRevoke,
       malformedResponse,
       erc20ActiveApprovalCount,
+      activeApprovalCount,
+    }),
+    nftRowRevokeEnabled: nftRowVerifiedForRevoke,
+    nftRowRevokeDisabledReason: arbitrumNftRowRevokeDisabledReason({
+      response,
+      rowVerifiedForRevoke: nftRowVerifiedForRevoke,
+      malformedResponse,
+      nftActiveApprovalCount,
       activeApprovalCount,
     }),
     nftRevokeEnabled: false as const,
@@ -284,6 +302,7 @@ export function mapArbitrumApprovalApiResponse(
       canShowClear: false,
       ...base,
       erc20RowRevokeEnabled: false,
+      nftRowRevokeEnabled: false,
     };
   }
 
@@ -293,6 +312,7 @@ export function mapArbitrumApprovalApiResponse(
       canShowClear: false,
       ...base,
       erc20RowRevokeEnabled: false,
+      nftRowRevokeEnabled: false,
     };
   }
 
@@ -321,6 +341,7 @@ export function mapArbitrumApprovalApiResponse(
     canShowClear: !malformedResponse,
     ...base,
     erc20RowRevokeEnabled: false,
+    nftRowRevokeEnabled: false,
   };
 }
 
@@ -329,6 +350,10 @@ function isArbitrumErc20ApprovalLiveActive(approval: Approval): boolean {
     approval.chainId === ARBITRUM_ONE_CLIENT_CHAIN_ID &&
     approval.rawAllowance > 0n
   );
+}
+
+function isArbitrumNftApprovalLiveActive(approval: NftApproval): boolean {
+  return approval.chainId === ARBITRUM_ONE_CLIENT_CHAIN_ID;
 }
 
 function arbitrumErc20RowRevokeDisabledReason({
@@ -356,6 +381,38 @@ function arbitrumErc20RowRevokeDisabledReason({
   }
   if (erc20ActiveApprovalCount === 0) {
     return "No active Arbitrum ERC-20 approvals are available to revoke.";
+  }
+  if (response.diagnostics.liveReadSuccessCount < activeApprovalCount) {
+    return "Revoke unavailable until current approval state is verified.";
+  }
+  return "Revoke unavailable until current approval state is verified.";
+}
+
+function arbitrumNftRowRevokeDisabledReason({
+  response,
+  rowVerifiedForRevoke,
+  malformedResponse,
+  nftActiveApprovalCount,
+  activeApprovalCount,
+}: {
+  response: ArbitrumApprovalApiResponse;
+  rowVerifiedForRevoke: boolean;
+  malformedResponse: boolean;
+  nftActiveApprovalCount: number;
+  activeApprovalCount: number;
+}): string | null {
+  if (rowVerifiedForRevoke) return null;
+  if (response.status === "config-missing") {
+    return "Arbitrum API configuration is missing - revoke unavailable.";
+  }
+  if (response.status === "upstream-failure") {
+    return "Arbitrum explorer or RPC failed - revoke unavailable.";
+  }
+  if (malformedResponse) {
+    return "Revoke unavailable until current approval state is verified.";
+  }
+  if (nftActiveApprovalCount === 0) {
+    return "No active Arbitrum NFT approvals are available to revoke.";
   }
   if (response.diagnostics.liveReadSuccessCount < activeApprovalCount) {
     return "Revoke unavailable until current approval state is verified.";
@@ -403,6 +460,49 @@ export function arbitrumErc20RowRevokeDisabledReasonForWallet({
   return (
     mapping.erc20RowRevokeDisabledReason ??
     "Verified ERC-20 row; revoke available."
+  );
+}
+
+export function canEnableArbitrumNftRowRevoke({
+  mapping,
+  walletChainId,
+  ownerAddress,
+  connectedAddress,
+}: {
+  mapping: ArbitrumApprovalClientMapping | null | undefined;
+  walletChainId: number | undefined;
+  ownerAddress: Address | undefined;
+  connectedAddress: Address | undefined;
+}): boolean {
+  return (
+    mapping?.nftRowRevokeEnabled === true &&
+    walletChainId === ARBITRUM_ONE_CLIENT_CHAIN_ID &&
+    arbitrumAddressesMatch(ownerAddress, connectedAddress)
+  );
+}
+
+export function arbitrumNftRowRevokeDisabledReasonForWallet({
+  mapping,
+  walletChainId,
+  ownerAddress,
+  connectedAddress,
+}: {
+  mapping: ArbitrumApprovalClientMapping | null | undefined;
+  walletChainId: number | undefined;
+  ownerAddress: Address | undefined;
+  connectedAddress: Address | undefined;
+}): string {
+  if (!mapping) return "Arbitrum approvals are still loading.";
+  if (!connectedAddress) return ADDRESS_SCAN_CONNECT_MATCHING_WALLET_COPY;
+  if (walletChainId !== ARBITRUM_ONE_CLIENT_CHAIN_ID) {
+    return "Switch to Arbitrum One to revoke.";
+  }
+  if (!arbitrumAddressesMatch(ownerAddress, connectedAddress)) {
+    return WALLET_MISMATCH_SCAN_TARGET_COPY;
+  }
+  return (
+    mapping.nftRowRevokeDisabledReason ??
+    "Verified NFT row; revoke available."
   );
 }
 
