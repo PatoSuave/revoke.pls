@@ -10,16 +10,15 @@ import {
 export const ARBITRUM_ONE_CLIENT_CHAIN_ID = 42161;
 export const ARBITRUM_ONE_DISPLAY_NAME = "Arbitrum One";
 export const ARBITRUM_ONE_SHORT_NAME = "Arbitrum";
-export const ARBITRUM_ONE_STATUS_LABEL =
-  "Arbitrum One verified-row revoke beta";
+export const ARBITRUM_ONE_STATUS_LABEL = "Arbitrum One verified-row revoke";
 export const ARBITRUM_ONE_NATIVE_SYMBOL = "ETH";
 export const ARBITRUM_ONE_EXPLORER_NAME = "Arbiscan";
 export const ARBITRUM_ONE_EXPLORER_BASE_URL = "https://arbiscan.io";
 export const ARBITRUM_ONE_PUBLIC_RPC_URL = "https://arb1.arbitrum.io/rpc";
 export const ARBITRUM_REVOKE_UNAVAILABLE_COPY =
-  "Arbitrum revoke is available only for live-verified ERC-20 and NFT rows in this beta.";
+  "Arbitrum revoke is available only for live-verified ERC-20 and NFT rows.";
 export const ARBITRUM_NFT_REVOKE_UNAVAILABLE_COPY =
-  "Arbitrum NFT revoke is available only for live-verified rows in this beta.";
+  "Arbitrum NFT revoke is available only for live-verified rows.";
 export const ARBITRUM_BATCH_REVOKE_UNAVAILABLE_COPY =
   "Batch revoke is not enabled for Arbitrum.";
 

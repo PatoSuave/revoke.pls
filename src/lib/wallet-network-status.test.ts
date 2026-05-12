@@ -15,7 +15,7 @@ import {
 } from "@/lib/wallet-network-status";
 
 describe("wallet header network status", () => {
-  it("shows Arbitrum One as verified-row beta instead of unsupported", () => {
+  it("shows Arbitrum One as verified-row instead of unsupported", () => {
     const status = resolveHeaderNetworkStatus({
       walletChainId: ARBITRUM_ONE_CLIENT_CHAIN_ID,
       wagmiChainId: ARBITRUM_ONE_CLIENT_CHAIN_ID,

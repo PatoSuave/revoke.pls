@@ -111,10 +111,10 @@ export function ArbitrumReadOnlyScanner({
           </div>
           <div className="flex flex-wrap gap-2 text-xs font-semibold">
             <span className="rounded-full border border-pulse-cyan/35 bg-pulse-cyan/10 px-3 py-1 text-pulse-cyan">
-              ERC-20 row revoke beta
+              ERC-20 row revoke
             </span>
             <span className="rounded-full border border-pulse-cyan/35 bg-pulse-cyan/10 px-3 py-1 text-pulse-cyan">
-              NFT row revoke beta
+              NFT row revoke
             </span>
             <span className="rounded-full border border-pulse-border bg-pulse-panel/70 px-3 py-1 text-pulse-muted">
               Batch revoke disabled
@@ -145,7 +145,7 @@ export function ArbitrumReadOnlyScanner({
             </p>
             <p className="mt-1 text-xs leading-5 text-pulse-muted">
               These rows passed live reads on Arbitrum One. ERC-20 and NFT rows
-              can show row-level revoke in this beta; batch revoke remains off.
+              can show row-level revoke; batch revoke remains off.
             </p>
           </div>
           {erc20Approvals.length > 0 ? (

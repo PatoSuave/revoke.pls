@@ -146,10 +146,10 @@ browser-exposed Arbitrum secret exposure.
       verification-incomplete copy remains accurate.
 - [ ] Confirm Ethereum explorer links open Etherscan.
 
-## 8. Arbitrum One Verified-Row Beta
+## 8. Arbitrum One Verified-Row Revoke
 
 - [ ] Connect on Arbitrum One and confirm `/app` shows the Arbitrum verified-row
-      beta lane, not the generic revoke scanner.
+      lane, not the generic revoke scanner.
 - [ ] Confirm `/api/arbitrum/approvals` discovery uses server-side settings
       and reports `chainId` / `chainid` `42161`.
 - [ ] Confirm active Arbitrum ERC-20 rows appear only after `allowance(owner,
@@ -187,7 +187,7 @@ browser-exposed Arbitrum secret exposure.
 - [ ] Anti-phishing banner is visible on production pages.
 - [ ] `/security` loads and remains readable on desktop and mobile.
 - [ ] Supported-chain matrix lists Arbitrum One as `Yes` /
-      `ERC-20/NFT verified rows only` / `Beta` and does not claim batch revoke
+      `ERC-20/NFT verified rows only` / `Live` and does not claim batch revoke
       is live.
 - [ ] The app never requests a seed phrase, private key, mnemonic, or raw
       signing secret.

@@ -5,7 +5,7 @@ Pulse Revoke
 
 ## Vision
 Create a clean, fast approval management interface for PulseChain, BSC, Base,
-Ethereum, and Arbitrum One verified-row revoke beta while preserving the Pulse
+Ethereum, and Arbitrum One verified-row revoke while preserving the Pulse
 Revoke identity and a narrow security-first scope.
 
 ## Primary Problem
@@ -27,7 +27,7 @@ Users often approve tokens to contracts and forget about those approvals. Unlimi
 - Connect wallet
 - Detect PRC-20, BEP-20, and ERC-20 approvals on supported chains
 - Detect NFT approvals where supported by the app pipeline
-- Scan Arbitrum One and enable only verified-row ERC-20/NFT revoke beta
+- Scan Arbitrum One and enable only verified-row ERC-20/NFT revoke
 - Show spender and allowance
 - Revoke approvals one by one
 - Run sequential fungible-token batch revokes on one chain at a time

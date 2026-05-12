@@ -11,7 +11,7 @@ Current active supported networks should be exactly:
 - BSC / BNB Smart Chain, chain ID `56`
 - Base, chain ID `8453`
 - Ethereum Mainnet, chain ID `1`
-- Arbitrum One, chain ID `42161`, ERC-20/NFT verified-row beta
+- Arbitrum One, chain ID `42161`, ERC-20/NFT verified-row revoke
 
 Ethereum Mainnet uses server-read-only discovery and wallet-side revoke. It is
 wallet-enabled, but it must not introduce server-side signing, relayers, private
@@ -135,7 +135,7 @@ submission must stay unavailable.
 - Do BSC revokes use BNB wording and BscScan links?
 - Do PulseChain revokes use PLS wording and PulseScan links?
 - Do Base revokes use ETH wording and BaseScan links?
-- Does Arbitrum show only ERC-20/NFT verified-row revoke beta while batch
+- Does Arbitrum show only ERC-20/NFT verified-row revoke while batch
   revoke remains unavailable?
 
 ## BSC Gas Safety Questions

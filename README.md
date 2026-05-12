@@ -2,7 +2,7 @@
 
 Pulse Revoke is a non-custodial approval scanner and revoker for PulseChain,
 BSC / BNB Smart Chain, Base, Ethereum Mainnet, and Arbitrum One verified-row
-revoke beta.
+revoke.
 
 Live app: <https://pulserevoke.com>
 
@@ -19,7 +19,7 @@ launcher, trust, and distribution page.
 
 Revoke.PLS is live as a non-custodial approval review and revoke tool for
 PulseChain, BSC / BNB Smart Chain, Base, Ethereum Mainnet, and Arbitrum One
-verified-row revoke beta. The current production checkpoint includes:
+verified-row revoke. The current production checkpoint includes:
 
 - A focused `/app` scanner workspace with address-only scan and connected-wallet
   scan modes.
@@ -27,7 +27,7 @@ verified-row revoke beta. The current production checkpoint includes:
 - Ethereum Mainnet read-only discovery with wallet-side row-level revoke only
   for live-verified rows.
 - Arbitrum One server-side approval discovery with ERC-20/NFT verified-row
-  revoke beta; Arbitrum batch revoke is not enabled.
+  revoke; Arbitrum batch revoke is not enabled.
 - Verification-incomplete copy for approvals that cannot be fully confirmed.
 - Collapsed approval explanation panels inside result rows.
 - LibertySwap current and legacy contract metadata labels.
@@ -48,13 +48,13 @@ Active scan networks are intentionally limited to:
 - Base Mainnet, chain ID `8453`, gas token `ETH`, explorer `BaseScan`
 - Ethereum Mainnet, chain ID `1`, gas token `ETH`, explorer `Etherscan`
 - Arbitrum One, chain ID `42161`, gas token `ETH`, explorer `Arbiscan`
-  (ERC-20/NFT verified-row revoke beta; batch revoke not enabled)
+  (ERC-20/NFT verified-row revoke; batch revoke not enabled)
 
 Ethereum discovery uses a server-read-only API, while Ethereum revoke remains
 wallet-side only with owner, chain, preflight, gas, and row-level verification
 gates.
 Arbitrum discovery also uses a server-read-only API, and Arbitrum revoke stays
-limited to live-verified ERC-20 and NFT rows in this beta.
+limited to live-verified ERC-20 and NFT rows.
 
 ## What It Can Scan And Revoke
 
@@ -62,7 +62,7 @@ limited to live-verified ERC-20 and NFT rows in this beta.
 - BSC BEP-20 fungible token approvals
 - Base ERC-20 fungible token approvals
 - Ethereum ERC-20 fungible token approvals
-- Arbitrum ERC-20 and NFT approvals with verified-row revoke beta
+- Arbitrum ERC-20 and NFT approvals with verified-row revoke
 - NFT operator approvals where supported by the app pipeline
 - NFT per-token approvals where supported by the app pipeline
 - Sequential batch revoke for fungible token approvals on one chain at a time
@@ -116,7 +116,7 @@ revokes use PLS gas wording and PulseScan links. BSC revokes use BNB gas wording
 and BscScan links. Base revokes use ETH gas wording and BaseScan links.
 Every revoke requires wallet confirmation before the transaction is submitted.
 Arbitrum revoke is limited to live-verified ERC-20 and NFT rows in the current
-beta. Arbitrum batch revoke does not expose revoke actions.
+product. Arbitrum batch revoke does not expose revoke actions.
 
 ## BSC Implementation Notes
 

@@ -15,7 +15,7 @@ import {
   resolveEthereumReadOnlyChainId,
 } from "@/lib/ethereum-approval-client";
 
-export const ARBITRUM_HEADER_STATUS_LABEL = "Arbitrum verified-row beta";
+export const ARBITRUM_HEADER_STATUS_LABEL = "Arbitrum verified-row";
 export const ARBITRUM_HEADER_STATUS_SHORT_HELPER =
   "ERC-20 and NFT rows only. Batch off.";
 export const ARBITRUM_HEADER_STATUS_HELPER =

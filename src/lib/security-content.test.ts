@@ -51,7 +51,7 @@ describe("security content", () => {
       chainId: "42161",
       scan: "Yes",
       revoke: "ERC-20/NFT verified rows only",
-      status: "Beta",
+      status: "Live",
     });
     expect(rowsByChain.get("Arbitrum One")?.note).toContain(
       "batch revoke is not enabled",
