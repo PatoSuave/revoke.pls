@@ -10,20 +10,11 @@ import {
   type Connector,
 } from "wagmi";
 
-import {
-  getChainConfig,
-  isSupportedChainId,
-  supportedChainConfigList,
-  type SupportedChainId,
-} from "@/lib/chains";
-import {
-  ETHEREUM_MAINNET_STATUS_LABEL,
-  isEthereumReadOnlyChainId,
-  resolveEthereumReadOnlyChainId,
-} from "@/lib/ethereum-approval-client";
+import type { SupportedChainId } from "@/lib/chains";
 import { shortenAddress } from "@/lib/format";
 import { isDesktopBuild } from "@/lib/platform";
 import { trackEvent } from "@/lib/telemetry";
+import { resolveHeaderNetworkStatus } from "@/lib/wallet-network-status";
 
 type Variant = "primary" | "ghost";
 
@@ -145,20 +136,17 @@ export function ConnectWalletButton({
   }
 
   if (isConnected && address) {
-    const connectedChainId = walletChainId ?? wagmiChainId;
-    const onSupportedChain = isSupportedChainId(connectedChainId);
-    const currentConfig = getChainConfig(connectedChainId);
-    const ethereumReadOnlyChainId = resolveEthereumReadOnlyChainId({
+    const networkStatus = resolveHeaderNetworkStatus({
       walletChainId,
       wagmiChainId,
     });
 
-    if (isEthereumReadOnlyChainId(ethereumReadOnlyChainId)) {
+    if (networkStatus.kind === "ethereum") {
       return (
         <div className={`inline-flex items-center gap-2 ${className}`}>
           <span className="inline-flex items-center gap-2 rounded-xl border border-amber-400/35 bg-amber-400/10 px-3 py-2 text-xs font-medium text-amber-200">
             <span className="h-2 w-2 rounded-full bg-amber-300" aria-hidden />
-            {ETHEREUM_MAINNET_STATUS_LABEL}
+            {networkStatus.label}
           </span>
           <button
             type="button"
@@ -174,7 +162,34 @@ export function ConnectWalletButton({
       );
     }
 
-    if (!onSupportedChain) {
+    if (networkStatus.kind === "arbitrum") {
+      return (
+        <div className={`inline-flex flex-wrap items-center gap-2 ${className}`}>
+          <span
+            title={networkStatus.helper}
+            className="inline-flex items-center gap-2 rounded-xl border border-pulse-cyan/35 bg-pulse-cyan/10 px-3 py-2 text-xs font-medium text-pulse-cyan"
+          >
+            <span className="h-2 w-2 rounded-full bg-pulse-cyan" aria-hidden />
+            {networkStatus.label}
+          </span>
+          <span className="hidden max-w-[14rem] text-[11px] leading-4 text-pulse-muted xl:inline">
+            ERC-20 rows only. NFT and batch revoke off.
+          </span>
+          <button
+            type="button"
+            onClick={() => disconnect()}
+            className={`${base} ${variantStyles.ghost}`}
+          >
+            <span className="font-mono text-xs text-pulse-text">
+              {shortenAddress(address)}
+            </span>
+            <span className="text-xs text-pulse-muted">Disconnect</span>
+          </button>
+        </div>
+      );
+    }
+
+    if (networkStatus.kind === "unsupported") {
       return (
         <div
           className={`inline-flex flex-wrap items-center gap-2 ${className}`}
@@ -182,7 +197,7 @@ export function ConnectWalletButton({
           <span className="text-xs font-semibold text-pulse-red">
             Unsupported network
           </span>
-          {supportedChainConfigList.map((c) => (
+          {networkStatus.switchChains.map((c) => (
             <button
               key={c.chainId}
               type="button"
@@ -203,7 +218,7 @@ export function ConnectWalletButton({
       <div className={`inline-flex items-center gap-2 ${className}`}>
         <span className="inline-flex items-center gap-2 rounded-xl border border-pulse-border bg-pulse-panel/70 px-3 py-2 text-xs font-medium text-pulse-muted">
           <span className="h-2 w-2 rounded-full bg-pulse-green" aria-hidden />
-          {currentConfig?.displayName}
+          {networkStatus.label}
         </span>
         <button
           type="button"
