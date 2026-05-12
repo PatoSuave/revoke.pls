@@ -7,10 +7,10 @@ import { siteConfig } from "@/lib/site";
 export function SiteHeader() {
   return (
     <header className="sticky top-0 z-40 w-full border-b border-pulse-border/60 bg-pulse-bg/80 backdrop-blur">
-      <div className="mx-auto flex h-16 w-full min-w-0 max-w-6xl items-center justify-between gap-2 px-3 sm:gap-4 sm:px-6">
+      <div className="mx-auto grid min-h-16 w-full min-w-0 max-w-6xl grid-cols-1 gap-3 px-3 py-3 sm:px-6 lg:grid-cols-[auto_minmax(0,1fr)_auto] lg:items-center lg:gap-5 lg:py-0">
         <Link
           href="/"
-          className="flex min-w-0 flex-1 items-center gap-2.5 text-pulse-text md:flex-none"
+          className="order-1 flex min-w-0 items-center gap-2.5 text-pulse-text"
           aria-label={`${siteConfig.name} home`}
         >
           <PulseMark className="h-8 w-8 shrink-0" />
@@ -19,19 +19,21 @@ export function SiteHeader() {
           </span>
         </Link>
 
-        <nav className="hidden items-center gap-6 text-sm text-pulse-muted lg:flex">
+        <nav className="order-3 flex min-w-0 items-center gap-1 overflow-x-auto rounded-xl border border-pulse-border/60 bg-pulse-panel/35 p-1 text-xs text-pulse-muted sm:text-sm lg:order-2 lg:justify-center lg:gap-6 lg:overflow-visible lg:border-0 lg:bg-transparent lg:p-0">
           {siteConfig.nav.map((item) => (
             <a
               key={item.href}
               href={item.href}
-              className="transition hover:text-pulse-text"
+              className="shrink-0 whitespace-nowrap rounded-lg px-2.5 py-1.5 transition hover:bg-white/5 hover:text-pulse-text lg:px-0 lg:py-0 lg:hover:bg-transparent"
             >
               {item.label}
             </a>
           ))}
         </nav>
 
-        <ConnectWalletButton className="min-w-0" />
+        <div className="order-2 flex min-w-0 justify-start lg:order-3 lg:justify-end">
+          <ConnectWalletButton className="max-w-full justify-start lg:justify-end" />
+        </div>
       </div>
     </header>
   );

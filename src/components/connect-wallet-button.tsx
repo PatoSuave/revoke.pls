@@ -14,7 +14,10 @@ import type { SupportedChainId } from "@/lib/chains";
 import { shortenAddress } from "@/lib/format";
 import { isDesktopBuild } from "@/lib/platform";
 import { trackEvent } from "@/lib/telemetry";
-import { resolveHeaderNetworkStatus } from "@/lib/wallet-network-status";
+import {
+  ARBITRUM_HEADER_STATUS_SHORT_HELPER,
+  resolveHeaderNetworkStatus,
+} from "@/lib/wallet-network-status";
 
 type Variant = "primary" | "ghost";
 
@@ -122,6 +125,8 @@ export function ConnectWalletButton({
 
   const base =
     "inline-flex max-w-full items-center justify-center gap-2 whitespace-nowrap rounded-xl px-3 py-2 text-xs font-semibold transition disabled:cursor-not-allowed disabled:opacity-60 sm:px-4 sm:py-2.5 sm:text-sm";
+  const connectedControls =
+    "inline-flex max-w-full flex-wrap items-center gap-2";
 
   if (status === "reconnecting" || status === "connecting") {
     return (
@@ -143,7 +148,7 @@ export function ConnectWalletButton({
 
     if (networkStatus.kind === "ethereum") {
       return (
-        <div className={`inline-flex items-center gap-2 ${className}`}>
+        <div className={`${connectedControls} ${className}`}>
           <span className="inline-flex items-center gap-2 rounded-xl border border-amber-400/35 bg-amber-400/10 px-3 py-2 text-xs font-medium text-amber-200">
             <span className="h-2 w-2 rounded-full bg-amber-300" aria-hidden />
             {networkStatus.label}
@@ -164,7 +169,7 @@ export function ConnectWalletButton({
 
     if (networkStatus.kind === "arbitrum") {
       return (
-        <div className={`inline-flex flex-wrap items-center gap-2 ${className}`}>
+        <div className={`${connectedControls} ${className}`}>
           <span
             title={networkStatus.helper}
             className="inline-flex items-center gap-2 rounded-xl border border-pulse-cyan/35 bg-pulse-cyan/10 px-3 py-2 text-xs font-medium text-pulse-cyan"
@@ -172,8 +177,11 @@ export function ConnectWalletButton({
             <span className="h-2 w-2 rounded-full bg-pulse-cyan" aria-hidden />
             {networkStatus.label}
           </span>
-          <span className="hidden max-w-[14rem] text-[11px] leading-4 text-pulse-muted xl:inline">
-            ERC-20 rows only. NFT and batch revoke off.
+          <span
+            title={networkStatus.helper}
+            className="hidden max-w-[12rem] text-[11px] leading-4 text-pulse-muted xl:inline"
+          >
+            {ARBITRUM_HEADER_STATUS_SHORT_HELPER}
           </span>
           <button
             type="button"
@@ -191,9 +199,7 @@ export function ConnectWalletButton({
 
     if (networkStatus.kind === "unsupported") {
       return (
-        <div
-          className={`inline-flex flex-wrap items-center gap-2 ${className}`}
-        >
+        <div className={`${connectedControls} ${className}`}>
           <span className="text-xs font-semibold text-pulse-red">
             Unsupported network
           </span>
@@ -215,7 +221,7 @@ export function ConnectWalletButton({
     }
 
     return (
-      <div className={`inline-flex items-center gap-2 ${className}`}>
+      <div className={`${connectedControls} ${className}`}>
         <span className="inline-flex items-center gap-2 rounded-xl border border-pulse-border bg-pulse-panel/70 px-3 py-2 text-xs font-medium text-pulse-muted">
           <span className="h-2 w-2 rounded-full bg-pulse-green" aria-hidden />
           {networkStatus.label}
