@@ -8,6 +8,7 @@ import {
 } from "./chains";
 import { ARBITRUM_ONE_CLIENT_CHAIN_ID } from "./arbitrum-approval-client";
 import { ETHEREUM_MAINNET_CLIENT_CHAIN_ID } from "./ethereum-approval-client";
+import { OPTIMISM_CLIENT_CHAIN_ID } from "./optimism-approval-client";
 import { walletChains } from "./wagmi";
 
 describe("wagmi wallet chains", () => {
@@ -24,6 +25,7 @@ describe("wagmi wallet chains", () => {
       BASE_CHAIN_ID,
       ETHEREUM_MAINNET_CLIENT_CHAIN_ID,
       ARBITRUM_ONE_CLIENT_CHAIN_ID,
+      OPTIMISM_CLIENT_CHAIN_ID,
     ]);
   });
 });

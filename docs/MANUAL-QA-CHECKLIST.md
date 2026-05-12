@@ -28,6 +28,11 @@ include the Arbitrum scanner UI, hook/client, and existing controlled ERC-20/NFT
 row revoke hook usage, but no batch revoke, server-signing, relayer, or
 browser-exposed Arbitrum secret exposure.
 
+For Optimism read-only work, expected sensitive-path output may include the
+Optimism API route, hook/client, scanner UI, and wagmi wallet-recognition entry,
+but no revoke hooks, batch revoke, server-signing, relayer, or browser-exposed
+Optimism secret exposure.
+
 ## 1. Production Smoke
 
 - [ ] `/` loads without a framework error overlay.
@@ -70,6 +75,11 @@ browser-exposed Arbitrum secret exposure.
 - [ ] Select Arbitrum One in address-only mode and confirm the pasted scan
       target is preserved even when a different wallet is connected.
 - [ ] Confirm no wallet is required to start an Arbitrum address-only scan.
+- [ ] Select Optimism in address-only mode and confirm the pasted scan target
+      is preserved even when a different wallet is connected.
+- [ ] Confirm no wallet is required to start an Optimism address-only scan.
+- [ ] Confirm Optimism address-only rows remain read-only even when a wallet is
+      connected.
 
 ## 4. PulseChain Approval Scanning
 
@@ -182,13 +192,34 @@ browser-exposed Arbitrum secret exposure.
       reasons, ERC-20 row revoke status, NFT row revoke status, and batch
       revoke disabled.
 
-## 9. Security And Trust
+## 9. Optimism Read-Only Scan
+
+- [ ] Connect on Optimism / OP Mainnet and confirm `/app` shows the Optimism
+      read-only lane, not the generic revoke scanner.
+- [ ] Confirm `/api/optimism/approvals` discovery uses server-side settings and
+      reports `chainId` / `chainid` `10`.
+- [ ] Confirm active Optimism ERC-20 rows appear only after
+      `allowance(owner, spender)` live verification.
+- [ ] Confirm active Optimism NFT rows appear only after `getApproved(tokenId)`
+      or `isApprovedForAll(owner, operator)` live verification.
+- [ ] Confirm Optimism ERC-20 revoke, NFT revoke, batch revoke, and global
+      revoke are not visible or enabled.
+- [ ] Confirm failed reads, truncation, caps, rate limits, and upstream
+      failures show verification-incomplete copy instead of a clear state.
+- [ ] Confirm Optimism explorer links open Optimistic Etherscan.
+- [ ] In `/app?debug=1`, confirm diagnostics show scan target, connected
+      wallet, wallet chain ID, API status, config presence, incomplete reasons,
+      and ERC-20/NFT/batch revoke disabled.
+
+## 10. Security And Trust
 
 - [ ] Anti-phishing banner is visible on production pages.
 - [ ] `/security` loads and remains readable on desktop and mobile.
 - [ ] Supported-chain matrix lists Arbitrum One as `Yes` /
       `ERC-20/NFT verified rows only` / `Live` and does not claim batch revoke
       is live.
+- [ ] Supported-chain matrix lists Optimism as `Yes` / `No` / `Read-only` and
+      does not claim Optimism revoke is live.
 - [ ] The app never requests a seed phrase, private key, mnemonic, or raw
       signing secret.
 - [ ] No spender or protocol is described as safe, unsafe, endorsed, or trusted
@@ -198,7 +229,7 @@ browser-exposed Arbitrum secret exposure.
 - [ ] Wallet prompts show expected revoke functions, not transfers, swaps,
       bridges, or unrelated approvals.
 
-## 10. Regression Guardrails
+## 11. Regression Guardrails
 
 - [ ] No server-side signing was introduced.
 - [ ] No private key, seed phrase, or mnemonic handling was introduced.
@@ -212,6 +243,8 @@ browser-exposed Arbitrum secret exposure.
       reviewed.
 - [ ] No Arbitrum API route write, signing, relayer, or private-key behavior
       was introduced.
+- [ ] No Optimism API route write, signing, relayer, private-key, or
+      wallet-write behavior was introduced.
 - [ ] No address-only scan gating changed unless explicitly intended and
       reviewed.
 - [ ] No LibertySwap registry labels changed unless explicitly intended and

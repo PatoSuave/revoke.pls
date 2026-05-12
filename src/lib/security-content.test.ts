@@ -56,6 +56,15 @@ describe("security content", () => {
     expect(rowsByChain.get("Arbitrum One")?.note).toContain(
       "batch revoke is not enabled",
     );
+    expect(rowsByChain.get("Optimism")).toMatchObject({
+      chainId: "10",
+      scan: "Yes",
+      revoke: "No",
+      status: "Read-only",
+    });
+    expect(rowsByChain.get("Optimism")?.note).toContain(
+      "Revoke is not enabled on Optimism",
+    );
     expect(rowsByChain.get("Solana")).toMatchObject({
       scan: "No",
       revoke: "No",

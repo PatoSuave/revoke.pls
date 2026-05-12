@@ -12,6 +12,7 @@ Current active supported networks should be exactly:
 - Base, chain ID `8453`
 - Ethereum Mainnet, chain ID `1`
 - Arbitrum One, chain ID `42161`, ERC-20/NFT verified-row revoke
+- Optimism / OP Mainnet, chain ID `10`, read-only approval scan
 
 Ethereum Mainnet uses server-read-only discovery and wallet-side revoke. It is
 wallet-enabled, but it must not introduce server-side signing, relayers, private
@@ -22,6 +23,10 @@ revoke only after row-level live verification, matching owner, chain,
 preflight, and post-revoke verification gates pass. Arbitrum batch revoke,
 server-side signing, relayers, private keys, and API route transaction
 submission must stay unavailable.
+
+Optimism uses server-read-only discovery only. Optimism revoke, NFT revoke,
+batch revoke, global revoke, server-side signing, relayers, private keys, and
+API route transaction submission must stay unavailable.
 
 ## Key Files
 
@@ -40,14 +45,16 @@ submission must stay unavailable.
 | Diagnostics UI | `src/components/sections/scanner-diagnostics.tsx` |
 | Ethereum API controls | `src/app/api/ethereum/approvals/route.ts`, `src/lib/ethereum-approval-api.ts`, `src/lib/ethereum-approval-api-controls.ts` |
 | Arbitrum API controls | `src/app/api/arbitrum/approvals/route.ts`, `src/lib/arbitrum-approval-api.ts`, `src/lib/arbitrum-approval-api-controls.ts` |
+| Optimism API controls | `src/app/api/optimism/approvals/route.ts`, `src/lib/optimism-approval-api.ts`, `src/lib/optimism-approval-api-controls.ts` |
 | Address-only scan controls | `src/lib/address-only-scan.ts`, `src/components/sections/approval-scanner.tsx` |
 
 ## Chain Safety Questions
 
 - Are active supported chains exactly PulseChain, BSC, Base, wallet-enabled
-  Ethereum Mainnet, and Arbitrum One's separate verified-row revoke lane?
-- Does `src/lib/wagmi.ts` register Ethereum and Arbitrum only for their
-  separate lanes and keep chain lists scoped correctly?
+  Ethereum Mainnet, Arbitrum One's separate verified-row revoke lane, and
+  Optimism's separate read-only lane?
+- Does `src/lib/wagmi.ts` register Ethereum, Arbitrum, and Optimism only for
+  their separate lanes and keep chain lists scoped correctly?
 - Is Ethereum Mainnet protected by owner, chain, preflight, gas, and row-level
   verification gates?
 - Do approval records carry `chainId` through discovery, validation, display,
@@ -93,6 +100,20 @@ submission must stay unavailable.
 - Do Arbitrum batch revoke, server signing, arbitrary `writeContract`, and
   `sendTransaction` paths remain unavailable?
 
+## Optimism Discovery Questions
+
+- Does `/api/optimism/approvals` reject invalid owners with `400`?
+- Does route-level rate limiting return `429` with non-clear JSON?
+- Does every Optimism historical log request use Etherscan API V2 with
+  `chainid=10`?
+- Are Optimism explorer links built with `https://optimistic.etherscan.io`?
+- Are Optimism RPC and Etherscan API V2 keys server-only values, with no
+  browser-exposed Optimism variables?
+- Do timeout, cap-hit, rate-limit, truncation, malformed rows, and live-read
+  failures return non-clear states?
+- Do Optimism ERC-20, NFT, batch, global, server signing, arbitrary
+  `writeContract`, and `sendTransaction` paths remain unavailable?
+
 ## BSC Discovery Questions
 
 - Do BSC historical log requests use Etherscan API V2 at
@@ -137,6 +158,8 @@ submission must stay unavailable.
 - Do Base revokes use ETH wording and BaseScan links?
 - Does Arbitrum show only ERC-20/NFT verified-row revoke while batch
   revoke remains unavailable?
+- Does Optimism show read-only rows only, with no ERC-20, NFT, batch, or global
+  revoke action?
 
 ## BSC Gas Safety Questions
 
@@ -198,6 +221,9 @@ npm.cmd run build
   until a matching wallet-side revoke is explicitly reviewed.
 - Load `/app` on Arbitrum One and confirm only live-verified ERC-20 and NFT rows
   can open the revoke review panel; batch revoke remains unavailable.
+- Load `/app` on Optimism / OP Mainnet and confirm read-only approvals can
+  render after live verification, with no ERC-20, NFT, batch, or global revoke
+  action.
 - Test a low-gas BSC revoke and confirm the wallet receives `gas` below the
   hard cap.
 - Test or simulate a high-gas BSC revoke and confirm the in-app warning appears

@@ -1,8 +1,8 @@
 # Pulse Revoke / revoke.pls
 
 Pulse Revoke is a non-custodial approval scanner and revoker for PulseChain,
-BSC / BNB Smart Chain, Base, Ethereum Mainnet, and Arbitrum One verified-row
-revoke.
+BSC / BNB Smart Chain, Base, Ethereum Mainnet, Arbitrum One verified-row
+revoke, and Optimism read-only approval scanning.
 
 Live app: <https://pulserevoke.com>
 
@@ -18,8 +18,9 @@ launcher, trust, and distribution page.
 ## Current Production Status
 
 Revoke.PLS is live as a non-custodial approval review and revoke tool for
-PulseChain, BSC / BNB Smart Chain, Base, Ethereum Mainnet, and Arbitrum One
-verified-row revoke. The current production checkpoint includes:
+PulseChain, BSC / BNB Smart Chain, Base, Ethereum Mainnet, Arbitrum One
+verified-row revoke, and Optimism read-only approval scanning. The current
+production checkpoint includes:
 
 - A focused `/app` scanner workspace with address-only scan and connected-wallet
   scan modes.
@@ -28,6 +29,8 @@ verified-row revoke. The current production checkpoint includes:
   for live-verified rows.
 - Arbitrum One server-side approval discovery with ERC-20/NFT verified-row
   revoke; Arbitrum batch revoke is not enabled.
+- Optimism server-side read-only approval discovery and live verification;
+  Optimism revoke is not enabled.
 - Verification-incomplete copy for approvals that cannot be fully confirmed.
 - Collapsed approval explanation panels inside result rows.
 - LibertySwap current and legacy contract metadata labels.
@@ -49,12 +52,16 @@ Active scan networks are intentionally limited to:
 - Ethereum Mainnet, chain ID `1`, gas token `ETH`, explorer `Etherscan`
 - Arbitrum One, chain ID `42161`, gas token `ETH`, explorer `Arbiscan`
   (ERC-20/NFT verified-row revoke; batch revoke not enabled)
+- Optimism / OP Mainnet, chain ID `10`, gas token `ETH`, explorer
+  `Optimistic Etherscan` (read-only scan; revoke not enabled)
 
 Ethereum discovery uses a server-read-only API, while Ethereum revoke remains
 wallet-side only with owner, chain, preflight, gas, and row-level verification
 gates.
 Arbitrum discovery also uses a server-read-only API, and Arbitrum revoke stays
 limited to live-verified ERC-20 and NFT rows.
+Optimism discovery uses a server-read-only API. Optimism revoke remains
+unavailable while discovery and live verification are validated.
 
 ## What It Can Scan And Revoke
 
@@ -63,6 +70,7 @@ limited to live-verified ERC-20 and NFT rows.
 - Base ERC-20 fungible token approvals
 - Ethereum ERC-20 fungible token approvals
 - Arbitrum ERC-20 and NFT approvals with verified-row revoke
+- Optimism ERC-20 and NFT approvals in read-only mode
 - NFT operator approvals where supported by the app pipeline
 - NFT per-token approvals where supported by the app pipeline
 - Sequential batch revoke for fungible token approvals on one chain at a time
@@ -71,6 +79,7 @@ User-facing BSC labels are `BEP-20`, `BEP-721`, and `BEP-1155`. User-facing
 Base labels are `ERC-20`, `ERC-721`, and `ERC-1155`. Internal ABI and event
 handling uses ERC-compatible EVM interfaces where appropriate.
 User-facing Arbitrum labels are `ERC-20`, `ERC-721`, and `ERC-1155`.
+User-facing Optimism labels are `ERC-20`, `ERC-721`, and `ERC-1155`.
 
 ## What It Does Not Do
 
@@ -117,6 +126,7 @@ and BscScan links. Base revokes use ETH gas wording and BaseScan links.
 Every revoke requires wallet confirmation before the transaction is submitted.
 Arbitrum revoke is limited to live-verified ERC-20 and NFT rows in the current
 product. Arbitrum batch revoke does not expose revoke actions.
+Optimism revoke actions are not enabled in this phase.
 
 ## BSC Implementation Notes
 
@@ -161,6 +171,18 @@ product. Arbitrum batch revoke does not expose revoke actions.
   after the same owner, chain, preflight, and post-revoke live verification
   gates.
 - Arbitrum batch revoke is not enabled.
+
+## Optimism Implementation Notes
+
+- Optimism / OP Mainnet is chain ID `10`.
+- Historical Optimism approval discovery uses the server-side
+  `/api/optimism/approvals` route.
+- The route uses Etherscan API V2 logs with `chainid=10` and Optimistic
+  Etherscan links.
+- Optimism RPC and API keys are server-only values. Do not put managed
+  Optimism RPC URLs or API keys in `NEXT_PUBLIC_*` variables.
+- Optimism rows are read-only in this phase. ERC-20, NFT, batch, and global
+  revoke actions are not enabled for Optimism.
 
 ## Security Model
 
@@ -254,6 +276,10 @@ supports it.
 | `ARBITRUM_EXPLORER_API_URL` | Optional | Server-only Etherscan-compatible API V2 endpoint override. Defaults to `https://api.etherscan.io/v2/api`. |
 | `ARBITRUM_EXPLORER_CHAIN_ID` | Optional | Etherscan API V2 chain ID for Arbitrum One logs. Defaults to `42161`; keep it at `42161`. |
 | `ARBISCAN_API_KEY` | Required for Arbitrum scan | Server-only Arbiscan/Etherscan-compatible API key for Arbitrum One approval discovery. Do not use a `NEXT_PUBLIC_` key for this route. |
+| `OPTIMISM_RPC_URL` / `OPTIMISM_MAINNET_RPC_URL` / `OP_MAINNET_RPC_URL` | Required for Optimism scan | Server-only Optimism RPC URL used by `/api/optimism/approvals`. |
+| `OPTIMISM_EXPLORER_API_URL` | Optional | Server-only Etherscan API V2 endpoint override. Defaults to `https://api.etherscan.io/v2/api`. |
+| `OPTIMISM_EXPLORER_CHAIN_ID` | Optional | Etherscan API V2 chain ID for OP Mainnet logs. Defaults to `10`; keep it at `10`. |
+| `OPTIMISM_EXPLORER_API_KEY` / `OPTIMISTIC_ETHERSCAN_API_KEY` / `ETHERSCAN_API_KEY` | Required for Optimism scan | Server-only Etherscan API V2 key for Optimism approval discovery. Do not use a `NEXT_PUBLIC_` key for this route. |
 
 See [docs/ENVIRONMENT.md](docs/ENVIRONMENT.md) for details.
 
@@ -268,9 +294,13 @@ See [docs/ENVIRONMENT.md](docs/ENVIRONMENT.md) for details.
   approval API route
 - `src/app/api/arbitrum/approvals/route.ts` - read-only Arbitrum One approval
   discovery API route
+- `src/app/api/optimism/approvals/route.ts` - read-only Optimism approval
+  discovery API route
 - `src/lib/ethereum-approval-api.ts` - server-only Ethereum discovery and live
   validation
 - `src/lib/arbitrum-approval-api.ts` - server-only Arbitrum discovery and live
+  validation
+- `src/lib/optimism-approval-api.ts` - server-only Optimism discovery and live
   validation
 - `src/lib/explorer.ts` - explorer URL generation
 - `src/lib/preflight.ts` - live validation helpers, BSC hard cap, high-gas

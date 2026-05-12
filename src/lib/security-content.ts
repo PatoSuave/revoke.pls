@@ -46,7 +46,7 @@ export interface ChainStatusRow {
   chainId: string;
   scan: "Yes" | "No";
   revoke: string;
-  status: "Live" | "Not enabled" | "Not supported";
+  status: "Live" | "Read-only" | "Not enabled" | "Not supported";
   note: string;
 }
 
@@ -90,6 +90,14 @@ export const SECURITY_CHAIN_STATUS_ROWS: readonly ChainStatusRow[] = [
     revoke: "ERC-20/NFT verified rows only",
     status: "Live",
     note: "Server-side approval discovery and live verification. Revoke is row-level only for verified ERC-20 and NFT rows; batch revoke is not enabled on Arbitrum.",
+  },
+  {
+    chain: "Optimism",
+    chainId: "10",
+    scan: "Yes",
+    revoke: "No",
+    status: "Read-only",
+    note: "Server-side approval discovery and live verification for OP Mainnet. Revoke is not enabled on Optimism in this phase.",
   },
   {
     chain: "Solana",

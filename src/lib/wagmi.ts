@@ -10,6 +10,10 @@ import {
   ETHEREUM_MAINNET_PUBLIC_RPC_URL,
   ethereumMainnetWalletChain,
 } from "@/lib/ethereum-approval-client";
+import {
+  OPTIMISM_PUBLIC_RPC_URL,
+  optimismWalletChain,
+} from "@/lib/optimism-approval-client";
 
 /**
  * Wagmi client configuration for Pulse Revoke.
@@ -27,6 +31,10 @@ import {
  * Arbitrum approval scanner uses the server-side read-only API and only its
  * live-verified ERC-20 and NFT rows may route through controlled single-row
  * revoke hooks. It never routes through the generic scanner/revoke path.
+ *
+ * OP Mainnet (10) is registered for wallet chain recognition only. The
+ * Optimism approval scanner uses a server-side read-only API and does not
+ * expose Optimism revoke actions in this phase.
  *
  * Connectors:
  *  - Injected (MetaMask, Rabby, Brave, etc.)
@@ -47,7 +55,7 @@ export const hasWalletConnect: boolean = Boolean(walletConnectProjectId);
 const WALLETCONNECT_METADATA = {
   name: "Pulse Revoke",
   description:
-    "Review token approvals on PulseChain, BSC, Base, Ethereum, and Arbitrum.",
+    "Review token approvals on PulseChain, BSC, Base, Ethereum, Arbitrum, and Optimism.",
   url: "https://pulserevoke.com",
   icons: ["https://pulserevoke.com/icon.png"],
 };
@@ -69,6 +77,7 @@ export const walletChains = [
   ...supportedChains,
   ethereumMainnetWalletChain,
   arbitrumOneWalletChain,
+  optimismWalletChain,
 ] as const;
 
 export const wagmiConfig = createConfig({
@@ -86,6 +95,7 @@ export const wagmiConfig = createConfig({
         ETHEREUM_MAINNET_PUBLIC_RPC_URL,
     ),
     [arbitrumOneWalletChain.id]: http(ARBITRUM_ONE_PUBLIC_RPC_URL),
+    [optimismWalletChain.id]: http(OPTIMISM_PUBLIC_RPC_URL),
   },
   ssr: true,
 });

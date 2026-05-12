@@ -12,7 +12,7 @@ It is open for review, but it is not claiming an external audit.
 - Always verify the connected site URL before connecting a wallet.
 - Always review transaction details in your wallet before signing.
 - When unsure, verify token, spender, operator, and transaction links on
-  PulseScan, BscScan, BaseScan, Etherscan, or Arbiscan.
+  PulseScan, BscScan, BaseScan, Etherscan, Arbiscan, or Optimistic Etherscan.
 
 ## What Revoke Transactions Do
 
@@ -35,6 +35,7 @@ Current active supported networks:
 - Base, chain ID `8453`
 - Ethereum Mainnet, chain ID `1`
 - Arbitrum One, chain ID `42161`, verified ERC-20 and NFT rows only
+- Optimism / OP Mainnet, chain ID `10`, read-only approval scan
 
 Ethereum server-read-only discovery uses an API for historical logs and live RPC
 validation. Ethereum revoke transactions are still wallet-side only: there is
@@ -46,6 +47,11 @@ Arbitrum One server-read-only discovery uses `/api/arbitrum/approvals` for
 historical logs and live RPC validation. Arbitrum ERC-20 and NFT row revoke is
 wallet-side only after owner, chain, preflight, and row-level verification gates
 pass. Arbitrum batch revoke is not enabled, and there is no server-side signing,
+private key handling, relayer, or API route transaction submission.
+
+Optimism server-read-only discovery uses `/api/optimism/approvals` for
+historical logs and live RPC validation. Optimism revoke, NFT revoke, batch
+revoke, and global revoke are not enabled, and there is no server-side signing,
 private key handling, relayer, or API route transaction submission.
 
 Address-only scanning is read-only until a connected wallet exactly matches the

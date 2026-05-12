@@ -24,8 +24,12 @@ describe("hardening source invariants", () => {
       join(process.cwd(), "src", "app", "api", "arbitrum", "approvals", "route.ts"),
       "utf8",
     );
+    const optimismRoute = readFileSync(
+      join(process.cwd(), "src", "app", "api", "optimism", "approvals", "route.ts"),
+      "utf8",
+    );
 
-    expect(`${ethereumRoute}\n${arbitrumRoute}`).not.toMatch(
+    expect(`${ethereumRoute}\n${arbitrumRoute}\n${optimismRoute}`).not.toMatch(
       /writeContract|sendTransaction|signTransaction|privateKey|mnemonic|seed|relayer/i,
     );
   });
@@ -68,6 +72,40 @@ describe("hardening source invariants", () => {
     expect(`${component}\n${client}`).not.toMatch(/\bsafe\b/i);
   });
 
+  it("keeps Optimism read-only without revoke hooks or wallet writes", () => {
+    const component = readFileSync(
+      join(
+        process.cwd(),
+        "src",
+        "components",
+        "sections",
+        "optimism-readonly-scanner.tsx",
+      ),
+      "utf8",
+    );
+    const hook = readFileSync(
+      join(process.cwd(), "src", "hooks", "use-optimism-approval-scan.ts"),
+      "utf8",
+    );
+    const client = readFileSync(
+      join(process.cwd(), "src", "lib", "optimism-approval-client.ts"),
+      "utf8",
+    );
+
+    expect(`${component}\n${hook}\n${client}`).not.toMatch(
+      /useRevokeApproval|useRevokeNftApproval|useBatchRevoke|writeContract|sendTransaction/i,
+    );
+    expect(client).toContain("revokeEnabled: false");
+    expect(client).toContain("batchRevokeEnabled: false");
+    expect(client).toContain("nftRevokeEnabled: false");
+    expect(client).toContain("erc20RowRevokeEnabled: false");
+    expect(client).toContain("nftRowRevokeEnabled: false");
+    expect(client).toContain("/api/optimism/approvals?owner=");
+    expect(hook).toContain('queryKey: ["optimism-approval-api"');
+    expect(hook).toContain('emptyOptimismApprovalApiResponse("upstream-failure"');
+    expect(`${component}\n${client}`).not.toMatch(/\bsafe\b/i);
+  });
+
   it("keeps Ethereum security docs current", () => {
     const security = readFileSync(join(process.cwd(), "SECURITY.md"), "utf8");
     const auditGuide = readFileSync(
@@ -79,8 +117,11 @@ describe("hardening source invariants", () => {
     expect(security).toContain("server-read-only discovery");
     expect(security).toContain("Arbitrum One, chain ID `42161`");
     expect(security).toContain("verified ERC-20 and NFT rows");
+    expect(security).toContain("Optimism / OP Mainnet, chain ID `10`");
+    expect(security).toContain("read-only approval scan");
     expect(auditGuide).toContain("Ethereum Mainnet, chain ID `1`");
     expect(auditGuide).toContain("Arbitrum One, chain ID `42161`");
+    expect(auditGuide).toContain("Optimism / OP Mainnet, chain ID `10`");
     expect(auditGuide).toContain("CSP report-only");
     expect(`${security}\n${auditGuide}`).not.toContain(
       "Ethereum Mainnet should remain inactive",

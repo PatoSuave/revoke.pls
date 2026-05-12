@@ -14,10 +14,7 @@ import type { SupportedChainId } from "@/lib/chains";
 import { shortenAddress } from "@/lib/format";
 import { isDesktopBuild } from "@/lib/platform";
 import { trackEvent } from "@/lib/telemetry";
-import {
-  ARBITRUM_HEADER_STATUS_SHORT_HELPER,
-  resolveHeaderNetworkStatus,
-} from "@/lib/wallet-network-status";
+import { resolveHeaderNetworkStatus } from "@/lib/wallet-network-status";
 
 type Variant = "primary" | "ghost";
 
@@ -167,7 +164,7 @@ export function ConnectWalletButton({
       );
     }
 
-    if (networkStatus.kind === "arbitrum") {
+    if (networkStatus.kind === "arbitrum" || networkStatus.kind === "optimism") {
       return (
         <div className={`${connectedControls} ${className}`}>
           <span
@@ -181,7 +178,7 @@ export function ConnectWalletButton({
             title={networkStatus.helper}
             className="hidden max-w-[12rem] text-[11px] leading-4 text-pulse-muted xl:inline"
           >
-            {ARBITRUM_HEADER_STATUS_SHORT_HELPER}
+            {networkStatus.shortHelper}
           </span>
           <button
             type="button"
