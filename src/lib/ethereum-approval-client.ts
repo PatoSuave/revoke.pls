@@ -221,6 +221,13 @@ export function mapEthereumApprovalApiResponse(
   for (const approval of response.approvals.nft) {
     const { tokenId, ...rest } = approval;
     if (tokenId === undefined) {
+      if (approval.kind === "tokenApproval") {
+        malformedResponse = true;
+        warnings.push(
+          "Ethereum API returned an NFT token approval without a token ID.",
+        );
+        continue;
+      }
       nft.push(rest);
       continue;
     }
