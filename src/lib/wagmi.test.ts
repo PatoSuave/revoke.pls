@@ -12,7 +12,7 @@ import { OPTIMISM_CLIENT_CHAIN_ID } from "./optimism-approval-client";
 import { walletChains } from "./wagmi";
 
 describe("wagmi wallet chains", () => {
-  it("keeps active product chains separate from read-only wallet-recognition chains", () => {
+  it("keeps generic product chains separate from special wallet-recognition chains", () => {
     expect(supportedChains.map((chain) => chain.id)).toEqual([
       PULSECHAIN_CHAIN_ID,
       BSC_CHAIN_ID,

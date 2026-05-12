@@ -2,7 +2,7 @@
 
 Pulse Revoke is public code for reviewing and clearing wallet approvals on
 PulseChain, BSC / BNB Smart Chain, Base, and Ethereum Mainnet verified rows,
-with Arbitrum One verified-row revoke and Optimism read-only scanning.
+with Arbitrum One verified-row revoke and Optimism NFT verified-row revoke.
 
 ## What The App Does
 
@@ -16,8 +16,8 @@ with Arbitrum One verified-row revoke and Optimism read-only scanning.
   revoke
 - Scans Arbitrum One through a server-side read-only API and enables only
   live-verified ERC-20 and NFT row revoke
-- Scans Optimism / OP Mainnet through a server-side read-only API without
-  enabling Optimism revoke
+- Scans Optimism / OP Mainnet through a server-side API and enables only
+  live-verified NFT row revoke
 
 ## What The App Does Not Do
 
@@ -26,7 +26,7 @@ with Arbitrum One verified-row revoke and Optimism read-only scanning.
 - Does not take custody of funds
 - Does not require token transfers
 - Does not support Arbitrum batch revoke yet
-- Does not support Optimism revoke yet
+- Does not support Optimism ERC-20, batch, or global revoke yet
 - Does not use server-side signing, relayers, or private-key handling
 - Does not guarantee complete discovery when explorer APIs are capped,
   rate-limited, unavailable, or malformed

@@ -24,11 +24,11 @@ export const ARBITRUM_HEADER_STATUS_SHORT_HELPER =
   "ERC-20 and NFT rows only. Batch off.";
 export const ARBITRUM_HEADER_STATUS_HELPER =
   "Verified ERC-20 and NFT rows can be revoked on Arbitrum. Batch revoke is not enabled.";
-export const OPTIMISM_HEADER_STATUS_LABEL = "Optimism read-only scan";
+export const OPTIMISM_HEADER_STATUS_LABEL = "Optimism NFT row revoke";
 export const OPTIMISM_HEADER_STATUS_SHORT_HELPER =
-  "Scan only. Revoke off.";
+  "NFT rows only. ERC-20 and batch off.";
 export const OPTIMISM_HEADER_STATUS_HELPER =
-  "Optimism approval scanning is read-only while discovery and live verification are validated. Revoke is not enabled.";
+  "Verified NFT rows can be revoked on Optimism. ERC-20 and batch revoke are not enabled.";
 
 export type HeaderNetworkStatus =
   | {

@@ -32,9 +32,9 @@ import {
  * live-verified ERC-20 and NFT rows may route through controlled single-row
  * revoke hooks. It never routes through the generic scanner/revoke path.
  *
- * OP Mainnet (10) is registered for wallet chain recognition only. The
- * Optimism approval scanner uses a server-side read-only API and does not
- * expose Optimism revoke actions in this phase.
+ * OP Mainnet (10) is registered for wallet chain recognition and verified NFT
+ * row revoke only. The Optimism approval scanner uses a server-side API and
+ * does not route through the generic scanner/revoke path.
  *
  * Connectors:
  *  - Injected (MetaMask, Rabby, Brave, etc.)

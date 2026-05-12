@@ -12,7 +12,7 @@ Current active supported networks should be exactly:
 - Base, chain ID `8453`
 - Ethereum Mainnet, chain ID `1`
 - Arbitrum One, chain ID `42161`, ERC-20/NFT verified-row revoke
-- Optimism / OP Mainnet, chain ID `10`, read-only approval scan
+- Optimism / OP Mainnet, chain ID `10`, NFT verified-row revoke
 
 Ethereum Mainnet uses server-read-only discovery and wallet-side revoke. It is
 wallet-enabled, but it must not introduce server-side signing, relayers, private
@@ -24,9 +24,11 @@ preflight, and post-revoke verification gates pass. Arbitrum batch revoke,
 server-side signing, relayers, private keys, and API route transaction
 submission must stay unavailable.
 
-Optimism uses server-read-only discovery only. Optimism revoke, NFT revoke,
-batch revoke, global revoke, server-side signing, relayers, private keys, and
-API route transaction submission must stay unavailable.
+Optimism uses server-side discovery and wallet-side NFT row revoke only after
+row-level live verification, matching owner, chain, preflight, and post-revoke
+verification gates pass. Optimism ERC-20 revoke, batch revoke, global revoke,
+server-side signing, relayers, private keys, and API route transaction
+submission must stay unavailable.
 
 ## Key Files
 
@@ -221,9 +223,9 @@ npm.cmd run build
   until a matching wallet-side revoke is explicitly reviewed.
 - Load `/app` on Arbitrum One and confirm only live-verified ERC-20 and NFT rows
   can open the revoke review panel; batch revoke remains unavailable.
-- Load `/app` on Optimism / OP Mainnet and confirm read-only approvals can
-  render after live verification, with no ERC-20, NFT, batch, or global revoke
-  action.
+- Load `/app` on Optimism / OP Mainnet and confirm only live-verified NFT rows
+  can open the revoke review panel; ERC-20, batch, and global revoke remain
+  unavailable.
 - Test a low-gas BSC revoke and confirm the wallet receives `gas` below the
   hard cap.
 - Test or simulate a high-gas BSC revoke and confirm the in-app warning appears

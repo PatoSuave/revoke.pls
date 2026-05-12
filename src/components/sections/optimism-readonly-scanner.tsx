@@ -1,18 +1,31 @@
 "use client";
 
-import { useEffect, useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
+import type { ReactNode } from "react";
 import type { Address } from "viem";
 
+import {
+  RevokeReceipt,
+  type RevokeReceiptDetails,
+} from "@/components/approvals/revoke-receipt";
 import { useOptimismApprovalScan } from "@/hooks/use-optimism-approval-scan";
+import type { RevokeStatus } from "@/hooks/use-revoke-approval";
+import { useRevokeNftApproval } from "@/hooks/use-revoke-nft-approval";
 import type { Approval } from "@/lib/approvals";
 import { shortenAddress } from "@/lib/format";
 import type { NftApproval } from "@/lib/nft-approvals";
+import type { NftPreflightResult } from "@/lib/preflight";
+import { WALLET_PROMPT_SAFETY_COPY } from "@/lib/revoke-gas";
 import {
   OPTIMISM_BATCH_REVOKE_UNAVAILABLE_COPY,
   OPTIMISM_CLIENT_CHAIN_ID,
+  OPTIMISM_DISPLAY_NAME,
   OPTIMISM_EXPLORER_NAME,
+  OPTIMISM_NATIVE_SYMBOL,
   OPTIMISM_REVOKE_UNAVAILABLE_COPY,
   OPTIMISM_STATUS_LABEL,
+  canEnableOptimismNftRowRevoke,
+  optimismNftRowRevokeDisabledReasonForWallet,
   optimismExplorerAddressUrl,
   optimismExplorerTokenUrl,
   type OptimismApprovalClientMapping,
@@ -43,6 +56,19 @@ export function OptimismReadOnlyScanner({
     [scan.mapped?.approvals.nft],
   );
   const activeCount = erc20Approvals.length + nftApprovals.length;
+  const nftRowRevokeEnabled = canEnableOptimismNftRowRevoke({
+    mapping: scan.mapped,
+    walletChainId,
+    ownerAddress: owner,
+    connectedAddress,
+  });
+  const nftRowRevokeDisabledReason =
+    optimismNftRowRevokeDisabledReasonForWallet({
+      mapping: scan.mapped,
+      walletChainId,
+      ownerAddress: owner,
+      connectedAddress,
+    });
 
   useEffect(() => {
     if (scan.status === "success" || scan.status === "error") {
@@ -62,17 +88,17 @@ export function OptimismReadOnlyScanner({
               Optimism approval scan
             </h3>
             <p className="mt-2 max-w-2xl text-sm leading-6 text-pulse-muted">
-              Revoke is not enabled for Optimism yet. Revoke.PLS is first
-              validating approval discovery and live verification on OP
-              Mainnet.
+              Verified NFT rows can be revoked when your connected wallet
+              matches the scanned address and your wallet is on OP Mainnet.
+              ERC-20 and batch revoke are not enabled for Optimism.
             </p>
           </div>
           <div className="flex flex-wrap gap-2 text-xs font-semibold">
             <span className="rounded-full border border-pulse-cyan/35 bg-pulse-cyan/10 px-3 py-1 text-pulse-cyan">
-              Read-only scan
+              NFT row revoke
             </span>
             <span className="rounded-full border border-pulse-border bg-pulse-panel/70 px-3 py-1 text-pulse-muted">
-              Row revoke disabled
+              ERC-20 revoke disabled
             </span>
             <span className="rounded-full border border-pulse-border bg-pulse-panel/70 px-3 py-1 text-pulse-muted">
               Batch revoke disabled
@@ -107,8 +133,9 @@ export function OptimismReadOnlyScanner({
               Live-verified Optimism approvals
             </p>
             <p className="mt-1 text-xs leading-5 text-pulse-muted">
-              These rows passed live reads on OP Mainnet. Revoke remains
-              disabled for Optimism while this scan lane is validated.
+              These rows passed live reads on OP Mainnet. NFT rows can be
+              revoked only after matching-wallet and OP Mainnet checks pass;
+              ERC-20 and batch revoke remain disabled for Optimism.
             </p>
           </div>
           {erc20Approvals.length > 0 ? (
@@ -130,7 +157,15 @@ export function OptimismReadOnlyScanner({
               </div>
               <ul className="divide-y divide-pulse-border/70">
                 {nftApprovals.map((approval) => (
-                  <OptimismNftRow key={approval.key} approval={approval} />
+                  <OptimismNftRow
+                    key={approval.key}
+                    approval={approval}
+                    owner={owner}
+                    rowRevokeEnabled={nftRowRevokeEnabled}
+                    rowRevokeDisabledReason={nftRowRevokeDisabledReason}
+                    onRevoked={scan.refetch}
+                    debugMode={debugMode}
+                  />
                 ))}
               </ul>
             </div>
@@ -153,6 +188,8 @@ export function OptimismReadOnlyScanner({
         wagmiChainId={wagmiChainId}
         mapping={scan.mapped}
         response={scan.response}
+        nftRowRevokeEnabled={nftRowRevokeEnabled}
+        nftRowRevokeDisabledReason={nftRowRevokeDisabledReason}
       />
     </div>
   );
@@ -200,7 +237,7 @@ function OptimismStatusPanel({
   } else if (mapping?.state === "active") {
     title = `${activeCount} active Optimism approval${activeCount === 1 ? "" : "s"} found`;
     body =
-      "Rows shown below passed live reads. Revoke remains disabled for Optimism in this phase.";
+      "Rows shown below passed live reads. NFT revoke is available only for verified NFT rows when the connected wallet and OP Mainnet checks pass.";
     tone = "success";
   }
 
@@ -272,7 +309,21 @@ function OptimismErc20Row({ approval }: { approval: Approval }) {
   );
 }
 
-function OptimismNftRow({ approval }: { approval: NftApproval }) {
+function OptimismNftRow({
+  approval,
+  owner,
+  rowRevokeEnabled,
+  rowRevokeDisabledReason,
+  onRevoked,
+  debugMode,
+}: {
+  approval: NftApproval;
+  owner: Address;
+  rowRevokeEnabled: boolean;
+  rowRevokeDisabledReason: string;
+  onRevoked: () => void;
+  debugMode: boolean;
+}) {
   const tokenLabel =
     approval.kind === "tokenApproval" && approval.tokenId !== undefined
       ? `#${approval.tokenId.toString()}`
@@ -307,8 +358,261 @@ function OptimismNftRow({ approval }: { approval: NftApproval }) {
           {approval.standard.toUpperCase()}
         </p>
       </div>
-      <UnavailableRowPill reason="Optimism NFT revoke is not enabled yet." />
+      <OptimismNftAction
+        approval={approval}
+        owner={owner}
+        rowRevokeEnabled={rowRevokeEnabled}
+        rowRevokeDisabledReason={rowRevokeDisabledReason}
+        onRevoked={onRevoked}
+        debugMode={debugMode}
+      />
     </li>
+  );
+}
+
+function OptimismNftAction({
+  approval,
+  owner,
+  rowRevokeEnabled,
+  rowRevokeDisabledReason,
+  onRevoked,
+  debugMode,
+}: {
+  approval: NftApproval;
+  owner: Address;
+  rowRevokeEnabled: boolean;
+  rowRevokeDisabledReason: string;
+  onRevoked: () => void;
+  debugMode: boolean;
+}) {
+  const [confirming, setConfirming] = useState(false);
+  const rowIsVerifiedActive =
+    approval.chainId === OPTIMISM_CLIENT_CHAIN_ID &&
+    (approval.kind === "approvalForAll" || approval.tokenId !== undefined);
+  const canRevoke = rowRevokeEnabled && rowIsVerifiedActive;
+  const revoke = useRevokeNftApproval({
+    target: approval,
+    ownerAddress: owner,
+    onSuccess: onRevoked,
+  });
+  const receiptDetails: RevokeReceiptDetails = {
+    kind: approval.kind === "approvalForAll" ? "nft-operator" : "nft-token",
+    chainId: OPTIMISM_CLIENT_CHAIN_ID,
+    chainName: OPTIMISM_DISPLAY_NAME,
+    assetLabel: "Collection / token",
+    assetValue: (
+      <ReceiptExplorerLink
+        href={optimismExplorerAddressUrl(approval.collectionAddress)}
+      >
+        {formatNftAssetLabel(approval)}
+      </ReceiptExplorerLink>
+    ),
+    counterpartyLabel: "Operator",
+    counterpartyValue: (
+      <ReceiptExplorerLink
+        href={optimismExplorerAddressUrl(approval.operatorAddress)}
+      >
+        {shortenAddress(approval.operatorAddress)}
+      </ReceiptExplorerLink>
+    ),
+    verificationState: revoke.postRevokeVerificationState,
+  };
+
+  if (!canRevoke) {
+    return (
+      <UnavailableRowPill
+        reason={
+          rowIsVerifiedActive
+            ? rowRevokeDisabledReason
+            : "Revoke unavailable until current NFT approval state is verified."
+        }
+      />
+    );
+  }
+
+  return (
+    <div className="flex min-w-[14rem] flex-col items-stretch gap-2 md:items-end">
+      <span className="inline-flex items-center justify-center rounded-full border border-pulse-green/35 bg-pulse-green/10 px-3 py-1 text-xs font-semibold text-pulse-green">
+        Live verified
+      </span>
+      <button
+        type="button"
+        onClick={() => {
+          setConfirming(true);
+          void revoke.refreshPreflight();
+        }}
+        disabled={revoke.isBusy}
+        className="inline-flex items-center justify-center rounded-xl border border-pulse-cyan/35 bg-pulse-cyan/10 px-3 py-2 text-xs font-semibold text-pulse-cyan transition hover:bg-pulse-cyan/15 disabled:cursor-not-allowed disabled:opacity-60"
+      >
+        {revoke.isBusy ? "Checking..." : "Review revoke"}
+      </button>
+      {confirming ? (
+        <OptimismNftConfirm
+          approval={approval}
+          preflight={revoke.preflight}
+          status={revoke.status}
+          isRefreshing={revoke.isRefreshingApproval}
+          errorMessage={revoke.errorMessage}
+          debugMode={debugMode}
+          onRefresh={() => void revoke.refreshPreflight()}
+          onConfirm={() => void revoke.revoke()}
+          onCancel={() => {
+            setConfirming(false);
+            revoke.reset();
+          }}
+        />
+      ) : null}
+      {isReceiptStatus(revoke.status) ? (
+        <div className="w-full md:min-w-[24rem]">
+          <RevokeReceipt
+            status={revoke.status}
+            hash={revoke.hash}
+            errorMessage={revoke.errorMessage}
+            details={receiptDetails}
+            onDismiss={() => {
+              setConfirming(false);
+              revoke.reset();
+            }}
+          />
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+function OptimismNftConfirm({
+  approval,
+  preflight,
+  status,
+  isRefreshing,
+  errorMessage,
+  debugMode,
+  onRefresh,
+  onConfirm,
+  onCancel,
+}: {
+  approval: NftApproval;
+  preflight: NftPreflightResult | null;
+  status: RevokeStatus;
+  isRefreshing: boolean;
+  errorMessage?: string;
+  debugMode: boolean;
+  onRefresh: () => void;
+  onConfirm: () => void;
+  onCancel: () => void;
+}) {
+  const canConfirm =
+    preflight?.status === "active" &&
+    status !== "wallet" &&
+    status !== "pending" &&
+    !isRefreshing;
+
+  return (
+    <div className="w-full rounded-xl border border-pulse-border bg-pulse-bg/70 p-3 text-left text-xs text-pulse-muted shadow-xl md:w-80">
+      <p className="font-semibold text-pulse-text">Review Optimism NFT revoke</p>
+      <p className="mt-1 leading-5">
+        This calls {nftRevokeMethodLabel(approval)}. Gas is paid in{" "}
+        {OPTIMISM_NATIVE_SYMBOL}.
+      </p>
+      <p className="mt-1 leading-5">{WALLET_PROMPT_SAFETY_COPY}</p>
+      <OptimismNftPreflightNotice
+        approval={approval}
+        preflight={preflight}
+        isRefreshing={isRefreshing}
+        debugMode={debugMode}
+      />
+      {errorMessage ? (
+        <p className="mt-2 rounded-lg border border-pulse-red/35 bg-pulse-red/10 p-2 text-pulse-red">
+          {errorMessage}
+        </p>
+      ) : null}
+      <div className="mt-3 flex flex-wrap gap-2 sm:justify-end">
+        <button
+          type="button"
+          onClick={onCancel}
+          className="rounded-lg border border-pulse-border bg-white/5 px-2.5 py-1.5 font-semibold text-pulse-muted transition hover:bg-white/10"
+        >
+          Cancel
+        </button>
+        {!canConfirm ? (
+          <button
+            type="button"
+            onClick={onRefresh}
+            disabled={isRefreshing}
+            className="rounded-lg border border-pulse-cyan/35 bg-pulse-cyan/10 px-2.5 py-1.5 font-semibold text-pulse-cyan disabled:opacity-60"
+          >
+            {isRefreshing ? "Checking..." : "Refresh"}
+          </button>
+        ) : null}
+        <button
+          type="button"
+          onClick={onConfirm}
+          disabled={!canConfirm}
+          className="rounded-lg bg-pulse-gradient px-2.5 py-1.5 font-semibold text-pulse-bg shadow-glow disabled:cursor-not-allowed disabled:opacity-60"
+        >
+          {status === "wallet" ? "Wallet open" : "Confirm revoke"}
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function OptimismNftPreflightNotice({
+  approval,
+  preflight,
+  isRefreshing,
+  debugMode,
+}: {
+  approval: NftApproval;
+  preflight: NftPreflightResult | null;
+  isRefreshing: boolean;
+  debugMode: boolean;
+}) {
+  if (isRefreshing || !preflight) {
+    return (
+      <p className="mt-2 rounded-lg border border-pulse-cyan/35 bg-pulse-cyan/10 p-2 text-pulse-cyan">
+        Checking current NFT approval before the wallet opens.
+      </p>
+    );
+  }
+
+  if (preflight.status === "active") {
+    return (
+      <p className="mt-2 rounded-lg border border-pulse-green/40 bg-pulse-green/10 p-2 text-pulse-green">
+        {approval.kind === "approvalForAll"
+          ? "Current operator approval is still active."
+          : "Current token approval still points to this operator."}
+      </p>
+    );
+  }
+
+  if (preflight.status === "cleared") {
+    return (
+      <p className="mt-2 rounded-lg border border-pulse-green/40 bg-pulse-green/10 p-2 text-pulse-green">
+        {approval.kind === "approvalForAll"
+          ? "Already cleared. isApprovedForAll(owner, operator) returned false."
+          : "Already cleared. getApproved(tokenId) no longer points to this operator."}
+      </p>
+    );
+  }
+
+  return (
+    <div className="mt-2 rounded-lg border border-amber-400/40 bg-amber-400/10 p-2 text-amber-200">
+      <p>
+        Revoke unavailable until current NFT approval state is verified
+        {preflight.error ? ` (${preflight.error})` : ""}.
+      </p>
+      {debugMode ? (
+        <dl className="mt-2 grid gap-1 font-mono text-[11px]">
+          <DebugRow label="Preflight status" value={preflight.status} />
+          <DebugRow label="Chain ID" value={preflight.chainId?.toString() ?? "10"} />
+          <DebugRow
+            label="Gas estimate attempted"
+            value={preflight.gasEstimateAttempted ? "Yes" : "No"}
+          />
+        </dl>
+      ) : null}
+    </div>
   );
 }
 
@@ -320,6 +624,8 @@ function OptimismDiagnostics({
   wagmiChainId,
   mapping,
   response,
+  nftRowRevokeEnabled,
+  nftRowRevokeDisabledReason,
 }: {
   enabled: boolean;
   owner: Address;
@@ -328,6 +634,8 @@ function OptimismDiagnostics({
   wagmiChainId: number | undefined;
   mapping: OptimismApprovalClientMapping | null;
   response: ReturnType<typeof useOptimismApprovalScan>["response"];
+  nftRowRevokeEnabled: boolean;
+  nftRowRevokeDisabledReason: string;
 }) {
   if (!enabled) return null;
 
@@ -359,7 +667,8 @@ function OptimismDiagnostics({
       diagnostics?.incompleteVerificationCount?.toString() ?? "0",
     ],
     ["ERC-20 row revoke", "Disabled"],
-    ["NFT row revoke", "Disabled"],
+    ["NFT row revoke", nftRowRevokeEnabled ? "Enabled" : "Disabled"],
+    ["NFT row revoke reason", nftRowRevokeDisabledReason],
     ["Batch revoke", "Disabled"],
   ];
 
@@ -391,6 +700,60 @@ function OptimismDiagnostics({
       ) : null}
     </section>
   );
+}
+
+function ReceiptExplorerLink({
+  href,
+  children,
+}: {
+  href: string;
+  children: ReactNode;
+}) {
+  return (
+    <a
+      href={href}
+      target="_blank"
+      rel="noreferrer"
+      className="font-semibold text-pulse-cyan underline underline-offset-2 hover:text-pulse-text"
+    >
+      {children}
+    </a>
+  );
+}
+
+function DebugRow({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="grid gap-1">
+      <dt className="text-pulse-muted">{label}</dt>
+      <dd className="break-words text-pulse-text">{value}</dd>
+    </div>
+  );
+}
+
+function isReceiptStatus(
+  status: RevokeStatus,
+): status is "pending" | "success" | "rejected" | "error" {
+  return (
+    status === "pending" ||
+    status === "success" ||
+    status === "rejected" ||
+    status === "error"
+  );
+}
+
+function formatNftAssetLabel(approval: NftApproval): string {
+  const collection =
+    approval.collectionName ?? shortenAddress(approval.collectionAddress);
+  if (approval.kind !== "tokenApproval" || approval.tokenId === undefined) {
+    return collection;
+  }
+  return `${collection} #${approval.tokenId.toString()}`;
+}
+
+function nftRevokeMethodLabel(approval: NftApproval): string {
+  return approval.kind === "approvalForAll"
+    ? "setApprovalForAll(operator, false)"
+    : "approve(address(0), tokenId)";
 }
 
 function ExplorerLink({ href, label }: { href: string; label: string }) {

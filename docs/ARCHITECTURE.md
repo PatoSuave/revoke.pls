@@ -30,9 +30,9 @@ supported-chain scanner path. Only live-verified ERC-20 and NFT rows can route
 through controlled wallet-side revoke hooks; batch revoke remains disabled.
 
 Optimism is wallet-recognized so the app can show a neutral network status and
-run the separate read-only scanner lane. It is not part of the default
-supported-chain scanner path and does not route to revoke hooks, batch revoke,
-or global revoke.
+run the separate scanner lane. It is not part of the default supported-chain
+scanner path. Optimism revoke is limited to verified NFT rows and does not route
+to generic ERC-20, batch, or global revoke.
 
 ## Web3 Layer
 
@@ -213,9 +213,10 @@ server-side Arbitrum API. It uses the same controlled ERC-20 and NFT revoke
 hooks, including owner, chain, preflight, and post-revoke verification gates.
 Arbitrum batch revoke remains unavailable.
 
-Optimism revoke is not enabled. Optimism rows are read-only output from the
-server-side Optimism API, and no Optimism row, NFT, batch, or global action is
-routed to wallet write hooks.
+Optimism revoke is limited to live-verified NFT rows from the server-side
+Optimism API. It uses the existing controlled NFT revoke hook, including owner,
+chain, preflight, and post-revoke verification gates. Optimism ERC-20, batch,
+and global revoke remain unavailable.
 
 ## BSC Gas Safety
 
