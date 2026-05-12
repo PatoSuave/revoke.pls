@@ -73,9 +73,9 @@ function response(
 }
 
 describe("Optimism approval client mapping", () => {
-  it("identifies OP Mainnet as a read-only wallet-recognition chain", () => {
+  it("identifies OP Mainnet as a special wallet-recognition chain", () => {
     expect(OPTIMISM_STATUS_LABEL).toBe(
-      "Optimism read-only approval scan",
+      "Optimism NFT verified-row revoke",
     );
     expect(optimismWalletChain.id).toBe(10);
     expect(optimismWalletChain.nativeCurrency.symbol).toBe(
@@ -137,7 +137,7 @@ describe("Optimism approval client mapping", () => {
     expect(result.status).toBe("complete-clear");
   });
 
-  it("maps active Optimism approvals while keeping revoke unavailable", () => {
+  it("maps active Optimism approvals while keeping only NFT row revoke eligible", () => {
     const mapped = mapOptimismApprovalApiResponse(
       response({
         status: "active-approvals-found",
@@ -196,10 +196,8 @@ describe("Optimism approval client mapping", () => {
     expect(mapped.erc20RowRevokeDisabledReason).toBe(
       OPTIMISM_REVOKE_UNAVAILABLE_COPY,
     );
-    expect(mapped.nftRowRevokeEnabled).toBe(false);
-    expect(mapped.nftRowRevokeDisabledReason).toBe(
-      OPTIMISM_NFT_REVOKE_UNAVAILABLE_COPY,
-    );
+    expect(mapped.nftRowRevokeEnabled).toBe(true);
+    expect(mapped.nftRowRevokeDisabledReason).toBeNull();
     expect(mapped.nftRevokeEnabled).toBe(false);
     expect(mapped.nftRevokeUnavailableReason).toBe(
       OPTIMISM_NFT_REVOKE_UNAVAILABLE_COPY,
@@ -343,7 +341,7 @@ describe("Optimism approval client mapping", () => {
     ).toBe(false);
   });
 
-  it("keeps Optimism NFT row revoke disabled even for matching wallet on chain 10", () => {
+  it("enables Optimism NFT row revoke only for matching wallet on chain 10", () => {
     const mapped = mapOptimismApprovalApiResponse(
       response({
         status: "active-approvals-found",
@@ -376,10 +374,8 @@ describe("Optimism approval client mapping", () => {
     );
 
     expect(mapped.erc20RowRevokeEnabled).toBe(false);
-    expect(mapped.nftRowRevokeEnabled).toBe(false);
-    expect(mapped.nftRowRevokeDisabledReason).toBe(
-      OPTIMISM_NFT_REVOKE_UNAVAILABLE_COPY,
-    );
+    expect(mapped.nftRowRevokeEnabled).toBe(true);
+    expect(mapped.nftRowRevokeDisabledReason).toBeNull();
     expect(mapped.nftRevokeEnabled).toBe(false);
     expect(mapped.nftRevokeUnavailableReason).toBe(
       OPTIMISM_NFT_REVOKE_UNAVAILABLE_COPY,
@@ -391,7 +387,7 @@ describe("Optimism approval client mapping", () => {
         ownerAddress: OWNER,
         connectedAddress: OWNER,
       }),
-    ).toBe(false);
+    ).toBe(true);
     expect(
       optimismNftRowRevokeDisabledReasonForWallet({
         mapping: mapped,
@@ -399,7 +395,7 @@ describe("Optimism approval client mapping", () => {
         ownerAddress: OWNER,
         connectedAddress: OWNER,
       }),
-    ).toBe(OPTIMISM_NFT_REVOKE_UNAVAILABLE_COPY);
+    ).toBe("Verified NFT row; revoke available.");
     expect(
       canEnableOptimismNftRowRevoke({
         mapping: mapped,

@@ -2,7 +2,7 @@
 
 Use this checklist to verify that Pulse Revoke reads approval state correctly on
 PulseChain, BSC, Base, Ethereum, Arbitrum One verified-row revoke, and
-Optimism read-only scanning.
+Optimism NFT verified-row revoke.
 Keep all testing low-risk and manual.
 
 ## Safety Setup
@@ -23,7 +23,8 @@ Run the scanner flow on all supported chains:
 - Ethereum Mainnet, chain ID `1`, gas token `ETH`.
 - Arbitrum One, chain ID `42161`, gas token `ETH`, ERC-20/NFT verified-row
   lane.
-- Optimism / OP Mainnet, chain ID `10`, gas token `ETH`, read-only lane.
+- Optimism / OP Mainnet, chain ID `10`, gas token `ETH`, NFT verified-row
+  lane.
 
 For each chain, confirm diagnostics show:
 
@@ -89,7 +90,7 @@ For each chain, confirm diagnostics show:
 - Rate limits, malformed responses, missing API keys, and capped responses are
   shown as incomplete/error states, not as "clear".
 
-## Optimism Read-Only Checks
+## Optimism NFT Verified-Row Checks
 
 - `OPTIMISM_RPC_URL`, `OPTIMISM_MAINNET_RPC_URL`, or `OP_MAINNET_RPC_URL` is
   set server-side for `/api/optimism/approvals`.
@@ -99,8 +100,11 @@ For each chain, confirm diagnostics show:
 - `OPTIMISM_EXPLORER_CHAIN_ID` is unset or set to `10`.
 - Optimism scans use Etherscan API V2 logs with `chainid=10`.
 - Optimism rows can render only after live verification.
-- Optimism ERC-20 revoke, NFT revoke, batch revoke, and global revoke are not
-  shown.
+- Optimism NFT row revoke appears only for live-verified NFT rows when the
+  connected wallet matches the scan target and is on chain `10`.
+- Optimism ERC-20 revoke, batch revoke, and global revoke are not shown.
+- Optimism NFT receipts show `Confirmed cleared.` only after post-revoke live
+  verification confirms the approval is gone.
 - Rate limits, malformed responses, missing API keys, and capped responses are
   shown as incomplete/error states, not as "clear".
 

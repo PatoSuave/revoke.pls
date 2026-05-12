@@ -59,11 +59,11 @@ describe("security content", () => {
     expect(rowsByChain.get("Optimism")).toMatchObject({
       chainId: "10",
       scan: "Yes",
-      revoke: "No",
-      status: "Read-only",
+      revoke: "NFT verified rows only",
+      status: "Live",
     });
     expect(rowsByChain.get("Optimism")?.note).toContain(
-      "Revoke is not enabled on Optimism",
+      "ERC-20 and batch revoke are not enabled",
     );
     expect(rowsByChain.get("Solana")).toMatchObject({
       scan: "No",

@@ -54,7 +54,7 @@ describe("wallet header network status", () => {
     }
   });
 
-  it("shows Optimism as read-only instead of unsupported", () => {
+  it("shows Optimism as NFT row revoke instead of unsupported", () => {
     const status = resolveHeaderNetworkStatus({
       walletChainId: OPTIMISM_CLIENT_CHAIN_ID,
       wagmiChainId: OPTIMISM_CLIENT_CHAIN_ID,
@@ -66,9 +66,11 @@ describe("wallet header network status", () => {
     expect(status).toMatchObject({
       shortHelper: OPTIMISM_HEADER_STATUS_SHORT_HELPER,
       helper:
-        "Optimism approval scanning is read-only while discovery and live verification are validated. Revoke is not enabled.",
+        "Verified NFT rows can be revoked on Optimism. ERC-20 and batch revoke are not enabled.",
     });
-    expect(OPTIMISM_HEADER_STATUS_SHORT_HELPER).toBe("Scan only. Revoke off.");
+    expect(OPTIMISM_HEADER_STATUS_SHORT_HELPER).toBe(
+      "NFT rows only. ERC-20 and batch off.",
+    );
   });
 
   it("keeps Ethereum header behavior on the existing special lane", () => {

@@ -47,7 +47,8 @@ export const ethereumMainnetWalletChain = defineChain({
 export type WalletWriteChainId =
   | SupportedChainId
   | typeof ETHEREUM_MAINNET_CLIENT_CHAIN_ID
-  | 42161;
+  | 42161
+  | 10;
 
 export type EthereumApprovalApiStatus =
   | "active-approvals-found"

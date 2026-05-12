@@ -95,9 +95,9 @@ export const SECURITY_CHAIN_STATUS_ROWS: readonly ChainStatusRow[] = [
     chain: "Optimism",
     chainId: "10",
     scan: "Yes",
-    revoke: "No",
-    status: "Read-only",
-    note: "Server-side approval discovery and live verification for OP Mainnet. Revoke is not enabled on Optimism in this phase.",
+    revoke: "NFT verified rows only",
+    status: "Live",
+    note: "Server-side approval discovery and live verification for OP Mainnet. Revoke is row-level only for verified NFT rows; ERC-20 and batch revoke are not enabled on Optimism.",
   },
   {
     chain: "Solana",

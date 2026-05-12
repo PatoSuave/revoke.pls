@@ -23,6 +23,7 @@ import {
 import { explorerAddressUrl, explorerTokenUrl, explorerTxUrl } from "./explorer";
 import { ARBITRUM_ONE_CLIENT_CHAIN_ID } from "./arbitrum-approval-client";
 import { ETHEREUM_MAINNET_CLIENT_CHAIN_ID } from "./ethereum-approval-client";
+import { OPTIMISM_CLIENT_CHAIN_ID } from "./optimism-approval-client";
 import {
   getSpenderEntry,
   getSpendersForChain,
@@ -200,6 +201,19 @@ describe("supported chain config", () => {
     );
     expect(explorerTxUrl(ARBITRUM_ONE_CLIENT_CHAIN_ID, "0xabc")).toBe(
       "https://arbiscan.io/tx/0xabc",
+    );
+  });
+
+  it("builds Optimistic Etherscan links for separate-lane Optimism without activating Optimism", () => {
+    expect(isSupportedChainId(OPTIMISM_CLIENT_CHAIN_ID)).toBe(false);
+    expect(explorerAddressUrl(OPTIMISM_CLIENT_CHAIN_ID, SPENDER)).toBe(
+      `https://optimistic.etherscan.io/address/${SPENDER}`,
+    );
+    expect(explorerTokenUrl(OPTIMISM_CLIENT_CHAIN_ID, TOKEN)).toBe(
+      `https://optimistic.etherscan.io/token/${TOKEN}`,
+    );
+    expect(explorerTxUrl(OPTIMISM_CLIENT_CHAIN_ID, "0xabc")).toBe(
+      "https://optimistic.etherscan.io/tx/0xabc",
     );
   });
 

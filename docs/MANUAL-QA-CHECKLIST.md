@@ -28,10 +28,11 @@ include the Arbitrum scanner UI, hook/client, and existing controlled ERC-20/NFT
 row revoke hook usage, but no batch revoke, server-signing, relayer, or
 browser-exposed Arbitrum secret exposure.
 
-For Optimism read-only work, expected sensitive-path output may include the
-Optimism API route, hook/client, scanner UI, and wagmi wallet-recognition entry,
-but no revoke hooks, batch revoke, server-signing, relayer, or browser-exposed
-Optimism secret exposure.
+For Optimism NFT verified-row revoke work, expected sensitive-path output may
+include the Optimism API route, hook/client, scanner UI, wagmi wallet-recognition
+entry, and existing controlled NFT row revoke hook usage, but no ERC-20 revoke,
+batch revoke, server-signing, relayer, or browser-exposed Optimism secret
+exposure.
 
 ## 1. Production Smoke
 
@@ -192,24 +193,32 @@ Optimism secret exposure.
       reasons, ERC-20 row revoke status, NFT row revoke status, and batch
       revoke disabled.
 
-## 9. Optimism Read-Only Scan
+## 9. Optimism NFT Verified-Row Revoke
 
 - [ ] Connect on Optimism / OP Mainnet and confirm `/app` shows the Optimism
-      read-only lane, not the generic revoke scanner.
+      NFT verified-row lane, not the generic revoke scanner.
 - [ ] Confirm `/api/optimism/approvals` discovery uses server-side settings and
       reports `chainId` / `chainid` `10`.
 - [ ] Confirm active Optimism ERC-20 rows appear only after
       `allowance(owner, spender)` live verification.
 - [ ] Confirm active Optimism NFT rows appear only after `getApproved(tokenId)`
       or `isApprovedForAll(owner, operator)` live verification.
-- [ ] Confirm Optimism ERC-20 revoke, NFT revoke, batch revoke, and global
-      revoke are not visible or enabled.
+- [ ] Confirm Optimism NFT row revoke appears only for live-verified NFT rows
+      when the connected wallet matches the scan target and is on OP Mainnet.
+- [ ] Confirm Optimism ERC-20 revoke, batch revoke, and global revoke are not
+      visible or enabled.
+- [ ] Reject one Optimism NFT revoke transaction and confirm no `Confirmed
+      cleared.` state appears.
+- [ ] For one controlled Optimism NFT approval, confirm revoke calls
+      `setApprovalForAll(operator, false)` or `approve(address(0), tokenId)`,
+      post-revoke verification runs, and `Confirmed cleared.` appears only
+      after the live read confirms the approval is gone.
 - [ ] Confirm failed reads, truncation, caps, rate limits, and upstream
       failures show verification-incomplete copy instead of a clear state.
 - [ ] Confirm Optimism explorer links open Optimistic Etherscan.
 - [ ] In `/app?debug=1`, confirm diagnostics show scan target, connected
       wallet, wallet chain ID, API status, config presence, incomplete reasons,
-      and ERC-20/NFT/batch revoke disabled.
+      ERC-20 revoke disabled, NFT row revoke status, and batch revoke disabled.
 
 ## 10. Security And Trust
 
@@ -218,8 +227,9 @@ Optimism secret exposure.
 - [ ] Supported-chain matrix lists Arbitrum One as `Yes` /
       `ERC-20/NFT verified rows only` / `Live` and does not claim batch revoke
       is live.
-- [ ] Supported-chain matrix lists Optimism as `Yes` / `No` / `Read-only` and
-      does not claim Optimism revoke is live.
+- [ ] Supported-chain matrix lists Optimism as `Yes` /
+      `NFT verified rows only` / `Live` and does not claim Optimism ERC-20 or
+      batch revoke is live.
 - [ ] The app never requests a seed phrase, private key, mnemonic, or raw
       signing secret.
 - [ ] No spender or protocol is described as safe, unsafe, endorsed, or trusted

@@ -47,7 +47,7 @@ function AppWorkspaceIntro() {
     "Base",
     "Ethereum Mainnet",
     "Arbitrum One verified-row",
-    "Optimism read-only",
+    "Optimism NFT verified-row",
   ];
 
   return (

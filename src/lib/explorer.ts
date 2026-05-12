@@ -17,6 +17,14 @@ import {
   ethereumExplorerTokenUrl,
   ethereumExplorerTxUrl,
 } from "@/lib/ethereum-approval-client";
+import {
+  OPTIMISM_CLIENT_CHAIN_ID,
+  OPTIMISM_EXPLORER_BASE_URL,
+  OPTIMISM_EXPLORER_NAME,
+  optimismExplorerAddressUrl,
+  optimismExplorerTokenUrl,
+  optimismExplorerTxUrl,
+} from "@/lib/optimism-approval-client";
 
 function baseUrlFor(chainId: number | undefined): string {
   if (chainId === ARBITRUM_ONE_CLIENT_CHAIN_ID) {
@@ -24,6 +32,9 @@ function baseUrlFor(chainId: number | undefined): string {
   }
   if (chainId === ETHEREUM_MAINNET_CLIENT_CHAIN_ID) {
     return ETHEREUM_MAINNET_EXPLORER_BASE_URL;
+  }
+  if (chainId === OPTIMISM_CLIENT_CHAIN_ID) {
+    return OPTIMISM_EXPLORER_BASE_URL;
   }
   const config = getChainConfig(chainId);
   const base = config?.explorer.baseUrl ?? pulsechain.blockExplorers.default.url;
@@ -40,6 +51,9 @@ export function explorerAddressUrl(
   if (chainId === ETHEREUM_MAINNET_CLIENT_CHAIN_ID) {
     return ethereumExplorerAddressUrl(address);
   }
+  if (chainId === OPTIMISM_CLIENT_CHAIN_ID) {
+    return optimismExplorerAddressUrl(address);
+  }
   const config = getChainConfig(chainId);
   return config?.explorer.urls.address(address) ?? `${baseUrlFor(chainId)}/address/${address}`;
 }
@@ -53,6 +67,9 @@ export function explorerTokenUrl(
   }
   if (chainId === ETHEREUM_MAINNET_CLIENT_CHAIN_ID) {
     return ethereumExplorerTokenUrl(address);
+  }
+  if (chainId === OPTIMISM_CLIENT_CHAIN_ID) {
+    return optimismExplorerTokenUrl(address);
   }
   const config = getChainConfig(chainId);
   return config?.explorer.urls.token(address) ?? `${baseUrlFor(chainId)}/token/${address}`;
@@ -68,6 +85,9 @@ export function explorerTxUrl(
   if (chainId === ETHEREUM_MAINNET_CLIENT_CHAIN_ID) {
     return ethereumExplorerTxUrl(hash);
   }
+  if (chainId === OPTIMISM_CLIENT_CHAIN_ID) {
+    return optimismExplorerTxUrl(hash);
+  }
   const config = getChainConfig(chainId);
   return config?.explorer.urls.transaction(hash) ?? `${baseUrlFor(chainId)}/tx/${hash}`;
 }
@@ -79,6 +99,9 @@ export function explorerName(chainId: number | undefined): string {
   }
   if (chainId === ETHEREUM_MAINNET_CLIENT_CHAIN_ID) {
     return ETHEREUM_MAINNET_EXPLORER_NAME;
+  }
+  if (chainId === OPTIMISM_CLIENT_CHAIN_ID) {
+    return OPTIMISM_EXPLORER_NAME;
   }
   return getChainConfig(chainId)?.explorer.name ?? "PulseScan";
 }

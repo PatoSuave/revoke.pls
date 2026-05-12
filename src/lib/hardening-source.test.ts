@@ -72,7 +72,7 @@ describe("hardening source invariants", () => {
     expect(`${component}\n${client}`).not.toMatch(/\bsafe\b/i);
   });
 
-  it("keeps Optimism read-only without revoke hooks or wallet writes", () => {
+  it("keeps Optimism revoke limited to controlled NFT row hooks", () => {
     const component = readFileSync(
       join(
         process.cwd(),
@@ -92,14 +92,19 @@ describe("hardening source invariants", () => {
       "utf8",
     );
 
-    expect(`${component}\n${hook}\n${client}`).not.toMatch(
+    expect(component).toContain("useRevokeNftApproval");
+    expect(component).not.toContain("useRevokeApproval");
+    expect(`${hook}\n${client}`).not.toMatch(
       /useRevokeApproval|useRevokeNftApproval|useBatchRevoke|writeContract|sendTransaction/i,
+    );
+    expect(component).not.toMatch(
+      /useBatchRevoke|writeContract|sendTransaction/i,
     );
     expect(client).toContain("revokeEnabled: false");
     expect(client).toContain("batchRevokeEnabled: false");
     expect(client).toContain("nftRevokeEnabled: false");
     expect(client).toContain("erc20RowRevokeEnabled: false");
-    expect(client).toContain("nftRowRevokeEnabled: false");
+    expect(client).toContain("nftRowRevokeEnabled");
     expect(client).toContain("/api/optimism/approvals?owner=");
     expect(hook).toContain('queryKey: ["optimism-approval-api"');
     expect(hook).toContain('emptyOptimismApprovalApiResponse("upstream-failure"');
@@ -118,7 +123,7 @@ describe("hardening source invariants", () => {
     expect(security).toContain("Arbitrum One, chain ID `42161`");
     expect(security).toContain("verified ERC-20 and NFT rows");
     expect(security).toContain("Optimism / OP Mainnet, chain ID `10`");
-    expect(security).toContain("read-only approval scan");
+    expect(security).toContain("verified NFT rows only");
     expect(auditGuide).toContain("Ethereum Mainnet, chain ID `1`");
     expect(auditGuide).toContain("Arbitrum One, chain ID `42161`");
     expect(auditGuide).toContain("Optimism / OP Mainnet, chain ID `10`");
