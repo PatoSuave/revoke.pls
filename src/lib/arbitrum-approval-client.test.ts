@@ -463,6 +463,46 @@ describe("Arbitrum approval client mapping", () => {
     ).toBe(false);
   });
 
+  it("treats Arbitrum token approvals without token IDs as malformed", () => {
+    const mapped = mapArbitrumApprovalApiResponse(
+      response({
+        status: "active-approvals-found",
+        approvals: {
+          erc20: [],
+          nft: [
+            {
+              key: `${ARBITRUM_ONE_CLIENT_CHAIN_ID}-tokenApproval-${COLLECTION}-${OPERATOR}-missing`,
+              chainId: ARBITRUM_ONE_CLIENT_CHAIN_ID,
+              kind: "tokenApproval",
+              standard: "erc721",
+              collectionAddress: COLLECTION,
+              collectionName: "Arbitrum Collection",
+              operatorAddress: OPERATOR,
+              operatorLabel: "Unknown operator",
+              protocol: "Unknown",
+              trusted: false,
+              risk: {
+                level: "medium",
+                reason: "Unknown operator approved for a single NFT.",
+              },
+            },
+          ],
+        },
+        diagnostics: {
+          ...response({}).diagnostics,
+          liveReadSuccessCount: 1,
+        },
+      }),
+    );
+
+    expect(mapped.state).toBe("verification-incomplete");
+    expect(mapped.malformedResponse).toBe(true);
+    expect(mapped.canShowClear).toBe(false);
+    expect(mapped.approvals.nft).toEqual([]);
+    expect(mapped.nftRowRevokeEnabled).toBe(false);
+    expect(mapped.warnings.join(" ")).toContain("without a token ID");
+  });
+
   it("shows clear only for complete-clear with no incomplete diagnostics", () => {
     const mapped = mapArbitrumApprovalApiResponse(
       response({ status: "complete-clear" }),

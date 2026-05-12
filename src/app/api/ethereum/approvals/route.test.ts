@@ -22,6 +22,34 @@ describe("Ethereum approvals API route hardening", () => {
     expect(body.status).toBe("bad-request");
   });
 
+  it("rejects non-Ethereum chain IDs before discovery", async () => {
+    const response = await GET(
+      new Request(
+        `https://pulserevoke.test/api/ethereum/approvals?owner=${OWNER}&chainId=42161`,
+        { headers: { "x-forwarded-for": "203.0.113.3" } },
+      ),
+    );
+    const body = await response.json();
+
+    expect(response.status).toBe(400);
+    expect(body.status).toBe("bad-request");
+    expect(body.errors.join(" ")).toContain("chainId=1");
+  });
+
+  it("rejects caller-controlled Ethereum discovery ranges", async () => {
+    const response = await GET(
+      new Request(
+        `https://pulserevoke.test/api/ethereum/approvals?owner=${OWNER}&fromBlock=1`,
+        { headers: { "x-forwarded-for": "203.0.113.4" } },
+      ),
+    );
+    const body = await response.json();
+
+    expect(response.status).toBe(400);
+    expect(body.status).toBe("bad-request");
+    expect(body.errors.join(" ")).toContain("server-bounded windows");
+  });
+
   it("rate-limits repeated public Ethereum scan requests as non-clear JSON", async () => {
     let response: Response | null = null;
     for (let i = 0; i < 21; i += 1) {

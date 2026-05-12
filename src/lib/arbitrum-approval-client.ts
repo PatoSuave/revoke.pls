@@ -220,6 +220,13 @@ export function mapArbitrumApprovalApiResponse(
   for (const approval of response.approvals.nft) {
     const { tokenId, ...rest } = approval;
     if (tokenId === undefined) {
+      if (approval.kind === "tokenApproval") {
+        malformedResponse = true;
+        warnings.push(
+          "Arbitrum API returned an NFT token approval without a token ID.",
+        );
+        continue;
+      }
       nft.push(rest);
       continue;
     }
@@ -353,7 +360,10 @@ function isArbitrumErc20ApprovalLiveActive(approval: Approval): boolean {
 }
 
 function isArbitrumNftApprovalLiveActive(approval: NftApproval): boolean {
-  return approval.chainId === ARBITRUM_ONE_CLIENT_CHAIN_ID;
+  return (
+    approval.chainId === ARBITRUM_ONE_CLIENT_CHAIN_ID &&
+    (approval.kind === "approvalForAll" || approval.tokenId !== undefined)
+  );
 }
 
 function arbitrumErc20RowRevokeDisabledReason({

@@ -504,4 +504,45 @@ describe("Ethereum approval client mapping", () => {
     expect(mapped.revokeEnabled).toBe(false);
     expect(mapped.revokeDisabledReason).toContain("malformed");
   });
+
+  it("treats Ethereum token approvals without token IDs as malformed", () => {
+    const mapped = mapEthereumApprovalApiResponse(
+      response({
+        status: "active-approvals-found",
+        approvals: {
+          erc20: [],
+          nft: [
+            {
+              key: `${ETHEREUM_MAINNET_CLIENT_CHAIN_ID}-tokenApproval-${COLLECTION}-${OPERATOR}-missing`,
+              chainId: ETHEREUM_MAINNET_CLIENT_CHAIN_ID,
+              kind: "tokenApproval",
+              standard: "erc721",
+              collectionAddress: COLLECTION,
+              collectionName: "Collectible",
+              operatorAddress: OPERATOR,
+              operatorLabel: "Unknown operator",
+              protocol: "Unknown",
+              trusted: false,
+              risk: {
+                level: "medium",
+                reason: "Unknown operator approved for a single NFT.",
+              },
+            },
+          ],
+        },
+        diagnostics: {
+          ...response({}).diagnostics,
+          liveReadSuccessCount: 1,
+        },
+      }),
+    );
+
+    expect(mapped.state).toBe("verification-incomplete");
+    expect(mapped.malformedResponse).toBe(true);
+    expect(mapped.canShowClear).toBe(false);
+    expect(mapped.revokeEnabled).toBe(false);
+    expect(mapped.rowRevokeEnabled).toBe(false);
+    expect(mapped.approvals.nft).toEqual([]);
+    expect(mapped.warnings.join(" ")).toContain("without a token ID");
+  });
 });
