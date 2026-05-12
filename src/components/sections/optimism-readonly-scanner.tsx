@@ -9,12 +9,13 @@ import {
   type RevokeReceiptDetails,
 } from "@/components/approvals/revoke-receipt";
 import { useOptimismApprovalScan } from "@/hooks/use-optimism-approval-scan";
+import { useRevokeApproval } from "@/hooks/use-revoke-approval";
 import type { RevokeStatus } from "@/hooks/use-revoke-approval";
 import { useRevokeNftApproval } from "@/hooks/use-revoke-nft-approval";
 import type { Approval } from "@/lib/approvals";
 import { shortenAddress } from "@/lib/format";
 import type { NftApproval } from "@/lib/nft-approvals";
-import type { NftPreflightResult } from "@/lib/preflight";
+import type { Erc20PreflightResult, NftPreflightResult } from "@/lib/preflight";
 import { WALLET_PROMPT_SAFETY_COPY } from "@/lib/revoke-gas";
 import {
   OPTIMISM_BATCH_REVOKE_UNAVAILABLE_COPY,
@@ -24,7 +25,9 @@ import {
   OPTIMISM_NATIVE_SYMBOL,
   OPTIMISM_REVOKE_UNAVAILABLE_COPY,
   OPTIMISM_STATUS_LABEL,
+  canEnableOptimismErc20RowRevoke,
   canEnableOptimismNftRowRevoke,
+  optimismErc20RowRevokeDisabledReasonForWallet,
   optimismNftRowRevokeDisabledReasonForWallet,
   optimismExplorerAddressUrl,
   optimismExplorerTokenUrl,
@@ -56,6 +59,19 @@ export function OptimismReadOnlyScanner({
     [scan.mapped?.approvals.nft],
   );
   const activeCount = erc20Approvals.length + nftApprovals.length;
+  const erc20RowRevokeEnabled = canEnableOptimismErc20RowRevoke({
+    mapping: scan.mapped,
+    walletChainId,
+    ownerAddress: owner,
+    connectedAddress,
+  });
+  const erc20RowRevokeDisabledReason =
+    optimismErc20RowRevokeDisabledReasonForWallet({
+      mapping: scan.mapped,
+      walletChainId,
+      ownerAddress: owner,
+      connectedAddress,
+    });
   const nftRowRevokeEnabled = canEnableOptimismNftRowRevoke({
     mapping: scan.mapped,
     walletChainId,
@@ -88,17 +104,17 @@ export function OptimismReadOnlyScanner({
               Optimism approval scan
             </h3>
             <p className="mt-2 max-w-2xl text-sm leading-6 text-pulse-muted">
-              Verified NFT rows can be revoked when your connected wallet
-              matches the scanned address and your wallet is on OP Mainnet.
-              ERC-20 and batch revoke are not enabled for Optimism.
+              Verified ERC-20 and NFT rows can be revoked when your connected
+              wallet matches the scanned address and your wallet is on OP
+              Mainnet. Batch revoke is not enabled for Optimism.
             </p>
           </div>
           <div className="flex flex-wrap gap-2 text-xs font-semibold">
             <span className="rounded-full border border-pulse-cyan/35 bg-pulse-cyan/10 px-3 py-1 text-pulse-cyan">
-              NFT row revoke
+              ERC-20 row revoke
             </span>
-            <span className="rounded-full border border-pulse-border bg-pulse-panel/70 px-3 py-1 text-pulse-muted">
-              ERC-20 revoke disabled
+            <span className="rounded-full border border-pulse-cyan/35 bg-pulse-cyan/10 px-3 py-1 text-pulse-cyan">
+              NFT row revoke
             </span>
             <span className="rounded-full border border-pulse-border bg-pulse-panel/70 px-3 py-1 text-pulse-muted">
               Batch revoke disabled
@@ -133,9 +149,9 @@ export function OptimismReadOnlyScanner({
               Live-verified Optimism approvals
             </p>
             <p className="mt-1 text-xs leading-5 text-pulse-muted">
-              These rows passed live reads on OP Mainnet. NFT rows can be
-              revoked only after matching-wallet and OP Mainnet checks pass;
-              ERC-20 and batch revoke remain disabled for Optimism.
+              These rows passed live reads on OP Mainnet. ERC-20 and NFT rows
+              can show row-level revoke only after matching-wallet and OP
+              Mainnet checks pass; batch revoke remains disabled for Optimism.
             </p>
           </div>
           {erc20Approvals.length > 0 ? (
@@ -145,7 +161,15 @@ export function OptimismReadOnlyScanner({
               </div>
               <ul className="divide-y divide-pulse-border/70">
                 {erc20Approvals.map((approval) => (
-                  <OptimismErc20Row key={approval.key} approval={approval} />
+                  <OptimismErc20Row
+                    key={approval.key}
+                    approval={approval}
+                    owner={owner}
+                    rowRevokeEnabled={erc20RowRevokeEnabled}
+                    rowRevokeDisabledReason={erc20RowRevokeDisabledReason}
+                    onRevoked={scan.refetch}
+                    debugMode={debugMode}
+                  />
                 ))}
               </ul>
             </div>
@@ -188,6 +212,8 @@ export function OptimismReadOnlyScanner({
         wagmiChainId={wagmiChainId}
         mapping={scan.mapped}
         response={scan.response}
+        erc20RowRevokeEnabled={erc20RowRevokeEnabled}
+        erc20RowRevokeDisabledReason={erc20RowRevokeDisabledReason}
         nftRowRevokeEnabled={nftRowRevokeEnabled}
         nftRowRevokeDisabledReason={nftRowRevokeDisabledReason}
       />
@@ -237,7 +263,7 @@ function OptimismStatusPanel({
   } else if (mapping?.state === "active") {
     title = `${activeCount} active Optimism approval${activeCount === 1 ? "" : "s"} found`;
     body =
-      "Rows shown below passed live reads. NFT revoke is available only for verified NFT rows when the connected wallet and OP Mainnet checks pass.";
+      "Rows shown below passed live reads. ERC-20 and NFT revoke are available only for verified rows when the connected wallet and OP Mainnet checks pass.";
     tone = "success";
   }
 
@@ -272,7 +298,21 @@ function OptimismStatusPanel({
   );
 }
 
-function OptimismErc20Row({ approval }: { approval: Approval }) {
+function OptimismErc20Row({
+  approval,
+  owner,
+  rowRevokeEnabled,
+  rowRevokeDisabledReason,
+  onRevoked,
+  debugMode,
+}: {
+  approval: Approval;
+  owner: Address;
+  rowRevokeEnabled: boolean;
+  rowRevokeDisabledReason: string;
+  onRevoked: () => void;
+  debugMode: boolean;
+}) {
   return (
     <li className="grid gap-3 px-4 py-4 md:grid-cols-[1.1fr_1.2fr_0.9fr_auto] md:items-center">
       <div className="min-w-0">
@@ -304,8 +344,255 @@ function OptimismErc20Row({ approval }: { approval: Approval }) {
           {approval.formattedAllowance}
         </p>
       </div>
-      <UnavailableRowPill reason={OPTIMISM_REVOKE_UNAVAILABLE_COPY} />
+      <OptimismErc20Action
+        approval={approval}
+        owner={owner}
+        rowRevokeEnabled={rowRevokeEnabled}
+        rowRevokeDisabledReason={rowRevokeDisabledReason}
+        onRevoked={onRevoked}
+        debugMode={debugMode}
+      />
     </li>
+  );
+}
+
+function OptimismErc20Action({
+  approval,
+  owner,
+  rowRevokeEnabled,
+  rowRevokeDisabledReason,
+  onRevoked,
+  debugMode,
+}: {
+  approval: Approval;
+  owner: Address;
+  rowRevokeEnabled: boolean;
+  rowRevokeDisabledReason: string;
+  onRevoked: () => void;
+  debugMode: boolean;
+}) {
+  const [confirming, setConfirming] = useState(false);
+  const rowIsVerifiedActive =
+    approval.chainId === OPTIMISM_CLIENT_CHAIN_ID && approval.rawAllowance > 0n;
+  const canRevoke = rowRevokeEnabled && rowIsVerifiedActive;
+  const revoke = useRevokeApproval({
+    target: {
+      chainId: OPTIMISM_CLIENT_CHAIN_ID,
+      tokenAddress: approval.tokenAddress,
+      spenderAddress: approval.spenderAddress,
+    },
+    ownerAddress: owner,
+    tokenSymbol: approval.tokenSymbol,
+    tokenDecimals: approval.tokenDecimals,
+    onSuccess: onRevoked,
+  });
+  const receiptDetails: RevokeReceiptDetails = {
+    kind: "erc20",
+    chainId: OPTIMISM_CLIENT_CHAIN_ID,
+    chainName: OPTIMISM_DISPLAY_NAME,
+    assetLabel: "Token",
+    assetValue: (
+      <ReceiptExplorerLink href={optimismExplorerTokenUrl(approval.tokenAddress)}>
+        {approval.tokenSymbol}
+      </ReceiptExplorerLink>
+    ),
+    counterpartyLabel: "Spender",
+    counterpartyValue: (
+      <ReceiptExplorerLink
+        href={optimismExplorerAddressUrl(approval.spenderAddress)}
+      >
+        {shortenAddress(approval.spenderAddress)}
+      </ReceiptExplorerLink>
+    ),
+    verificationState: revoke.postRevokeVerificationState,
+  };
+
+  if (!canRevoke) {
+    return (
+      <UnavailableRowPill
+        reason={
+          rowIsVerifiedActive
+            ? rowRevokeDisabledReason
+            : "Revoke unavailable until current approval state is verified."
+        }
+      />
+    );
+  }
+
+  return (
+    <div className="flex min-w-[14rem] flex-col items-stretch gap-2 md:items-end">
+      <span className="inline-flex items-center justify-center rounded-full border border-pulse-green/35 bg-pulse-green/10 px-3 py-1 text-xs font-semibold text-pulse-green">
+        Live verified
+      </span>
+      <button
+        type="button"
+        onClick={() => {
+          setConfirming(true);
+          void revoke.refreshPreflight();
+        }}
+        disabled={revoke.isBusy}
+        className="inline-flex items-center justify-center rounded-xl border border-pulse-cyan/35 bg-pulse-cyan/10 px-3 py-2 text-xs font-semibold text-pulse-cyan transition hover:bg-pulse-cyan/15 disabled:cursor-not-allowed disabled:opacity-60"
+      >
+        {revoke.isBusy ? "Checking..." : "Review revoke"}
+      </button>
+      {confirming ? (
+        <OptimismErc20Confirm
+          preflight={revoke.preflight}
+          status={revoke.status}
+          isRefreshing={revoke.isRefreshingApproval}
+          errorMessage={revoke.errorMessage}
+          debugMode={debugMode}
+          onRefresh={() => void revoke.refreshPreflight()}
+          onConfirm={() => void revoke.revoke()}
+          onCancel={() => {
+            setConfirming(false);
+            revoke.reset();
+          }}
+        />
+      ) : null}
+      {isReceiptStatus(revoke.status) ? (
+        <div className="w-full md:min-w-[24rem]">
+          <RevokeReceipt
+            status={revoke.status}
+            hash={revoke.hash}
+            errorMessage={revoke.errorMessage}
+            details={receiptDetails}
+            onDismiss={() => {
+              setConfirming(false);
+              revoke.reset();
+            }}
+          />
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+function OptimismErc20Confirm({
+  preflight,
+  status,
+  isRefreshing,
+  errorMessage,
+  debugMode,
+  onRefresh,
+  onConfirm,
+  onCancel,
+}: {
+  preflight: Erc20PreflightResult | null;
+  status: RevokeStatus;
+  isRefreshing: boolean;
+  errorMessage?: string;
+  debugMode: boolean;
+  onRefresh: () => void;
+  onConfirm: () => void;
+  onCancel: () => void;
+}) {
+  const canConfirm =
+    preflight?.status === "active" &&
+    status !== "wallet" &&
+    status !== "pending" &&
+    !isRefreshing;
+
+  return (
+    <div className="w-full rounded-xl border border-pulse-border bg-pulse-bg/70 p-3 text-left text-xs text-pulse-muted shadow-xl md:w-80">
+      <p className="font-semibold text-pulse-text">Review Optimism revoke</p>
+      <p className="mt-1 leading-5">
+        This calls approve(spender, 0). Gas is paid in{" "}
+        {OPTIMISM_NATIVE_SYMBOL}.
+      </p>
+      <p className="mt-1 leading-5">{WALLET_PROMPT_SAFETY_COPY}</p>
+      <OptimismErc20PreflightNotice
+        preflight={preflight}
+        isRefreshing={isRefreshing}
+        debugMode={debugMode}
+      />
+      {errorMessage ? (
+        <p className="mt-2 rounded-lg border border-pulse-red/35 bg-pulse-red/10 p-2 text-pulse-red">
+          {errorMessage}
+        </p>
+      ) : null}
+      <div className="mt-3 flex flex-wrap gap-2 sm:justify-end">
+        <button
+          type="button"
+          onClick={onCancel}
+          className="rounded-lg border border-pulse-border bg-white/5 px-2.5 py-1.5 font-semibold text-pulse-muted transition hover:bg-white/10"
+        >
+          Cancel
+        </button>
+        {!canConfirm ? (
+          <button
+            type="button"
+            onClick={onRefresh}
+            disabled={isRefreshing}
+            className="rounded-lg border border-pulse-cyan/35 bg-pulse-cyan/10 px-2.5 py-1.5 font-semibold text-pulse-cyan disabled:opacity-60"
+          >
+            {isRefreshing ? "Checking..." : "Refresh"}
+          </button>
+        ) : null}
+        <button
+          type="button"
+          onClick={onConfirm}
+          disabled={!canConfirm}
+          className="rounded-lg bg-pulse-gradient px-2.5 py-1.5 font-semibold text-pulse-bg shadow-glow disabled:cursor-not-allowed disabled:opacity-60"
+        >
+          {status === "wallet" ? "Wallet open" : "Confirm revoke"}
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function OptimismErc20PreflightNotice({
+  preflight,
+  isRefreshing,
+  debugMode,
+}: {
+  preflight: Erc20PreflightResult | null;
+  isRefreshing: boolean;
+  debugMode: boolean;
+}) {
+  if (isRefreshing || !preflight) {
+    return (
+      <p className="mt-2 rounded-lg border border-pulse-cyan/35 bg-pulse-cyan/10 p-2 text-pulse-cyan">
+        Checking allowance(owner, spender) before the wallet opens.
+      </p>
+    );
+  }
+
+  if (preflight.status === "active") {
+    return (
+      <p className="mt-2 rounded-lg border border-pulse-green/40 bg-pulse-green/10 p-2 text-pulse-green">
+        Current allowance is still active
+        {preflight.currentLabel ? `: ${preflight.currentLabel}` : "."}
+      </p>
+    );
+  }
+
+  if (preflight.status === "cleared") {
+    return (
+      <p className="mt-2 rounded-lg border border-pulse-green/40 bg-pulse-green/10 p-2 text-pulse-green">
+        Already cleared. allowance(owner, spender) returned 0.
+      </p>
+    );
+  }
+
+  return (
+    <div className="mt-2 rounded-lg border border-amber-400/40 bg-amber-400/10 p-2 text-amber-200">
+      <p>
+        Revoke unavailable until current approval state is verified
+        {preflight.error ? ` (${preflight.error})` : ""}.
+      </p>
+      {debugMode ? (
+        <dl className="mt-2 grid gap-1 font-mono text-[11px]">
+          <DebugRow label="Preflight status" value={preflight.status} />
+          <DebugRow label="Chain ID" value={preflight.chainId?.toString() ?? "10"} />
+          <DebugRow
+            label="Gas estimate attempted"
+            value={preflight.gasEstimateAttempted ? "Yes" : "No"}
+          />
+        </dl>
+      ) : null}
+    </div>
   );
 }
 
@@ -624,6 +911,8 @@ function OptimismDiagnostics({
   wagmiChainId,
   mapping,
   response,
+  erc20RowRevokeEnabled,
+  erc20RowRevokeDisabledReason,
   nftRowRevokeEnabled,
   nftRowRevokeDisabledReason,
 }: {
@@ -634,6 +923,8 @@ function OptimismDiagnostics({
   wagmiChainId: number | undefined;
   mapping: OptimismApprovalClientMapping | null;
   response: ReturnType<typeof useOptimismApprovalScan>["response"];
+  erc20RowRevokeEnabled: boolean;
+  erc20RowRevokeDisabledReason: string;
   nftRowRevokeEnabled: boolean;
   nftRowRevokeDisabledReason: string;
 }) {
@@ -666,7 +957,8 @@ function OptimismDiagnostics({
       "Incomplete checks",
       diagnostics?.incompleteVerificationCount?.toString() ?? "0",
     ],
-    ["ERC-20 row revoke", "Disabled"],
+    ["ERC-20 row revoke", erc20RowRevokeEnabled ? "Enabled" : "Disabled"],
+    ["ERC-20 row revoke reason", erc20RowRevokeDisabledReason],
     ["NFT row revoke", nftRowRevokeEnabled ? "Enabled" : "Disabled"],
     ["NFT row revoke reason", nftRowRevokeDisabledReason],
     ["Batch revoke", "Disabled"],

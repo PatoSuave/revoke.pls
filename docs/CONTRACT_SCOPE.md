@@ -49,8 +49,9 @@ wallet row-level revoke after live verification.
 Optimism user-facing copy uses ERC-20, ERC-721, ERC-1155, ETH, and OP Mainnet
 where chain-specific naming is helpful. Optimism uses a separate verified-row
 lane in the current product; the app reads `allowance`, `isApprovedForAll`, and
-`getApproved`, then only enables matching-wallet row-level NFT revoke after
-live verification. Optimism ERC-20, batch, and global revoke are not enabled.
+`getApproved`, then only enables matching-wallet row-level ERC-20 and NFT
+revoke after live verification. Optimism batch and global revoke are not
+enabled.
 
 ## Known Limitations
 - Not all tokens behave perfectly
