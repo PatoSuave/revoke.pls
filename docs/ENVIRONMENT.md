@@ -8,7 +8,7 @@ Do not store private secrets in these variables.
 ## Production Requirements
 
 For the live PulseChain + BSC + Base + Ethereum + Arbitrum verified-row product
-plus Optimism NFT verified-row revoke, configure:
+plus Optimism ERC-20/NFT verified-row revoke, configure:
 
 | Variable | Production status | Notes |
 | --- | --- | --- |
@@ -198,8 +198,8 @@ accepted as fallback names.
 
 Do not configure managed or secret-key Optimism RPC URLs as `NEXT_PUBLIC_*`
 variables. Optimism approval scanning uses the server route. Optimism revoke is
-limited to verified NFT rows; Optimism ERC-20, batch, and global revoke are not
-enabled.
+limited to verified ERC-20 and NFT rows; Optimism batch and global revoke are
+not enabled.
 
 ### `OPTIMISM_EXPLORER_API_URL`
 

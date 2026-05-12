@@ -2,7 +2,7 @@
 
 Pulse Revoke is public code for reviewing and clearing wallet approvals on
 PulseChain, BSC / BNB Smart Chain, Base, and Ethereum Mainnet verified rows,
-with Arbitrum One verified-row revoke and Optimism NFT verified-row revoke.
+with Arbitrum One verified-row revoke and Optimism verified-row revoke.
 
 ## What The App Does
 
@@ -17,7 +17,7 @@ with Arbitrum One verified-row revoke and Optimism NFT verified-row revoke.
 - Scans Arbitrum One through a server-side read-only API and enables only
   live-verified ERC-20 and NFT row revoke
 - Scans Optimism / OP Mainnet through a server-side API and enables only
-  live-verified NFT row revoke
+  live-verified ERC-20 and NFT row revoke
 
 ## What The App Does Not Do
 
@@ -26,7 +26,7 @@ with Arbitrum One verified-row revoke and Optimism NFT verified-row revoke.
 - Does not take custody of funds
 - Does not require token transfers
 - Does not support Arbitrum batch revoke yet
-- Does not support Optimism ERC-20, batch, or global revoke yet
+- Does not support Optimism batch or global revoke yet
 - Does not use server-side signing, relayers, or private-key handling
 - Does not guarantee complete discovery when explorer APIs are capped,
   rate-limited, unavailable, or malformed
@@ -90,7 +90,9 @@ not automatically mean safe.
 - Arbitrum One revoke is limited to live-verified ERC-20 and NFT rows
   with a matching connected wallet on chain `42161`; Arbitrum batch revoke is
   not enabled.
-- Optimism is read-only; ERC-20, NFT, batch, and global revoke are not enabled.
+- Optimism row revoke is limited to live-verified ERC-20 and NFT rows with a
+  matching connected wallet on chain `10`; batch and global revoke are not
+  enabled.
 - BSC revokes above `16,777,216` estimated gas are blocked because BNB Smart
   Chain rejects individual transactions above the Osaka/Mendel cap.
 - BSC revokes above `1,000,000` estimated gas show a warning before the wallet

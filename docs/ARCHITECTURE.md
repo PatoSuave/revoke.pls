@@ -18,7 +18,7 @@ Active supported chains are configured in `src/lib/chains.ts`:
 - Ethereum Mainnet, chain ID `1`, native gas token `ETH`, explorer `Etherscan`
 - Arbitrum One, chain ID `42161`, native gas token `ETH`, explorer `Arbiscan`
 - Optimism / OP Mainnet, chain ID `10`, native gas token `ETH`, explorer
-  `Optimistic Etherscan`, read-only scan
+  `Optimistic Etherscan`, verified ERC-20/NFT row revoke
 
 Ethereum Mainnet is wallet-enabled for the Ethereum read-only discovery and
 wallet-side revoke lane. It is not handled by the default supported-chain
@@ -31,8 +31,8 @@ through controlled wallet-side revoke hooks; batch revoke remains disabled.
 
 Optimism is wallet-recognized so the app can show a neutral network status and
 run the separate scanner lane. It is not part of the default supported-chain
-scanner path. Optimism revoke is limited to verified NFT rows and does not route
-to generic ERC-20, batch, or global revoke.
+scanner path. Optimism revoke is limited to verified ERC-20 and NFT rows and
+does not route to generic batch or global revoke.
 
 ## Web3 Layer
 
@@ -99,8 +99,8 @@ Optimism historical discovery is exposed through `/api/optimism/approvals` so
 managed RPC URLs and Etherscan API V2 keys stay server-only. The route is
 read-only, uses bounded discovery and live-validation caps, requires
 `chainid=10`, and never signs, relays, or submits transactions. Optimism rows
-can be shown only after live reads verify current approval state, and revoke is
-not enabled in this phase.
+can be shown only after live reads verify current approval state, and
+row-level revoke stays limited to verified ERC-20 and NFT rows.
 
 ## Explorer APIs
 
@@ -182,8 +182,8 @@ User-facing Optimism copy uses:
 - `ERC-721` for NFT approvals
 - `ERC-1155` for multi-token NFT / semi-fungible approvals
 - `ETH` for gas
-- `Read-only scan` for current Optimism support
-- `Revoke disabled` for ERC-20, NFT, batch, and global actions
+- `Verified-row revoke` for ERC-20 and NFT row state
+- `Batch revoke disabled` for Optimism batch/global actions
 
 ## Transaction Flow
 
@@ -213,10 +213,10 @@ server-side Arbitrum API. It uses the same controlled ERC-20 and NFT revoke
 hooks, including owner, chain, preflight, and post-revoke verification gates.
 Arbitrum batch revoke remains unavailable.
 
-Optimism revoke is limited to live-verified NFT rows from the server-side
-Optimism API. It uses the existing controlled NFT revoke hook, including owner,
-chain, preflight, and post-revoke verification gates. Optimism ERC-20, batch,
-and global revoke remain unavailable.
+Optimism revoke is limited to live-verified ERC-20 and NFT rows from the
+server-side Optimism API. It uses the existing controlled ERC-20 and NFT revoke
+hooks, including owner, chain, preflight, and post-revoke verification gates.
+Optimism batch and global revoke remain unavailable.
 
 ## BSC Gas Safety
 

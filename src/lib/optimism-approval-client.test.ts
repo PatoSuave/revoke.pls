@@ -75,7 +75,7 @@ function response(
 describe("Optimism approval client mapping", () => {
   it("identifies OP Mainnet as a special wallet-recognition chain", () => {
     expect(OPTIMISM_STATUS_LABEL).toBe(
-      "Optimism NFT verified-row revoke",
+      "Optimism verified-row revoke",
     );
     expect(optimismWalletChain.id).toBe(10);
     expect(optimismWalletChain.nativeCurrency.symbol).toBe(
@@ -137,7 +137,7 @@ describe("Optimism approval client mapping", () => {
     expect(result.status).toBe("complete-clear");
   });
 
-  it("maps active Optimism approvals while keeping only NFT row revoke eligible", () => {
+  it("maps active Optimism approvals while keeping global and batch revoke unavailable", () => {
     const mapped = mapOptimismApprovalApiResponse(
       response({
         status: "active-approvals-found",
@@ -192,10 +192,8 @@ describe("Optimism approval client mapping", () => {
     expect(mapped.canShowClear).toBe(false);
     expect(mapped.revokeEnabled).toBe(false);
     expect(mapped.revokeUnavailableReason).toBe(OPTIMISM_REVOKE_UNAVAILABLE_COPY);
-    expect(mapped.erc20RowRevokeEnabled).toBe(false);
-    expect(mapped.erc20RowRevokeDisabledReason).toBe(
-      OPTIMISM_REVOKE_UNAVAILABLE_COPY,
-    );
+    expect(mapped.erc20RowRevokeEnabled).toBe(true);
+    expect(mapped.erc20RowRevokeDisabledReason).toBeNull();
     expect(mapped.nftRowRevokeEnabled).toBe(true);
     expect(mapped.nftRowRevokeDisabledReason).toBeNull();
     expect(mapped.nftRevokeEnabled).toBe(false);
@@ -211,7 +209,7 @@ describe("Optimism approval client mapping", () => {
     expect(mapped.approvals.nft[0]?.tokenId).toBe(7n);
   });
 
-  it("keeps Optimism ERC-20 row revoke disabled even for matching wallet on chain 10", () => {
+  it("enables Optimism ERC-20 row revoke only for matching wallet on chain 10", () => {
     const mapped = mapOptimismApprovalApiResponse(
       response({
         status: "active-approvals-found",
@@ -251,7 +249,7 @@ describe("Optimism approval client mapping", () => {
         ownerAddress: OWNER,
         connectedAddress: OWNER,
       }),
-    ).toBe(false);
+    ).toBe(true);
     expect(
       optimismErc20RowRevokeDisabledReasonForWallet({
         mapping: mapped,
@@ -259,7 +257,7 @@ describe("Optimism approval client mapping", () => {
         ownerAddress: OWNER,
         connectedAddress: OWNER,
       }),
-    ).toBe(OPTIMISM_REVOKE_UNAVAILABLE_COPY);
+    ).toBe("Verified ERC-20 row; revoke available.");
     expect(
       canEnableOptimismErc20RowRevoke({
         mapping: mapped,
@@ -331,6 +329,58 @@ describe("Optimism approval client mapping", () => {
     expect(mapped.erc20RowRevokeDisabledReason).toContain(
       "No active Optimism ERC-20 approvals",
     );
+    expect(
+      canEnableOptimismErc20RowRevoke({
+        mapping: mapped,
+        walletChainId: OPTIMISM_CLIENT_CHAIN_ID,
+        ownerAddress: OWNER,
+        connectedAddress: OWNER,
+      }),
+    ).toBe(false);
+  });
+
+  it("keeps Optimism ERC-20 row revoke disabled when live verification is incomplete", () => {
+    const mapped = mapOptimismApprovalApiResponse(
+      response({
+        status: "verification-incomplete",
+        approvals: {
+          erc20: [
+            {
+              key: `${OPTIMISM_CLIENT_CHAIN_ID}-${TOKEN}-${SPENDER}`,
+              chainId: OPTIMISM_CLIENT_CHAIN_ID,
+              tokenAddress: TOKEN,
+              tokenSymbol: "OP",
+              tokenName: "Optimism Token",
+              tokenDecimals: 18,
+              tokenCategory: "unknown",
+              spenderAddress: SPENDER,
+              spenderLabel: "Unknown spender",
+              protocol: "Unknown",
+              spenderCategory: "unknown",
+              trusted: false,
+              rawAllowance: "1000000000000000000",
+              formattedAllowance: "1 OP",
+              unlimited: false,
+            },
+          ],
+          nft: [],
+        },
+        diagnostics: {
+          ...response({}).diagnostics,
+          liveReadSuccessCount: 0,
+          liveReadFailureCount: 1,
+          incompleteVerificationCount: 1,
+          skippedReasons: { "erc20-live-read-failure": 1 },
+        },
+      }),
+    );
+
+    expect(mapped.state).toBe("verification-incomplete");
+    expect(mapped.erc20RowRevokeEnabled).toBe(false);
+    expect(mapped.erc20RowRevokeDisabledReason).toContain(
+      "current approval state is verified",
+    );
+    expect(mapped.incompleteReason).toContain("1 ERC-20 live read failed");
     expect(
       canEnableOptimismErc20RowRevoke({
         mapping: mapped,

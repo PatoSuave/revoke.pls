@@ -12,7 +12,7 @@ Current active supported networks should be exactly:
 - Base, chain ID `8453`
 - Ethereum Mainnet, chain ID `1`
 - Arbitrum One, chain ID `42161`, ERC-20/NFT verified-row revoke
-- Optimism / OP Mainnet, chain ID `10`, NFT verified-row revoke
+- Optimism / OP Mainnet, chain ID `10`, ERC-20/NFT verified-row revoke
 
 Ethereum Mainnet uses server-read-only discovery and wallet-side revoke. It is
 wallet-enabled, but it must not introduce server-side signing, relayers, private
@@ -24,9 +24,9 @@ preflight, and post-revoke verification gates pass. Arbitrum batch revoke,
 server-side signing, relayers, private keys, and API route transaction
 submission must stay unavailable.
 
-Optimism uses server-side discovery and wallet-side NFT row revoke only after
-row-level live verification, matching owner, chain, preflight, and post-revoke
-verification gates pass. Optimism ERC-20 revoke, batch revoke, global revoke,
+Optimism uses server-side discovery and wallet-side ERC-20/NFT row revoke only
+after row-level live verification, matching owner, chain, preflight, and
+post-revoke verification gates pass. Optimism batch revoke, global revoke,
 server-side signing, relayers, private keys, and API route transaction
 submission must stay unavailable.
 
@@ -54,7 +54,7 @@ submission must stay unavailable.
 
 - Are active supported chains exactly PulseChain, BSC, Base, wallet-enabled
   Ethereum Mainnet, Arbitrum One's separate verified-row revoke lane, and
-  Optimism's separate read-only lane?
+  Optimism's separate verified-row lane?
 - Does `src/lib/wagmi.ts` register Ethereum, Arbitrum, and Optimism only for
   their separate lanes and keep chain lists scoped correctly?
 - Is Ethereum Mainnet protected by owner, chain, preflight, gas, and row-level
@@ -113,8 +113,10 @@ submission must stay unavailable.
   browser-exposed Optimism variables?
 - Do timeout, cap-hit, rate-limit, truncation, malformed rows, and live-read
   failures return non-clear states?
-- Do Optimism ERC-20, NFT, batch, global, server signing, arbitrary
-  `writeContract`, and `sendTransaction` paths remain unavailable?
+- Are Optimism ERC-20 and NFT row revoke actions available only for
+  live-verified rows with matching wallet and chain `10`?
+- Do Optimism batch, global, server signing, arbitrary `writeContract`, and
+  `sendTransaction` paths remain unavailable?
 
 ## BSC Discovery Questions
 
@@ -160,8 +162,8 @@ submission must stay unavailable.
 - Do Base revokes use ETH wording and BaseScan links?
 - Does Arbitrum show only ERC-20/NFT verified-row revoke while batch
   revoke remains unavailable?
-- Does Optimism show read-only rows only, with no ERC-20, NFT, batch, or global
-  revoke action?
+- Does Optimism show only ERC-20/NFT verified-row revoke while batch and global
+  revoke remain unavailable?
 
 ## BSC Gas Safety Questions
 
@@ -223,8 +225,8 @@ npm.cmd run build
   until a matching wallet-side revoke is explicitly reviewed.
 - Load `/app` on Arbitrum One and confirm only live-verified ERC-20 and NFT rows
   can open the revoke review panel; batch revoke remains unavailable.
-- Load `/app` on Optimism / OP Mainnet and confirm only live-verified NFT rows
-  can open the revoke review panel; ERC-20, batch, and global revoke remain
+- Load `/app` on Optimism / OP Mainnet and confirm only live-verified ERC-20
+  and NFT rows can open the revoke review panel; batch and global revoke remain
   unavailable.
 - Test a low-gas BSC revoke and confirm the wallet receives `gas` below the
   hard cap.
