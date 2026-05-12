@@ -10,7 +10,7 @@ ship.
 - BSC / BNB Smart Chain support
 - Base support
 - Ethereum Mainnet read-only discovery and wallet-side revoke
-- Arbitrum One ERC-20/NFT verified-row revoke beta
+- Arbitrum One ERC-20/NFT verified-row revoke
 - Browser wallet connection
 - WalletConnect when configured
 - Historical approval log discovery

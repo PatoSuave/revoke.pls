@@ -44,9 +44,9 @@ export const WALLET_SAFETY_RECOMMENDATIONS = [
 export interface ChainStatusRow {
   chain: string;
   chainId: string;
-  scan: "Yes" | "No" | "Read-only beta";
+  scan: "Yes" | "No";
   revoke: string;
-  status: "Live" | "Beta" | "Read-only beta" | "Not enabled" | "Not supported";
+  status: "Live" | "Not enabled" | "Not supported";
   note: string;
 }
 
@@ -88,7 +88,7 @@ export const SECURITY_CHAIN_STATUS_ROWS: readonly ChainStatusRow[] = [
     chainId: "42161",
     scan: "Yes",
     revoke: "ERC-20/NFT verified rows only",
-    status: "Beta",
+    status: "Live",
     note: "Server-side approval discovery and live verification. Revoke is row-level only for verified ERC-20 and NFT rows; batch revoke is not enabled on Arbitrum.",
   },
   {

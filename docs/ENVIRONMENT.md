@@ -7,7 +7,7 @@ Do not store private secrets in these variables.
 
 ## Production Requirements
 
-For the live PulseChain + BSC + Base + Ethereum + Arbitrum verified-row beta product,
+For the live PulseChain + BSC + Base + Ethereum + Arbitrum verified-row product,
 configure:
 
 | Variable | Production status | Notes |

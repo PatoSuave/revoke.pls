@@ -145,8 +145,8 @@ User-facing Arbitrum copy uses:
 - `ERC-721` for NFT approvals
 - `ERC-1155` for multi-token NFT / semi-fungible approvals
 - `ETH` for gas
-- `Verified-row revoke beta` for ERC-20 and NFT row state
-- `NFT row revoke beta` for Arbitrum NFT rows
+- `Verified-row revoke` for ERC-20 and NFT row state
+- `NFT row revoke` for Arbitrum NFT rows
 - `Batch revoke disabled` for Arbitrum batch/global actions
 
 ## Transaction Flow

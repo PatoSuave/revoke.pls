@@ -1,7 +1,7 @@
 # Scanner QA Checklist
 
 Use this checklist to verify that Pulse Revoke reads approval state correctly on
-PulseChain, BSC, Base, Ethereum, and Arbitrum One verified-row beta.
+PulseChain, BSC, Base, Ethereum, and Arbitrum One verified-row revoke.
 Keep all testing low-risk and manual.
 
 ## Safety Setup
@@ -21,7 +21,7 @@ Run the scanner flow on all supported chains:
 - Base, chain ID `8453`, gas token `ETH`.
 - Ethereum Mainnet, chain ID `1`, gas token `ETH`.
 - Arbitrum One, chain ID `42161`, gas token `ETH`, ERC-20/NFT verified-row
-  beta.
+  lane.
 
 For each chain, confirm diagnostics show:
 

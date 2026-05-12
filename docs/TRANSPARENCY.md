@@ -2,7 +2,7 @@
 
 Pulse Revoke is public code for reviewing and clearing wallet approvals on
 PulseChain, BSC / BNB Smart Chain, Base, and Ethereum Mainnet verified rows,
-with Arbitrum One verified-row revoke beta.
+with Arbitrum One verified-row revoke.
 
 ## What The App Does
 
@@ -82,7 +82,7 @@ not automatically mean safe.
 - Some token and NFT contracts are nonstandard.
 - NFT per-token discovery can be limited by contract behavior and historical
   event availability.
-- Arbitrum One revoke is beta and limited to live-verified ERC-20 and NFT rows
+- Arbitrum One revoke is limited to live-verified ERC-20 and NFT rows
   with a matching connected wallet on chain `42161`; Arbitrum batch revoke is
   not enabled.
 - BSC revokes above `16,777,216` estimated gas are blocked because BNB Smart
