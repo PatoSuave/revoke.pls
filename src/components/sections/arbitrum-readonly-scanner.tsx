@@ -10,6 +10,8 @@ import {
 } from "@/components/approvals/revoke-receipt";
 import { useArbitrumApprovalScan } from "@/hooks/use-arbitrum-approval-scan";
 import { useRevokeApproval } from "@/hooks/use-revoke-approval";
+import type { RevokeStatus } from "@/hooks/use-revoke-approval";
+import { useRevokeNftApproval } from "@/hooks/use-revoke-nft-approval";
 import {
   ARBITRUM_BATCH_REVOKE_UNAVAILABLE_COPY,
   ARBITRUM_ONE_CLIENT_CHAIN_ID,
@@ -20,13 +22,15 @@ import {
   ARBITRUM_NFT_REVOKE_UNAVAILABLE_COPY,
   ARBITRUM_REVOKE_UNAVAILABLE_COPY,
   arbitrumErc20RowRevokeDisabledReasonForWallet,
+  arbitrumNftRowRevokeDisabledReasonForWallet,
   canEnableArbitrumErc20RowRevoke,
+  canEnableArbitrumNftRowRevoke,
 } from "@/lib/arbitrum-approval-client";
 import type { Approval } from "@/lib/approvals";
 import { explorerAddressUrl, explorerTokenUrl } from "@/lib/explorer";
 import { shortenAddress } from "@/lib/format";
 import type { NftApproval } from "@/lib/nft-approvals";
-import type { Erc20PreflightResult } from "@/lib/preflight";
+import type { Erc20PreflightResult, NftPreflightResult } from "@/lib/preflight";
 import { WALLET_PROMPT_SAFETY_COPY } from "@/lib/revoke-gas";
 import { addressesEqual } from "@/lib/scan-target";
 
@@ -68,6 +72,19 @@ export function ArbitrumReadOnlyScanner({
       ownerAddress: owner,
       connectedAddress,
     });
+  const nftRowRevokeEnabled = canEnableArbitrumNftRowRevoke({
+    mapping: scan.mapped,
+    walletChainId,
+    ownerAddress: owner,
+    connectedAddress,
+  });
+  const nftRowRevokeDisabledReason =
+    arbitrumNftRowRevokeDisabledReasonForWallet({
+      mapping: scan.mapped,
+      walletChainId,
+      ownerAddress: owner,
+      connectedAddress,
+    });
 
   useEffect(() => {
     if (scan.status === "success" || scan.status === "error") {
@@ -87,17 +104,17 @@ export function ArbitrumReadOnlyScanner({
               Arbitrum One approval scan
             </h3>
             <p className="mt-2 max-w-2xl text-sm leading-6 text-pulse-muted">
-              Verified ERC-20 rows can be revoked when your connected wallet
-              matches the scanned address and your wallet is on Arbitrum One.
-              NFT and batch revoke are not enabled for Arbitrum yet.
+              Verified ERC-20 and NFT rows can be revoked when your connected
+              wallet matches the scanned address and your wallet is on Arbitrum
+              One. Batch revoke is not enabled for Arbitrum.
             </p>
           </div>
           <div className="flex flex-wrap gap-2 text-xs font-semibold">
             <span className="rounded-full border border-pulse-cyan/35 bg-pulse-cyan/10 px-3 py-1 text-pulse-cyan">
               ERC-20 row revoke beta
             </span>
-            <span className="rounded-full border border-amber-400/35 bg-amber-400/10 px-3 py-1 text-amber-200">
-              NFT revoke not enabled
+            <span className="rounded-full border border-pulse-cyan/35 bg-pulse-cyan/10 px-3 py-1 text-pulse-cyan">
+              NFT row revoke beta
             </span>
             <span className="rounded-full border border-pulse-border bg-pulse-panel/70 px-3 py-1 text-pulse-muted">
               Batch revoke disabled
@@ -127,9 +144,8 @@ export function ArbitrumReadOnlyScanner({
               Live-verified Arbitrum approvals
             </p>
             <p className="mt-1 text-xs leading-5 text-pulse-muted">
-              These rows passed live reads on Arbitrum One. Only ERC-20 rows
-              can show row-level revoke in this beta; NFT rows remain review
-              only.
+              These rows passed live reads on Arbitrum One. ERC-20 and NFT rows
+              can show row-level revoke in this beta; batch revoke remains off.
             </p>
           </div>
           {erc20Approvals.length > 0 ? (
@@ -159,7 +175,15 @@ export function ArbitrumReadOnlyScanner({
               </div>
               <ul className="divide-y divide-pulse-border/70">
                 {nftApprovals.map((approval) => (
-                  <ArbitrumNftRow key={approval.key} approval={approval} />
+                  <ArbitrumNftRow
+                    key={approval.key}
+                    approval={approval}
+                    owner={owner}
+                    rowRevokeEnabled={nftRowRevokeEnabled}
+                    rowRevokeDisabledReason={nftRowRevokeDisabledReason}
+                    onRevoked={scan.refetch}
+                    debugMode={debugMode}
+                  />
                 ))}
               </ul>
             </div>
@@ -177,6 +201,8 @@ export function ArbitrumReadOnlyScanner({
         wagmiChainId={wagmiChainId}
         erc20RowRevokeEnabled={erc20RowRevokeEnabled}
         erc20RowRevokeDisabledReason={erc20RowRevokeDisabledReason}
+        nftRowRevokeEnabled={nftRowRevokeEnabled}
+        nftRowRevokeDisabledReason={nftRowRevokeDisabledReason}
       />
     </div>
   );
@@ -631,7 +657,21 @@ function ArbitrumPreflightNotice({
   );
 }
 
-function ArbitrumNftRow({ approval }: { approval: NftApproval }) {
+function ArbitrumNftRow({
+  approval,
+  owner,
+  rowRevokeEnabled,
+  rowRevokeDisabledReason,
+  onRevoked,
+  debugMode,
+}: {
+  approval: NftApproval;
+  owner: Address;
+  rowRevokeEnabled: boolean;
+  rowRevokeDisabledReason: string;
+  onRevoked: () => void;
+  debugMode: boolean;
+}) {
   const tokenLabel =
     approval.kind === "tokenApproval" && approval.tokenId !== undefined
       ? `#${approval.tokenId.toString()}`
@@ -672,8 +712,267 @@ function ArbitrumNftRow({ approval }: { approval: NftApproval }) {
           {approval.standard.toUpperCase()}
         </p>
       </div>
-      <NftReadonlyRowPill />
+      <ArbitrumNftAction
+        approval={approval}
+        owner={owner}
+        rowRevokeEnabled={rowRevokeEnabled}
+        rowRevokeDisabledReason={rowRevokeDisabledReason}
+        onRevoked={onRevoked}
+        debugMode={debugMode}
+      />
     </li>
+  );
+}
+
+function ArbitrumNftAction({
+  approval,
+  owner,
+  rowRevokeEnabled,
+  rowRevokeDisabledReason,
+  onRevoked,
+  debugMode,
+}: {
+  approval: NftApproval;
+  owner: Address;
+  rowRevokeEnabled: boolean;
+  rowRevokeDisabledReason: string;
+  onRevoked: () => void;
+  debugMode: boolean;
+}) {
+  const [confirming, setConfirming] = useState(false);
+  const rowIsVerifiedActive =
+    approval.chainId === ARBITRUM_ONE_CLIENT_CHAIN_ID &&
+    (approval.kind === "approvalForAll" || approval.tokenId !== undefined);
+  const canRevoke = rowRevokeEnabled && rowIsVerifiedActive;
+  const revoke = useRevokeNftApproval({
+    target: approval,
+    ownerAddress: owner,
+    onSuccess: onRevoked,
+  });
+  const receiptDetails: RevokeReceiptDetails = {
+    kind: approval.kind === "approvalForAll" ? "nft-operator" : "nft-token",
+    chainId: ARBITRUM_ONE_CLIENT_CHAIN_ID,
+    chainName: ARBITRUM_ONE_DISPLAY_NAME,
+    assetLabel: "Collection / token",
+    assetValue: (
+      <ReceiptExplorerLink
+        href={explorerAddressUrl(
+          ARBITRUM_ONE_CLIENT_CHAIN_ID,
+          approval.collectionAddress,
+        )}
+      >
+        {formatNftAssetLabel(approval)}
+      </ReceiptExplorerLink>
+    ),
+    counterpartyLabel: "Operator",
+    counterpartyValue: (
+      <ReceiptExplorerLink
+        href={explorerAddressUrl(
+          ARBITRUM_ONE_CLIENT_CHAIN_ID,
+          approval.operatorAddress,
+        )}
+      >
+        {shortenAddress(approval.operatorAddress)}
+      </ReceiptExplorerLink>
+    ),
+    verificationState: revoke.postRevokeVerificationState,
+  };
+
+  if (!canRevoke) {
+    return (
+      <UnavailableRowPill
+        reason={
+          rowIsVerifiedActive
+            ? rowRevokeDisabledReason
+            : "Revoke unavailable until current NFT approval state is verified."
+        }
+      />
+    );
+  }
+
+  return (
+    <div className="flex min-w-[14rem] flex-col items-stretch gap-2 md:items-end">
+      <span className="inline-flex items-center justify-center rounded-full border border-pulse-green/35 bg-pulse-green/10 px-3 py-1 text-xs font-semibold text-pulse-green">
+        Live verified
+      </span>
+      <button
+        type="button"
+        onClick={() => {
+          setConfirming(true);
+          void revoke.refreshPreflight();
+        }}
+        disabled={revoke.isBusy}
+        className="inline-flex items-center justify-center rounded-xl border border-pulse-cyan/35 bg-pulse-cyan/10 px-3 py-2 text-xs font-semibold text-pulse-cyan transition hover:bg-pulse-cyan/15 disabled:cursor-not-allowed disabled:opacity-60"
+      >
+        {revoke.isBusy ? "Checking..." : "Review revoke"}
+      </button>
+      {confirming ? (
+        <ArbitrumNftConfirm
+          approval={approval}
+          preflight={revoke.preflight}
+          status={revoke.status}
+          isRefreshing={revoke.isRefreshingApproval}
+          errorMessage={revoke.errorMessage}
+          debugMode={debugMode}
+          onRefresh={() => void revoke.refreshPreflight()}
+          onConfirm={() => void revoke.revoke()}
+          onCancel={() => {
+            setConfirming(false);
+            revoke.reset();
+          }}
+        />
+      ) : null}
+      {isReceiptStatus(revoke.status) ? (
+        <div className="w-full md:min-w-[24rem]">
+          <RevokeReceipt
+            status={revoke.status}
+            hash={revoke.hash}
+            errorMessage={revoke.errorMessage}
+            details={receiptDetails}
+            onDismiss={() => {
+              setConfirming(false);
+              revoke.reset();
+            }}
+          />
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+function ArbitrumNftConfirm({
+  approval,
+  preflight,
+  status,
+  isRefreshing,
+  errorMessage,
+  debugMode,
+  onRefresh,
+  onConfirm,
+  onCancel,
+}: {
+  approval: NftApproval;
+  preflight: NftPreflightResult | null;
+  status: RevokeStatus;
+  isRefreshing: boolean;
+  errorMessage?: string;
+  debugMode: boolean;
+  onRefresh: () => void;
+  onConfirm: () => void;
+  onCancel: () => void;
+}) {
+  const canConfirm =
+    preflight?.status === "active" &&
+    status !== "wallet" &&
+    status !== "pending" &&
+    !isRefreshing;
+
+  return (
+    <div className="w-full rounded-xl border border-pulse-border bg-pulse-bg/70 p-3 text-left text-xs text-pulse-muted shadow-xl md:w-80">
+      <p className="font-semibold text-pulse-text">Review Arbitrum NFT revoke</p>
+      <p className="mt-1 leading-5">
+        This calls {nftRevokeMethodLabel(approval)}. Gas is paid in{" "}
+        {ARBITRUM_ONE_NATIVE_SYMBOL}.
+      </p>
+      <p className="mt-1 leading-5">{WALLET_PROMPT_SAFETY_COPY}</p>
+      <ArbitrumNftPreflightNotice
+        approval={approval}
+        preflight={preflight}
+        isRefreshing={isRefreshing}
+        debugMode={debugMode}
+      />
+      {errorMessage ? (
+        <p className="mt-2 rounded-lg border border-pulse-red/35 bg-pulse-red/10 p-2 text-pulse-red">
+          {errorMessage}
+        </p>
+      ) : null}
+      <div className="mt-3 flex flex-wrap gap-2 sm:justify-end">
+        <button
+          type="button"
+          onClick={onCancel}
+          className="rounded-lg border border-pulse-border bg-white/5 px-2.5 py-1.5 font-semibold text-pulse-muted transition hover:bg-white/10"
+        >
+          Cancel
+        </button>
+        {!canConfirm ? (
+          <button
+            type="button"
+            onClick={onRefresh}
+            disabled={isRefreshing}
+            className="rounded-lg border border-pulse-cyan/35 bg-pulse-cyan/10 px-2.5 py-1.5 font-semibold text-pulse-cyan disabled:opacity-60"
+          >
+            {isRefreshing ? "Checking..." : "Refresh"}
+          </button>
+        ) : null}
+        <button
+          type="button"
+          onClick={onConfirm}
+          disabled={!canConfirm}
+          className="rounded-lg bg-pulse-gradient px-2.5 py-1.5 font-semibold text-pulse-bg shadow-glow disabled:cursor-not-allowed disabled:opacity-60"
+        >
+          {status === "wallet" ? "Wallet open" : "Confirm revoke"}
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function ArbitrumNftPreflightNotice({
+  approval,
+  preflight,
+  isRefreshing,
+  debugMode,
+}: {
+  approval: NftApproval;
+  preflight: NftPreflightResult | null;
+  isRefreshing: boolean;
+  debugMode: boolean;
+}) {
+  if (isRefreshing || !preflight) {
+    return (
+      <p className="mt-2 rounded-lg border border-pulse-cyan/35 bg-pulse-cyan/10 p-2 text-pulse-cyan">
+        Checking current NFT approval before the wallet opens.
+      </p>
+    );
+  }
+
+  if (preflight.status === "active") {
+    return (
+      <p className="mt-2 rounded-lg border border-pulse-green/40 bg-pulse-green/10 p-2 text-pulse-green">
+        {approval.kind === "approvalForAll"
+          ? "Current operator approval is still active."
+          : "Current token approval still points to this operator."}
+      </p>
+    );
+  }
+
+  if (preflight.status === "cleared") {
+    return (
+      <p className="mt-2 rounded-lg border border-pulse-green/40 bg-pulse-green/10 p-2 text-pulse-green">
+        {approval.kind === "approvalForAll"
+          ? "Already cleared. isApprovedForAll(owner, operator) returned false."
+          : "Already cleared. getApproved(tokenId) no longer points to this operator."}
+      </p>
+    );
+  }
+
+  return (
+    <div className="mt-2 rounded-lg border border-amber-400/40 bg-amber-400/10 p-2 text-amber-200">
+      <p>
+        Revoke unavailable until current NFT approval state is verified
+        {preflight.error ? ` (${preflight.error})` : ""}.
+      </p>
+      {debugMode ? (
+        <dl className="mt-2 grid gap-1 font-mono text-[11px]">
+          <DebugRow label="Preflight status" value={preflight.status} />
+          <DebugRow label="Chain ID" value={preflight.chainId?.toString() ?? "42161"} />
+          <DebugRow
+            label="Gas estimate attempted"
+            value={preflight.gasEstimateAttempted ? "Yes" : "No"}
+          />
+        </dl>
+      ) : null}
+    </div>
   );
 }
 
@@ -688,19 +987,6 @@ function UnavailableRowPill({ reason }: { reason: string }) {
         className="rounded-full border border-amber-400/35 bg-amber-400/10 px-3 py-1 text-xs font-semibold text-amber-200"
       >
         Revoke unavailable
-      </span>
-    </div>
-  );
-}
-
-function NftReadonlyRowPill() {
-  return (
-    <div className="flex flex-wrap gap-2 md:justify-end">
-      <span className="rounded-full border border-pulse-green/35 bg-pulse-green/10 px-3 py-1 text-xs font-semibold text-pulse-green">
-        Live verified
-      </span>
-      <span className="rounded-full border border-amber-400/35 bg-amber-400/10 px-3 py-1 text-xs font-semibold text-amber-200">
-        NFT revoke not enabled
       </span>
     </div>
   );
@@ -735,7 +1021,7 @@ function DebugRow({ label, value }: { label: string; value: string }) {
 }
 
 function isReceiptStatus(
-  status: ReturnType<typeof useRevokeApproval>["status"],
+  status: RevokeStatus,
 ): status is "pending" | "success" | "rejected" | "error" {
   return (
     status === "pending" ||
@@ -743,6 +1029,20 @@ function isReceiptStatus(
     status === "rejected" ||
     status === "error"
   );
+}
+
+function formatNftAssetLabel(approval: NftApproval): string {
+  const collection = approval.collectionName ?? shortenAddress(approval.collectionAddress);
+  if (approval.kind !== "tokenApproval" || approval.tokenId === undefined) {
+    return collection;
+  }
+  return `${collection} #${approval.tokenId.toString()}`;
+}
+
+function nftRevokeMethodLabel(approval: NftApproval): string {
+  return approval.kind === "approvalForAll"
+    ? "setApprovalForAll(operator, false)"
+    : "approve(address(0), tokenId)";
 }
 
 function ExplorerLink({ href, label }: { href: string; label: string }) {
@@ -791,6 +1091,8 @@ function ArbitrumDiagnosticsPanel({
   wagmiChainId,
   erc20RowRevokeEnabled,
   erc20RowRevokeDisabledReason,
+  nftRowRevokeEnabled,
+  nftRowRevokeDisabledReason,
 }: {
   enabled: boolean;
   scan: ReturnType<typeof useArbitrumApprovalScan>;
@@ -800,6 +1102,8 @@ function ArbitrumDiagnosticsPanel({
   wagmiChainId: number | undefined;
   erc20RowRevokeEnabled: boolean;
   erc20RowRevokeDisabledReason: string;
+  nftRowRevokeEnabled: boolean;
+  nftRowRevokeDisabledReason: string;
 }) {
   if (!enabled) return null;
 
@@ -828,8 +1132,15 @@ function ArbitrumDiagnosticsPanel({
         ? "Verified ERC-20 row; revoke available"
         : erc20RowRevokeDisabledReason,
     ],
-    ["NFT revoke enabled", "No"],
-    ["NFT revoke reason", ARBITRUM_NFT_REVOKE_UNAVAILABLE_COPY],
+    ["NFT row revoke enabled", nftRowRevokeEnabled ? "Yes" : "No"],
+    [
+      "NFT row revoke reason",
+      nftRowRevokeEnabled
+        ? "Verified NFT row; revoke available"
+        : nftRowRevokeDisabledReason,
+    ],
+    ["NFT global revoke enabled", "No"],
+    ["NFT global revoke reason", ARBITRUM_NFT_REVOKE_UNAVAILABLE_COPY],
     ["Batch revoke enabled", "No"],
     ["Batch revoke reason", ARBITRUM_BATCH_REVOKE_UNAVAILABLE_COPY],
     ["Chain ID", diagnostics?.chainId.toString() ?? "42161"],

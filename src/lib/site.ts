@@ -99,7 +99,7 @@ export const siteConfig = {
     "Manage PulseChain, BSC, Base, Ethereum, and Arbitrum token approvals",
   /** Single-sentence meta description (used for SEO + OG). */
   description:
-    "Pulse Revoke is a non-custodial tool to review and revoke token and NFT approvals on PulseChain, BSC, Base, and Ethereum Mainnet, with Arbitrum One ERC-20 verified-row revoke beta. Open source, read-only until you sign.",
+    "Pulse Revoke is a non-custodial tool to review and revoke token and NFT approvals on PulseChain, BSC, Base, and Ethereum Mainnet, with Arbitrum One verified-row revoke beta. Open source, read-only until you sign.",
   /** Longer paragraph for hero copy and social previews. */
   longDescription:
     "Review every token allowance and NFT operator approval your wallet has granted on PulseChain, BSC, Base, Ethereum Mainnet, or Arbitrum One, understand the risk, and revoke enabled-network approvals you no longer need one signature at a time.",

@@ -23,10 +23,10 @@ Expected sensitive-path result: no diff output for `src/hooks`,
 `src/app/api`, `src/lib/wagmi.ts`, or `src/lib/preflight.ts` unless the change
 explicitly intends to modify execution behavior.
 
-For Arbitrum ERC-20 verified-row revoke work, expected sensitive-path output
-may include the Arbitrum scanner UI, hook/client, and existing controlled
-ERC-20 revoke hook typing, but no NFT revoke, batch revoke, server-signing,
-relayer, or browser-exposed Arbitrum secret exposure.
+For Arbitrum verified-row revoke work, expected sensitive-path output may
+include the Arbitrum scanner UI, hook/client, and existing controlled ERC-20/NFT
+row revoke hook usage, but no batch revoke, server-signing, relayer, or
+browser-exposed Arbitrum secret exposure.
 
 ## 1. Production Smoke
 
@@ -146,10 +146,10 @@ relayer, or browser-exposed Arbitrum secret exposure.
       verification-incomplete copy remains accurate.
 - [ ] Confirm Ethereum explorer links open Etherscan.
 
-## 8. Arbitrum One ERC-20 Verified-Row Beta
+## 8. Arbitrum One Verified-Row Beta
 
 - [ ] Connect on Arbitrum One and confirm `/app` shows the Arbitrum verified-row
-      ERC-20 beta lane, not the generic revoke scanner.
+      beta lane, not the generic revoke scanner.
 - [ ] Confirm `/api/arbitrum/approvals` discovery uses server-side settings
       and reports `chainId` / `chainid` `42161`.
 - [ ] Confirm active Arbitrum ERC-20 rows appear only after `allowance(owner,
@@ -162,10 +162,16 @@ relayer, or browser-exposed Arbitrum secret exposure.
       when `allowance(owner, spender)` returns `0`.
 - [ ] Confirm active Arbitrum NFT rows appear only after `getApproved(tokenId)`
       or `isApprovedForAll(owner, operator)` live verification.
+- [ ] Confirm a matching connected wallet on Arbitrum One can review only
+      live-verified Arbitrum NFT rows.
+- [ ] Confirm NFT preflight blocks the wallet prompt when
+      `getApproved(tokenId)` or `isApprovedForAll(owner, operator)` returns
+      cleared state or fails.
+- [ ] Confirm post-revoke live verification reports `Confirmed cleared.` only
+      when `getApproved(tokenId)` returns the zero address or
+      `isApprovedForAll(owner, operator)` returns `false`.
 - [ ] Confirm failed reads, truncation, caps, rate limits, and upstream
       failures show verification-incomplete copy instead of a clear state.
-- [ ] Confirm Arbitrum NFT rows say NFT revoke is not enabled and expose no NFT
-      revoke action.
 - [ ] Confirm Arbitrum batch/global revoke is not visible or enabled.
 - [ ] Confirm address-only Arbitrum scans keep revoke unavailable until the
       connected wallet exactly matches the pasted scan target and is on
@@ -173,16 +179,16 @@ relayer, or browser-exposed Arbitrum secret exposure.
 - [ ] Confirm Arbitrum explorer links open Arbiscan.
 - [ ] In `/app?debug=1`, confirm diagnostics show scan target, connected
       wallet, wallet chain ID, API status, config presence, incomplete
-      reasons, ERC-20 row revoke status, NFT revoke disabled, and batch revoke
-      disabled.
+      reasons, ERC-20 row revoke status, NFT row revoke status, and batch
+      revoke disabled.
 
 ## 9. Security And Trust
 
 - [ ] Anti-phishing banner is visible on production pages.
 - [ ] `/security` loads and remains readable on desktop and mobile.
 - [ ] Supported-chain matrix lists Arbitrum One as `Yes` /
-      `ERC-20 verified rows only` / `Beta` and does not claim NFT or batch
-      revoke is live.
+      `ERC-20/NFT verified rows only` / `Beta` and does not claim batch revoke
+      is live.
 - [ ] The app never requests a seed phrase, private key, mnemonic, or raw
       signing secret.
 - [ ] No spender or protocol is described as safe, unsafe, endorsed, or trusted

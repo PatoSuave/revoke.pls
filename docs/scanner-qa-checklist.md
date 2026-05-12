@@ -1,7 +1,7 @@
 # Scanner QA Checklist
 
 Use this checklist to verify that Pulse Revoke reads approval state correctly on
-PulseChain, BSC, Base, Ethereum, and Arbitrum One ERC-20 verified-row beta.
+PulseChain, BSC, Base, Ethereum, and Arbitrum One verified-row beta.
 Keep all testing low-risk and manual.
 
 ## Safety Setup
@@ -20,7 +20,8 @@ Run the scanner flow on all supported chains:
 - BSC / BNB Smart Chain, chain ID `56`, gas token `BNB`.
 - Base, chain ID `8453`, gas token `ETH`.
 - Ethereum Mainnet, chain ID `1`, gas token `ETH`.
-- Arbitrum One, chain ID `42161`, gas token `ETH`, ERC-20 verified-row beta.
+- Arbitrum One, chain ID `42161`, gas token `ETH`, ERC-20/NFT verified-row
+  beta.
 
 For each chain, confirm diagnostics show:
 
@@ -71,7 +72,7 @@ For each chain, confirm diagnostics show:
 - Rate limits, malformed responses, missing API keys, and capped responses are
   shown as incomplete/error states, not as "clear".
 
-## Arbitrum ERC-20 Verified-Row Checks
+## Arbitrum Verified-Row Checks
 
 - `ARBITRUM_ONE_RPC_URL` or `ARBITRUM_RPC_URL` is set server-side for
   `/api/arbitrum/approvals`.
@@ -79,9 +80,9 @@ For each chain, confirm diagnostics show:
   `NEXT_PUBLIC_` variable.
 - `ARBITRUM_EXPLORER_CHAIN_ID` is unset or set to `42161`.
 - Arbitrum scans use Etherscan-compatible logs with `chainid=42161`.
-- Arbitrum ERC-20 revoke appears only for live-verified rows when the connected
-  wallet matches the scan target and is on chain `42161`.
-- Arbitrum NFT revoke, batch revoke, and global revoke are not shown.
+- Arbitrum ERC-20 and NFT row revoke appears only for live-verified rows when
+  the connected wallet matches the scan target and is on chain `42161`.
+- Arbitrum batch revoke and global revoke are not shown.
 - Rate limits, malformed responses, missing API keys, and capped responses are
   shown as incomplete/error states, not as "clear".
 
@@ -119,7 +120,8 @@ For collection-wide approvals:
 5. Confirm the NFT approval appears in the NFT approvals section.
 6. On BSC, confirm UI copy says `BEP-721` or `BEP-1155`.
 7. On Base, confirm UI copy says `ERC-721` or `ERC-1155`.
-8. On Arbitrum, confirm NFT revoke is not enabled and stop here.
+8. On Arbitrum, confirm only the verified NFT row can open the revoke review
+   panel when the matching wallet is connected on Arbitrum One.
 9. On revoke-enabled chains, revoke with `setApprovalForAll(operator, false)`
    through the app.
 10. Rescan after confirmation.
@@ -140,8 +142,9 @@ For per-token approvals:
 - Single PulseChain revoke confirm panel says PulseChain and PLS.
 - Single BSC revoke confirm panel says BSC or BNB Smart Chain and BNB.
 - Single Base revoke confirm panel says Base and ETH.
-- Arbitrum One shows a revoke confirm panel only for live-verified ERC-20 rows.
-- Arbitrum One never shows NFT or batch revoke controls.
+- Arbitrum One shows a revoke confirm panel only for live-verified ERC-20 and
+  NFT rows.
+- Arbitrum One never shows batch revoke controls.
 - PulseChain transaction links open PulseScan.
 - BSC transaction links open BscScan.
 - Base transaction links open BaseScan.

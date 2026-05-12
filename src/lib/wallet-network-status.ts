@@ -15,11 +15,11 @@ import {
   resolveEthereumReadOnlyChainId,
 } from "@/lib/ethereum-approval-client";
 
-export const ARBITRUM_HEADER_STATUS_LABEL = "Arbitrum One ERC-20 beta";
+export const ARBITRUM_HEADER_STATUS_LABEL = "Arbitrum verified-row beta";
 export const ARBITRUM_HEADER_STATUS_SHORT_HELPER =
-  "ERC-20 only. NFT and batch off.";
+  "ERC-20 and NFT rows only. Batch off.";
 export const ARBITRUM_HEADER_STATUS_HELPER =
-  "Verified ERC-20 rows can be revoked on Arbitrum. NFT and batch revoke are not enabled.";
+  "Verified ERC-20 and NFT rows can be revoked on Arbitrum. Batch revoke is not enabled.";
 
 export type HeaderNetworkStatus =
   | {

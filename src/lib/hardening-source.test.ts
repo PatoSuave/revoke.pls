@@ -30,7 +30,7 @@ describe("hardening source invariants", () => {
     );
   });
 
-  it("keeps Arbitrum revoke limited to the controlled ERC-20 row hook", () => {
+  it("keeps Arbitrum revoke limited to controlled row hooks", () => {
     const component = readFileSync(
       join(
         process.cwd(),
@@ -51,15 +51,17 @@ describe("hardening source invariants", () => {
     );
 
     expect(component).toContain("useRevokeApproval");
+    expect(component).toContain("useRevokeNftApproval");
     expect(`${hook}\n${client}`).not.toMatch(
       /useRevokeApproval|useRevokeNftApproval|useBatchRevoke|writeContract|sendTransaction/i,
     );
     expect(component).not.toMatch(
-      /useRevokeNftApproval|useBatchRevoke|writeContract|sendTransaction/i,
+      /useBatchRevoke|writeContract|sendTransaction/i,
     );
     expect(client).toContain("revokeEnabled: false");
     expect(client).toContain("batchRevokeEnabled: false");
     expect(client).toContain("nftRevokeEnabled: false");
+    expect(client).toContain("nftRowRevokeEnabled");
     expect(client).toContain("/api/arbitrum/approvals?owner=");
     expect(hook).toContain('queryKey: ["arbitrum-approval-api"');
     expect(hook).toContain('emptyArbitrumApprovalApiResponse("upstream-failure"');
@@ -76,7 +78,7 @@ describe("hardening source invariants", () => {
     expect(security).toContain("Ethereum Mainnet, chain ID `1`");
     expect(security).toContain("server-read-only discovery");
     expect(security).toContain("Arbitrum One, chain ID `42161`");
-    expect(security).toContain("ERC-20 verified rows only");
+    expect(security).toContain("verified ERC-20 and NFT rows");
     expect(auditGuide).toContain("Ethereum Mainnet, chain ID `1`");
     expect(auditGuide).toContain("Arbitrum One, chain ID `42161`");
     expect(auditGuide).toContain("CSP report-only");

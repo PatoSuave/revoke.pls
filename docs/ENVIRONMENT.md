@@ -7,7 +7,7 @@ Do not store private secrets in these variables.
 
 ## Production Requirements
 
-For the live PulseChain + BSC + Base + Ethereum + Arbitrum ERC-20 beta product,
+For the live PulseChain + BSC + Base + Ethereum + Arbitrum verified-row beta product,
 configure:
 
 | Variable | Production status | Notes |
@@ -156,9 +156,9 @@ values used by `/api/arbitrum/approvals` for live RPC validation. Prefer
 `ARBITRUM_ONE_RPC_URL`; `ARBITRUM_RPC_URL` is accepted as a fallback name.
 
 Do not configure managed or secret-key Arbitrum RPC URLs as `NEXT_PUBLIC_*`
-variables. Arbitrum approval scanning uses the server route; ERC-20 row revoke
-uses the user's wallet and the existing client-side approval-clearing hook.
-Arbitrum NFT and batch revoke are not enabled.
+variables. Arbitrum approval scanning uses the server route; ERC-20 and NFT row
+revoke use the user's wallet and the existing client-side approval-clearing
+hooks. Arbitrum batch revoke is not enabled.
 
 ### `ARBITRUM_EXPLORER_API_URL`
 

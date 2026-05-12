@@ -50,11 +50,11 @@ describe("security content", () => {
     expect(rowsByChain.get("Arbitrum One")).toMatchObject({
       chainId: "42161",
       scan: "Yes",
-      revoke: "ERC-20 verified rows only",
+      revoke: "ERC-20/NFT verified rows only",
       status: "Beta",
     });
     expect(rowsByChain.get("Arbitrum One")?.note).toContain(
-      "NFT revoke and batch revoke are not enabled",
+      "batch revoke is not enabled",
     );
     expect(rowsByChain.get("Solana")).toMatchObject({
       scan: "No",
