@@ -1,7 +1,8 @@
 # Scanner QA Checklist
 
 Use this checklist to verify that Pulse Revoke reads approval state correctly on
-PulseChain, BSC, Base, Ethereum, and Arbitrum One verified-row revoke.
+PulseChain, BSC, Base, Ethereum, Arbitrum One verified-row revoke, and
+Optimism read-only scanning.
 Keep all testing low-risk and manual.
 
 ## Safety Setup
@@ -22,6 +23,7 @@ Run the scanner flow on all supported chains:
 - Ethereum Mainnet, chain ID `1`, gas token `ETH`.
 - Arbitrum One, chain ID `42161`, gas token `ETH`, ERC-20/NFT verified-row
   lane.
+- Optimism / OP Mainnet, chain ID `10`, gas token `ETH`, read-only lane.
 
 For each chain, confirm diagnostics show:
 
@@ -35,6 +37,7 @@ For each chain, confirm diagnostics show:
 - BSC API chain ID `56` when testing BNB Smart Chain.
 - Base API chain ID `8453` when testing Base.
 - Arbitrum API chain ID `42161` when testing Arbitrum One.
+- Optimism API chain ID `10` when testing OP Mainnet.
 - Fungible token and NFT scan status.
 - Explorer request/window counts.
 - Any truncation, explorer/API error, or RPC/live-read error.
@@ -86,6 +89,21 @@ For each chain, confirm diagnostics show:
 - Rate limits, malformed responses, missing API keys, and capped responses are
   shown as incomplete/error states, not as "clear".
 
+## Optimism Read-Only Checks
+
+- `OPTIMISM_RPC_URL`, `OPTIMISM_MAINNET_RPC_URL`, or `OP_MAINNET_RPC_URL` is
+  set server-side for `/api/optimism/approvals`.
+- `OPTIMISM_EXPLORER_API_KEY`, `OPTIMISTIC_ETHERSCAN_API_KEY`, or
+  `ETHERSCAN_API_KEY` is set server-side. Do not expose Optimism keys through a
+  `NEXT_PUBLIC_` variable.
+- `OPTIMISM_EXPLORER_CHAIN_ID` is unset or set to `10`.
+- Optimism scans use Etherscan API V2 logs with `chainid=10`.
+- Optimism rows can render only after live verification.
+- Optimism ERC-20 revoke, NFT revoke, batch revoke, and global revoke are not
+  shown.
+- Rate limits, malformed responses, missing API keys, and capped responses are
+  shown as incomplete/error states, not as "clear".
+
 ## Controlled Fungible Approval Test
 
 1. Use a burner wallet as the owner wallet.
@@ -99,11 +117,13 @@ For each chain, confirm diagnostics show:
 8. Confirm the approval appears in normal scanner results.
 9. On Arbitrum, confirm only the verified ERC-20 row can open the revoke review
    panel when the matching wallet is connected on Arbitrum One.
-10. On revoke-enabled chains, revoke the approval from the app.
-11. Rescan after the transaction confirms.
-12. Confirm the approval disappears or diagnostics show no nonzero allowance.
-13. Verify directly on PulseScan, BscScan, BaseScan, Etherscan, or Arbiscan if
-    results disagree.
+10. On Optimism, confirm the verified ERC-20 row renders read-only and no
+    revoke action is available.
+11. On revoke-enabled chains, revoke the approval from the app.
+12. Rescan after the transaction confirms.
+13. Confirm the approval disappears or diagnostics show no nonzero allowance.
+14. Verify directly on PulseScan, BscScan, BaseScan, Etherscan, Arbiscan, or
+    Optimistic Etherscan if results disagree.
 
 ## NFT Approval Test
 
@@ -122,10 +142,12 @@ For collection-wide approvals:
 7. On Base, confirm UI copy says `ERC-721` or `ERC-1155`.
 8. On Arbitrum, confirm only the verified NFT row can open the revoke review
    panel when the matching wallet is connected on Arbitrum One.
-9. On revoke-enabled chains, revoke with `setApprovalForAll(operator, false)`
+9. On Optimism, confirm the verified NFT row renders read-only and no revoke
+   action is available.
+10. On revoke-enabled chains, revoke with `setApprovalForAll(operator, false)`
    through the app.
-10. Rescan after confirmation.
-11. Confirm the NFT approval disappears or diagnostics show no active live NFT
+11. Rescan after confirmation.
+12. Confirm the NFT approval disappears or diagnostics show no active live NFT
    approval.
 
 For per-token approvals:
@@ -145,10 +167,12 @@ For per-token approvals:
 - Arbitrum One shows a revoke confirm panel only for live-verified ERC-20 and
   NFT rows.
 - Arbitrum One never shows batch revoke controls.
+- Optimism never shows ERC-20, NFT, batch, or global revoke controls.
 - PulseChain transaction links open PulseScan.
 - BSC transaction links open BscScan.
 - Base transaction links open BaseScan.
 - Arbitrum address and token links open Arbiscan.
+- Optimism address and token links open Optimistic Etherscan.
 - Batch revoke submits one transaction at a time.
 - Batch revoke uses the selected approvals' chain ID.
 - Mixed-chain batch selection is blocked.
@@ -157,8 +181,8 @@ For per-token approvals:
 ## Unsupported Network Checks
 
 - Connect to an unsupported chain.
-- Confirm the app lists PulseChain, BSC, Base, Ethereum, and Arbitrum with the
-  correct scan/revoke statuses.
+- Confirm the app lists PulseChain, BSC, Base, Ethereum, Arbitrum, and
+  Optimism with the correct scan/revoke statuses.
 - Confirm no scan starts.
 - Confirm no revoke action is available.
 - Confirm stale approvals from a previous chain are not shown as current.

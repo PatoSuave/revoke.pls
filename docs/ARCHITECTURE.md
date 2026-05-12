@@ -17,6 +17,8 @@ Active supported chains are configured in `src/lib/chains.ts`:
 - Base, chain ID `8453`, native gas token `ETH`, explorer `BaseScan`
 - Ethereum Mainnet, chain ID `1`, native gas token `ETH`, explorer `Etherscan`
 - Arbitrum One, chain ID `42161`, native gas token `ETH`, explorer `Arbiscan`
+- Optimism / OP Mainnet, chain ID `10`, native gas token `ETH`, explorer
+  `Optimistic Etherscan`, read-only scan
 
 Ethereum Mainnet is wallet-enabled for the Ethereum read-only discovery and
 wallet-side revoke lane. It is not handled by the default supported-chain
@@ -27,10 +29,16 @@ and run the separate Arbitrum scanner lane. It is not part of the default
 supported-chain scanner path. Only live-verified ERC-20 and NFT rows can route
 through controlled wallet-side revoke hooks; batch revoke remains disabled.
 
+Optimism is wallet-recognized so the app can show a neutral network status and
+run the separate read-only scanner lane. It is not part of the default
+supported-chain scanner path and does not route to revoke hooks, batch revoke,
+or global revoke.
+
 ## Web3 Layer
 
-- `src/lib/wagmi.ts` registers PulseChain, BSC, Base, Ethereum Mainnet, and
-  Arbitrum One with wagmi. Ethereum and Arbitrum use separate scanner lanes.
+- `src/lib/wagmi.ts` registers PulseChain, BSC, Base, Ethereum Mainnet,
+  Arbitrum One, and OP Mainnet with wagmi. Ethereum, Arbitrum, and Optimism
+  use separate scanner lanes.
 - PulseChain RPC defaults to `https://rpc.pulsechain.com`.
 - BSC RPC defaults to `https://bsc-dataseed.bnbchain.org`.
 - Base RPC defaults to `https://mainnet.base.org`.
@@ -39,6 +47,9 @@ through controlled wallet-side revoke hooks; batch revoke remains disabled.
 - Arbitrum wallet chain recognition uses `https://arb1.arbitrum.io/rpc`.
   Production Arbitrum approval discovery uses server-only RPC/API settings
   through `/api/arbitrum/approvals`.
+- Optimism wallet chain recognition uses `https://mainnet.optimism.io`.
+  Production Optimism approval discovery uses server-only RPC/API settings
+  through `/api/optimism/approvals`.
 - RPCs can be overridden with public env vars.
 - Live reads and writes always include the approval record's `chainId`.
 - When connected, the wallet account `chainId` is the active scanner source of
@@ -84,6 +95,13 @@ live-validation caps, requires `chainid=42161`, and never signs, relays, or
 submits transactions. Arbitrum rows can be shown only after live reads verify
 current approval state.
 
+Optimism historical discovery is exposed through `/api/optimism/approvals` so
+managed RPC URLs and Etherscan API V2 keys stay server-only. The route is
+read-only, uses bounded discovery and live-validation caps, requires
+`chainid=10`, and never signs, relays, or submits transactions. Optimism rows
+can be shown only after live reads verify current approval state, and revoke is
+not enabled in this phase.
+
 ## Explorer APIs
 
 - PulseChain discovery API default:
@@ -114,6 +132,15 @@ current approval state.
   `ARBITRUM_EXPLORER_CHAIN_ID=42161`
 - Arbitrum server API key env var:
   `ARBISCAN_API_KEY`
+- Optimism server RPC env vars:
+  `OPTIMISM_RPC_URL` / `OPTIMISM_MAINNET_RPC_URL` / `OP_MAINNET_RPC_URL`
+- Optimism server discovery API default:
+  `https://api.etherscan.io/v2/api`
+- Optimism server discovery API chain id:
+  `OPTIMISM_EXPLORER_CHAIN_ID=10`
+- Optimism server API key env vars:
+  `OPTIMISM_EXPLORER_API_KEY` / `OPTIMISTIC_ETHERSCAN_API_KEY` /
+  `ETHERSCAN_API_KEY`
 
 The old BscScan V1 endpoint `https://api.bscscan.com/api` is deprecated for
 BSC log discovery. If it is configured or returned by a custom endpoint, debug
@@ -149,6 +176,15 @@ User-facing Arbitrum copy uses:
 - `NFT row revoke` for Arbitrum NFT rows
 - `Batch revoke disabled` for Arbitrum batch/global actions
 
+User-facing Optimism copy uses:
+
+- `ERC-20` for fungible token approvals
+- `ERC-721` for NFT approvals
+- `ERC-1155` for multi-token NFT / semi-fungible approvals
+- `ETH` for gas
+- `Read-only scan` for current Optimism support
+- `Revoke disabled` for ERC-20, NFT, batch, and global actions
+
 ## Transaction Flow
 
 Fungible token revoke:
@@ -176,6 +212,10 @@ Arbitrum revoke is limited to live-verified ERC-20 and NFT rows from the
 server-side Arbitrum API. It uses the same controlled ERC-20 and NFT revoke
 hooks, including owner, chain, preflight, and post-revoke verification gates.
 Arbitrum batch revoke remains unavailable.
+
+Optimism revoke is not enabled. Optimism rows are read-only output from the
+server-side Optimism API, and no Optimism row, NFT, batch, or global action is
+routed to wallet write hooks.
 
 ## BSC Gas Safety
 

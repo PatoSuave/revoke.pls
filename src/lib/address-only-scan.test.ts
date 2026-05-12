@@ -9,6 +9,7 @@ import {
 import { ARBITRUM_ONE_CLIENT_CHAIN_ID } from "@/lib/arbitrum-approval-client";
 import { BASE_CHAIN_ID, BSC_CHAIN_ID, PULSECHAIN_CHAIN_ID } from "@/lib/chains";
 import { ETHEREUM_MAINNET_CLIENT_CHAIN_ID } from "@/lib/ethereum-approval-client";
+import { OPTIMISM_CLIENT_CHAIN_ID } from "@/lib/optimism-approval-client";
 
 describe("address-only scan selection", () => {
   it("defaults to Ethereum when no wallet chain is available", () => {
@@ -38,6 +39,15 @@ describe("address-only scan selection", () => {
     ).toBe(ARBITRUM_ONE_CLIENT_CHAIN_ID);
   });
 
+  it("defaults to Optimism when the connected wallet is on OP Mainnet", () => {
+    expect(
+      resolveDefaultAddressOnlyScanChainId({
+        walletChainId: OPTIMISM_CLIENT_CHAIN_ID,
+        wagmiChainId: ETHEREUM_MAINNET_CLIENT_CHAIN_ID,
+      }),
+    ).toBe(OPTIMISM_CLIENT_CHAIN_ID);
+  });
+
   it("scans only the selected chain by default", () => {
     expect(
       getAddressOnlyActiveScanChainIds({
@@ -52,6 +62,7 @@ describe("address-only scan selection", () => {
     expect(addressOnlyScanOptions.map((option) => option.chainId)).toEqual([
       ETHEREUM_MAINNET_CLIENT_CHAIN_ID,
       ARBITRUM_ONE_CLIENT_CHAIN_ID,
+      OPTIMISM_CLIENT_CHAIN_ID,
       PULSECHAIN_CHAIN_ID,
       BSC_CHAIN_ID,
       BASE_CHAIN_ID,
@@ -71,5 +82,16 @@ describe("address-only scan selection", () => {
         scanAllIndex: 1,
       }),
     ).toEqual([ETHEREUM_MAINNET_CLIENT_CHAIN_ID, ARBITRUM_ONE_CLIENT_CHAIN_ID]);
+    expect(
+      getAddressOnlyActiveScanChainIds({
+        selectedChainId: BASE_CHAIN_ID,
+        scanAllStarted: true,
+        scanAllIndex: 2,
+      }),
+    ).toEqual([
+      ETHEREUM_MAINNET_CLIENT_CHAIN_ID,
+      ARBITRUM_ONE_CLIENT_CHAIN_ID,
+      OPTIMISM_CLIENT_CHAIN_ID,
+    ]);
   });
 });

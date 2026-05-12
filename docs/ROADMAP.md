@@ -11,6 +11,7 @@ ship.
 - Base support
 - Ethereum Mainnet read-only discovery and wallet-side revoke
 - Arbitrum One ERC-20/NFT verified-row revoke
+- Optimism / OP Mainnet read-only approval scanning
 - Browser wallet connection
 - WalletConnect when configured
 - Historical approval log discovery
@@ -23,6 +24,7 @@ ship.
 - Base Etherscan API V2 discovery with `chainid=8453`
 - Ethereum server-read-only Etherscan API V2 discovery with `chainid=1`
 - Arbitrum server-read-only Etherscan API V2 discovery with `chainid=42161`
+- Optimism server-read-only Etherscan API V2 discovery with `chainid=10`
 - BSC hard gas-cap block and high-gas warning UX
 
 ## Active Guardrails
@@ -34,6 +36,10 @@ ship.
   batch revoke is explicitly planned, implemented, and reviewed. Do not add
   Arbitrum batch revoke, server-side signing, relayers, private keys, or API
   route transaction submission.
+- Optimism must remain read-only until a separate revoke readiness plan and
+  production QA pass. Do not add Optimism ERC-20 revoke, NFT revoke, batch
+  revoke, server-side signing, relayers, private keys, or API route transaction
+  submission in the read-only phase.
 - Do not broaden into unsupported networks without explicit review.
 - Do not treat registry labels as proof of safety.
 - Do not show a clear state when discovery or validation is incomplete.
@@ -46,6 +52,7 @@ ship.
 
 - More manually verified PulseChain, BSC, and Base registry labels
 - Future Arbitrum batch revoke only after separate planning and QA
+- Future Optimism verified-row revoke only after read-only production QA
 - Additional suspicious-spender heuristics
 - Better unsupported-network guidance
 - More focused manual QA fixtures for BSC high-gas cases

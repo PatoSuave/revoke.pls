@@ -2,7 +2,7 @@
 
 Pulse Revoke is public code for reviewing and clearing wallet approvals on
 PulseChain, BSC / BNB Smart Chain, Base, and Ethereum Mainnet verified rows,
-with Arbitrum One verified-row revoke.
+with Arbitrum One verified-row revoke and Optimism read-only scanning.
 
 ## What The App Does
 
@@ -16,6 +16,8 @@ with Arbitrum One verified-row revoke.
   revoke
 - Scans Arbitrum One through a server-side read-only API and enables only
   live-verified ERC-20 and NFT row revoke
+- Scans Optimism / OP Mainnet through a server-side read-only API without
+  enabling Optimism revoke
 
 ## What The App Does Not Do
 
@@ -24,6 +26,7 @@ with Arbitrum One verified-row revoke.
 - Does not take custody of funds
 - Does not require token transfers
 - Does not support Arbitrum batch revoke yet
+- Does not support Optimism revoke yet
 - Does not use server-side signing, relayers, or private-key handling
 - Does not guarantee complete discovery when explorer APIs are capped,
   rate-limited, unavailable, or malformed
@@ -32,8 +35,8 @@ with Arbitrum One verified-row revoke.
 ## How Users Can Verify Behavior
 
 - Review the active chain shown in the app.
-- Open token and spender links on PulseScan, BscScan, BaseScan, Etherscan, or
-  Arbiscan.
+- Open token and spender links on PulseScan, BscScan, BaseScan, Etherscan,
+  Arbiscan, or Optimistic Etherscan.
 - Check that revoke wallet prompts match the intended approval-clearing call.
 - Confirm BSC transactions use BNB gas and BscScan links.
 - Confirm PulseChain transactions use PLS gas and PulseScan links.
@@ -54,6 +57,8 @@ Etherscan API V2 with `chainid=8453`. BaseScan is still used for public
 explorer links. Ethereum and Arbitrum discovery use server-side read-only API
 routes so managed RPC URLs and explorer API keys do not need to be exposed to
 the browser; Arbitrum requests use `chainid=42161` and Arbiscan links.
+Optimism requests also use a server-side route, Etherscan API V2 with
+`chainid=10`, and Optimistic Etherscan links.
 
 ## Why Live Validation Matters
 
@@ -85,6 +90,7 @@ not automatically mean safe.
 - Arbitrum One revoke is limited to live-verified ERC-20 and NFT rows
   with a matching connected wallet on chain `42161`; Arbitrum batch revoke is
   not enabled.
+- Optimism is read-only; ERC-20, NFT, batch, and global revoke are not enabled.
 - BSC revokes above `16,777,216` estimated gas are blocked because BNB Smart
   Chain rejects individual transactions above the Osaka/Mendel cap.
 - BSC revokes above `1,000,000` estimated gas show a warning before the wallet

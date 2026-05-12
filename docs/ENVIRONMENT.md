@@ -1,14 +1,14 @@
 # Environment Variables
 
 Pulse Revoke is primarily a wallet-side frontend app, with server-side
-Ethereum and Arbitrum API routes for discovery. Variables prefixed with
+Ethereum, Arbitrum, and Optimism API routes for discovery. Variables prefixed with
 `NEXT_PUBLIC_` are embedded into the browser bundle and are visible to users.
 Do not store private secrets in these variables.
 
 ## Production Requirements
 
-For the live PulseChain + BSC + Base + Ethereum + Arbitrum verified-row product,
-configure:
+For the live PulseChain + BSC + Base + Ethereum + Arbitrum verified-row product
+plus Optimism read-only approval scanning, configure:
 
 | Variable | Production status | Notes |
 | --- | --- | --- |
@@ -25,6 +25,8 @@ configure:
 | `ETHERSCAN_API_KEY` | Required for Ethereum scan | Server-only Etherscan API key. Do not use a `NEXT_PUBLIC_` key for Ethereum server discovery. |
 | `ARBITRUM_ONE_RPC_URL` / `ARBITRUM_RPC_URL` | Required for Arbitrum scan | Server-only Arbitrum RPC URL for `/api/arbitrum/approvals`. |
 | `ARBISCAN_API_KEY` | Required for Arbitrum scan | Server-only Arbiscan/Etherscan-compatible API key. Do not use a `NEXT_PUBLIC_` key for Arbitrum server discovery. |
+| `OPTIMISM_RPC_URL` / `OPTIMISM_MAINNET_RPC_URL` / `OP_MAINNET_RPC_URL` | Required for Optimism scan | Server-only OP Mainnet RPC URL for `/api/optimism/approvals`. |
+| `OPTIMISM_EXPLORER_API_KEY` / `OPTIMISTIC_ETHERSCAN_API_KEY` / `ETHERSCAN_API_KEY` | Required for Optimism scan | Server-only Etherscan API V2 key with OP Mainnet access. Do not use a `NEXT_PUBLIC_` key for Optimism server discovery. |
 
 PulseChain has defaults for RPC and explorer API, but hosted production can
 override them for reliability.
@@ -187,6 +189,45 @@ Required for Arbitrum One approval discovery. This must be a
 server-only environment variable. Do not configure it as
 `NEXT_PUBLIC_ARBISCAN_API_KEY`; the frontend does not need this key.
 
+### `OPTIMISM_RPC_URL` / `OPTIMISM_MAINNET_RPC_URL` / `OP_MAINNET_RPC_URL`
+
+Required for Optimism approval discovery. These are server-only values used by
+`/api/optimism/approvals` for live RPC validation. Prefer
+`OPTIMISM_RPC_URL`; `OPTIMISM_MAINNET_RPC_URL` and `OP_MAINNET_RPC_URL` are
+accepted as fallback names.
+
+Do not configure managed or secret-key Optimism RPC URLs as `NEXT_PUBLIC_*`
+variables. Optimism approval scanning uses the server route and is read-only in
+this phase. Optimism revoke, NFT revoke, batch revoke, and global revoke are not
+enabled.
+
+### `OPTIMISM_EXPLORER_API_URL`
+
+Optional server-only Etherscan API V2 endpoint override for Optimism logs. If
+unset, the API route uses:
+
+```text
+https://api.etherscan.io/v2/api
+```
+
+### `OPTIMISM_EXPLORER_CHAIN_ID`
+
+Optional server-only Etherscan API V2 chain ID parameter for OP Mainnet logs.
+Default:
+
+```text
+10
+```
+
+If this is set to any other value, the app falls back to `10` and reports a
+diagnostic warning.
+
+### `OPTIMISM_EXPLORER_API_KEY` / `OPTIMISTIC_ETHERSCAN_API_KEY`
+
+Required for Optimism approval discovery unless `ETHERSCAN_API_KEY` is used as
+the shared server-side Etherscan API V2 key. Do not configure these values as
+`NEXT_PUBLIC_*`; the frontend does not need an Optimism explorer key.
+
 ### `NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID`
 
 Optional. Enables WalletConnect QR pairing through Reown / WalletConnect. If
@@ -234,6 +275,13 @@ ARBITRUM_RPC_URL=
 ARBITRUM_EXPLORER_API_URL=https://api.etherscan.io/v2/api
 ARBITRUM_EXPLORER_CHAIN_ID=42161
 ARBISCAN_API_KEY=replace_with_server_only_arbiscan_or_etherscan_key
+OPTIMISM_RPC_URL=https://your-server-only-optimism-rpc.example
+OPTIMISM_MAINNET_RPC_URL=
+OP_MAINNET_RPC_URL=
+OPTIMISM_EXPLORER_API_URL=https://api.etherscan.io/v2/api
+OPTIMISM_EXPLORER_CHAIN_ID=10
+OPTIMISM_EXPLORER_API_KEY=replace_with_server_only_etherscan_v2_key
+OPTIMISTIC_ETHERSCAN_API_KEY=
 ```
 
 ## Provider Limitations
@@ -243,4 +291,7 @@ The app should surface incomplete discovery or validation instead of displaying
 a false "clear" state. For production BSC and Base discovery, use Etherscan API
 V2 keys and account plans that support BNB Smart Chain and Base Mainnet logs.
 For Arbitrum, configure server-only managed RPC plus an Arbiscan or
-Etherscan-compatible API key with Arbitrum One log access.
+Etherscan-compatible API key with Arbitrum One log access. For Optimism,
+configure server-only managed RPC plus an Etherscan API V2 key with OP Mainnet
+log access. Optimism scan failures should surface as incomplete/config/upstream
+states, not as false clear results.

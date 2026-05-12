@@ -12,6 +12,7 @@ import {
 } from "@/components/approvals/batch-revoke-panel";
 import { ArbitrumReadOnlyScanner } from "@/components/sections/arbitrum-readonly-scanner";
 import { EthereumReadOnlyScanner } from "@/components/sections/ethereum-readonly-scanner";
+import { OptimismReadOnlyScanner } from "@/components/sections/optimism-readonly-scanner";
 import { NftApprovalRow } from "@/components/approvals/nft-approval-row";
 import { ConnectWalletButton } from "@/components/connect-wallet-button";
 import { ScannerDiagnosticsPanel } from "@/components/sections/scanner-diagnostics";
@@ -39,6 +40,10 @@ import {
   ETHEREUM_MAINNET_CLIENT_CHAIN_ID,
   resolveEthereumReadOnlyChainId,
 } from "@/lib/ethereum-approval-client";
+import {
+  OPTIMISM_CLIENT_CHAIN_ID,
+  resolveOptimismReadOnlyChainId,
+} from "@/lib/optimism-approval-client";
 import { shortenAddress } from "@/lib/format";
 import type { NftApproval } from "@/lib/nft-approvals";
 import {
@@ -428,6 +433,23 @@ function ScannerBody({
     );
   }
 
+  const optimismReadOnlyChainId = resolveOptimismReadOnlyChainId({
+    walletChainId,
+    wagmiChainId,
+  });
+
+  if (optimismReadOnlyChainId === OPTIMISM_CLIENT_CHAIN_ID) {
+    return (
+      <OptimismReadOnlyScanner
+        owner={address}
+        connectedAddress={address}
+        walletChainId={walletChainId}
+        wagmiChainId={wagmiChainId}
+        debugMode={debugMode}
+      />
+    );
+  }
+
   if (!onSupportedChain || !chainConfig) {
     const names = getSupportedChainShortNames();
     return (
@@ -726,6 +748,19 @@ function AddressOnlyChainScan({
   if (chainId === ARBITRUM_ONE_CLIENT_CHAIN_ID) {
     return (
       <ArbitrumReadOnlyScanner
+        owner={owner}
+        connectedAddress={connectedAddress}
+        walletChainId={walletChainId}
+        wagmiChainId={wagmiChainId}
+        debugMode={debugMode}
+        onScanSettled={handleScanSettled}
+      />
+    );
+  }
+
+  if (chainId === OPTIMISM_CLIENT_CHAIN_ID) {
+    return (
+      <OptimismReadOnlyScanner
         owner={owner}
         connectedAddress={connectedAddress}
         walletChainId={walletChainId}

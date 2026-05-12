@@ -14,12 +14,21 @@ import {
   ETHEREUM_MAINNET_STATUS_LABEL,
   resolveEthereumReadOnlyChainId,
 } from "@/lib/ethereum-approval-client";
+import {
+  OPTIMISM_CLIENT_CHAIN_ID,
+  resolveOptimismReadOnlyChainId,
+} from "@/lib/optimism-approval-client";
 
 export const ARBITRUM_HEADER_STATUS_LABEL = "Arbitrum verified-row";
 export const ARBITRUM_HEADER_STATUS_SHORT_HELPER =
   "ERC-20 and NFT rows only. Batch off.";
 export const ARBITRUM_HEADER_STATUS_HELPER =
   "Verified ERC-20 and NFT rows can be revoked on Arbitrum. Batch revoke is not enabled.";
+export const OPTIMISM_HEADER_STATUS_LABEL = "Optimism read-only scan";
+export const OPTIMISM_HEADER_STATUS_SHORT_HELPER =
+  "Scan only. Revoke off.";
+export const OPTIMISM_HEADER_STATUS_HELPER =
+  "Optimism approval scanning is read-only while discovery and live verification are validated. Revoke is not enabled.";
 
 export type HeaderNetworkStatus =
   | {
@@ -39,6 +48,13 @@ export type HeaderNetworkStatus =
       label: typeof ARBITRUM_HEADER_STATUS_LABEL;
       shortHelper: typeof ARBITRUM_HEADER_STATUS_SHORT_HELPER;
       helper: typeof ARBITRUM_HEADER_STATUS_HELPER;
+    }
+  | {
+      kind: "optimism";
+      chainId: typeof OPTIMISM_CLIENT_CHAIN_ID;
+      label: typeof OPTIMISM_HEADER_STATUS_LABEL;
+      shortHelper: typeof OPTIMISM_HEADER_STATUS_SHORT_HELPER;
+      helper: typeof OPTIMISM_HEADER_STATUS_HELPER;
     }
   | {
       kind: "unsupported";
@@ -76,6 +92,20 @@ export function resolveHeaderNetworkStatus({
       label: ARBITRUM_HEADER_STATUS_LABEL,
       shortHelper: ARBITRUM_HEADER_STATUS_SHORT_HELPER,
       helper: ARBITRUM_HEADER_STATUS_HELPER,
+    };
+  }
+
+  const optimismChainId = resolveOptimismReadOnlyChainId({
+    walletChainId,
+    wagmiChainId,
+  });
+  if (optimismChainId === OPTIMISM_CLIENT_CHAIN_ID) {
+    return {
+      kind: "optimism",
+      chainId: OPTIMISM_CLIENT_CHAIN_ID,
+      label: OPTIMISM_HEADER_STATUS_LABEL,
+      shortHelper: OPTIMISM_HEADER_STATUS_SHORT_HELPER,
+      helper: OPTIMISM_HEADER_STATUS_HELPER,
     };
   }
 

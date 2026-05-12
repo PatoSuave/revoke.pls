@@ -11,8 +11,11 @@ import { ETHEREUM_MAINNET_CLIENT_CHAIN_ID } from "@/lib/ethereum-approval-client
 import {
   ARBITRUM_HEADER_STATUS_LABEL,
   ARBITRUM_HEADER_STATUS_SHORT_HELPER,
+  OPTIMISM_HEADER_STATUS_LABEL,
+  OPTIMISM_HEADER_STATUS_SHORT_HELPER,
   resolveHeaderNetworkStatus,
 } from "@/lib/wallet-network-status";
+import { OPTIMISM_CLIENT_CHAIN_ID } from "@/lib/optimism-approval-client";
 
 describe("wallet header network status", () => {
   it("shows Arbitrum One as verified-row instead of unsupported", () => {
@@ -51,6 +54,23 @@ describe("wallet header network status", () => {
     }
   });
 
+  it("shows Optimism as read-only instead of unsupported", () => {
+    const status = resolveHeaderNetworkStatus({
+      walletChainId: OPTIMISM_CLIENT_CHAIN_ID,
+      wagmiChainId: OPTIMISM_CLIENT_CHAIN_ID,
+    });
+
+    expect(status.kind).toBe("optimism");
+    expect(status.label).toBe(OPTIMISM_HEADER_STATUS_LABEL);
+    expect(JSON.stringify(status)).not.toContain("Unsupported network");
+    expect(status).toMatchObject({
+      shortHelper: OPTIMISM_HEADER_STATUS_SHORT_HELPER,
+      helper:
+        "Optimism approval scanning is read-only while discovery and live verification are validated. Revoke is not enabled.",
+    });
+    expect(OPTIMISM_HEADER_STATUS_SHORT_HELPER).toBe("Scan only. Revoke off.");
+  });
+
   it("keeps Ethereum header behavior on the existing special lane", () => {
     const status = resolveHeaderNetworkStatus({
       walletChainId: ETHEREUM_MAINNET_CLIENT_CHAIN_ID,
@@ -76,7 +96,7 @@ describe("wallet header network status", () => {
     ]);
   });
 
-  it("keeps Arbitrum out of the generic supported chain config list", () => {
+  it("keeps Arbitrum and Optimism out of the generic supported chain config list", () => {
     expect(supportedChainConfigList.map((chain) => chain.chainId)).toEqual([
       PULSECHAIN_CHAIN_ID,
       BSC_CHAIN_ID,
@@ -84,6 +104,9 @@ describe("wallet header network status", () => {
     ]);
     expect(supportedChainConfigList.map((chain) => chain.chainId)).not.toContain(
       ARBITRUM_ONE_CLIENT_CHAIN_ID,
+    );
+    expect(supportedChainConfigList.map((chain) => chain.chainId)).not.toContain(
+      OPTIMISM_CLIENT_CHAIN_ID,
     );
   });
 });

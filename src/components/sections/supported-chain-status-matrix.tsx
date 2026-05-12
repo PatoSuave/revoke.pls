@@ -2,6 +2,7 @@ import { SECURITY_CHAIN_STATUS_ROWS } from "@/lib/security-content";
 
 const STATUS_STYLES = {
   Live: "border-pulse-green/35 bg-pulse-green/10 text-pulse-green",
+  "Read-only": "border-pulse-cyan/35 bg-pulse-cyan/10 text-pulse-cyan",
   "Not enabled": "border-pulse-border bg-pulse-bg/65 text-pulse-muted",
   "Not supported": "border-pulse-red/35 bg-pulse-red/10 text-pulse-red",
 } as const;
