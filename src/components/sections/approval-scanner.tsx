@@ -277,7 +277,7 @@ function AddressScanPanel({
             type="button"
             onClick={onClear}
             disabled={!hasInput && !activeAddress}
-            className="inline-flex min-h-10 items-center justify-center rounded-xl border border-pulse-border bg-white/5 px-3 py-2 text-xs font-semibold text-pulse-muted transition hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-50"
+            className="inline-flex min-h-10 items-center justify-center rounded-xl border border-pulse-border bg-pulse-text/5 px-3 py-2 text-xs font-semibold text-pulse-muted transition hover:bg-pulse-text/10 disabled:cursor-not-allowed disabled:opacity-50"
           >
             Clear
           </button>
@@ -691,7 +691,7 @@ function AddressOnlyChainSelector({
               className={`inline-flex min-h-9 items-center rounded-xl border px-3 py-1.5 text-xs font-semibold transition ${
                 selected
                   ? "border-pulse-green/40 bg-pulse-green/10 text-pulse-green"
-                  : "border-pulse-border bg-white/5 text-pulse-muted hover:bg-white/10"
+                  : "border-pulse-border bg-pulse-text/5 text-pulse-muted hover:bg-pulse-text/10"
               }`}
               aria-pressed={selected}
             >
@@ -1139,7 +1139,7 @@ function NftSection({
             type="button"
             onClick={nft.refetch}
             disabled={nft.isFetching}
-            className="inline-flex items-center gap-2 rounded-xl border border-pulse-border bg-white/5 px-3 py-2 text-xs font-semibold text-pulse-text transition hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-60"
+            className="inline-flex items-center gap-2 rounded-xl border border-pulse-border bg-pulse-text/5 px-3 py-2 text-xs font-semibold text-pulse-text transition hover:bg-pulse-text/10 disabled:cursor-not-allowed disabled:opacity-60"
           >
             {nft.isFetching ? "Scanning..." : "Rescan"}
           </button>

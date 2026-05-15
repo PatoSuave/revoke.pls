@@ -3,13 +3,77 @@
 @tailwind utilities;
 
 :root {
+  --pulse-bg: 7 7 11;
+  --pulse-panel: 15 16 32;
+  --pulse-panel-2: 22 24 50;
+  --pulse-border: 35 38 74;
+  --pulse-text: 232 233 255;
+  --pulse-muted: 138 141 184;
+  --pulse-pink: 255 47 181;
+  --pulse-purple: 124 58 237;
+  --pulse-cyan: 34 211 238;
+  --pulse-green: 0 229 160;
+  --pulse-red: 255 77 109;
+  --pulse-on-gradient: 255 255 255;
+  --pulse-mark-stroke: 7 7 11;
   color-scheme: dark;
+}
+
+html[data-theme="dark"] {
+  --pulse-bg: 7 7 11;
+  --pulse-panel: 15 16 32;
+  --pulse-panel-2: 22 24 50;
+  --pulse-border: 35 38 74;
+  --pulse-text: 232 233 255;
+  --pulse-muted: 138 141 184;
+  --pulse-pink: 255 47 181;
+  --pulse-purple: 124 58 237;
+  --pulse-cyan: 34 211 238;
+  --pulse-green: 0 229 160;
+  --pulse-red: 255 77 109;
+  --pulse-on-gradient: 255 255 255;
+  --pulse-mark-stroke: 7 7 11;
+  color-scheme: dark;
+}
+
+html[data-theme="dim"] {
+  --pulse-bg: 18 22 31;
+  --pulse-panel: 27 32 44;
+  --pulse-panel-2: 36 42 58;
+  --pulse-border: 62 70 92;
+  --pulse-text: 232 238 246;
+  --pulse-muted: 151 162 184;
+  --pulse-pink: 244 114 182;
+  --pulse-purple: 139 92 246;
+  --pulse-cyan: 45 212 191;
+  --pulse-green: 52 211 153;
+  --pulse-red: 251 113 133;
+  --pulse-on-gradient: 255 255 255;
+  --pulse-mark-stroke: 18 22 31;
+  color-scheme: dark;
+}
+
+html[data-theme="light"] {
+  --pulse-bg: 247 249 252;
+  --pulse-panel: 255 255 255;
+  --pulse-panel-2: 239 244 249;
+  --pulse-border: 203 213 225;
+  --pulse-text: 20 25 38;
+  --pulse-muted: 83 95 121;
+  --pulse-pink: 204 39 130;
+  --pulse-purple: 103 65 217;
+  --pulse-cyan: 8 145 178;
+  --pulse-green: 0 128 97;
+  --pulse-red: 220 38 70;
+  --pulse-on-gradient: 255 255 255;
+  --pulse-mark-stroke: 20 25 38;
+  color-scheme: light;
 }
 
 html,
 body {
-  background-color: #07070b;
-  color: #e8e9ff;
+  background-color: rgb(var(--pulse-bg));
+  color: rgb(var(--pulse-text));
 }
 
 body {
@@ -23,9 +87,9 @@ body {
   .text-gradient-pulse {
     background-image: linear-gradient(
       90deg,
-      #22d3ee 0%,
-      #7c3aed 50%,
-      #ff2fb5 100%
+      rgb(var(--pulse-cyan)) 0%,
+      rgb(var(--pulse-purple)) 50%,
+      rgb(var(--pulse-pink)) 100%
     );
     -webkit-background-clip: text;
     background-clip: text;
@@ -42,7 +106,12 @@ body {
     inset: 0;
     border-radius: inherit;
     padding: 1px;
-    background: linear-gradient(135deg, #7c3aed, #ff2fb5, #22d3ee);
+    background: linear-gradient(
+      135deg,
+      rgb(var(--pulse-purple)),
+      rgb(var(--pulse-pink)),
+      rgb(var(--pulse-cyan))
+    );
     -webkit-mask:
       linear-gradient(#000 0 0) content-box,
       linear-gradient(#000 0 0);

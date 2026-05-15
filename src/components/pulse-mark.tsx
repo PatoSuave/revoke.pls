@@ -8,9 +8,9 @@ export function PulseMark({ className = "h-8 w-8" }: { className?: string }) {
     >
       <defs>
         <linearGradient id="pulseMarkFill" x1="0" y1="0" x2="1" y2="1">
-          <stop offset="0%" stopColor="#22d3ee" />
-          <stop offset="50%" stopColor="#7c3aed" />
-          <stop offset="100%" stopColor="#ff2fb5" />
+          <stop offset="0%" stopColor="rgb(var(--pulse-cyan))" />
+          <stop offset="50%" stopColor="rgb(var(--pulse-purple))" />
+          <stop offset="100%" stopColor="rgb(var(--pulse-pink))" />
         </linearGradient>
       </defs>
       <rect
@@ -24,7 +24,7 @@ export function PulseMark({ className = "h-8 w-8" }: { className?: string }) {
       <path
         d="M10 22 L16 22 L19 14 L23 28 L26 22 L30 22"
         fill="none"
-        stroke="#07070b"
+        stroke="rgb(var(--pulse-mark-stroke))"
         strokeWidth="2.6"
         strokeLinecap="round"
         strokeLinejoin="round"

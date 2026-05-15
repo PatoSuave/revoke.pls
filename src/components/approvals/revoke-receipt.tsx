@@ -49,7 +49,7 @@ export function RevokeReceipt({
           </p>
           <p className="mt-1 max-w-3xl leading-5">{copy.body}</p>
           {errorMessage ? (
-            <p className="mt-2 max-w-3xl rounded-lg border border-current/20 bg-black/10 p-2 leading-5">
+            <p className="mt-2 max-w-3xl rounded-lg border border-current/20 bg-pulse-text/10 p-2 leading-5">
               {errorMessage}
             </p>
           ) : null}
@@ -58,7 +58,7 @@ export function RevokeReceipt({
           <button
             type="button"
             onClick={onDismiss}
-            className="self-start rounded-md px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wide hover:bg-white/5"
+            className="self-start rounded-md px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wide hover:bg-pulse-text/5"
           >
             Dismiss
           </button>

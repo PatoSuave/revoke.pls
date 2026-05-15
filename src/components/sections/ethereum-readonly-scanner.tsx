@@ -835,13 +835,13 @@ function EthereumActionShell({
     );
   } else if (status === "wallet") {
     action = (
-      <span className={`${base} border border-pulse-border bg-white/5 text-pulse-muted`}>
+      <span className={`${base} border border-pulse-border bg-pulse-text/5 text-pulse-muted`}>
         Confirm in wallet...
       </span>
     );
   } else if (status === "pending") {
     action = (
-      <span className={`${base} border border-pulse-border bg-white/5 text-pulse-muted`}>
+      <span className={`${base} border border-pulse-border bg-pulse-text/5 text-pulse-muted`}>
         Confirming...
         {hash ? <EthereumTxLink hash={hash} /> : null}
       </span>
@@ -868,7 +868,7 @@ function EthereumActionShell({
       <button
         type="button"
         onClick={onRetry}
-        className={`${base} border border-pulse-border bg-white/5 text-pulse-text hover:bg-white/10`}
+        className={`${base} border border-pulse-border bg-pulse-text/5 text-pulse-text hover:bg-pulse-text/10`}
       >
         Try again
       </button>
@@ -878,7 +878,7 @@ function EthereumActionShell({
       <button
         type="button"
         onClick={onCancel}
-        className={`${base} border border-pulse-border bg-white/5 text-pulse-muted hover:bg-white/10`}
+        className={`${base} border border-pulse-border bg-pulse-text/5 text-pulse-muted hover:bg-pulse-text/10`}
       >
         Cancel
       </button>
@@ -890,7 +890,7 @@ function EthereumActionShell({
         onClick={onStart}
         disabled={isBusy}
         title="Verified row; revoke available"
-        className={`${base} bg-pulse-gradient text-pulse-bg shadow-glow hover:brightness-110 active:brightness-95`}
+        className={`${base} bg-pulse-gradient text-pulse-on-gradient shadow-glow hover:brightness-110 active:brightness-95`}
       >
         Revoke
       </button>
@@ -1008,7 +1008,7 @@ function EthereumErc20Confirm({
           type="button"
           onClick={highGasWarning ? onConfirmHighGas : onConfirm}
           disabled={!canConfirm}
-          className="rounded-lg bg-pulse-gradient px-2.5 py-1.5 font-semibold text-pulse-bg shadow-glow disabled:cursor-not-allowed disabled:opacity-60"
+          className="rounded-lg bg-pulse-gradient px-2.5 py-1.5 font-semibold text-pulse-on-gradient shadow-glow disabled:cursor-not-allowed disabled:opacity-60"
         >
           {highGasWarning ? "Continue to wallet anyway" : "Confirm revoke"}
         </button>
@@ -1099,7 +1099,7 @@ function EthereumNftConfirm({
           type="button"
           onClick={highGasWarning ? onConfirmHighGas : onConfirm}
           disabled={!canConfirm}
-          className="rounded-lg bg-pulse-gradient px-2.5 py-1.5 font-semibold text-pulse-bg shadow-glow disabled:cursor-not-allowed disabled:opacity-60"
+          className="rounded-lg bg-pulse-gradient px-2.5 py-1.5 font-semibold text-pulse-on-gradient shadow-glow disabled:cursor-not-allowed disabled:opacity-60"
         >
           {highGasWarning ? "Continue to wallet anyway" : "Confirm revoke"}
         </button>
@@ -1282,7 +1282,7 @@ function ReadOnlyAction({
 
   return (
     <div className="flex flex-col items-stretch gap-1 sm:items-end">
-      <span className="inline-flex w-full items-center justify-center rounded-xl border border-pulse-border bg-white/5 px-3 py-2 text-xs font-semibold text-pulse-muted sm:w-auto">
+      <span className="inline-flex w-full items-center justify-center rounded-xl border border-pulse-border bg-pulse-text/5 px-3 py-2 text-xs font-semibold text-pulse-muted sm:w-auto">
         <span title={title}>Revoke unavailable</span>
       </span>
       {showVerificationHint && verificationKind ? (

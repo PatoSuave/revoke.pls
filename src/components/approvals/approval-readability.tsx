@@ -34,7 +34,7 @@ export function ApprovalMeaningPanel({
 }) {
   return (
     <details className="group mx-4 mb-4 overflow-hidden rounded-xl border border-pulse-border/70 bg-pulse-bg/35 sm:mx-6 [&>summary::-webkit-details-marker]:hidden">
-      <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-[0.16em] text-pulse-cyan transition hover:bg-white/[0.025] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-pulse-cyan">
+      <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-[0.16em] text-pulse-cyan transition hover:bg-pulse-text/[0.025] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-pulse-cyan">
         <span>What this approval means</span>
         <span
           className="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full border border-pulse-border text-pulse-muted transition group-open:rotate-45"
