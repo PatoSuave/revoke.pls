@@ -3,6 +3,7 @@ import Link from "next/link";
 
 import { AntiPhishingBanner } from "@/components/sections/anti-phishing-banner";
 import { ApprovalScanner } from "@/components/sections/approval-scanner";
+import { PulseChainResourceLinks } from "@/components/sections/pulsechain-resource-links";
 import { SiteFooter } from "@/components/sections/site-footer";
 import { SiteHeader } from "@/components/sections/site-header";
 import { absoluteUrl, siteConfig } from "@/lib/site";
@@ -40,6 +41,7 @@ export default function AppPage() {
       <main className="bg-pulse-bg">
         <AppWorkspaceIntro />
         <AntiPhishingBanner />
+        <PulseChainResourceLinks />
         <ApprovalScanner />
       </main>
       <SiteFooter />
