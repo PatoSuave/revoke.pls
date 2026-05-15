@@ -74,6 +74,8 @@ html,
 body {
   background-color: rgb(var(--pulse-bg));
   color: rgb(var(--pulse-text));
+  max-width: 100%;
+  overflow-x: hidden;
 }
 
 body {
