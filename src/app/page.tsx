@@ -13,11 +13,19 @@ import {
   type ReleaseManifest,
 } from "@/lib/release";
 import { absoluteUrl, siteConfig } from "@/lib/site";
+import {
+  LIVE_SUPPORTED_CHAIN_COMPACT_LIST,
+  LIVE_SUPPORTED_CHAIN_COUNT,
+  LIVE_SUPPORTED_CHAIN_LIST,
+  LIVE_SUPPORTED_CHAIN_ROWS,
+  VERIFIED_ROW_SUPPORT_NOTE,
+  formatRevokeSupport,
+} from "@/lib/supported-chain-copy";
 
 const productName = "Pulse Revoke";
-const launcherTitle = `${productName} - PulseChain, BSC, Base, and Ethereum approval safety`;
+const launcherTitle = `${productName} - ${LIVE_SUPPORTED_CHAIN_COMPACT_LIST} approval safety`;
 const launcherDescription =
-  "Launch the Pulse Revoke scanner or track desktop release status. Review and revoke token approvals on PulseChain, BSC, Base, and Ethereum Mainnet without custody.";
+  `Launch the Pulse Revoke scanner or track desktop release status. Review and revoke token approvals on ${LIVE_SUPPORTED_CHAIN_LIST} without custody.`;
 
 export const metadata: Metadata = {
   title: launcherTitle,
@@ -58,16 +66,12 @@ const TRUST_POINTS = [
 ] as const;
 
 const HERO_STATS = [
-  { label: "Supported chains", value: "PulseChain + BSC + Base + Ethereum" },
+  {
+    label: "Supported chains",
+    value: `${LIVE_SUPPORTED_CHAIN_COUNT} live EVM networks`,
+  },
   { label: "Scanner", value: "Live at /app" },
   { label: "Desktop", value: "Pending release" },
-] as const;
-
-const LIVE_NETWORKS = [
-  "PulseChain",
-  "BSC / BNB Smart Chain",
-  "Base",
-  "Ethereum Mainnet",
 ] as const;
 
 const HOW_IT_WORKS = [
@@ -116,8 +120,7 @@ const FAQ_ITEMS = [
   },
   {
     question: "What chains are supported?",
-    answer:
-      "PulseChain mainnet (369), BSC / BNB Smart Chain (56), Base (8453), and Ethereum Mainnet (1). Results should still be checked on PulseScan, BscScan, BaseScan, or Etherscan before signing.",
+    answer: `${LIVE_SUPPORTED_CHAIN_LIST} are live in the scanner. ${VERIFIED_ROW_SUPPORT_NOTE} Results should still be checked on the relevant explorer before signing.`,
   },
 ] as const;
 
@@ -211,7 +214,7 @@ function Hero({ desktopReady }: { desktopReady: boolean }) {
               className="h-1.5 w-1.5 rounded-full bg-pulse-green"
               aria-hidden
             />
-            PulseChain, BSC, Base, and Ethereum approval safety
+            {LIVE_SUPPORTED_CHAIN_COMPACT_LIST} approval safety
           </div>
 
           <h1 className="mt-5 text-5xl font-bold tracking-tight sm:text-7xl">
@@ -219,14 +222,15 @@ function Hero({ desktopReady }: { desktopReady: boolean }) {
           </h1>
 
           <p className="mt-5 max-w-2xl text-xl font-semibold leading-8 text-pulse-text sm:text-2xl">
-            Revoke risky approvals on PulseChain, BSC, Base, and Ethereum
-            Mainnet with a scanner built for careful wallet review.
+            Revoke risky approvals across {LIVE_SUPPORTED_CHAIN_COUNT} live EVM
+            networks with a scanner built for careful wallet review.
           </p>
 
           <p className="mt-4 max-w-2xl text-base leading-7 text-pulse-muted">
-            Review token allowances and NFT operator approvals, then clear the
-            permissions you do not trust. The app stays read-only until you
-            choose a revoke action and confirm it in your own wallet.
+            Review token allowances and NFT operator approvals on{" "}
+            {LIVE_SUPPORTED_CHAIN_LIST}, then clear the permissions you do not
+            trust. The app stays read-only until you choose a revoke action and
+            confirm it in your own wallet.
           </p>
 
           <div className="mt-8 flex flex-col gap-3 sm:flex-row">
@@ -282,26 +286,35 @@ function LiveNetworksStrip() {
     <div className="mt-5 max-w-2xl rounded-2xl border border-pulse-cyan/30 bg-pulse-panel/55 p-4">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <p className="text-xs font-semibold uppercase tracking-[0.18em] text-pulse-cyan">
-          Live networks
+          Live supported chains
         </p>
         <p className="text-sm font-semibold text-pulse-text">
-          Live now on PulseChain, BSC, Base, and Ethereum Mainnet.
+          {LIVE_SUPPORTED_CHAIN_COUNT} live EVM networks
         </p>
       </div>
       <div className="mt-3 flex flex-wrap gap-2">
-        {LIVE_NETWORKS.map((network) => (
+        {LIVE_SUPPORTED_CHAIN_ROWS.map((row) => (
           <span
-            key={network}
-            className="inline-flex items-center gap-2 rounded-full border border-pulse-border bg-pulse-bg/70 px-3 py-1 text-xs font-semibold text-pulse-text"
+            key={row.chain}
+            className="inline-flex max-w-full flex-wrap items-center gap-x-2 gap-y-0.5 rounded-full border border-pulse-border bg-pulse-bg/70 px-3 py-1 text-xs font-semibold text-pulse-text"
           >
             <span
               className="h-1.5 w-1.5 rounded-full bg-pulse-green"
               aria-hidden
             />
-            {network}
+            <span>{row.chain}</span>
+            <span className="font-mono text-[10px] font-medium text-pulse-muted">
+              {row.chainId}
+            </span>
+            <span className="text-[10px] font-medium text-pulse-muted">
+              {formatRevokeSupport(row)}
+            </span>
           </span>
         ))}
       </div>
+      <p className="mt-3 text-xs leading-5 text-pulse-muted">
+        {VERIFIED_ROW_SUPPORT_NOTE}
+      </p>
     </div>
   );
 }

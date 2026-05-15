@@ -134,7 +134,7 @@ export default function OpengraphImage() {
             color: muted,
           }}
         >
-          <span>Non-custodial · Open source · PulseChain + BSC + Base</span>
+          <span>Non-custodial | Open source | 6 live EVM networks</span>
           <span
             style={{
               background: gradient,

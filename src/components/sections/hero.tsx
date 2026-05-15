@@ -21,7 +21,8 @@ export function Hero() {
               aria-hidden
             />
             <span className="min-w-0 max-w-[15rem] break-words">
-              PulseChain, BSC, Base, and Ethereum approval safety
+              PulseChain, BSC, Base, Ethereum, Arbitrum, and Optimism approval
+              safety
             </span>
           </span>
 
