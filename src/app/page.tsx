@@ -3,6 +3,7 @@ import Link from "next/link";
 import type { ReactNode } from "react";
 
 import { AntiPhishingBanner } from "@/components/sections/anti-phishing-banner";
+import { PulseChainResourceLinks } from "@/components/sections/pulsechain-resource-links";
 import { PulseMark } from "@/components/pulse-mark";
 import { ThemeModeToggle } from "@/components/theme-mode-toggle";
 import {
@@ -137,6 +138,7 @@ export default function LauncherPage() {
       <main>
         <Hero desktopReady={desktopReady} />
         <AntiPhishingBanner />
+        <PulseChainResourceLinks />
         <TrustStrip />
         <HowItWorks />
         <DesktopSection release={release} desktopReady={desktopReady} />
