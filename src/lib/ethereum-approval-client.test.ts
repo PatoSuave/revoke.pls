@@ -295,10 +295,11 @@ describe("Ethereum approval client mapping", () => {
   });
 
   it("passes the explicit owner address to the Ethereum approvals API", async () => {
-    const fetch = vi.fn(async (input: RequestInfo | URL) => {
+    const fetch = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
       expect(String(input)).toBe(
         `/api/ethereum/approvals?owner=${encodeURIComponent(OWNER)}`,
       );
+      expect(init?.cache).toBe("no-store");
       return new Response(JSON.stringify(response({ status: "complete-clear" })), {
         status: 200,
         headers: { "content-type": "application/json" },

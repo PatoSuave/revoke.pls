@@ -117,10 +117,11 @@ describe("Arbitrum approval client mapping", () => {
   });
 
   it("passes the explicit owner address to the Arbitrum approvals API", async () => {
-    const fetch = vi.fn(async (input: RequestInfo | URL) => {
+    const fetch = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
       expect(String(input)).toBe(
         `/api/arbitrum/approvals?owner=${encodeURIComponent(OWNER)}`,
       );
+      expect(init?.cache).toBe("no-store");
       return new Response(
         JSON.stringify(response({ status: "complete-clear" })),
         {

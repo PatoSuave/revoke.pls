@@ -34,6 +34,33 @@ describe("hardening source invariants", () => {
     );
   });
 
+  it("keeps public approval API responses explicitly non-cacheable", () => {
+    const cacheHeaders = readFileSync(
+      join(process.cwd(), "src", "lib", "approval-api-cache.ts"),
+      "utf8",
+    );
+    const ethereumRoute = readFileSync(
+      join(process.cwd(), "src", "app", "api", "ethereum", "approvals", "route.ts"),
+      "utf8",
+    );
+    const arbitrumRoute = readFileSync(
+      join(process.cwd(), "src", "app", "api", "arbitrum", "approvals", "route.ts"),
+      "utf8",
+    );
+    const optimismRoute = readFileSync(
+      join(process.cwd(), "src", "app", "api", "optimism", "approvals", "route.ts"),
+      "utf8",
+    );
+
+    expect(cacheHeaders).toContain("Cache-Control");
+    expect(cacheHeaders).toContain("Vercel-CDN-Cache-Control");
+    expect(cacheHeaders).toContain("no-store");
+    for (const route of [ethereumRoute, arbitrumRoute, optimismRoute]) {
+      expect(route).toContain("approvalApiNoStoreHeaders");
+      expect(route).toContain("headers: approvalApiNoStoreHeaders({");
+    }
+  });
+
   it("keeps Arbitrum revoke limited to controlled row hooks", () => {
     const component = readFileSync(
       join(

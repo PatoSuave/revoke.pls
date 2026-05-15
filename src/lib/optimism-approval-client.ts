@@ -180,6 +180,7 @@ export async function fetchOptimismApprovals({
     `/api/optimism/approvals?owner=${encodeURIComponent(owner)}`,
     {
       method: "GET",
+      cache: "no-store",
       headers: { accept: "application/json" },
       signal,
     },
