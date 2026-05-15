@@ -71,7 +71,9 @@ import {
 } from "@/lib/scan-target";
 
 /**
- * Connected-wallet approval scanner (PulseChain + BSC + Base).
+ * Connected-wallet approval scanner for the shared PulseChain/BSC/Base lane.
+ * Ethereum, Arbitrum, and Optimism are routed through read-only scanner lanes
+ * in this component before verified rows can expose revoke actions.
  *
  * Uses `useApprovalDiscovery` to pull historical `Approval` events from the
  * configured explorer, re-validate every `(token, spender)` pair live via
