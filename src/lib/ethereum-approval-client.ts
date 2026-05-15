@@ -183,6 +183,7 @@ export async function fetchEthereumApprovals({
     `/api/ethereum/approvals?owner=${encodeURIComponent(owner)}`,
     {
       method: "GET",
+      cache: "no-store",
       headers: { accept: "application/json" },
       signal,
     },

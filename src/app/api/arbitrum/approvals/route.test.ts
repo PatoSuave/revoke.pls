@@ -9,6 +9,14 @@ afterEach(() => {
   resetArbitrumApprovalApiRateLimitForTests();
 });
 
+function expectNoStore(response: Response) {
+  expect(response.headers.get("Cache-Control")).toBe(
+    "private, no-store, max-age=0, must-revalidate",
+  );
+  expect(response.headers.get("CDN-Cache-Control")).toBe("no-store");
+  expect(response.headers.get("Vercel-CDN-Cache-Control")).toBe("no-store");
+}
+
 describe("Arbitrum approvals API route hardening", () => {
   it("keeps invalid owners as bad requests before rate limiting", async () => {
     const response = await GET(
@@ -19,6 +27,7 @@ describe("Arbitrum approvals API route hardening", () => {
     const body = await response.json();
 
     expect(response.status).toBe(400);
+    expectNoStore(response);
     expect(body.status).toBe("bad-request");
   });
 
@@ -62,6 +71,7 @@ describe("Arbitrum approvals API route hardening", () => {
     }
 
     expect(response?.status).toBe(429);
+    expectNoStore(response!);
     expect(response?.headers.get("Retry-After")).toBeTruthy();
     const body = await response!.json();
     expect(body.ok).toBe(false);
