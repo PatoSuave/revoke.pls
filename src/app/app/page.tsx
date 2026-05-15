@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 
 import { AntiPhishingBanner } from "@/components/sections/anti-phishing-banner";
 import { ApprovalScanner } from "@/components/sections/approval-scanner";
@@ -8,11 +7,7 @@ import { SiteFooter } from "@/components/sections/site-footer";
 import { SiteHeader } from "@/components/sections/site-header";
 import { absoluteUrl, siteConfig } from "@/lib/site";
 import {
-  LIVE_SUPPORTED_CHAIN_COUNT,
-  LIVE_SUPPORTED_CHAIN_LIST,
   LIVE_SUPPORTED_CHAIN_ROWS,
-  VERIFIED_ROW_SUPPORT_NOTE,
-  formatRevokeSupport,
 } from "@/lib/supported-chain-copy";
 
 export const metadata: Metadata = {
@@ -41,8 +36,8 @@ export default function AppPage() {
       <main className="bg-pulse-bg">
         <AppWorkspaceIntro />
         <AntiPhishingBanner />
-        <PulseChainResourceLinks />
         <ApprovalScanner />
+        <PulseChainResourceLinks compact />
       </main>
       <SiteFooter />
     </>
@@ -67,35 +62,21 @@ function AppWorkspaceIntro() {
             </p>
           </div>
 
-          <div className="flex flex-col gap-2 text-[11px] text-pulse-muted lg:items-end">
+          <div className="flex min-w-0 flex-col gap-2 text-[11px] text-pulse-muted lg:items-end">
             <p className="font-semibold uppercase tracking-[0.16em] text-pulse-muted/80">
               Live supported chains
             </p>
-            <div className="flex flex-wrap gap-1.5 lg:justify-end">
+            <div className="flex max-w-full flex-wrap gap-1.5 lg:justify-end">
               {LIVE_SUPPORTED_CHAIN_ROWS.map((row) => (
                 <span
                   key={row.chain}
-                  className="inline-flex max-w-full flex-wrap items-center gap-x-1.5 gap-y-0.5 rounded-full border border-pulse-border/70 bg-pulse-panel/40 px-2.5 py-1 font-medium text-pulse-muted"
+                  className="inline-flex max-w-full items-center gap-1.5 rounded-full border border-pulse-border/70 bg-pulse-panel/40 px-2.5 py-1 font-medium text-pulse-muted"
                 >
-                  <span className="text-pulse-text">{row.chain}</span>
+                  <span className="truncate text-pulse-text">{row.chain}</span>
                   <span className="font-mono text-[10px]">ID {row.chainId}</span>
-                  <span className="text-[10px]">
-                    {formatRevokeSupport(row)}
-                  </span>
                 </span>
               ))}
             </div>
-            <p className="max-w-xl text-xs leading-5 lg:max-w-sm lg:text-right">
-              Live now on {LIVE_SUPPORTED_CHAIN_COUNT} EVM networks:{" "}
-              {LIVE_SUPPORTED_CHAIN_LIST}. {VERIFIED_ROW_SUPPORT_NOTE} No seed
-              phrases or private keys.{" "}
-              <Link
-                href="/security"
-                className="font-semibold text-pulse-cyan underline underline-offset-2 hover:text-pulse-text"
-              >
-                Security details
-              </Link>
-            </p>
           </div>
         </div>
       </div>

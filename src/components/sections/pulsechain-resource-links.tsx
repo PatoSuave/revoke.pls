@@ -3,11 +3,17 @@ import {
   PULSECHAIN_RESOURCE_NOTICE,
 } from "@/lib/pulsechain-resources";
 
-export function PulseChainResourceLinks() {
+export function PulseChainResourceLinks({
+  compact = false,
+}: {
+  compact?: boolean;
+} = {}) {
   return (
     <section
       id="pulsechain-resources"
-      className="border-b border-pulse-border/60 bg-pulse-bg py-12 sm:py-16"
+      className={`border-b border-pulse-border/60 bg-pulse-bg ${
+        compact ? "py-8 sm:py-10" : "py-12 sm:py-16"
+      }`}
     >
       <div className="mx-auto max-w-6xl px-4 sm:px-6">
         <div className="max-w-3xl">
@@ -29,10 +35,10 @@ export function PulseChainResourceLinks() {
               href={resource.href}
               target="_blank"
               rel="noopener noreferrer"
-              className="group flex min-h-44 flex-col rounded-xl border border-pulse-border bg-pulse-panel/55 p-4 transition hover:border-pulse-cyan/45 hover:bg-pulse-panel/75"
+              className="group flex min-h-0 flex-col rounded-xl border border-pulse-border bg-pulse-panel/55 p-4 transition hover:border-pulse-cyan/45 hover:bg-pulse-panel/75 sm:min-h-44"
             >
               <div className="flex items-start justify-between gap-3">
-                <div>
+                <div className="min-w-0">
                   <p className="text-sm font-semibold text-pulse-text">
                     {resource.label}
                   </p>

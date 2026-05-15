@@ -20,7 +20,6 @@ import {
   LIVE_SUPPORTED_CHAIN_LIST,
   LIVE_SUPPORTED_CHAIN_ROWS,
   VERIFIED_ROW_SUPPORT_NOTE,
-  formatRevokeSupport,
 } from "@/lib/supported-chain-copy";
 
 const productName = "Pulse Revoke";
@@ -153,14 +152,14 @@ export default function LauncherPage() {
 function SiteHeader({ desktopReady }: { desktopReady: boolean }) {
   return (
     <header className="sticky top-0 z-40 border-b border-pulse-border/60 bg-pulse-bg/85 backdrop-blur">
-      <div className="mx-auto flex h-16 max-w-6xl items-center justify-between gap-4 px-4 sm:px-6">
+      <div className="mx-auto flex min-h-16 max-w-6xl flex-wrap items-center justify-between gap-2 px-4 py-3 sm:flex-nowrap sm:gap-4 sm:px-6 sm:py-0">
         <Link
           href="/"
-          className="flex items-center gap-2.5"
+          className="flex min-w-0 shrink-0 items-center gap-2.5"
           aria-label={`${productName} home`}
         >
-          <PulseMark className="h-8 w-8" />
-          <span className="text-sm font-semibold tracking-tight sm:text-base">
+          <PulseMark className="h-8 w-8 shrink-0" />
+          <span className="truncate text-sm font-semibold tracking-tight sm:text-base">
             Pulse <span className="text-gradient-pulse">Revoke</span>
           </span>
         </Link>
@@ -183,16 +182,17 @@ function SiteHeader({ desktopReady }: { desktopReady: boolean }) {
           </a>
         </nav>
 
-        <div className="flex items-center gap-2">
+        <div className="flex min-w-0 shrink-0 items-center gap-2">
           <ThemeModeToggle className="hidden sm:inline-grid" />
           <StatusPill className="hidden sm:inline-flex">
             {desktopReady ? "Desktop ready" : "Desktop pending"}
           </StatusPill>
           <Link
             href="/app"
-            className="inline-flex items-center justify-center rounded-xl bg-pulse-gradient px-4 py-2 text-xs font-semibold text-pulse-on-gradient shadow-glow transition hover:brightness-110"
+            className="inline-flex items-center justify-center whitespace-nowrap rounded-xl bg-pulse-gradient px-3 py-2 text-xs font-semibold text-pulse-on-gradient shadow-glow transition hover:brightness-110 sm:px-4"
           >
-            Launch Scanner
+            <span className="sm:hidden">Launch</span>
+            <span className="hidden sm:inline">Launch Scanner</span>
           </Link>
         </div>
       </div>
@@ -210,16 +210,21 @@ function Hero({ desktopReady }: { desktopReady: boolean }) {
       />
 
       <div className="relative mx-auto grid max-w-6xl gap-10 px-4 py-16 sm:px-6 sm:py-24 lg:grid-cols-[1.02fr_0.98fr] lg:items-center">
-        <div>
-          <div className="inline-flex items-center gap-2 rounded-full border border-pulse-cyan/35 bg-pulse-panel/75 px-3 py-1 text-xs font-semibold text-pulse-cyan">
+        <div className="min-w-0">
+          <div className="flex w-full max-w-full flex-wrap items-center gap-2 rounded-full border border-pulse-cyan/35 bg-pulse-panel/75 px-3 py-1 text-xs font-semibold text-pulse-cyan sm:inline-flex sm:w-auto">
             <span
               className="h-1.5 w-1.5 rounded-full bg-pulse-green"
               aria-hidden
             />
-            {LIVE_SUPPORTED_CHAIN_COMPACT_LIST} approval safety
+            <span className="min-w-0 break-words sm:hidden">
+              {LIVE_SUPPORTED_CHAIN_COUNT} live EVM networks
+            </span>
+            <span className="hidden sm:inline">
+              {LIVE_SUPPORTED_CHAIN_COMPACT_LIST} approval safety
+            </span>
           </div>
 
-          <h1 className="mt-5 text-5xl font-bold tracking-tight sm:text-7xl">
+          <h1 className="mt-5 break-words text-5xl font-bold tracking-tight sm:text-7xl">
             Pulse <span className="text-gradient-pulse">Revoke</span>
           </h1>
 
@@ -294,22 +299,19 @@ function LiveNetworksStrip() {
           {LIVE_SUPPORTED_CHAIN_COUNT} live EVM networks
         </p>
       </div>
-      <div className="mt-3 flex flex-wrap gap-2">
+      <div className="mt-3 flex max-w-full flex-wrap gap-2">
         {LIVE_SUPPORTED_CHAIN_ROWS.map((row) => (
           <span
             key={row.chain}
-            className="inline-flex max-w-full flex-wrap items-center gap-x-2 gap-y-0.5 rounded-full border border-pulse-border bg-pulse-bg/70 px-3 py-1 text-xs font-semibold text-pulse-text"
+            className="inline-flex max-w-full items-center gap-2 rounded-full border border-pulse-border bg-pulse-bg/70 px-3 py-1 text-xs font-semibold text-pulse-text"
           >
             <span
               className="h-1.5 w-1.5 rounded-full bg-pulse-green"
               aria-hidden
             />
-            <span>{row.chain}</span>
+            <span className="truncate">{row.chain}</span>
             <span className="font-mono text-[10px] font-medium text-pulse-muted">
-              {row.chainId}
-            </span>
-            <span className="text-[10px] font-medium text-pulse-muted">
-              {formatRevokeSupport(row)}
+              ID {row.chainId}
             </span>
           </span>
         ))}
