@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 
+import { approvalApiNoStoreHeaders } from "@/lib/approval-api-cache";
 import {
   ETHEREUM_MAINNET_CHAIN_ID,
   createEthereumApprovalApiFailureResponse,
@@ -31,7 +32,7 @@ export async function GET(request: Request) {
           `Unsupported query param: ${unsupportedRangeParam}. Ethereum approval discovery uses server-bounded windows only.`,
         ],
       },
-      { status: 400 },
+      { status: 400, headers: approvalApiNoStoreHeaders() },
     );
   }
 
@@ -47,7 +48,7 @@ export async function GET(request: Request) {
         status: "bad-request",
         errors: ["Ethereum approvals API only supports chainId=1."],
       },
-      { status: 400 },
+      { status: 400, headers: approvalApiNoStoreHeaders() },
     );
   }
 
@@ -62,7 +63,7 @@ export async function GET(request: Request) {
         status: "bad-request",
         errors: ["Provide a valid Ethereum owner address in ?owner=0x..."],
       },
-      { status: 400 },
+      { status: 400, headers: approvalApiNoStoreHeaders() },
     );
   }
 
@@ -84,7 +85,9 @@ export async function GET(request: Request) {
 
     return NextResponse.json(result, {
       status: 429,
-      headers: rateLimitHeaders(rateLimit, { includeRetryAfter: true }),
+      headers: approvalApiNoStoreHeaders(
+        rateLimitHeaders(rateLimit, { includeRetryAfter: true }),
+      ),
     });
   }
 
@@ -109,13 +112,13 @@ export async function GET(request: Request) {
 
   return NextResponse.json(result, {
     status: httpStatus,
-    headers: {
+    headers: approvalApiNoStoreHeaders({
       ...rateLimitHeaders(rateLimit),
       "X-Ethereum-Approval-Timeout-Ms":
         ETHEREUM_APPROVAL_API_REQUEST_TIMEOUT_MS.toString(),
       "X-Ethereum-Approval-Live-Read-Cap":
         ETHEREUM_APPROVAL_API_LIVE_READ_CANDIDATE_CAP.toString(),
-    },
+    }),
   });
 }
 

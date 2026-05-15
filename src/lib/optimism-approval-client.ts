@@ -10,13 +10,13 @@ import {
 export const OPTIMISM_CLIENT_CHAIN_ID = 10;
 export const OPTIMISM_DISPLAY_NAME = "Optimism";
 export const OPTIMISM_SHORT_NAME = "Optimism";
-export const OPTIMISM_STATUS_LABEL = "Optimism NFT verified-row revoke";
+export const OPTIMISM_STATUS_LABEL = "Optimism verified-row revoke";
 export const OPTIMISM_NATIVE_SYMBOL = "ETH";
 export const OPTIMISM_EXPLORER_NAME = "Optimistic Etherscan";
 export const OPTIMISM_EXPLORER_BASE_URL = "https://optimistic.etherscan.io";
 export const OPTIMISM_PUBLIC_RPC_URL = "https://mainnet.optimism.io";
 export const OPTIMISM_REVOKE_UNAVAILABLE_COPY =
-  "Optimism ERC-20 revoke is not enabled yet.";
+  "Optimism revoke is available only for live-verified ERC-20 and NFT rows.";
 export const OPTIMISM_NFT_REVOKE_UNAVAILABLE_COPY =
   "Optimism NFT revoke is available only for live-verified rows.";
 export const OPTIMISM_BATCH_REVOKE_UNAVAILABLE_COPY =
@@ -109,10 +109,10 @@ export interface OptimismApprovalClientMapping {
   /** Global and batch revoke stay unavailable for Optimism. */
   revokeEnabled: false;
   revokeUnavailableReason: string;
-  /** Optimism ERC-20 row revoke is intentionally unavailable in this phase. */
-  erc20RowRevokeEnabled: false;
+  /** True only for live-verified active ERC-20 rows. */
+  erc20RowRevokeEnabled: boolean;
   erc20RowRevokeDisabledReason: string | null;
-  /** Optimism NFT row revoke is limited to verified individual rows. */
+  /** True only for live-verified active NFT rows. Global NFT revoke stays unavailable. */
   nftRowRevokeEnabled: boolean;
   nftRowRevokeDisabledReason: string | null;
   nftRevokeEnabled: false;
@@ -180,6 +180,7 @@ export async function fetchOptimismApprovals({
     `/api/optimism/approvals?owner=${encodeURIComponent(owner)}`,
     {
       method: "GET",
+      cache: "no-store",
       headers: { accept: "application/json" },
       signal,
     },
@@ -260,6 +261,12 @@ export function mapOptimismApprovalApiResponse(
           malformedResponse,
         })
       : null;
+  const erc20RowVerifiedForRevoke =
+    (response.status === "active-approvals-found" ||
+      response.status === "verification-incomplete") &&
+    !malformedResponse &&
+    erc20ActiveApprovalCount > 0 &&
+    response.diagnostics.liveReadSuccessCount >= activeApprovalCount;
   const nftRowVerifiedForRevoke =
     (response.status === "active-approvals-found" ||
       response.status === "verification-incomplete") &&
@@ -269,9 +276,10 @@ export function mapOptimismApprovalApiResponse(
   const base = {
     revokeEnabled: false as const,
     revokeUnavailableReason: OPTIMISM_REVOKE_UNAVAILABLE_COPY,
-    erc20RowRevokeEnabled: false as const,
+    erc20RowRevokeEnabled: erc20RowVerifiedForRevoke,
     erc20RowRevokeDisabledReason: optimismErc20RowRevokeDisabledReason({
       response,
+      rowVerifiedForRevoke: erc20RowVerifiedForRevoke,
       malformedResponse,
       erc20ActiveApprovalCount,
       activeApprovalCount,
@@ -300,7 +308,7 @@ export function mapOptimismApprovalApiResponse(
       state: "config-missing",
       canShowClear: false,
       ...base,
-      erc20RowRevokeEnabled: false as const,
+      erc20RowRevokeEnabled: false,
       nftRowRevokeEnabled: false,
     };
   }
@@ -310,7 +318,7 @@ export function mapOptimismApprovalApiResponse(
       state: "upstream-failure",
       canShowClear: false,
       ...base,
-      erc20RowRevokeEnabled: false as const,
+      erc20RowRevokeEnabled: false,
       nftRowRevokeEnabled: false,
     };
   }
@@ -339,7 +347,7 @@ export function mapOptimismApprovalApiResponse(
     state: "complete-clear",
     canShowClear: !malformedResponse,
     ...base,
-    erc20RowRevokeEnabled: false as const,
+    erc20RowRevokeEnabled: false,
     nftRowRevokeEnabled: false,
   };
 }
@@ -360,15 +368,18 @@ function isOptimismNftApprovalLiveActive(approval: NftApproval): boolean {
 
 function optimismErc20RowRevokeDisabledReason({
   response,
+  rowVerifiedForRevoke,
   malformedResponse,
   erc20ActiveApprovalCount,
   activeApprovalCount,
 }: {
   response: OptimismApprovalApiResponse;
+  rowVerifiedForRevoke: boolean;
   malformedResponse: boolean;
   erc20ActiveApprovalCount: number;
   activeApprovalCount: number;
 }): string | null {
+  if (rowVerifiedForRevoke) return null;
   if (response.status === "config-missing") {
     return "Optimism API configuration is missing - revoke unavailable.";
   }
@@ -384,7 +395,7 @@ function optimismErc20RowRevokeDisabledReason({
   if (response.diagnostics.liveReadSuccessCount < activeApprovalCount) {
     return "Revoke unavailable until current approval state is verified.";
   }
-  return OPTIMISM_REVOKE_UNAVAILABLE_COPY;
+  return "Revoke unavailable until current approval state is verified.";
 }
 
 function optimismNftRowRevokeDisabledReason({
@@ -431,7 +442,7 @@ export function canEnableOptimismErc20RowRevoke({
   connectedAddress: Address | undefined;
 }): boolean {
   return (
-    Boolean(mapping?.erc20RowRevokeEnabled) &&
+    mapping?.erc20RowRevokeEnabled === true &&
     walletChainId === OPTIMISM_CLIENT_CHAIN_ID &&
     optimismAddressesMatch(ownerAddress, connectedAddress)
   );
@@ -458,7 +469,7 @@ export function optimismErc20RowRevokeDisabledReasonForWallet({
   }
   return (
     mapping.erc20RowRevokeDisabledReason ??
-    OPTIMISM_REVOKE_UNAVAILABLE_COPY
+    "Verified ERC-20 row; revoke available."
   );
 }
 

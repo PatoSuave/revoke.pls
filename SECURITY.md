@@ -35,7 +35,7 @@ Current active supported networks:
 - Base, chain ID `8453`
 - Ethereum Mainnet, chain ID `1`
 - Arbitrum One, chain ID `42161`, verified ERC-20 and NFT rows only
-- Optimism / OP Mainnet, chain ID `10`, verified NFT rows only
+- Optimism / OP Mainnet, chain ID `10`, verified ERC-20 and NFT rows only
 
 Ethereum server-read-only discovery uses an API for historical logs and live RPC
 validation. Ethereum revoke transactions are still wallet-side only: there is
@@ -50,10 +50,10 @@ pass. Arbitrum batch revoke is not enabled, and there is no server-side signing,
 private key handling, relayer, or API route transaction submission.
 
 Optimism server-side discovery uses `/api/optimism/approvals` for historical
-logs and live RPC validation. Optimism NFT row revoke is wallet-side only after
-owner, chain, preflight, and row-level verification gates pass. Optimism ERC-20,
-batch, and global revoke are not enabled, and there is no server-side signing,
-private key handling, relayer, or API route transaction submission.
+logs and live RPC validation. Optimism ERC-20 and NFT row revoke are wallet-side
+only after owner, chain, preflight, and row-level verification gates pass.
+Optimism batch and global revoke are not enabled, and there is no server-side
+signing, private key handling, relayer, or API route transaction submission.
 
 Address-only scanning is read-only until a connected wallet exactly matches the
 scanned owner address and is on the row's chain.

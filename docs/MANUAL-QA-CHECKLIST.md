@@ -28,9 +28,9 @@ include the Arbitrum scanner UI, hook/client, and existing controlled ERC-20/NFT
 row revoke hook usage, but no batch revoke, server-signing, relayer, or
 browser-exposed Arbitrum secret exposure.
 
-For Optimism NFT verified-row revoke work, expected sensitive-path output may
+For Optimism verified-row revoke work, expected sensitive-path output may
 include the Optimism API route, hook/client, scanner UI, wagmi wallet-recognition
-entry, and existing controlled NFT row revoke hook usage, but no ERC-20 revoke,
+entry, and existing controlled ERC-20/NFT row revoke hook usage, but no
 batch revoke, server-signing, relayer, or browser-exposed Optimism secret
 exposure.
 
@@ -79,8 +79,9 @@ exposure.
 - [ ] Select Optimism in address-only mode and confirm the pasted scan target
       is preserved even when a different wallet is connected.
 - [ ] Confirm no wallet is required to start an Optimism address-only scan.
-- [ ] Confirm Optimism address-only rows remain read-only even when a wallet is
-      connected.
+- [ ] Confirm Optimism address-only rows keep revoke unavailable until the
+      connected wallet exactly matches the pasted scan target and is on OP
+      Mainnet.
 
 ## 4. PulseChain Approval Scanning
 
@@ -193,20 +194,33 @@ exposure.
       reasons, ERC-20 row revoke status, NFT row revoke status, and batch
       revoke disabled.
 
-## 9. Optimism NFT Verified-Row Revoke
+## 9. Optimism Verified-Row Revoke
 
 - [ ] Connect on Optimism / OP Mainnet and confirm `/app` shows the Optimism
-      NFT verified-row lane, not the generic revoke scanner.
+      verified-row lane, not the generic revoke scanner.
 - [ ] Confirm `/api/optimism/approvals` discovery uses server-side settings and
       reports `chainId` / `chainid` `10`.
 - [ ] Confirm active Optimism ERC-20 rows appear only after
       `allowance(owner, spender)` live verification.
 - [ ] Confirm active Optimism NFT rows appear only after `getApproved(tokenId)`
       or `isApprovedForAll(owner, operator)` live verification.
+- [ ] Confirm Optimism ERC-20 row revoke appears only for live-verified ERC-20
+      rows when the connected wallet matches the scan target and is on OP
+      Mainnet.
+- [ ] Confirm Optimism ERC-20 preflight blocks the wallet prompt when
+      `allowance(owner, spender)` returns `0` or fails.
+- [ ] Confirm Optimism ERC-20 post-revoke verification reports
+      `Confirmed cleared.` only when `allowance(owner, spender)` returns `0`.
 - [ ] Confirm Optimism NFT row revoke appears only for live-verified NFT rows
       when the connected wallet matches the scan target and is on OP Mainnet.
-- [ ] Confirm Optimism ERC-20 revoke, batch revoke, and global revoke are not
-      visible or enabled.
+- [ ] Confirm Optimism batch revoke and global revoke are not visible or
+      enabled.
+- [ ] Reject one Optimism ERC-20 or NFT revoke transaction and confirm no
+      `Confirmed cleared.` state appears.
+- [ ] For one controlled Optimism ERC-20 approval, confirm revoke calls
+      `approve(spender, 0)`, post-revoke verification runs, and
+      `Confirmed cleared.` appears only after the live read confirms the
+      allowance is `0`.
 - [ ] Reject one Optimism NFT revoke transaction and confirm no `Confirmed
       cleared.` state appears.
 - [ ] For one controlled Optimism NFT approval, confirm revoke calls
@@ -218,7 +232,8 @@ exposure.
 - [ ] Confirm Optimism explorer links open Optimistic Etherscan.
 - [ ] In `/app?debug=1`, confirm diagnostics show scan target, connected
       wallet, wallet chain ID, API status, config presence, incomplete reasons,
-      ERC-20 revoke disabled, NFT row revoke status, and batch revoke disabled.
+      ERC-20 row revoke status, NFT row revoke status, and batch revoke
+      disabled.
 
 ## 10. Security And Trust
 
@@ -228,7 +243,7 @@ exposure.
       `ERC-20/NFT verified rows only` / `Live` and does not claim batch revoke
       is live.
 - [ ] Supported-chain matrix lists Optimism as `Yes` /
-      `NFT verified rows only` / `Live` and does not claim Optimism ERC-20 or
+      `ERC-20/NFT verified rows only` / `Live` and does not claim Optimism
       batch revoke is live.
 - [ ] The app never requests a seed phrase, private key, mnemonic, or raw
       signing secret.

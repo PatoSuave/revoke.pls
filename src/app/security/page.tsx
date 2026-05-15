@@ -82,13 +82,13 @@ function SecurityHero() {
           <div className="mt-8 flex flex-col gap-3 sm:flex-row">
             <Link
               href="/app"
-              className="inline-flex items-center justify-center rounded-xl bg-pulse-gradient px-5 py-3 text-sm font-semibold text-white shadow-glow transition hover:brightness-110"
+              className="inline-flex items-center justify-center rounded-xl bg-pulse-gradient px-5 py-3 text-sm font-semibold text-pulse-on-gradient shadow-glow transition hover:brightness-110"
             >
               Launch Scanner
             </Link>
             <a
               href={`https://${OFFICIAL_DOMAIN}`}
-              className="inline-flex items-center justify-center rounded-xl border border-pulse-border bg-white/5 px-5 py-3 text-sm font-semibold text-pulse-text transition hover:bg-white/10"
+              className="inline-flex items-center justify-center rounded-xl border border-pulse-border bg-pulse-text/5 px-5 py-3 text-sm font-semibold text-pulse-text transition hover:bg-pulse-text/10"
             >
               {OFFICIAL_DOMAIN}
             </a>

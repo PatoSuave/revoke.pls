@@ -25,9 +25,9 @@ interface ConnectWalletButtonProps {
 
 const variantStyles: Record<Variant, string> = {
   primary:
-    "bg-pulse-gradient text-white shadow-glow hover:brightness-110 active:brightness-95",
+    "bg-pulse-gradient text-pulse-on-gradient shadow-glow hover:brightness-110 active:brightness-95",
   ghost:
-    "bg-white/5 text-pulse-text border border-pulse-border hover:bg-white/10",
+    "bg-pulse-text/5 text-pulse-text border border-pulse-border hover:bg-pulse-text/10",
 };
 
 /**
@@ -337,7 +337,7 @@ export function ConnectWalletButton({
                   trackEvent("connector_selected", { type: c.type });
                   connect({ connector: c });
                 }}
-                className="flex w-full items-start justify-between gap-3 rounded-xl px-3 py-2.5 text-left text-sm text-pulse-text transition hover:bg-white/5 disabled:cursor-not-allowed disabled:opacity-60"
+                className="flex w-full items-start justify-between gap-3 rounded-xl px-3 py-2.5 text-left text-sm text-pulse-text transition hover:bg-pulse-text/5 disabled:cursor-not-allowed disabled:opacity-60"
               >
                 <span className="flex flex-col">
                   <span className="font-semibold">{d.label}</span>

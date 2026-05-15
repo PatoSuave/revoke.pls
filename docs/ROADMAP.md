@@ -11,7 +11,7 @@ ship.
 - Base support
 - Ethereum Mainnet read-only discovery and wallet-side revoke
 - Arbitrum One ERC-20/NFT verified-row revoke
-- Optimism / OP Mainnet NFT verified-row revoke
+- Optimism / OP Mainnet ERC-20/NFT verified-row revoke
 - Browser wallet connection
 - WalletConnect when configured
 - Historical approval log discovery
@@ -36,10 +36,10 @@ ship.
   batch revoke is explicitly planned, implemented, and reviewed. Do not add
   Arbitrum batch revoke, server-side signing, relayers, private keys, or API
   route transaction submission.
-- Optimism must remain limited to verified-row NFT revoke until ERC-20 or batch
+- Optimism must remain limited to verified-row ERC-20/NFT revoke until batch
   revoke is explicitly planned, implemented, and reviewed. Do not add Optimism
-  ERC-20 revoke, batch revoke, server-side signing, relayers, private keys, or
-  API route transaction submission.
+  batch revoke, server-side signing, relayers, private keys, or API route
+  transaction submission.
 - Do not broaden into unsupported networks without explicit review.
 - Do not treat registry labels as proof of safety.
 - Do not show a clear state when discovery or validation is incomplete.
@@ -52,7 +52,7 @@ ship.
 
 - More manually verified PulseChain, BSC, and Base registry labels
 - Future Arbitrum batch revoke only after separate planning and QA
-- Future Optimism ERC-20 verified-row revoke only after separate planning and QA
+- Future Optimism batch revoke only after separate planning and QA
 - Additional suspicious-spender heuristics
 - Better unsupported-network guidance
 - More focused manual QA fixtures for BSC high-gas cases

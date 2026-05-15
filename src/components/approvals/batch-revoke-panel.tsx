@@ -46,7 +46,7 @@ export function BatchActionBar({
           type="button"
           onClick={onSelectAllVisible}
           disabled={disabled || visibleCount === 0}
-          className="rounded-lg border border-pulse-border bg-white/5 px-2.5 py-1 text-xs font-semibold text-pulse-text transition hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-60"
+          className="rounded-lg border border-pulse-border bg-pulse-text/5 px-2.5 py-1 text-xs font-semibold text-pulse-text transition hover:bg-pulse-text/10 disabled:cursor-not-allowed disabled:opacity-60"
         >
           {allVisibleSelected ? "Deselect visible" : "Select all visible"}
         </button>
@@ -81,7 +81,7 @@ export function BatchActionBar({
           type="button"
           onClick={onClear}
           disabled={disabled || selectedCount === 0}
-          className="flex-1 rounded-xl border border-pulse-border bg-white/5 px-3 py-2 text-xs font-semibold text-pulse-text transition hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-60 sm:flex-none"
+          className="flex-1 rounded-xl border border-pulse-border bg-pulse-text/5 px-3 py-2 text-xs font-semibold text-pulse-text transition hover:bg-pulse-text/10 disabled:cursor-not-allowed disabled:opacity-60 sm:flex-none"
         >
           Clear
         </button>
@@ -89,7 +89,7 @@ export function BatchActionBar({
           type="button"
           onClick={onReview}
           disabled={disabled || selectedCount === 0}
-          className="flex-1 rounded-xl bg-pulse-gradient px-3 py-2 text-xs font-semibold text-pulse-bg shadow-glow transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-60 sm:flex-none"
+          className="flex-1 rounded-xl bg-pulse-gradient px-3 py-2 text-xs font-semibold text-pulse-on-gradient shadow-glow transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-60 sm:flex-none"
         >
           Review selected
         </button>
@@ -245,7 +245,7 @@ function ConfirmingCard({ batch }: { batch: UseBatchRevokeResult }) {
         <button
           type="button"
           onClick={batch.cancelConfirm}
-          className="rounded-xl border border-pulse-border bg-white/5 px-3 py-2 text-xs font-semibold text-pulse-text transition hover:bg-white/10"
+          className="rounded-xl border border-pulse-border bg-pulse-text/5 px-3 py-2 text-xs font-semibold text-pulse-text transition hover:bg-pulse-text/10"
         >
           Cancel
         </button>
@@ -253,7 +253,7 @@ function ConfirmingCard({ batch }: { batch: UseBatchRevokeResult }) {
           type="button"
           onClick={() => void batch.start()}
           disabled={ready === 0}
-          className="rounded-xl bg-pulse-gradient px-3 py-2 text-xs font-semibold text-pulse-bg shadow-glow transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-60"
+          className="rounded-xl bg-pulse-gradient px-3 py-2 text-xs font-semibold text-pulse-on-gradient shadow-glow transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-60"
         >
           {ready === 0 ? "No active approvals" : "Start wallet prompts"}
         </button>
@@ -284,7 +284,7 @@ function RunningCard({ batch }: { batch: UseBatchRevokeResult }) {
           type="button"
           onClick={batch.stop}
           disabled={stopping}
-          className="rounded-xl border border-pulse-border bg-white/5 px-3 py-2 text-xs font-semibold text-pulse-text transition hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-60"
+          className="rounded-xl border border-pulse-border bg-pulse-text/5 px-3 py-2 text-xs font-semibold text-pulse-text transition hover:bg-pulse-text/10 disabled:cursor-not-allowed disabled:opacity-60"
         >
           {stopping ? "Stopping..." : "Stop after current"}
         </button>
@@ -372,7 +372,7 @@ function CompleteCard({ batch }: { batch: UseBatchRevokeResult }) {
         <button
           type="button"
           onClick={batch.close}
-          className="rounded-xl bg-pulse-gradient px-3 py-2 text-xs font-semibold text-pulse-bg shadow-glow transition hover:brightness-110"
+          className="rounded-xl bg-pulse-gradient px-3 py-2 text-xs font-semibold text-pulse-on-gradient shadow-glow transition hover:brightness-110"
         >
           Close
         </button>
