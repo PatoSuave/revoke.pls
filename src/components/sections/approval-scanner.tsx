@@ -165,6 +165,7 @@ export function ApprovalScanner() {
             aria-hidden
           />
           <div className="p-4 sm:p-6 lg:p-8">
+            <ScannerWorkflowStrip />
             <AddressScanPanel
               inputAddress={scanInputAddress}
               activeAddress={activeAddressOnlyAddress}
@@ -226,30 +227,40 @@ function AddressScanPanel({
   onClear: () => void;
 }) {
   const hasInput = inputAddress.trim().length > 0;
+  const statusTone = activeAddress
+    ? scanTarget.isConnectedWalletSameAsScanTarget
+      ? "success"
+      : scanTarget.connectedWalletAddress
+        ? "warning"
+        : "neutral"
+    : "neutral";
   const statusCopy = activeAddress
     ? scanTarget.isConnectedWalletSameAsScanTarget
-      ? "Connected wallet matches scanned address."
+      ? "Wallet matches scan target"
       : scanTarget.connectedWalletAddress
-        ? WALLET_MISMATCH_SCAN_TARGET_COPY
-        : ADDRESS_SCAN_CONNECT_MATCHING_WALLET_COPY
-    : "Connected-wallet mode is used when no pasted address is active.";
+        ? "Wallet mismatch"
+        : "Connect matching wallet to revoke"
+    : "No pasted address active";
 
   return (
-    <div className="mb-6 rounded-2xl border border-pulse-cyan/25 bg-pulse-cyan/5 p-4">
-      <div className="grid gap-4 lg:grid-cols-[1fr_auto] lg:items-end">
-        <div>
+    <div className="mb-6 rounded-2xl border border-pulse-border/80 bg-pulse-bg/45 p-4">
+      <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+        <div className="min-w-0">
           <p className="text-xs font-semibold uppercase tracking-[0.18em] text-pulse-cyan">
-            Scan first. Connect only when ready to revoke.
+            Address scan
           </p>
-          <p className="mt-2 text-sm leading-6 text-pulse-muted">
-            Paste any EVM wallet address to inspect public approvals without
-            connecting. Connecting is only required when you choose to revoke.
-          </p>
-          <p className="mt-1 text-xs leading-5 text-pulse-muted">
-            Revoke is available only when the connected wallet matches the
-            scanned address.
+          <h3 className="mt-1 text-lg font-semibold text-pulse-text">
+            Review first. Connect only to revoke.
+          </h3>
+          <p className="mt-2 max-w-2xl text-sm leading-6 text-pulse-muted">
+            Paste any EVM wallet address for read-only approval review. Wallet
+            connection is needed only when you choose a verified row to revoke.
           </p>
         </div>
+        <ScanStatusPill tone={statusTone}>{statusCopy}</ScanStatusPill>
+      </div>
+
+      <div className="mt-4 grid gap-3 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-end">
         <form
           className="grid gap-2 sm:grid-cols-[minmax(0,1fr)_auto_auto]"
           onSubmit={(event) => {
@@ -267,11 +278,11 @@ function AddressScanPanel({
             placeholder="0x..."
             autoComplete="off"
             spellCheck={false}
-            className="min-h-10 rounded-xl border border-pulse-border bg-pulse-bg/80 px-3 py-2 font-mono text-sm text-pulse-text outline-none transition placeholder:text-pulse-muted/60 focus:border-pulse-cyan/60"
+            className="min-h-11 rounded-xl border border-pulse-border bg-pulse-bg/80 px-3 py-2 font-mono text-sm text-pulse-text outline-none transition placeholder:text-pulse-muted/60 focus:border-pulse-cyan/60"
           />
           <button
             type="submit"
-            className="inline-flex min-h-10 items-center justify-center rounded-xl border border-pulse-cyan/35 bg-pulse-cyan/10 px-3 py-2 text-xs font-semibold text-pulse-cyan transition hover:bg-pulse-cyan/15"
+            className="inline-flex min-h-11 items-center justify-center rounded-xl border border-pulse-cyan/35 bg-pulse-cyan/10 px-4 py-2 text-xs font-semibold text-pulse-cyan transition hover:bg-pulse-cyan/15"
           >
             Scan address
           </button>
@@ -279,28 +290,18 @@ function AddressScanPanel({
             type="button"
             onClick={onClear}
             disabled={!hasInput && !activeAddress}
-            className="inline-flex min-h-10 items-center justify-center rounded-xl border border-pulse-border bg-pulse-text/5 px-3 py-2 text-xs font-semibold text-pulse-muted transition hover:bg-pulse-text/10 disabled:cursor-not-allowed disabled:opacity-50"
+            className="inline-flex min-h-11 items-center justify-center rounded-xl border border-pulse-border bg-pulse-text/5 px-4 py-2 text-xs font-semibold text-pulse-muted transition hover:bg-pulse-text/10 disabled:cursor-not-allowed disabled:opacity-50"
           >
             Clear
           </button>
         </form>
-      </div>
-      <div className="mt-3 flex flex-wrap items-center gap-2 text-xs">
-        <span
-          className={`rounded-full border px-2.5 py-1 font-semibold ${
-            activeAddress
-              ? scanTarget.isConnectedWalletSameAsScanTarget
-                ? "border-pulse-green/35 bg-pulse-green/10 text-pulse-green"
-                : "border-amber-400/35 bg-amber-400/10 text-amber-200"
-              : "border-pulse-border bg-pulse-bg/60 text-pulse-muted"
-          }`}
-        >
-          {statusCopy}
-        </span>
         {activeAddress ? (
-          <span className="rounded-full border border-pulse-border bg-pulse-bg/60 px-2.5 py-1 font-mono text-pulse-muted">
-            Scanning {shortenAddress(activeAddress)}
-          </span>
+          <div className="flex min-h-11 items-center rounded-xl border border-pulse-border bg-pulse-panel/45 px-3 py-2 text-xs text-pulse-muted">
+            <span className="mr-2 font-semibold uppercase tracking-[0.14em]">
+              Target
+            </span>
+            <span className="font-mono">{shortenAddress(activeAddress)}</span>
+          </div>
         ) : null}
       </div>
       {inputError ? (
@@ -309,6 +310,73 @@ function AddressScanPanel({
         </p>
       ) : null}
     </div>
+  );
+}
+
+function ScannerWorkflowStrip() {
+  return (
+    <div className="mb-4 grid gap-2 text-xs text-pulse-muted sm:grid-cols-3">
+      <ScannerWorkflowStep
+        label="1"
+        title="Scan"
+        body="Read public approval state."
+      />
+      <ScannerWorkflowStep
+        label="2"
+        title="Review"
+        body="Check spender and risk cues."
+      />
+      <ScannerWorkflowStep
+        label="3"
+        title="Revoke"
+        body="Connect the matching wallet."
+      />
+    </div>
+  );
+}
+
+function ScannerWorkflowStep({
+  label,
+  title,
+  body,
+}: {
+  label: string;
+  title: string;
+  body: string;
+}) {
+  return (
+    <div className="flex items-start gap-3 rounded-xl border border-pulse-border/70 bg-pulse-bg/35 p-3">
+      <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full border border-pulse-cyan/35 bg-pulse-cyan/10 font-mono text-[11px] font-semibold text-pulse-cyan">
+        {label}
+      </span>
+      <span className="min-w-0">
+        <span className="block font-semibold text-pulse-text">{title}</span>
+        <span className="mt-0.5 block leading-5">{body}</span>
+      </span>
+    </div>
+  );
+}
+
+function ScanStatusPill({
+  children,
+  tone,
+}: {
+  children: React.ReactNode;
+  tone: "neutral" | "success" | "warning";
+}) {
+  const toneClass =
+    tone === "success"
+      ? "border-pulse-green/35 bg-pulse-green/10 text-pulse-green"
+      : tone === "warning"
+        ? "border-amber-400/35 bg-amber-400/10 text-amber-200"
+        : "border-pulse-border bg-pulse-panel/55 text-pulse-muted";
+
+  return (
+    <span
+      className={`inline-flex max-w-full shrink-0 items-center rounded-full border px-3 py-1 text-xs font-semibold ${toneClass}`}
+    >
+      <span className="truncate">{children}</span>
+    </span>
   );
 }
 
@@ -382,8 +450,8 @@ function ScannerBody({
       <div className="space-y-5">
         <ScannerState
           eyebrow="Step 1"
-          title="Connect to review live approvals"
-          body="The scan reads public wallet history and on-chain state. It does not move funds, request signatures, or send transactions."
+          title="Connect when you want wallet-led review"
+          body="You can scan a pasted address without connecting. Connect only when you want to review the connected wallet directly or revoke verified approvals."
           action={<ConnectWalletButton />}
         />
         <ScannerDiagnosticsPanel
