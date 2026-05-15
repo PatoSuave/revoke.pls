@@ -3,6 +3,11 @@ import type { Metadata, Viewport } from "next";
 import "@/app/globals.css";
 import { Providers } from "@/components/providers";
 import { absoluteUrl, siteConfig } from "@/lib/site";
+import {
+  DEFAULT_THEME_MODE,
+  THEME_MODE_IDS,
+  THEME_STORAGE_KEY,
+} from "@/lib/theme";
 
 // Icons and social previews are generated from the co-located metadata
 // files (`icon.tsx`, `apple-icon.tsx`, `opengraph-image.tsx`). Next.js
@@ -50,13 +55,35 @@ export const viewport: Viewport = {
   initialScale: 1,
 };
 
+const themeInitScript = `
+(() => {
+  try {
+    const key = ${JSON.stringify(THEME_STORAGE_KEY)};
+    const modes = ${JSON.stringify(THEME_MODE_IDS)};
+    const stored = window.localStorage.getItem(key);
+    const theme = modes.includes(stored) ? stored : ${JSON.stringify(DEFAULT_THEME_MODE)};
+    document.documentElement.dataset.theme = theme;
+    document.documentElement.style.colorScheme = theme === "light" ? "light" : "dark";
+  } catch {
+    document.documentElement.dataset.theme = ${JSON.stringify(DEFAULT_THEME_MODE)};
+  }
+})();
+`;
+
 export default function RootLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en" className="dark">
+    <html
+      lang="en"
+      data-theme={DEFAULT_THEME_MODE}
+      suppressHydrationWarning
+    >
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: themeInitScript }} />
+      </head>
       <body className="min-h-dvh bg-pulse-bg text-pulse-text antialiased">
         <Providers>{children}</Providers>
       </body>

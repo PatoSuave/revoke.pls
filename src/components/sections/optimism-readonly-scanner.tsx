@@ -515,7 +515,7 @@ function OptimismErc20Confirm({
         <button
           type="button"
           onClick={onCancel}
-          className="rounded-lg border border-pulse-border bg-white/5 px-2.5 py-1.5 font-semibold text-pulse-muted transition hover:bg-white/10"
+          className="rounded-lg border border-pulse-border bg-pulse-text/5 px-2.5 py-1.5 font-semibold text-pulse-muted transition hover:bg-pulse-text/10"
         >
           Cancel
         </button>
@@ -533,7 +533,7 @@ function OptimismErc20Confirm({
           type="button"
           onClick={onConfirm}
           disabled={!canConfirm}
-          className="rounded-lg bg-pulse-gradient px-2.5 py-1.5 font-semibold text-pulse-bg shadow-glow disabled:cursor-not-allowed disabled:opacity-60"
+          className="rounded-lg bg-pulse-gradient px-2.5 py-1.5 font-semibold text-pulse-on-gradient shadow-glow disabled:cursor-not-allowed disabled:opacity-60"
         >
           {status === "wallet" ? "Wallet open" : "Confirm revoke"}
         </button>
@@ -817,7 +817,7 @@ function OptimismNftConfirm({
         <button
           type="button"
           onClick={onCancel}
-          className="rounded-lg border border-pulse-border bg-white/5 px-2.5 py-1.5 font-semibold text-pulse-muted transition hover:bg-white/10"
+          className="rounded-lg border border-pulse-border bg-pulse-text/5 px-2.5 py-1.5 font-semibold text-pulse-muted transition hover:bg-pulse-text/10"
         >
           Cancel
         </button>
@@ -835,7 +835,7 @@ function OptimismNftConfirm({
           type="button"
           onClick={onConfirm}
           disabled={!canConfirm}
-          className="rounded-lg bg-pulse-gradient px-2.5 py-1.5 font-semibold text-pulse-bg shadow-glow disabled:cursor-not-allowed disabled:opacity-60"
+          className="rounded-lg bg-pulse-gradient px-2.5 py-1.5 font-semibold text-pulse-on-gradient shadow-glow disabled:cursor-not-allowed disabled:opacity-60"
         >
           {status === "wallet" ? "Wallet open" : "Confirm revoke"}
         </button>

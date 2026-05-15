@@ -4,6 +4,7 @@ import type { ReactNode } from "react";
 
 import { AntiPhishingBanner } from "@/components/sections/anti-phishing-banner";
 import { PulseMark } from "@/components/pulse-mark";
+import { ThemeModeToggle } from "@/components/theme-mode-toggle";
 import {
   currentRelease,
   isPlaceholderCid,
@@ -178,12 +179,13 @@ function SiteHeader({ desktopReady }: { desktopReady: boolean }) {
         </nav>
 
         <div className="flex items-center gap-2">
+          <ThemeModeToggle className="hidden sm:inline-grid" />
           <StatusPill className="hidden sm:inline-flex">
             {desktopReady ? "Desktop ready" : "Desktop pending"}
           </StatusPill>
           <Link
             href="/app"
-            className="inline-flex items-center justify-center rounded-xl bg-pulse-gradient px-4 py-2 text-xs font-semibold text-white shadow-glow transition hover:brightness-110"
+            className="inline-flex items-center justify-center rounded-xl bg-pulse-gradient px-4 py-2 text-xs font-semibold text-pulse-on-gradient shadow-glow transition hover:brightness-110"
           >
             Launch Scanner
           </Link>
@@ -230,13 +232,13 @@ function Hero({ desktopReady }: { desktopReady: boolean }) {
           <div className="mt-8 flex flex-col gap-3 sm:flex-row">
             <Link
               href="/app"
-              className="inline-flex items-center justify-center rounded-xl bg-pulse-gradient px-6 py-3 text-sm font-semibold text-white shadow-glow transition hover:brightness-110"
+              className="inline-flex items-center justify-center rounded-xl bg-pulse-gradient px-6 py-3 text-sm font-semibold text-pulse-on-gradient shadow-glow transition hover:brightness-110"
             >
               Launch Scanner
             </Link>
             <a
               href="#desktop"
-              className="inline-flex items-center justify-center rounded-xl border border-pulse-border bg-white/5 px-6 py-3 text-sm font-semibold text-pulse-text transition hover:bg-white/10"
+              className="inline-flex items-center justify-center rounded-xl border border-pulse-border bg-pulse-text/5 px-6 py-3 text-sm font-semibold text-pulse-text transition hover:bg-pulse-text/10"
             >
               Desktop App {desktopReady ? "" : "/ Coming Soon"}
             </a>
@@ -329,7 +331,7 @@ function LaunchChoicePanel({ desktopReady }: { desktopReady: boolean }) {
           action={
             <Link
               href="/app"
-              className="inline-flex items-center justify-center rounded-xl bg-pulse-gradient px-4 py-2.5 text-sm font-semibold text-white transition hover:brightness-110"
+              className="inline-flex items-center justify-center rounded-xl bg-pulse-gradient px-4 py-2.5 text-sm font-semibold text-pulse-on-gradient transition hover:brightness-110"
             >
               Open /app
             </Link>
@@ -352,7 +354,7 @@ function LaunchChoicePanel({ desktopReady }: { desktopReady: boolean }) {
           action={
             <a
               href="#desktop"
-              className="inline-flex items-center justify-center rounded-xl border border-pulse-border bg-white/5 px-4 py-2.5 text-sm font-semibold text-pulse-text transition hover:bg-white/10"
+              className="inline-flex items-center justify-center rounded-xl border border-pulse-border bg-pulse-text/5 px-4 py-2.5 text-sm font-semibold text-pulse-text transition hover:bg-pulse-text/10"
             >
               View status
             </a>

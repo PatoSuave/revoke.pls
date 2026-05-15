@@ -95,7 +95,7 @@ export function NftApprovalRow({
     approval.operatorAddress.toLowerCase() === ZERO_ADDRESS;
 
   return (
-    <li className="border-b border-pulse-border/60 transition last:border-b-0 hover:bg-white/[0.025]">
+    <li className="border-b border-pulse-border/60 transition last:border-b-0 hover:bg-pulse-text/[0.025]">
       <div className="grid grid-cols-1 gap-4 px-4 py-4 sm:grid-cols-[1.2fr_1.45fr_1fr_auto] sm:items-center sm:gap-4">
         <div className="flex min-w-0 items-center gap-3">
           <CollectionAvatar name={approval.collectionName ?? "NFT"} />
@@ -523,7 +523,7 @@ function RowAction({
   if (status === "wallet") {
     return (
       <span
-        className={`${base} border border-pulse-border bg-white/5 text-pulse-muted`}
+        className={`${base} border border-pulse-border bg-pulse-text/5 text-pulse-muted`}
       >
         <Spinner /> Confirm in wallet...
       </span>
@@ -532,7 +532,7 @@ function RowAction({
   if (status === "pending") {
     return (
       <span
-        className={`${base} border border-pulse-border bg-white/5 text-pulse-muted`}
+        className={`${base} border border-pulse-border bg-pulse-text/5 text-pulse-muted`}
       >
         <Spinner /> Confirming...
         {hash ? <TxLink chainId={chainId} hash={hash} /> : null}
@@ -586,7 +586,7 @@ function RowAction({
       <button
         type="button"
         onClick={onRetry}
-        className={`${base} border border-pulse-border bg-white/5 text-pulse-text hover:bg-white/10`}
+        className={`${base} border border-pulse-border bg-pulse-text/5 text-pulse-text hover:bg-pulse-text/10`}
       >
         Try again
       </button>
@@ -597,7 +597,7 @@ function RowAction({
       <button
         type="button"
         onClick={onCancel}
-        className={`${base} border border-pulse-border bg-white/5 text-pulse-muted hover:bg-white/10`}
+        className={`${base} border border-pulse-border bg-pulse-text/5 text-pulse-muted hover:bg-pulse-text/10`}
       >
         Cancel
       </button>
@@ -608,7 +608,7 @@ function RowAction({
       type="button"
       onClick={onConfirmClick}
       disabled={isBusy}
-      className={`${base} bg-pulse-gradient text-pulse-bg shadow-glow hover:brightness-110 active:brightness-95`}
+      className={`${base} bg-pulse-gradient text-pulse-on-gradient shadow-glow hover:brightness-110 active:brightness-95`}
     >
       Review revoke
     </button>
@@ -691,7 +691,7 @@ function ConfirmPanel({
           <button
             type="button"
             onClick={onCancel}
-            className="flex-1 rounded-xl border border-pulse-border bg-white/5 px-3 py-2 text-xs font-semibold text-pulse-text transition hover:bg-white/10 sm:flex-none"
+            className="flex-1 rounded-xl border border-pulse-border bg-pulse-text/5 px-3 py-2 text-xs font-semibold text-pulse-text transition hover:bg-pulse-text/10 sm:flex-none"
           >
             Cancel
           </button>
@@ -709,7 +709,7 @@ function ConfirmPanel({
             type="button"
             onClick={highGasWarning ? onConfirmHighGas : onConfirm}
             disabled={!canConfirm}
-            className="flex-1 rounded-xl bg-pulse-gradient px-3 py-2 text-xs font-semibold text-pulse-bg shadow-glow transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-60 sm:flex-none"
+            className="flex-1 rounded-xl bg-pulse-gradient px-3 py-2 text-xs font-semibold text-pulse-on-gradient shadow-glow transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-60 sm:flex-none"
           >
             {highGasWarning ? "Continue to wallet anyway" : "Confirm revoke"}
           </button>
@@ -940,7 +940,7 @@ function StatusRow({
         <button
           type="button"
           onClick={onDismiss}
-          className="rounded-md px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wide hover:bg-white/5"
+          className="rounded-md px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wide hover:bg-pulse-text/5"
         >
           Dismiss
         </button>
@@ -988,7 +988,7 @@ function CollectionAvatar({ name }: { name: string }) {
   return (
     <div
       aria-hidden
-      className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-pulse-gradient text-[10px] font-bold text-pulse-bg"
+      className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-pulse-gradient text-[10px] font-bold text-pulse-on-gradient"
     >
       {initials}
     </div>

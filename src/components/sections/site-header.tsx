@@ -2,6 +2,7 @@ import Link from "next/link";
 
 import { ConnectWalletButton } from "@/components/connect-wallet-button";
 import { PulseMark } from "@/components/pulse-mark";
+import { ThemeModeToggle } from "@/components/theme-mode-toggle";
 import { siteConfig } from "@/lib/site";
 
 export function SiteHeader() {
@@ -24,14 +25,15 @@ export function SiteHeader() {
             <a
               key={item.href}
               href={item.href}
-              className="shrink-0 whitespace-nowrap rounded-lg px-2.5 py-1.5 transition hover:bg-white/5 hover:text-pulse-text lg:px-0 lg:py-0 lg:hover:bg-transparent"
+              className="shrink-0 whitespace-nowrap rounded-lg px-2.5 py-1.5 transition hover:bg-pulse-text/5 hover:text-pulse-text lg:px-0 lg:py-0 lg:hover:bg-transparent"
             >
               {item.label}
             </a>
           ))}
         </nav>
 
-        <div className="order-2 flex min-w-0 justify-start lg:order-3 lg:justify-end">
+        <div className="order-2 flex min-w-0 flex-wrap items-center gap-2 lg:order-3 lg:justify-end">
+          <ThemeModeToggle className="shrink-0" />
           <ConnectWalletButton className="max-w-full justify-start lg:justify-end" />
         </div>
       </div>
