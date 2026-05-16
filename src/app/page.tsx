@@ -185,7 +185,7 @@ function SiteHeader({ desktopReady }: { desktopReady: boolean }) {
             target="_blank"
             rel="noopener noreferrer"
             aria-label="Follow Pulse Revoke on X"
-            className="transition hover:text-pulse-text"
+            className="x-profile-pulse-link"
           >
             X
           </a>

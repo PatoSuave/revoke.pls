@@ -35,7 +35,7 @@ export function SiteHeader() {
             target="_blank"
             rel="noopener noreferrer"
             aria-label="Follow Pulse Revoke on X"
-            className="shrink-0 whitespace-nowrap rounded-lg px-2.5 py-1.5 transition hover:bg-pulse-text/5 hover:text-pulse-text lg:px-0 lg:py-0 lg:hover:bg-transparent"
+            className="x-profile-pulse-link shrink-0"
           >
             X
           </a>
