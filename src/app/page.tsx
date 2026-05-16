@@ -732,6 +732,14 @@ function SiteFooter({ desktopReady }: { desktopReady: boolean }) {
           >
             GitHub
           </a>
+          <a
+            href={siteConfig.links.x}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="transition hover:text-pulse-text"
+          >
+            X
+          </a>
           <a href="#desktop" className="transition hover:text-pulse-text">
             Desktop {desktopReady ? "downloads" : "coming soon"}
           </a>

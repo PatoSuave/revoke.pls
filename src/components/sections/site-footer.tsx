@@ -44,6 +44,14 @@ export function SiteFooter() {
             GitHub
           </a>
           <a
+            href={siteConfig.links.x}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="transition hover:text-pulse-text"
+          >
+            X
+          </a>
+          <a
             href={siteConfig.links.explorer}
             target="_blank"
             rel="noopener noreferrer"
