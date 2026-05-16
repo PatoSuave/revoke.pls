@@ -180,6 +180,15 @@ function SiteHeader({ desktopReady }: { desktopReady: boolean }) {
           <a href="#faq" className="transition hover:text-pulse-text">
             FAQ
           </a>
+          <a
+            href={siteConfig.links.x}
+            target="_blank"
+            rel="noopener noreferrer"
+            aria-label="Follow Pulse Revoke on X"
+            className="transition hover:text-pulse-text"
+          >
+            X
+          </a>
         </nav>
 
         <div className="flex min-w-0 shrink-0 items-center gap-2">
