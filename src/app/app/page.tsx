@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 
 import { AntiPhishingBanner } from "@/components/sections/anti-phishing-banner";
 import { ApprovalScanner } from "@/components/sections/approval-scanner";
@@ -9,6 +10,7 @@ import { absoluteUrl, siteConfig } from "@/lib/site";
 import {
   LIVE_SUPPORTED_CHAIN_ROWS,
 } from "@/lib/supported-chain-copy";
+import { TOKEN_CHAIR_SNIFFER_ROUTE } from "@/lib/token-chair-sniffer";
 
 export const metadata: Metadata = {
   title: "Revoke Scanner",
@@ -77,6 +79,12 @@ function AppWorkspaceIntro() {
                 </span>
               ))}
             </div>
+            <Link
+              href={TOKEN_CHAIR_SNIFFER_ROUTE}
+              className="mt-2 inline-flex max-w-full items-center justify-center rounded-xl border border-pulse-cyan/35 bg-pulse-cyan/10 px-3 py-2 text-xs font-semibold text-pulse-cyan transition hover:bg-pulse-cyan/15"
+            >
+              Token Chair Sniffer
+            </Link>
           </div>
         </div>
       </div>
