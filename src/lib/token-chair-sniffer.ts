@@ -185,6 +185,28 @@ export interface ContractSniffCard {
   href?: string;
 }
 
+export type TokenChairPairCandidateStatus =
+  | "selected"
+  | "warning"
+  | "available";
+
+export interface TokenChairPairCandidateRow {
+  rank: number;
+  pairAddress: string;
+  pairLabel: string;
+  dexName: string;
+  quoteLabel: string;
+  priceUsd: string;
+  liquidityUsd: string;
+  volume24h: string;
+  txns24h: string;
+  pairAgeLabel: string;
+  status: TokenChairPairCandidateStatus;
+  statusLabel: string;
+  detail: string;
+  dexScreenerUrl: string | null;
+}
+
 export type TokenChairAddressKind =
   | "zero-address"
   | "burn-address"
@@ -703,6 +725,46 @@ export function formatCompactNumber(value: number | null): string {
 export function formatTxns24h(txns: TokenChairTxnWindow | null): string {
   if (!txns) return "Not returned";
   return `${txns.total.toLocaleString("en-US")} total`;
+}
+
+export function buildPairCandidateRows(
+  pairs: readonly TokenChairMarketData[],
+  limit = 6,
+): TokenChairPairCandidateRow[] {
+  return pairs.slice(0, Math.max(0, limit)).map((pair, index) => {
+    const isSelected = index === 0;
+    const warning = pairCandidateWarning(pair);
+    const status: TokenChairPairCandidateStatus = isSelected
+      ? "selected"
+      : warning
+        ? "warning"
+        : "available";
+
+    return {
+      rank: index + 1,
+      pairAddress: pair.pairAddress,
+      pairLabel: shortenPairAddress(pair.pairAddress),
+      dexName: pair.dexName,
+      quoteLabel: pair.quoteTokenSymbol
+        ? `/${pair.quoteTokenSymbol}`
+        : "/quote not returned",
+      priceUsd: formatPriceUsd(pair.priceUsd),
+      liquidityUsd: formatUsd(pair.liquidityUsd),
+      volume24h: formatUsd(pair.volume24h),
+      txns24h: formatTxns24h(pair.txns24h),
+      pairAgeLabel: pair.pairAgeLabel,
+      status,
+      statusLabel: isSelected
+        ? "Selected pair"
+        : warning ?? "Visible market data",
+      detail: pair.quoteTokenSymbol
+        ? `Quoted against ${pair.quoteTokenSymbol}${
+            pair.quoteTokenName ? ` (${pair.quoteTokenName})` : ""
+          }.`
+        : "DEX Screener did not return quote-token metadata.",
+      dexScreenerUrl: pair.dexScreenerUrl,
+    };
+  });
 }
 
 export function formatPairAge(
@@ -1424,6 +1486,24 @@ function shortenSignalAddress(address: Address): string {
 
 function pulseScanAddressUrl(address: Address | string): string {
   return `${PULSESCAN_BASE_URL}/address/${address}`;
+}
+
+function shortenPairAddress(address: string): string {
+  return address.length >= 10
+    ? `${address.slice(0, 6)}...${address.slice(-4)}`
+    : address;
+}
+
+function pairCandidateWarning(
+  pair: TokenChairMarketData,
+): string | null {
+  if (pair.liquidityUsd === null) return "Liquidity not returned";
+  if (pair.liquidityUsd <= 0) return "No visible liquidity";
+  if (pair.liquidityUsd < 1_000) return "Very low liquidity";
+  if (pair.liquidityUsd < 10_000) return "Low liquidity";
+  if (pair.pairAgeMs !== null && pair.pairAgeMs < DAY_MS) return "New pair";
+  if (pair.txns24h?.total === 0) return "No 24h transactions";
+  return null;
 }
 
 function formatSignalPercent(value: number): string {

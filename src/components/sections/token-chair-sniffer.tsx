@@ -11,6 +11,7 @@ import {
   TOKEN_CHAIR_CHAIN_LABEL,
   TOKEN_CHAIR_DISCLAIMER,
   buildContractSniffCards,
+  buildPairCandidateRows,
   buildQuickSniffRows,
   formatCompactNumber,
   formatPriceUsd,
@@ -22,6 +23,7 @@ import {
   type TokenChairApiResponse,
   type TokenChairContractData,
   type TokenChairMarketData,
+  type TokenChairPairCandidateRow,
   type TokenChairVerdict,
 } from "@/lib/token-chair-sniffer";
 
@@ -559,6 +561,7 @@ function MarketChairIntel({
         ? "No pair found"
         : "Not returned";
   const cards = buildMarketCards(market, placeholder);
+  const pairRows = buildPairCandidateRows(response?.pairs ?? []);
 
   return (
     <section className="rounded-lg border border-pulse-border/80 bg-[#080d12] p-4">
@@ -572,6 +575,7 @@ function MarketChairIntel({
           <IntelCard key={card.label} {...card} />
         ))}
       </div>
+      <PairCandidateRows rows={pairRows} />
     </section>
   );
 }
@@ -687,6 +691,94 @@ function IntelCard({
   return (
     <div className="grid min-h-28 grid-cols-[3rem_minmax(0,1fr)] items-center gap-4 rounded-lg border border-pulse-border/80 bg-[#0a1016] p-4">
       {content}
+    </div>
+  );
+}
+
+function PairCandidateRows({
+  rows,
+}: {
+  rows: readonly TokenChairPairCandidateRow[];
+}) {
+  if (rows.length === 0) return null;
+
+  return (
+    <div className="mt-4 overflow-hidden rounded-lg border border-pulse-border/75 bg-[#070b10]">
+      <div className="grid grid-cols-[minmax(0,1fr)_auto] gap-3 border-b border-pulse-border/70 px-3 py-2">
+        <p className="text-sm font-semibold text-pulse-text">Pair Candidates</p>
+        <p className="text-xs text-pulse-muted">
+          Top {rows.length} by visible liquidity
+        </p>
+      </div>
+      <ul className="divide-y divide-pulse-border/60">
+        {rows.map((row) => (
+          <li key={row.pairAddress}>
+            <PairCandidateRow row={row} />
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
+function PairCandidateRow({
+  row,
+}: {
+  row: TokenChairPairCandidateRow;
+}) {
+  const badgeClass = {
+    selected: "border-pulse-green/40 bg-pulse-green/10 text-pulse-green",
+    warning: "border-amber-400/45 bg-amber-400/10 text-amber-200",
+    available: "border-pulse-border bg-pulse-panel/45 text-pulse-muted",
+  }[row.status];
+  const content = (
+    <div className="grid gap-3 px-3 py-3 transition hover:bg-pulse-panel/25 md:grid-cols-[minmax(0,1.1fr)_minmax(0,1fr)]">
+      <div className="min-w-0">
+        <div className="flex min-w-0 items-center gap-2">
+          <span className="grid h-6 w-6 shrink-0 place-items-center rounded-full border border-pulse-border text-[11px] text-pulse-muted">
+            {row.rank}
+          </span>
+          <p className="truncate text-sm font-semibold text-pulse-text">
+            {row.dexName} {row.quoteLabel}
+          </p>
+          <span className={`shrink-0 rounded-full border px-2 py-0.5 text-[11px] font-semibold ${badgeClass}`}>
+            {row.statusLabel}
+          </span>
+        </div>
+        <p className="mt-2 truncate font-mono text-xs text-pulse-muted">
+          {row.pairLabel}
+        </p>
+        <p className="mt-1 text-xs text-pulse-muted">{row.detail}</p>
+      </div>
+      <div className="grid grid-cols-2 gap-2 text-xs sm:grid-cols-4 md:grid-cols-2 2xl:grid-cols-4">
+        <PairMetric label="Liq" value={row.liquidityUsd} />
+        <PairMetric label="Vol" value={row.volume24h} />
+        <PairMetric label="Txns" value={row.txns24h} />
+        <PairMetric label="Age" value={row.pairAgeLabel} />
+      </div>
+    </div>
+  );
+
+  if (!row.dexScreenerUrl) return content;
+
+  return (
+    <a href={row.dexScreenerUrl} target="_blank" rel="noopener noreferrer">
+      {content}
+    </a>
+  );
+}
+
+function PairMetric({
+  label,
+  value,
+}: {
+  label: string;
+  value: string;
+}) {
+  return (
+    <div className="min-w-0 rounded-lg border border-pulse-border/60 bg-[#0a1016] px-2 py-1.5">
+      <p className="uppercase tracking-[0.12em] text-pulse-muted/70">{label}</p>
+      <p className="mt-1 truncate font-semibold text-pulse-text">{value}</p>
     </div>
   );
 }

@@ -27,6 +27,7 @@ Implemented in this MVP:
 - Compact Signal Details panel explaining the current verdict inputs
 - Conservative Chair Verdict mapping
 - Market Chair Intel cards
+- Pair Candidates list showing the top returned DEX Screener pairs by visible liquidity
 - Quick Sniff checklist with live ownership/proxy rows and conservative placeholders for unchecked rows
 - Contract Sniff cards with live owner, source, deployer, holder, LP, and metadata signals
 - Unit tests for address validation, parser behavior, API states, verdict copy, and unchecked rows
@@ -56,6 +57,8 @@ Normalized live fields include:
 - quote token name and symbol
 
 If DEX Screener returns multiple PulseChain pairs, the UI selects the pair with the highest `liquidity.usd`. If every valid pair is missing liquidity, the first valid pair is used and the response is marked with a weak-selection warning.
+
+The Market Chair Intel panel also shows a compact Pair Candidates list from the already-normalized DEX Screener response. Candidate rows include pair rank, DEX, quote token, liquidity, volume, transaction count, age, and a DEX Screener link when returned. These rows are market context only; labels like `Selected pair`, `Low liquidity`, and `Visible market data` are not contract-risk conclusions.
 
 ## Native Read-Only Contract Checks
 

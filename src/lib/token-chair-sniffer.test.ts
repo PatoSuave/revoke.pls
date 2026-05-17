@@ -5,6 +5,7 @@ import { fetchDexScreenerTokenPairs } from "@/lib/token-chair-sniffer-server";
 import {
   TOKEN_CHAIR_CHAIN_ID,
   buildContractSniffCards,
+  buildPairCandidateRows,
   buildQuickSniffRows,
   classifyTokenChairAddress,
   formatPairAge,
@@ -170,6 +171,46 @@ describe("Token Chair Sniffer helpers", () => {
       getAddress("0x0000000000000000000000000000000000000002"),
     );
     expect(result.market?.pairCount).toBe(2);
+  });
+
+  it("builds conservative pair candidate rows from normalized DEX Screener pairs", () => {
+    const selectedPair = dexPair({
+      liquidity: { usd: 10000 },
+      pairCreatedAt: CREATED_AT - 3 * 24 * 60 * 60 * 1000,
+    });
+    const lowLiquidityPair = dexPair({
+      pairAddress: getAddress("0x0000000000000000000000000000000000000003"),
+      liquidity: { usd: 500 },
+    });
+    const noTxnPair = dexPair({
+      pairAddress: getAddress("0x0000000000000000000000000000000000000004"),
+      liquidity: { usd: 12000 },
+      txns: { h24: { buys: 0, sells: 0 } },
+    });
+    const response = normalizeDexScreenerTokenPairsResponse(
+      [selectedPair, lowLiquidityPair, noTxnPair],
+      TOKEN,
+      { now: CREATED_AT },
+    );
+    const rows = buildPairCandidateRows(response.pairs);
+    const rowText = rows.map((row) => row.statusLabel).join(" ").toLowerCase();
+
+    expect(rows).toHaveLength(3);
+    expect(rows[0]).toMatchObject({
+      rank: 1,
+      status: "selected",
+      statusLabel: "Selected pair",
+      liquidityUsd: "$12,000",
+    });
+    expect(rows[1]).toMatchObject({
+      status: "available",
+      statusLabel: "Visible market data",
+    });
+    expect(rows[2]).toMatchObject({
+      status: "warning",
+      statusLabel: "Very low liquidity",
+    });
+    expect(rowText).not.toMatch(/\bsafe\b/);
   });
 
   it("reports no-pair and malformed response states without false market data", () => {
