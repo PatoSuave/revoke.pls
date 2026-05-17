@@ -22,15 +22,18 @@ Implemented in this MVP:
 - PulseScan/Blockscout verified-source metadata for source status, ABI availability, deployer, and creation transaction
 - Lightweight ABI/source keyword signals for mint, pause, cooldown, blacklist, whitelist, and suspicious-function rows
 - PulseScan holder endpoint concentration reads for top token holder and LP holder data when available
+- Address context labels for zero/burn addresses, token contract, selected pair, owner, deployer, contracts, and wallets where visible metadata supports it
+- PulseScan links on live contract/source/deployer/holder cards
+- Compact Signal Details panel explaining the current verdict inputs
 - Conservative Chair Verdict mapping
 - Market Chair Intel cards
 - Quick Sniff checklist with live ownership/proxy rows and conservative placeholders for unchecked rows
 - Contract Sniff cards with live owner, source, deployer, holder, LP, and metadata signals
 - Unit tests for address validation, parser behavior, API states, verdict copy, and unchecked rows
 
-## Live Data Source
+## Market Data Source
 
-Phase 1 uses DEX Screener only:
+Phase 1 market data uses DEX Screener only:
 
 ```text
 GET https://api.dexscreener.com/token-pairs/v1/pulsechain/{tokenAddress}
@@ -109,6 +112,20 @@ The top-holder card reports the largest visible token holder as a percentage of 
 The LP concentration card attempts the same read for the selected DEX Screener pair address. Some PulseScan pair contracts are not indexed as token holder endpoints; in that case LP concentration stays `Unable to verify` instead of guessing.
 
 These are visible holder signals only. They can be affected by explorer indexing, wrapped-token mechanics, staking contracts, bridges, protocol contracts, or holder data that changes after the scan.
+
+Holder and LP cards classify the returned top address when possible:
+
+- zero address
+- common burn address
+- token contract
+- selected DEX pair
+- standard owner
+- deployer
+- PulseScan contract
+- wallet
+- unknown address
+
+These labels are context, not audit conclusions. They use already-returned read-only RPC, DEX Screener, and PulseScan metadata.
 
 ## Placeholder Checks
 

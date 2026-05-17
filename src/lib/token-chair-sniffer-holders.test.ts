@@ -18,24 +18,27 @@ const PAIR = getAddress("0x165C3410fC91EF562C50559f7d2289fEbed552d9");
 const QUOTE = getAddress("0xA1077a294dDE1B09bB078844df40758a5D0f9a27");
 const HOLDER = getAddress("0x1111111111111111111111111111111111111111");
 const LP_HOLDER = getAddress("0x2222222222222222222222222222222222222222");
+const OWNER = getAddress("0x3333333333333333333333333333333333333333");
 
 function holdersPayload({
   holder = HOLDER,
   value = "250",
   totalSupply = "1000",
   holders = "42",
+  isContract = false,
 }: {
   holder?: Address;
   value?: string;
   totalSupply?: string;
   holders?: string;
+  isContract?: boolean;
 } = {}) {
   return {
     items: [
       {
         address: {
           hash: holder,
-          is_contract: false,
+          is_contract: isContract,
         },
         token: {
           holders,
@@ -150,6 +153,46 @@ describe("Token Chair Sniffer holder concentration", () => {
     expect(result.token.percent).toBe(25);
     expect(result.lp.percent).toBeNull();
     expect(result.warnings.join(" ")).toContain("HTTP 404");
+  });
+
+  it("adds address context and PulseScan links to concentration cards", () => {
+    const holders = normalizeTokenChairHolderResponse({
+      tokenPayload: holdersPayload({
+        holder: OWNER,
+        value: "300",
+        totalSupply: "1000",
+      }),
+      lpPayload: holdersPayload({
+        holder: PAIR,
+        value: "600",
+        totalSupply: "1000",
+        isContract: true,
+      }),
+      pairAddress: PAIR,
+    });
+    const cards = buildContractSniffCards({
+      contract: {
+        ...contractData(),
+        ownerAddress: OWNER,
+        ownershipRenounced: false,
+        holders,
+      },
+    });
+    const topHolder = cards.find((card) => card.label === "Top holder concentration");
+    const lpHolder = cards.find((card) => card.label === "LP concentration");
+
+    expect(topHolder).toMatchObject({
+      value: "30%",
+      status: "warning",
+      href: `https://scan.pulsechain.com/address/${OWNER}`,
+    });
+    expect(topHolder?.detail).toContain("Owner");
+    expect(lpHolder).toMatchObject({
+      value: "60%",
+      status: "warning",
+      href: `https://scan.pulsechain.com/address/${PAIR}`,
+    });
+    expect(lpHolder?.detail).toContain("Selected DEX pair");
   });
 
   it("adds concentration warnings to the conservative verdict without safe claims", () => {

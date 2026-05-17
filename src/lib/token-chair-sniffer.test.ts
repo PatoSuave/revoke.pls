@@ -6,6 +6,7 @@ import {
   TOKEN_CHAIR_CHAIN_ID,
   buildContractSniffCards,
   buildQuickSniffRows,
+  classifyTokenChairAddress,
   formatPairAge,
   getTokenChairVerdict,
   normalizeDexScreenerTokenPairsResponse,
@@ -69,6 +70,55 @@ describe("Token Chair Sniffer helpers", () => {
     expect(normalizeTokenChairAddress("")).toBeNull();
     expect(normalizeTokenChairAddress("not-an-address")).toBeNull();
     expect(normalizeTokenChairAddress("0x1234")).toBeNull();
+  });
+
+  it("classifies visible addresses without implying audit certainty", () => {
+    const owner = getAddress("0x3333333333333333333333333333333333333333");
+    const deployer = getAddress("0x4444444444444444444444444444444444444444");
+    const contract = getAddress("0x5555555555555555555555555555555555555555");
+
+    expect(classifyTokenChairAddress("not-an-address")).toBeNull();
+    expect(
+      classifyTokenChairAddress(
+        "0x0000000000000000000000000000000000000000",
+      )?.kind,
+    ).toBe("zero-address");
+    expect(
+      classifyTokenChairAddress(
+        "0x000000000000000000000000000000000000dEaD",
+      )?.kind,
+    ).toBe("burn-address");
+    expect(
+      classifyTokenChairAddress(PAIR, {
+        tokenAddress: TOKEN,
+        pairAddress: PAIR,
+        ownerAddress: owner,
+        deployerAddress: deployer,
+        isContract: true,
+      })?.kind,
+    ).toBe("selected-pair");
+    expect(
+      classifyTokenChairAddress(owner, {
+        tokenAddress: TOKEN,
+        pairAddress: PAIR,
+        ownerAddress: owner,
+        deployerAddress: deployer,
+        isContract: false,
+      })?.kind,
+    ).toBe("owner");
+    expect(
+      classifyTokenChairAddress(deployer, {
+        tokenAddress: TOKEN,
+        deployerAddress: deployer,
+        isContract: false,
+      })?.kind,
+    ).toBe("deployer");
+    expect(classifyTokenChairAddress(contract, { isContract: true })?.kind).toBe(
+      "contract",
+    );
+    expect(classifyTokenChairAddress(contract, { isContract: false })?.kind).toBe(
+      "wallet",
+    );
   });
 
   it("normalizes DEX Screener token-pairs responses", () => {

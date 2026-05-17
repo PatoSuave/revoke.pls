@@ -139,6 +139,11 @@ export function TokenChairSniffer() {
           </section>
 
           <StatusStrip response={response} state={state} contract={contract} />
+          <SignalDetailsPanel
+            response={response}
+            state={state}
+            requestError={requestError}
+          />
 
           <div className="grid gap-4 xl:grid-cols-[minmax(0,1.15fr)_minmax(360px,0.85fr)]">
             <QuickSniffRows rows={quickRows} />
@@ -486,6 +491,58 @@ function StatusStrip({
   );
 }
 
+function SignalDetailsPanel({
+  response,
+  state,
+  requestError,
+}: {
+  response: TokenChairApiResponse | null;
+  state: SnifferUiState;
+  requestError: string | null;
+}) {
+  const details = buildSignalDetails(response, state, requestError);
+
+  return (
+    <section className="rounded-lg border border-pulse-border/75 bg-[#070b10] p-4">
+      <PanelHeader
+        icon="S"
+        title="Signal Details"
+        meta={response ? response.verdict.label : "Waiting"}
+      />
+      <div className="mt-4 grid gap-3 lg:grid-cols-[minmax(0,1fr)_260px]">
+        <ul className="grid gap-2">
+          {details.map((detail) => (
+            <li
+              key={detail}
+              className="rounded-lg border border-pulse-border/60 bg-[#0a1016] px-3 py-2 text-sm leading-6 text-pulse-muted"
+            >
+              {detail}
+            </li>
+          ))}
+        </ul>
+        <div className="grid gap-2 rounded-lg border border-pulse-border/60 bg-[#0a1016] p-3 text-xs text-pulse-muted">
+          <div>
+            <p className="uppercase tracking-[0.14em] text-pulse-muted/75">
+              Market
+            </p>
+            <p className="mt-1 font-semibold text-pulse-text">
+              {response?.status ?? (state === "loading" ? "Loading" : "Not checked yet")}
+            </p>
+          </div>
+          <div>
+            <p className="uppercase tracking-[0.14em] text-pulse-muted/75">
+              Mode
+            </p>
+            <p className="mt-1 font-semibold text-pulse-text">
+              Read-only, no wallet
+            </p>
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+}
+
 function MarketChairIntel({
   state,
   response,
@@ -697,21 +754,54 @@ function ContractSniffCards({
       <ContractMetadataStrip contract={contract} state={state} />
       <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
         {cards.map((card, index) => (
-          <div
+          <ContractSniffCardTile
             key={card.label}
-            className="min-h-32 rounded-lg border border-pulse-border/75 bg-[#0a1016] p-4"
-          >
-            <IconOrb accent={contractAccent(index)}>
-              {card.label.charAt(0)}
-            </IconOrb>
-            <p className="mt-4 text-sm text-pulse-muted">{card.label}</p>
-            <p className="mt-2 font-semibold text-pulse-text">{card.value}</p>
-            <p className="mt-2 text-xs leading-5 text-pulse-muted">{card.detail}</p>
-          </div>
+            card={card}
+            index={index}
+          />
         ))}
       </div>
     </section>
   );
+}
+
+function ContractSniffCardTile({
+  card,
+  index,
+}: {
+  card: ContractSniffCard;
+  index: number;
+}) {
+  const baseClassName =
+    "min-h-32 rounded-lg border border-pulse-border/75 bg-[#0a1016] p-4";
+  const className = card.href
+    ? `${baseClassName} transition hover:border-pulse-green/35 hover:bg-pulse-green/5`
+    : baseClassName;
+  const content = (
+    <>
+      <IconOrb accent={contractAccent(index)}>
+        {card.label.charAt(0)}
+      </IconOrb>
+      <p className="mt-4 text-sm text-pulse-muted">{card.label}</p>
+      <p className="mt-2 break-words font-semibold text-pulse-text">{card.value}</p>
+      <p className="mt-2 text-xs leading-5 text-pulse-muted">{card.detail}</p>
+    </>
+  );
+
+  if (card.href) {
+    return (
+      <a
+        href={card.href}
+        target="_blank"
+        rel="noopener noreferrer"
+        className={className}
+      >
+        {content}
+      </a>
+    );
+  }
+
+  return <div className={className}>{content}</div>;
 }
 
 function ContractMetadataStrip({
@@ -841,7 +931,7 @@ function getVerdictStatusCopy(
     return "No token has been sniffed yet. Contract checks remain pending.";
   }
   if (response.status === "no-pair-found") {
-    return "No PulseChain DEX Screener pair was found for this token. This does not prove the token is safe or unsafe. It means market data is currently unavailable from this source.";
+    return "No PulseChain DEX Screener pair was found for this token. This does not prove anything about contract risk. It means market data is currently unavailable from this source.";
   }
   if (response.status === "upstream-unavailable") {
     return "Market data could not be loaded right now. Token Chair Sniffer cannot fully verify this token.";
@@ -922,4 +1012,46 @@ function contractAccent(
 
 function firstMessage(messages: readonly string[]): string | null {
   return messages.find((message) => message.trim().length > 0) ?? null;
+}
+
+function buildSignalDetails(
+  response: TokenChairApiResponse | null,
+  state: SnifferUiState,
+  requestError: string | null,
+): string[] {
+  if (state === "loading") {
+    return [
+      "Sniffing visible data from DEX Screener, PulseChain RPC, and PulseScan read-only endpoints.",
+    ];
+  }
+
+  if (state === "error") {
+    return [
+      requestError ??
+        "The local Token Chair Sniffer API route could not complete this read.",
+    ];
+  }
+
+  if (!response) {
+    return [
+      "Waiting for a PulseChain token address. This feature does not connect a wallet, request signatures, or submit transactions.",
+    ];
+  }
+
+  const messages = [
+    ...response.verdict.notes,
+    ...response.warnings,
+    ...response.errors,
+  ]
+    .map((message) => message.trim())
+    .filter(Boolean);
+  const uniqueMessages = [...new Set(messages)];
+
+  if (uniqueMessages.length === 0) {
+    return [
+      "Visible market data returned, but tax and honeypot checks are still not live in this pass.",
+    ];
+  }
+
+  return uniqueMessages.slice(0, 5);
 }

@@ -182,6 +182,34 @@ export interface ContractSniffCard {
   value: string;
   status: SniffRowStatus;
   detail: string;
+  href?: string;
+}
+
+export type TokenChairAddressKind =
+  | "zero-address"
+  | "burn-address"
+  | "token-contract"
+  | "selected-pair"
+  | "owner"
+  | "deployer"
+  | "contract"
+  | "wallet"
+  | "unknown";
+
+export interface TokenChairAddressClassificationContext {
+  tokenAddress?: Address | null;
+  pairAddress?: Address | string | null;
+  ownerAddress?: Address | null;
+  deployerAddress?: Address | null;
+  isContract?: boolean | null;
+}
+
+export interface TokenChairAddressClassification {
+  address: Address;
+  kind: TokenChairAddressKind;
+  label: string;
+  detail: string;
+  explorerUrl: string;
 }
 
 interface NormalizeOptions {
@@ -201,6 +229,9 @@ interface VisibleMarketWarning {
 }
 
 const DAY_MS = 24 * 60 * 60 * 1000;
+const PULSESCAN_BASE_URL = "https://scan.pulsechain.com";
+const ZERO_ADDRESS = getAddress("0x0000000000000000000000000000000000000000");
+const DEAD_ADDRESS = getAddress("0x000000000000000000000000000000000000dEaD");
 
 const QUICK_SNIFF_DETAILS: Record<string, string> = {
   "Buy tax": "Needs a verified tax source or trade simulation. This MVP does not check it.",
@@ -241,6 +272,101 @@ export function normalizeTokenChairAddress(
   const value = input?.trim();
   if (!value || !isAddress(value)) return null;
   return getAddress(value);
+}
+
+export function classifyTokenChairAddress(
+  address: Address | string | null | undefined,
+  context: TokenChairAddressClassificationContext = {},
+): TokenChairAddressClassification | null {
+  const normalized = normalizeTokenChairAddress(address);
+  if (!normalized) return null;
+
+  const pairAddress = normalizeTokenChairAddress(context.pairAddress);
+  const base = {
+    address: normalized,
+    explorerUrl: pulseScanAddressUrl(normalized),
+  };
+
+  if (addressesMatch(normalized, ZERO_ADDRESS)) {
+    return {
+      ...base,
+      kind: "zero-address",
+      label: "Zero address",
+      detail:
+        "This is the zero address, commonly used for renounced ownership or inaccessible balances.",
+    };
+  }
+
+  if (addressesMatch(normalized, DEAD_ADDRESS)) {
+    return {
+      ...base,
+      kind: "burn-address",
+      label: "Burn address",
+      detail:
+        "This is a common dead/burn address; balances here are generally inaccessible.",
+    };
+  }
+
+  if (addressesMatch(normalized, context.tokenAddress)) {
+    return {
+      ...base,
+      kind: "token-contract",
+      label: "Token contract",
+      detail: "This address matches the token contract being scanned.",
+    };
+  }
+
+  if (addressesMatch(normalized, pairAddress)) {
+    return {
+      ...base,
+      kind: "selected-pair",
+      label: "Selected DEX pair",
+      detail: "This address matches the primary DEX Screener pair for this scan.",
+    };
+  }
+
+  if (addressesMatch(normalized, context.ownerAddress)) {
+    return {
+      ...base,
+      kind: "owner",
+      label: "Owner",
+      detail: "This address matches the standard owner returned by read-only checks.",
+    };
+  }
+
+  if (addressesMatch(normalized, context.deployerAddress)) {
+    return {
+      ...base,
+      kind: "deployer",
+      label: "Deployer",
+      detail: "This address matches the deployer returned by PulseScan metadata.",
+    };
+  }
+
+  if (context.isContract === true) {
+    return {
+      ...base,
+      kind: "contract",
+      label: "Contract",
+      detail: "PulseScan marks this address as a contract.",
+    };
+  }
+
+  if (context.isContract === false) {
+    return {
+      ...base,
+      kind: "wallet",
+      label: "Wallet",
+      detail: "PulseScan does not mark this address as a contract.",
+    };
+  }
+
+  return {
+    ...base,
+    kind: "unknown",
+    label: "Unknown address",
+    detail: "PulseScan did not return enough context to classify this address.",
+  };
 }
 
 export function normalizeDexScreenerTokenPairsResponse(
@@ -791,19 +917,25 @@ function getVisibleContractWarnings(
   const holders = contract.holders;
   const tokenHolderPercent = holders?.token.percent ?? null;
   const lpHolderPercent = holders?.lp.percent ?? null;
-  if (tokenHolderPercent !== null && tokenHolderPercent >= 20) {
+  if (holders && tokenHolderPercent !== null && tokenHolderPercent >= 20) {
     warnings.push({
       severity: "warning",
-      message:
-        "PulseScan shows a high visible top-holder concentration for this token.",
+      message: buildConcentrationWarningMessage(
+        "top-holder",
+        holders.token,
+        contract,
+      ),
     });
   }
 
-  if (lpHolderPercent !== null && lpHolderPercent >= 50) {
+  if (holders && lpHolderPercent !== null && lpHolderPercent >= 50) {
     warnings.push({
       severity: "warning",
-      message:
-        "PulseScan shows a high visible LP-token holder concentration for the selected pair.",
+      message: buildConcentrationWarningMessage(
+        "lp-holder",
+        holders.lp,
+        contract,
+      ),
     });
   } else if (
     holders &&
@@ -962,6 +1094,7 @@ function buildOwnerContractCard(
       ...card,
       value: shortenSignalAddress(contract.ownerAddress),
       status: "warning",
+      href: pulseScanAddressUrl(contract.ownerAddress),
       detail: `${contract.ownerFunction ?? "owner"}() returned a non-zero owner address.`,
     };
   }
@@ -996,6 +1129,7 @@ function buildSourceVerifiedContractCard(
       ...card,
       value: "Verified on PulseScan",
       status: "checked",
+      href: explorer.explorerTokenUrl,
       detail: [
         explorer.contractName ?? "Contract source is verified.",
         explorer.compilerVersion ? `Compiler ${explorer.compilerVersion}.` : null,
@@ -1008,6 +1142,7 @@ function buildSourceVerifiedContractCard(
       ...card,
       value: "Not verified on PulseScan",
       status: "warning",
+      href: explorer.explorerAddressUrl,
       detail:
         "PulseScan did not return verified source, so source-based checks are limited.",
     };
@@ -1033,9 +1168,10 @@ function buildDeployerContractCard(
       ...card,
       value: shortenSignalAddress(explorer.deployerAddress),
       status: "checked",
+      href: pulseScanAddressUrl(explorer.deployerAddress),
       detail: explorer.creationTxHash
-        ? "PulseScan returned creator and creation transaction metadata."
-        : "PulseScan returned creator metadata without a creation transaction hash.",
+        ? "PulseScan returned creator and creation transaction metadata. Classified as Deployer."
+        : "PulseScan returned creator metadata without a creation transaction hash. Classified as Deployer.",
     };
   }
 
@@ -1076,8 +1212,9 @@ function buildTopHolderContractCard(
     ...card,
     value: formatSignalPercent(signal.percent),
     status: signal.percent >= 20 ? "warning" : "checked",
+    href: classifyConcentrationSignal(signal, contract)?.explorerUrl,
     detail: [
-      signal.address ? `Top visible holder ${shortenSignalAddress(signal.address)}.` : null,
+      signal.address ? describeConcentrationSignal(signal, contract, "top-holder") : null,
       signal.holdersCount !== null
         ? `${signal.holdersCount.toLocaleString("en-US")} holders reported.`
         : null,
@@ -1106,10 +1243,78 @@ function buildLpConcentrationContractCard(
     ...card,
     value: formatSignalPercent(signal.percent),
     status: signal.percent >= 50 ? "warning" : "checked",
+    href: classifyConcentrationSignal(signal, contract)?.explorerUrl,
     detail: signal.address
-      ? `Largest visible LP holder ${shortenSignalAddress(signal.address)}.`
+      ? describeConcentrationSignal(signal, contract, "lp-holder")
       : "Largest visible LP holder concentration returned by PulseScan.",
   };
+}
+
+function buildConcentrationWarningMessage(
+  kind: "top-holder" | "lp-holder",
+  signal: TokenChairConcentrationSignal,
+  contract: TokenChairContractData,
+): string {
+  const percent = signal.percent === null ? null : formatSignalPercent(signal.percent);
+  const classification = classifyConcentrationSignal(signal, contract);
+  const holder = classification ? warningHolderLabel(classification) : null;
+  const percentCopy = percent ? ` (${percent})` : "";
+
+  if (kind === "top-holder") {
+    return holder
+      ? `PulseScan shows high visible top-holder concentration${percentCopy} at ${holder}.`
+      : `PulseScan shows high visible top-holder concentration${percentCopy} for this token.`;
+  }
+
+  return holder
+    ? `PulseScan shows high visible LP-token holder concentration${percentCopy} at ${holder}.`
+    : `PulseScan shows high visible LP-token holder concentration${percentCopy} for the selected pair.`;
+}
+
+function classifyConcentrationSignal(
+  signal: TokenChairConcentrationSignal,
+  contract: TokenChairContractData,
+): TokenChairAddressClassification | null {
+  return classifyTokenChairAddress(signal.address, {
+    tokenAddress: contract.tokenAddress,
+    pairAddress: contract.holders?.lp.pairAddress ?? null,
+    ownerAddress: contract.ownerAddress,
+    deployerAddress: contract.explorer?.deployerAddress ?? null,
+    isContract: signal.isContract,
+  });
+}
+
+function describeConcentrationSignal(
+  signal: TokenChairConcentrationSignal,
+  contract: TokenChairContractData,
+  kind: "top-holder" | "lp-holder",
+): string {
+  const classification = classifyConcentrationSignal(signal, contract);
+  const addressCopy = signal.address
+    ? shortenSignalAddress(signal.address)
+    : "unknown address";
+  const prefix =
+    kind === "top-holder" ? "Top visible holder" : "Largest visible LP holder";
+
+  if (!classification) {
+    return `${prefix} ${addressCopy}.`;
+  }
+
+  return `${prefix} ${addressCopy}. ${classification.label}: ${classification.detail}`;
+}
+
+function warningHolderLabel(
+  classification: TokenChairAddressClassification,
+): string {
+  if (classification.kind === "zero-address") return "the zero address";
+  if (classification.kind === "burn-address") return "a common burn address";
+  if (classification.kind === "token-contract") return "the token contract";
+  if (classification.kind === "selected-pair") return "the selected DEX pair";
+  if (classification.kind === "owner") return "the standard owner address";
+  if (classification.kind === "deployer") return "the deployer address";
+  if (classification.kind === "contract") return "a contract address";
+  if (classification.kind === "wallet") return "a wallet address";
+  return "an unclassified address";
 }
 
 function sortMarketPairs(
@@ -1215,6 +1420,10 @@ function quickRowSourceSignalKey(
 
 function shortenSignalAddress(address: Address): string {
   return `${address.slice(0, 6)}...${address.slice(-4)}`;
+}
+
+function pulseScanAddressUrl(address: Address | string): string {
+  return `${PULSESCAN_BASE_URL}/address/${address}`;
 }
 
 function formatSignalPercent(value: number): string {
