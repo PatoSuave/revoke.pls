@@ -7,9 +7,12 @@ import {
   normalizeTokenChairAddress,
   withTokenChairContractData,
   withTokenChairExplorerData,
+  withTokenChairHolderData,
+  type TokenChairApiResponse,
 } from "@/lib/token-chair-sniffer";
 import { fetchTokenChairContractData } from "@/lib/token-chair-sniffer-contract";
 import { fetchTokenChairExplorerData } from "@/lib/token-chair-sniffer-explorer";
+import { fetchTokenChairHolderData } from "@/lib/token-chair-sniffer-holders";
 import { fetchDexScreenerTokenPairs } from "@/lib/token-chair-sniffer-server";
 
 export const runtime = "nodejs";
@@ -56,22 +59,38 @@ export async function GET(request: Request) {
     TOKEN_CHAIR_REQUEST_TIMEOUT_MS,
   );
 
-  const [marketResult, contractResult, explorerResult] = await Promise.all([
-    fetchDexScreenerTokenPairs(tokenAddress, {
-      signal: controller.signal,
-    }),
-    fetchTokenChairContractData(tokenAddress, {
-      signal: controller.signal,
-    }),
-    fetchTokenChairExplorerData(tokenAddress, {
-      signal: controller.signal,
-    }),
-  ]).finally(() => clearTimeout(timeout));
+  let result: TokenChairApiResponse;
+  try {
+    const [marketResult, contractResult, explorerResult] = await Promise.all([
+      fetchDexScreenerTokenPairs(tokenAddress, {
+        signal: controller.signal,
+      }),
+      fetchTokenChairContractData(tokenAddress, {
+        signal: controller.signal,
+      }),
+      fetchTokenChairExplorerData(tokenAddress, {
+        signal: controller.signal,
+      }),
+    ]);
 
-  const result = withTokenChairExplorerData(
-    withTokenChairContractData(marketResult, contractResult),
-    explorerResult,
-  );
+    const holderResult = await fetchTokenChairHolderData(
+      tokenAddress,
+      marketResult.market?.pairAddress,
+      {
+        signal: controller.signal,
+      },
+    );
+
+    result = withTokenChairHolderData(
+      withTokenChairExplorerData(
+        withTokenChairContractData(marketResult, contractResult),
+        explorerResult,
+      ),
+      holderResult,
+    );
+  } finally {
+    clearTimeout(timeout);
+  }
 
   const httpStatus =
     result.status === "upstream-unavailable" ||

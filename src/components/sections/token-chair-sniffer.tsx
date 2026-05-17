@@ -671,8 +671,8 @@ function QuickSniffRows({ rows }: { rows: readonly SniffSignalRow[] }) {
         ))}
       </div>
       <p className="mt-4 text-xs text-pulse-muted">
-        Tax, honeypot, ownership, source, and bytecode checks are intentionally
-        not inferred in this pass.
+        Tax, honeypot, hidden-owner, and obfuscation checks are not live yet.
+        Source rows use lightweight PulseScan ABI/source keyword signals only.
       </p>
     </section>
   );

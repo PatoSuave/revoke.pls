@@ -21,10 +21,11 @@ Implemented in this MVP:
 - Read-only PulseChain RPC contract reads for basic token metadata, standard ownership, and common proxy signals
 - PulseScan/Blockscout verified-source metadata for source status, ABI availability, deployer, and creation transaction
 - Lightweight ABI/source keyword signals for mint, pause, cooldown, blacklist, whitelist, and suspicious-function rows
+- PulseScan holder endpoint concentration reads for top token holder and LP holder data when available
 - Conservative Chair Verdict mapping
 - Market Chair Intel cards
 - Quick Sniff checklist with live ownership/proxy rows and conservative placeholders for unchecked rows
-- Contract Sniff cards with live owner, source, deployer, and metadata; holders and LP concentration remain placeholders
+- Contract Sniff cards with live owner, source, deployer, holder, LP, and metadata signals
 - Unit tests for address validation, parser behavior, API states, verdict copy, and unchecked rows
 
 ## Live Data Source
@@ -95,12 +96,25 @@ If verified ABI or source is available, Token Chair Sniffer runs a lightweight k
 
 Rows with matches say `Source signal found`. Rows without matches say `Not flagged by source scan`, which means only that the lightweight keyword pass did not match obvious terms in returned ABI/source. It is not a full audit and does not prove the behavior is absent.
 
+## PulseScan Holder Concentration
+
+The API reads PulseScan/Blockscout token-holder data through:
+
+```text
+GET /api/v2/tokens/{address}/holders
+```
+
+The top-holder card reports the largest visible token holder as a percentage of the returned token total supply.
+
+The LP concentration card attempts the same read for the selected DEX Screener pair address. Some PulseScan pair contracts are not indexed as token holder endpoints; in that case LP concentration stays `Unable to verify` instead of guessing.
+
+These are visible holder signals only. They can be affected by explorer indexing, wrapped-token mechanics, staking contracts, bridges, protocol contracts, or holder data that changes after the scan.
+
 ## Placeholder Checks
 
 The following sections are visually present but not live contract-analysis results in Phase 1:
 
 - Quick Sniff tax, hidden-owner, obfuscation, and honeypot rows
-- Contract Sniff top-holder concentration and LP concentration cards
 
 Unchecked rows must say `Not checked yet`. If an upstream or parser failure prevents even the placeholder context from being reliable, rows may say `Unable to verify`.
 
@@ -134,9 +148,9 @@ Allowed internal verdict states:
 - `high-risk`
 - `low-visible-risk`
 
-Phase 1 defaults complete-looking market results to `unable-to-fully-verify` unless visible market, read-only contract, or source-signal warnings are present, because tax, holder, LP, and honeypot checks are not live yet.
+Phase 1 defaults complete-looking market results to `unable-to-fully-verify` unless visible market, read-only contract, source-signal, or concentration warnings are present, because tax and honeypot checks are not live yet.
 
-The UI may show `some-warnings` or `high-risk` for visible market-only warnings such as very low liquidity, new pairs, missing price, missing liquidity, no 24h transactions, a non-zero standard owner, common proxy signals, missing verified source, or lightweight source-signal matches.
+The UI may show `some-warnings` or `high-risk` for visible market-only warnings such as very low liquidity, new pairs, missing price, missing liquidity, no 24h transactions, a non-zero standard owner, common proxy signals, missing verified source, lightweight source-signal matches, high top-holder concentration, or high LP-holder concentration.
 
 The positive word `safe` must not be used as a verdict or marketing claim. It may appear only in conservative disclaimer language, such as: "does not guarantee that a token is safe."
 
@@ -172,8 +186,8 @@ Possible remaining scope:
 - richer owner/admin analysis
 - expanded proxy detection
 - richer ABI/source analysis with severity tiers
-- holder concentration
-- LP concentration
+- richer holder concentration with known-contract tagging
+- richer LP concentration with lock/burn detection
 
 Later phases:
 

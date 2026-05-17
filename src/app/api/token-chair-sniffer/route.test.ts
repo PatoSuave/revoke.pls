@@ -20,6 +20,7 @@ vi.mock("@/lib/token-chair-sniffer-contract", () => ({
       checks: [],
     },
     explorer: null,
+    holders: null,
     warnings: [],
     errors: [],
   })),
@@ -42,6 +43,33 @@ vi.mock("@/lib/token-chair-sniffer-explorer", () => ({
     explorerTxUrl:
       "https://scan.pulsechain.com/tx/0x2222222222222222222222222222222222222222222222222222222222222222",
     sourceSignals: [],
+    warnings: [],
+    errors: [],
+  })),
+}));
+
+vi.mock("@/lib/token-chair-sniffer-holders", () => ({
+  fetchTokenChairHolderData: vi.fn(async () => ({
+    status: "success",
+    token: {
+      percent: 12.5,
+      address: "0x3333333333333333333333333333333333333333",
+      isContract: false,
+      holdersCount: 1234,
+      sampledHolderCount: 50,
+      totalSupplyRaw: "1000000",
+      valueRaw: "125000",
+    },
+    lp: {
+      percent: 24.25,
+      address: "0x4444444444444444444444444444444444444444",
+      isContract: true,
+      holdersCount: 42,
+      sampledHolderCount: 42,
+      totalSupplyRaw: "100000",
+      valueRaw: "24250",
+      pairAddress: "0x165C3410fC91EF562C50559f7d2289fEbed552d9",
+    },
     warnings: [],
     errors: [],
   })),
@@ -170,6 +198,8 @@ describe("Token Chair Sniffer API route", () => {
     expect(body.contract.explorer.deployerAddress).toBe(
       "0x1111111111111111111111111111111111111111",
     );
+    expect(body.contract.holders.token.percent).toBe(12.5);
+    expect(body.contract.holders.lp.percent).toBe(24.25);
   });
 
   it("returns malformed-response as an upstream failure HTTP status", async () => {

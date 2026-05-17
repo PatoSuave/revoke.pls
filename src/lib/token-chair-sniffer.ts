@@ -106,6 +106,26 @@ export interface TokenChairExplorerData {
   errors: string[];
 }
 
+export interface TokenChairConcentrationSignal {
+  percent: number | null;
+  address: Address | null;
+  isContract: boolean | null;
+  holdersCount: number | null;
+  sampledHolderCount: number;
+  totalSupplyRaw: string | null;
+  valueRaw: string | null;
+}
+
+export interface TokenChairHolderData {
+  status: TokenChairContractReadStatus;
+  token: TokenChairConcentrationSignal;
+  lp: TokenChairConcentrationSignal & {
+    pairAddress: Address | null;
+  };
+  warnings: string[];
+  errors: string[];
+}
+
 export interface TokenChairProxySignal {
   detected: boolean | null;
   implementationAddress: Address | null;
@@ -126,6 +146,7 @@ export interface TokenChairContractData {
   ownershipRenounced: boolean | null;
   proxy: TokenChairProxySignal;
   explorer: TokenChairExplorerData | null;
+  holders: TokenChairHolderData | null;
   warnings: string[];
   errors: string[];
 }
@@ -452,6 +473,14 @@ export function buildContractSniffCards(options: {
       return buildDeployerContractCard(card, options.contract ?? null);
     }
 
+    if (card.label === "Top holder concentration") {
+      return buildTopHolderContractCard(card, options.contract ?? null);
+    }
+
+    if (card.label === "LP concentration") {
+      return buildLpConcentrationContractCard(card, options.contract ?? null);
+    }
+
     return card;
   });
 }
@@ -490,6 +519,26 @@ export function withTokenChairExplorerData(
   return {
     ...withExplorer,
     verdict: getTokenChairVerdict(withExplorer),
+  };
+}
+
+export function withTokenChairHolderData(
+  response: TokenChairApiResponse,
+  holders: TokenChairHolderData,
+): TokenChairApiResponse {
+  const contract = response.contract
+    ? { ...response.contract, holders }
+    : null;
+  const withHolders: Omit<TokenChairApiResponse, "verdict"> = {
+    ...response,
+    contract,
+    warnings: [...response.warnings, ...holders.warnings],
+    errors: [...response.errors, ...holders.errors],
+  };
+
+  return {
+    ...withHolders,
+    verdict: getTokenChairVerdict(withHolders),
   };
 }
 
@@ -739,6 +788,35 @@ function getVisibleContractWarnings(
     }
   }
 
+  const holders = contract.holders;
+  const tokenHolderPercent = holders?.token.percent ?? null;
+  const lpHolderPercent = holders?.lp.percent ?? null;
+  if (tokenHolderPercent !== null && tokenHolderPercent >= 20) {
+    warnings.push({
+      severity: "warning",
+      message:
+        "PulseScan shows a high visible top-holder concentration for this token.",
+    });
+  }
+
+  if (lpHolderPercent !== null && lpHolderPercent >= 50) {
+    warnings.push({
+      severity: "warning",
+      message:
+        "PulseScan shows a high visible LP-token holder concentration for the selected pair.",
+    });
+  } else if (
+    holders &&
+    holders.lp.percent === null &&
+    holders.status !== "unable-to-verify"
+  ) {
+    warnings.push({
+      severity: "warning",
+      message:
+        "PulseScan did not return LP holder concentration for the selected pair.",
+    });
+  }
+
   return warnings;
 }
 
@@ -978,6 +1056,62 @@ function buildDeployerContractCard(
   };
 }
 
+function buildTopHolderContractCard(
+  card: ContractSniffCard,
+  contract: TokenChairContractData | null,
+): ContractSniffCard {
+  const signal = contract?.holders?.token;
+  if (!signal) return card;
+
+  if (signal.percent === null) {
+    return {
+      ...card,
+      value: "Unable to verify",
+      status: "unable-to-verify",
+      detail: "PulseScan did not return token holder concentration data.",
+    };
+  }
+
+  return {
+    ...card,
+    value: formatSignalPercent(signal.percent),
+    status: signal.percent >= 20 ? "warning" : "checked",
+    detail: [
+      signal.address ? `Top visible holder ${shortenSignalAddress(signal.address)}.` : null,
+      signal.holdersCount !== null
+        ? `${signal.holdersCount.toLocaleString("en-US")} holders reported.`
+        : null,
+    ].filter(Boolean).join(" "),
+  };
+}
+
+function buildLpConcentrationContractCard(
+  card: ContractSniffCard,
+  contract: TokenChairContractData | null,
+): ContractSniffCard {
+  const signal = contract?.holders?.lp;
+  if (!signal) return card;
+
+  if (signal.percent === null) {
+    return {
+      ...card,
+      value: "Unable to verify",
+      status: "unable-to-verify",
+      detail:
+        "PulseScan did not return LP-token holder concentration for the selected pair.",
+    };
+  }
+
+  return {
+    ...card,
+    value: formatSignalPercent(signal.percent),
+    status: signal.percent >= 50 ? "warning" : "checked",
+    detail: signal.address
+      ? `Largest visible LP holder ${shortenSignalAddress(signal.address)}.`
+      : "Largest visible LP holder concentration returned by PulseScan.",
+  };
+}
+
 function sortMarketPairs(
   pairs: readonly TokenChairMarketData[],
 ): TokenChairMarketData[] {
@@ -1081,4 +1215,10 @@ function quickRowSourceSignalKey(
 
 function shortenSignalAddress(address: Address): string {
   return `${address.slice(0, 6)}...${address.slice(-4)}`;
+}
+
+function formatSignalPercent(value: number): string {
+  return `${value.toLocaleString("en-US", {
+    maximumFractionDigits: value < 1 ? 2 : 1,
+  })}%`;
 }

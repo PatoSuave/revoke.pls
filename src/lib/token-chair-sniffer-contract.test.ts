@@ -71,6 +71,7 @@ function successfulContract(
       checks: [],
     },
     explorer: null,
+    holders: null,
     warnings: [],
     errors: [],
     ...overrides,

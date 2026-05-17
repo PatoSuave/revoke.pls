@@ -160,6 +160,7 @@ export async function fetchTokenChairContractData(
     ownershipRenounced: ownerRead.ownershipRenounced,
     proxy,
     explorer: null,
+    holders: null,
     warnings,
     errors: [],
   };
@@ -401,6 +402,7 @@ function createUnableContractData(
       checks: [],
     },
     explorer: null,
+    holders: null,
     warnings: [],
     errors,
   };

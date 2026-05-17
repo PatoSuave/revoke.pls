@@ -48,6 +48,7 @@ function contractData(): TokenChairContractData {
       checks: [],
     },
     explorer: null,
+    holders: null,
     warnings: [],
     errors: [],
   };
