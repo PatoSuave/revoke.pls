@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { FormEvent, ReactNode } from "react";
 import type { Address } from "viem";
 
@@ -10,6 +10,7 @@ import {
   TOKEN_CHAIR_API_ROUTE,
   TOKEN_CHAIR_CHAIN_LABEL,
   TOKEN_CHAIR_DISCLAIMER,
+  buildTokenChairSnifferUrl,
   buildContractSniffCards,
   buildPairCandidateRows,
   buildQuickSniffRows,
@@ -48,12 +49,27 @@ const NAV_ITEMS = [
   { label: "Security", href: "/security", active: false },
 ] as const;
 
-export function TokenChairSniffer() {
-  const [input, setInput] = useState("");
+export function TokenChairSniffer({
+  initialTokenAddress = null,
+  initialResponse = null,
+}: {
+  initialTokenAddress?: Address | null;
+  initialResponse?: TokenChairApiResponse | null;
+}) {
+  const initialScanRef = useRef<Address | null>(
+    initialResponse?.tokenAddress ?? null,
+  );
+  const [input, setInput] = useState(
+    initialResponse?.tokenAddress ?? initialTokenAddress ?? "",
+  );
   const [inputTouched, setInputTouched] = useState(false);
   const [inputError, setInputError] = useState<string | null>(null);
-  const [state, setState] = useState<SnifferUiState>("idle");
-  const [response, setResponse] = useState<TokenChairApiResponse | null>(null);
+  const [state, setState] = useState<SnifferUiState>(
+    initialResponse ? "settled" : "idle",
+  );
+  const [response, setResponse] = useState<TokenChairApiResponse | null>(
+    initialResponse,
+  );
   const [requestError, setRequestError] = useState<string | null>(null);
 
   const normalizedAddress = useMemo(
@@ -79,10 +95,46 @@ export function TokenChairSniffer() {
   const market = response?.market ?? null;
   const verdict = response?.verdict ?? DEFAULT_VERDICT;
 
+  const runSniff = useCallback(
+    async (
+      tokenAddress: Address,
+      options: { updateUrl?: boolean } = {},
+    ) => {
+      setInput(tokenAddress);
+      setInputError(null);
+      setRequestError(null);
+      setResponse(null);
+      setState("loading");
+      if (options.updateUrl) replaceTokenChairUrl(tokenAddress);
+
+      try {
+        const apiResponse = await fetchTokenChairMarket(tokenAddress);
+        setResponse(apiResponse);
+        setState("settled");
+      } catch (error) {
+        setResponse(null);
+        setRequestError(
+          error instanceof Error
+            ? error.message
+            : "Token Chair Sniffer could not read the local API route.",
+        );
+        setState("error");
+      }
+    },
+    [],
+  );
+
+  useEffect(() => {
+    if (!initialTokenAddress) return;
+    if (initialScanRef.current === initialTokenAddress) return;
+    initialScanRef.current = initialTokenAddress;
+    setInputTouched(true);
+    void runSniff(initialTokenAddress);
+  }, [initialTokenAddress, runSniff]);
+
   async function onSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setInputTouched(true);
-    setRequestError(null);
 
     const tokenAddress = normalizeTokenChairAddress(input);
     if (!tokenAddress) {
@@ -92,24 +144,7 @@ export function TokenChairSniffer() {
       return;
     }
 
-    setInput(tokenAddress);
-    setInputError(null);
-    setResponse(null);
-    setState("loading");
-
-    try {
-      const apiResponse = await fetchTokenChairMarket(tokenAddress);
-      setResponse(apiResponse);
-      setState("settled");
-    } catch (error) {
-      setResponse(null);
-      setRequestError(
-        error instanceof Error
-          ? error.message
-          : "Token Chair Sniffer could not read the local API route.",
-      );
-      setState("error");
-    }
+    await runSniff(tokenAddress, { updateUrl: true });
   }
 
   return (
@@ -191,6 +226,15 @@ async function fetchTokenChairMarket(
   }
 
   return body;
+}
+
+function replaceTokenChairUrl(tokenAddress: Address) {
+  if (typeof window === "undefined") return;
+  window.history.replaceState(
+    null,
+    "",
+    buildTokenChairSnifferUrl(tokenAddress),
+  );
 }
 
 function FeatureRail() {

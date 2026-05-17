@@ -4,14 +4,17 @@ import { getAddress, type Address } from "viem";
 import { fetchDexScreenerTokenPairs } from "@/lib/token-chair-sniffer-server";
 import {
   TOKEN_CHAIR_CHAIN_ID,
+  TOKEN_CHAIR_SNIFFER_ROUTE,
   buildContractSniffCards,
   buildPairCandidateRows,
+  buildTokenChairSnifferUrl,
   buildQuickSniffRows,
   classifyTokenChairAddress,
   formatPairAge,
   getTokenChairVerdict,
   normalizeDexScreenerTokenPairsResponse,
   normalizeTokenChairAddress,
+  normalizeTokenChairQueryToken,
 } from "@/lib/token-chair-sniffer";
 
 const TOKEN = getAddress("0xcae394005c9c4c309621c53d53db9ceb701fc8d8");
@@ -71,6 +74,19 @@ describe("Token Chair Sniffer helpers", () => {
     expect(normalizeTokenChairAddress("")).toBeNull();
     expect(normalizeTokenChairAddress("not-an-address")).toBeNull();
     expect(normalizeTokenChairAddress("0x1234")).toBeNull();
+  });
+
+  it("normalizes share-link token params and builds canonical sniffer URLs", () => {
+    expect(normalizeTokenChairQueryToken(TOKEN.toLowerCase())).toBe(TOKEN);
+    expect(normalizeTokenChairQueryToken([TOKEN.toLowerCase(), QUOTE])).toBe(TOKEN);
+    expect(normalizeTokenChairQueryToken(["not-an-address"])).toBeNull();
+    expect(normalizeTokenChairQueryToken(undefined)).toBeNull();
+    expect(buildTokenChairSnifferUrl(TOKEN.toLowerCase())).toBe(
+      `${TOKEN_CHAIR_SNIFFER_ROUTE}?token=${TOKEN}`,
+    );
+    expect(buildTokenChairSnifferUrl("not-an-address")).toBe(
+      TOKEN_CHAIR_SNIFFER_ROUTE,
+    );
   });
 
   it("classifies visible addresses without implying audit certainty", () => {

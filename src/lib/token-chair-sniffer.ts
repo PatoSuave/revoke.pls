@@ -296,6 +296,22 @@ export function normalizeTokenChairAddress(
   return getAddress(value);
 }
 
+export function normalizeTokenChairQueryToken(
+  value: string | string[] | null | undefined,
+): Address | null {
+  const candidate = Array.isArray(value) ? value[0] : value;
+  return normalizeTokenChairAddress(candidate);
+}
+
+export function buildTokenChairSnifferUrl(
+  tokenAddress: Address | string | null | undefined,
+): string {
+  const normalized = normalizeTokenChairAddress(tokenAddress);
+  if (!normalized) return TOKEN_CHAIR_SNIFFER_ROUTE;
+  const params = new URLSearchParams({ token: normalized });
+  return `${TOKEN_CHAIR_SNIFFER_ROUTE}?${params.toString()}`;
+}
+
 export function classifyTokenChairAddress(
   address: Address | string | null | undefined,
   context: TokenChairAddressClassificationContext = {},

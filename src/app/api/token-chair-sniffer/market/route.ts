@@ -5,19 +5,13 @@ import {
   TOKEN_CHAIR_CHAIN_ID,
   createTokenChairApiResponse,
   normalizeTokenChairAddress,
-  withTokenChairContractData,
-  withTokenChairExplorerData,
-  withTokenChairHolderData,
-  type TokenChairApiResponse,
 } from "@/lib/token-chair-sniffer";
-import { fetchTokenChairContractData } from "@/lib/token-chair-sniffer-contract";
-import { fetchTokenChairExplorerData } from "@/lib/token-chair-sniffer-explorer";
-import { fetchTokenChairHolderData } from "@/lib/token-chair-sniffer-holders";
-import { fetchDexScreenerTokenPairs } from "@/lib/token-chair-sniffer-server";
+import {
+  TOKEN_CHAIR_REQUEST_TIMEOUT_MS,
+  fetchTokenChairScan,
+} from "@/lib/token-chair-sniffer-scan";
 
 export const runtime = "nodejs";
-
-const TOKEN_CHAIR_REQUEST_TIMEOUT_MS = 10_000;
 
 export async function GET(request: Request) {
   const url = new URL(request.url);
@@ -53,44 +47,7 @@ export async function GET(request: Request) {
     );
   }
 
-  const controller = new AbortController();
-  const timeout = setTimeout(
-    () => controller.abort(),
-    TOKEN_CHAIR_REQUEST_TIMEOUT_MS,
-  );
-
-  let result: TokenChairApiResponse;
-  try {
-    const [marketResult, contractResult, explorerResult] = await Promise.all([
-      fetchDexScreenerTokenPairs(tokenAddress, {
-        signal: controller.signal,
-      }),
-      fetchTokenChairContractData(tokenAddress, {
-        signal: controller.signal,
-      }),
-      fetchTokenChairExplorerData(tokenAddress, {
-        signal: controller.signal,
-      }),
-    ]);
-
-    const holderResult = await fetchTokenChairHolderData(
-      tokenAddress,
-      marketResult.market?.pairAddress,
-      {
-        signal: controller.signal,
-      },
-    );
-
-    result = withTokenChairHolderData(
-      withTokenChairExplorerData(
-        withTokenChairContractData(marketResult, contractResult),
-        explorerResult,
-      ),
-      holderResult,
-    );
-  } finally {
-    clearTimeout(timeout);
-  }
+  const result = await fetchTokenChairScan(tokenAddress);
 
   const httpStatus =
     result.status === "upstream-unavailable" ||

@@ -13,9 +13,11 @@ It is intentionally playful, but its security language stays conservative. The f
 Implemented in this MVP:
 
 - App route: `/app/token-chair-sniffer`
+- Shareable token deep links: `/app/token-chair-sniffer?token=0x...`
 - Internal API route: `/api/token-chair-sniffer/market?token=0x...`
 - Lightweight CTA from `/app` to the sniffer route
 - EVM token-address validation and checksum normalization
+- Query-string token normalization with `token` and `address` aliases
 - Server-side DEX Screener token-pairs fetch for `pulsechain`
 - DEX Screener response normalization and main-pair selection by highest visible USD liquidity
 - Read-only PulseChain RPC contract reads for basic token metadata, standard ownership, and common proxy signals
@@ -137,6 +139,17 @@ The following sections are visually present but not live contract-analysis resul
 - Quick Sniff tax, hidden-owner, obfuscation, and honeypot rows
 
 Unchecked rows must say `Not checked yet`. If an upstream or parser failure prevents even the placeholder context from being reliable, rows may say `Unable to verify`.
+
+## Share Links
+
+The app route accepts a `token` query parameter and an `address` alias:
+
+```text
+/app/token-chair-sniffer?token=0x...
+/app/token-chair-sniffer?address=0x...
+```
+
+Valid EVM-style query addresses are checksum-normalized, prefilled, and scanned automatically through the same read-only server route. Manual scans replace the current URL with the canonical `?token=` form so the result can be shared for review. Invalid query values are ignored instead of triggering a wallet action or transaction.
 
 ## Non-Goals
 
