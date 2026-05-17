@@ -18,10 +18,13 @@ Implemented in this MVP:
 - EVM token-address validation and checksum normalization
 - Server-side DEX Screener token-pairs fetch for `pulsechain`
 - DEX Screener response normalization and main-pair selection by highest visible USD liquidity
+- Read-only PulseChain RPC contract reads for basic token metadata, standard ownership, and common proxy signals
+- PulseScan/Blockscout verified-source metadata for source status, ABI availability, deployer, and creation transaction
+- Lightweight ABI/source keyword signals for mint, pause, cooldown, blacklist, whitelist, and suspicious-function rows
 - Conservative Chair Verdict mapping
 - Market Chair Intel cards
-- Quick Sniff placeholder checklist
-- Contract Sniff placeholder cards
+- Quick Sniff checklist with live ownership/proxy rows and conservative placeholders for unchecked rows
+- Contract Sniff cards with live owner, source, deployer, and metadata; holders and LP concentration remain placeholders
 - Unit tests for address validation, parser behavior, API states, verdict copy, and unchecked rows
 
 ## Live Data Source
@@ -50,12 +53,54 @@ Normalized live fields include:
 
 If DEX Screener returns multiple PulseChain pairs, the UI selects the pair with the highest `liquidity.usd`. If every valid pair is missing liquidity, the first valid pair is used and the response is marked with a weak-selection warning.
 
+## Native Read-Only Contract Checks
+
+The API also performs PulseChain RPC reads without connecting a wallet:
+
+- `eth_getCode` to confirm bytecode exists at the pasted address
+- ERC-20-style `name()`, `symbol()`, and `decimals()` view reads
+- standard `owner()` with `getOwner()` fallback
+- EIP-1967 implementation/admin/beacon storage-slot reads
+- EIP-1167 minimal-proxy bytecode pattern detection
+
+These checks are informational only. `owner()` returning the zero address is labeled `Appears renounced`, not as a guarantee. A missing common proxy signal is labeled `Common proxy signal not found`, not as proof that every proxy pattern is absent.
+
+## PulseScan Source Checks
+
+The API reads PulseScan/Blockscout metadata through public read-only endpoints:
+
+- `/api/v2/addresses/{address}`
+- `/api/v2/smart-contracts/{address}`
+
+Normalized live fields include:
+
+- source verification status
+- ABI availability
+- source-code availability
+- contract name
+- compiler version
+- verification timestamp
+- deployer address when PulseScan returns it
+- creation transaction hash when PulseScan returns it
+- PulseScan address, token, and transaction links
+
+If verified ABI or source is available, Token Chair Sniffer runs a lightweight keyword pass for:
+
+- mintable
+- transfer pausable
+- trading cooldown
+- blacklist
+- whitelist
+- suspicious functions
+
+Rows with matches say `Source signal found`. Rows without matches say `Not flagged by source scan`, which means only that the lightweight keyword pass did not match obvious terms in returned ABI/source. It is not a full audit and does not prove the behavior is absent.
+
 ## Placeholder Checks
 
 The following sections are visually present but not live contract-analysis results in Phase 1:
 
-- Quick Sniff tax, ownership, honeypot, proxy, mint, pause, cooldown, blacklist, and whitelist rows
-- Contract Sniff source verification, owner, deployer, top-holder concentration, and LP concentration cards
+- Quick Sniff tax, hidden-owner, obfuscation, and honeypot rows
+- Contract Sniff top-holder concentration and LP concentration cards
 
 Unchecked rows must say `Not checked yet`. If an upstream or parser failure prevents even the placeholder context from being reliable, rows may say `Unable to verify`.
 
@@ -75,7 +120,8 @@ Phase 1 does not add:
 - swap execution
 - scraping
 - paid API keys
-- Quick Intel, DEXTools, TokenSniffer, or PulseScan/BlockScout integrations
+- Quick Intel, DEXTools, or TokenSniffer integrations
+- transaction or simulation-based honeypot checks
 
 Existing approval scanner and revoke behavior are intentionally unchanged.
 
@@ -88,9 +134,9 @@ Allowed internal verdict states:
 - `high-risk`
 - `low-visible-risk`
 
-Phase 1 defaults complete-looking market results to `unable-to-fully-verify` because native contract, tax, ownership, source, and honeypot checks are not live yet.
+Phase 1 defaults complete-looking market results to `unable-to-fully-verify` unless visible market, read-only contract, or source-signal warnings are present, because tax, holder, LP, and honeypot checks are not live yet.
 
-The UI may show `some-warnings` or `high-risk` for visible market-only warnings such as very low liquidity, new pairs, missing price, missing liquidity, or no 24h transactions.
+The UI may show `some-warnings` or `high-risk` for visible market-only warnings such as very low liquidity, new pairs, missing price, missing liquidity, no 24h transactions, a non-zero standard owner, common proxy signals, missing verified source, or lightweight source-signal matches.
 
 The positive word `safe` must not be used as a verdict or marketing claim. It may appear only in conservative disclaimer language, such as: "does not guarantee that a token is safe."
 
@@ -121,15 +167,11 @@ Recommended next phase:
 
 **Phase 2: Native PulseChain Contract Sniff**
 
-Possible scope:
+Possible remaining scope:
 
-- PulseScan/BlockScout source verification metadata
-- contract ABI/source fetch
-- deployer address
-- owner/admin reads
-- renounced ownership detection
-- proxy detection
-- suspicious function keyword detection
+- richer owner/admin analysis
+- expanded proxy detection
+- richer ABI/source analysis with severity tiers
 - holder concentration
 - LP concentration
 

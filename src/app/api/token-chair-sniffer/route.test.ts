@@ -1,6 +1,52 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { getAddress } from "viem";
 
+vi.mock("@/lib/token-chair-sniffer-contract", () => ({
+  fetchTokenChairContractData: vi.fn(async (tokenAddress: string) => ({
+    tokenAddress,
+    status: "success",
+    tokenName: "Chair Token",
+    tokenSymbol: "CHAIR",
+    decimals: 18,
+    ownerAddress: null,
+    ownerFunction: "owner",
+    ownershipRenounced: true,
+    proxy: {
+      detected: false,
+      implementationAddress: null,
+      adminAddress: null,
+      beaconAddress: null,
+      minimalProxyTarget: null,
+      checks: [],
+    },
+    explorer: null,
+    warnings: [],
+    errors: [],
+  })),
+}));
+
+vi.mock("@/lib/token-chair-sniffer-explorer", () => ({
+  fetchTokenChairExplorerData: vi.fn(async (tokenAddress: string) => ({
+    status: "success",
+    sourceVerified: true,
+    abiAvailable: true,
+    sourceCodeAvailable: true,
+    contractName: "Chair Token",
+    compilerVersion: "v0.8.24+commit.e11b9ed9",
+    verifiedAt: "2026-01-01T00:00:00Z",
+    deployerAddress: "0x1111111111111111111111111111111111111111",
+    creationTxHash:
+      "0x2222222222222222222222222222222222222222222222222222222222222222",
+    explorerAddressUrl: `https://scan.pulsechain.com/address/${tokenAddress}`,
+    explorerTokenUrl: `https://scan.pulsechain.com/token/${tokenAddress}`,
+    explorerTxUrl:
+      "https://scan.pulsechain.com/tx/0x2222222222222222222222222222222222222222222222222222222222222222",
+    sourceSignals: [],
+    warnings: [],
+    errors: [],
+  })),
+}));
+
 import { GET } from "./route";
 
 const TOKEN = getAddress("0xcae394005c9c4c309621c53d53db9ceb701fc8d8");
@@ -118,6 +164,12 @@ describe("Token Chair Sniffer API route", () => {
     expect(body.status).toBe("success");
     expect(body.market.tokenSymbol).toBe("CHAIR");
     expect(body.market.dexName).toBe("PulseX");
+    expect(body.contract.tokenSymbol).toBe("CHAIR");
+    expect(body.contract.ownershipRenounced).toBe(true);
+    expect(body.contract.explorer.sourceVerified).toBe(true);
+    expect(body.contract.explorer.deployerAddress).toBe(
+      "0x1111111111111111111111111111111111111111",
+    );
   });
 
   it("returns malformed-response as an upstream failure HTTP status", async () => {

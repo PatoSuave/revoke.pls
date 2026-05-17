@@ -173,6 +173,7 @@ describe("Token Chair Sniffer helpers", () => {
     const unable = getTokenChairVerdict({
       status: "upstream-unavailable",
       market: null,
+      contract: null,
     });
     const combined = [
       success.verdict,

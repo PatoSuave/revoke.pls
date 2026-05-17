@@ -67,30 +67,98 @@ export interface TokenChairMarketData {
   pairCount: number;
 }
 
+export type TokenChairContractReadStatus =
+  | "success"
+  | "partial"
+  | "unable-to-verify";
+
+export type TokenChairSourceSignalKey =
+  | "mintable"
+  | "transfer-pausable"
+  | "trading-cooldown"
+  | "blacklist"
+  | "whitelist"
+  | "suspicious-functions";
+
+export interface TokenChairSourceSignal {
+  key: TokenChairSourceSignalKey;
+  label: string;
+  found: boolean | null;
+  matches: string[];
+  detail: string;
+}
+
+export interface TokenChairExplorerData {
+  status: TokenChairContractReadStatus;
+  sourceVerified: boolean | null;
+  abiAvailable: boolean | null;
+  sourceCodeAvailable: boolean | null;
+  contractName: string | null;
+  compilerVersion: string | null;
+  verifiedAt: string | null;
+  deployerAddress: Address | null;
+  creationTxHash: `0x${string}` | null;
+  explorerAddressUrl: string;
+  explorerTokenUrl: string;
+  explorerTxUrl: string | null;
+  sourceSignals: TokenChairSourceSignal[];
+  warnings: string[];
+  errors: string[];
+}
+
+export interface TokenChairProxySignal {
+  detected: boolean | null;
+  implementationAddress: Address | null;
+  adminAddress: Address | null;
+  beaconAddress: Address | null;
+  minimalProxyTarget: Address | null;
+  checks: string[];
+}
+
+export interface TokenChairContractData {
+  tokenAddress: Address;
+  status: TokenChairContractReadStatus;
+  tokenName: string | null;
+  tokenSymbol: string | null;
+  decimals: number | null;
+  ownerAddress: Address | null;
+  ownerFunction: "owner" | "getOwner" | null;
+  ownershipRenounced: boolean | null;
+  proxy: TokenChairProxySignal;
+  explorer: TokenChairExplorerData | null;
+  warnings: string[];
+  errors: string[];
+}
+
 export interface TokenChairApiResponse {
   ok: boolean;
   status: TokenChairApiStatus;
   chainId: typeof TOKEN_CHAIR_CHAIN_ID;
   tokenAddress: Address | null;
   market: TokenChairMarketData | null;
+  contract: TokenChairContractData | null;
   pairs: TokenChairMarketData[];
   verdict: TokenChairVerdict;
   warnings: string[];
   errors: string[];
 }
 
-export type SniffRowStatus = "not-checked" | "unable-to-verify";
+export type SniffRowStatus =
+  | "checked"
+  | "warning"
+  | "not-checked"
+  | "unable-to-verify";
 
 export interface SniffSignalRow {
   label: string;
-  value: "Not checked yet" | "Unable to verify";
+  value: string;
   status: SniffRowStatus;
   detail: string;
 }
 
 export interface ContractSniffCard {
   label: string;
-  value: "Not checked yet" | "Unable to verify";
+  value: string;
   status: SniffRowStatus;
   detail: string;
 }
@@ -116,12 +184,12 @@ const DAY_MS = 24 * 60 * 60 * 1000;
 const QUICK_SNIFF_DETAILS: Record<string, string> = {
   "Buy tax": "Needs a verified tax source or trade simulation. This MVP does not check it.",
   "Sell tax": "Needs a verified tax source or trade simulation. This MVP does not check it.",
-  "Ownership renounced": "Needs contract ownership reads or verified source analysis.",
+  "Ownership renounced": "Reads standard owner() or getOwner() when available. Hidden/admin controls are not ruled out.",
   "Hidden owner": "Needs source and bytecode review.",
   "Obfuscated address": "Needs bytecode and source review.",
   "Suspicious functions": "Needs source and bytecode review.",
   Honeypot: "Honeypot execution is not run in this MVP.",
-  "Proxy contract": "Needs native contract reads and explorer metadata.",
+  "Proxy contract": "Checks common proxy storage slots and minimal-proxy bytecode patterns only.",
   Mintable: "Needs source, ABI, or bytecode review.",
   "Transfer pausable": "Needs source, ABI, or bytecode review.",
   "Trading cooldown": "Needs source, ABI, or bytecode review.",
@@ -240,12 +308,14 @@ export function normalizeDexScreenerTokenPairsResponse(
 export function createTokenChairApiResponse({
   status,
   tokenAddress,
+  contract = null,
   pairs = [],
   warnings = [],
   errors = [],
 }: {
   status: TokenChairApiStatus;
   tokenAddress: Address | null;
+  contract?: TokenChairContractData | null;
   pairs?: TokenChairMarketData[];
   warnings?: string[];
   errors?: string[];
@@ -257,6 +327,7 @@ export function createTokenChairApiResponse({
     chainId: TOKEN_CHAIR_CHAIN_ID,
     tokenAddress,
     market,
+    contract,
     pairs,
     warnings,
     errors,
@@ -271,7 +342,8 @@ export function createTokenChairApiResponse({
 export function getTokenChairVerdict({
   status,
   market,
-}: Pick<TokenChairApiResponse, "status" | "market">): TokenChairVerdict {
+  contract,
+}: Pick<TokenChairApiResponse, "status" | "market" | "contract">): TokenChairVerdict {
   if (status !== "success" || !market) {
     return {
       kind: "unable-to-fully-verify",
@@ -284,7 +356,10 @@ export function getTokenChairVerdict({
     };
   }
 
-  const visibleWarnings = getVisibleMarketWarnings(market);
+  const visibleWarnings = [
+    ...getVisibleMarketWarnings(market),
+    ...getVisibleContractWarnings(contract),
+  ];
   if (visibleWarnings.some((warning) => warning.severity === "high")) {
     return {
       kind: "high-risk",
@@ -318,38 +393,104 @@ export function getTokenChairVerdict({
 
 export function buildQuickSniffRows(options: {
   unableToVerify?: boolean;
+  contract?: TokenChairContractData | null;
 } = {}): SniffSignalRow[] {
-  const status: SniffRowStatus = options.unableToVerify
+  const fallbackStatus: SniffRowStatus = options.unableToVerify
     ? "unable-to-verify"
     : "not-checked";
-  const value = status === "unable-to-verify"
+  const fallbackValue = fallbackStatus === "unable-to-verify"
     ? "Unable to verify"
     : "Not checked yet";
 
   return Object.entries(QUICK_SNIFF_DETAILS).map(([label, detail]) => ({
     label,
-    value,
-    status,
+    value: fallbackValue,
+    status: fallbackStatus,
     detail,
-  }));
+  })).map((row) => {
+    if (row.label === "Ownership renounced") {
+      return buildOwnershipQuickRow(row, options.contract ?? null);
+    }
+
+    if (row.label === "Proxy contract") {
+      return buildProxyQuickRow(row, options.contract ?? null);
+    }
+
+    const sourceRow = buildSourceSignalQuickRow(row, options.contract ?? null);
+    if (sourceRow) return sourceRow;
+
+    return row;
+  });
 }
 
 export function buildContractSniffCards(options: {
   unableToVerify?: boolean;
+  contract?: TokenChairContractData | null;
 } = {}): ContractSniffCard[] {
-  const status: SniffRowStatus = options.unableToVerify
+  const fallbackStatus: SniffRowStatus = options.unableToVerify
     ? "unable-to-verify"
     : "not-checked";
-  const value = status === "unable-to-verify"
+  const fallbackValue = fallbackStatus === "unable-to-verify"
     ? "Unable to verify"
     : "Not checked yet";
 
   return Object.entries(CONTRACT_SNIFF_DETAILS).map(([label, detail]) => ({
     label,
-    value,
-    status,
+    value: fallbackValue,
+    status: fallbackStatus,
     detail,
-  }));
+  })).map((card) => {
+    if (card.label === "Source verified") {
+      return buildSourceVerifiedContractCard(card, options.contract ?? null);
+    }
+
+    if (card.label === "Owner") {
+      return buildOwnerContractCard(card, options.contract ?? null);
+    }
+
+    if (card.label === "Deployer") {
+      return buildDeployerContractCard(card, options.contract ?? null);
+    }
+
+    return card;
+  });
+}
+
+export function withTokenChairContractData(
+  response: TokenChairApiResponse,
+  contract: TokenChairContractData,
+): TokenChairApiResponse {
+  const withContract: Omit<TokenChairApiResponse, "verdict"> = {
+    ...response,
+    contract,
+    warnings: [...response.warnings, ...contract.warnings],
+    errors: [...response.errors, ...contract.errors],
+  };
+
+  return {
+    ...withContract,
+    verdict: getTokenChairVerdict(withContract),
+  };
+}
+
+export function withTokenChairExplorerData(
+  response: TokenChairApiResponse,
+  explorer: TokenChairExplorerData,
+): TokenChairApiResponse {
+  const contract = response.contract
+    ? { ...response.contract, explorer }
+    : null;
+  const withExplorer: Omit<TokenChairApiResponse, "verdict"> = {
+    ...response,
+    contract,
+    warnings: [...response.warnings, ...explorer.warnings],
+    errors: [...response.errors, ...explorer.errors],
+  };
+
+  return {
+    ...withExplorer,
+    verdict: getTokenChairVerdict(withExplorer),
+  };
 }
 
 export function formatUsd(value: number | null): string {
@@ -538,6 +679,305 @@ function getVisibleMarketWarnings(
   return warnings;
 }
 
+function getVisibleContractWarnings(
+  contract: TokenChairContractData | null,
+): VisibleMarketWarning[] {
+  if (!contract) return [];
+
+  const warnings: VisibleMarketWarning[] = [];
+
+  if (contract.status === "unable-to-verify") {
+    warnings.push({
+      severity: "warning",
+      message: "Read-only PulseChain contract checks could not be completed.",
+    });
+  }
+
+  if (contract.ownershipRenounced === false && contract.ownerAddress) {
+    warnings.push({
+      severity: "warning",
+      message:
+        "A standard owner function returned a non-zero owner address; owner controls may remain.",
+    });
+  }
+
+  if (contract.proxy.detected === true) {
+    warnings.push({
+      severity: "warning",
+      message:
+        "A common proxy signal was found; implementation behavior can depend on proxy administration.",
+    });
+  } else if (contract.proxy.detected === null) {
+    warnings.push({
+      severity: "warning",
+      message:
+        "Common proxy checks were incomplete, so proxy status could not be fully verified.",
+    });
+  }
+
+  const explorer = contract.explorer;
+  if (explorer?.sourceVerified === false) {
+    warnings.push({
+      severity: "warning",
+      message:
+        "PulseScan did not return verified source for this contract, limiting source-based checks.",
+    });
+  } else if (explorer?.status === "unable-to-verify") {
+    warnings.push({
+      severity: "warning",
+      message:
+        "PulseScan source metadata could not be loaded, limiting source-based checks.",
+    });
+  }
+
+  for (const signal of explorer?.sourceSignals ?? []) {
+    if (signal.found === true) {
+      warnings.push({
+        severity: "warning",
+        message: `${signal.label} source signal found. Review verified source before interacting.`,
+      });
+    }
+  }
+
+  return warnings;
+}
+
+function buildOwnershipQuickRow(
+  row: SniffSignalRow,
+  contract: TokenChairContractData | null,
+): SniffSignalRow {
+  if (!contract) return row;
+
+  if (contract.ownershipRenounced === true) {
+    return {
+      ...row,
+      value: "Appears renounced",
+      status: "checked",
+      detail:
+        "A standard owner function returned the zero address. This does not rule out hidden controls.",
+    };
+  }
+
+  if (contract.ownershipRenounced === false && contract.ownerAddress) {
+    return {
+      ...row,
+      value: "Not renounced",
+      status: "warning",
+      detail: `${contract.ownerFunction ?? "owner"}() returned ${contract.ownerAddress}.`,
+    };
+  }
+
+  if (contract.status === "unable-to-verify") {
+    return {
+      ...row,
+      value: "Unable to verify",
+      status: "unable-to-verify",
+      detail:
+        "The read-only contract check could not verify standard ownership functions.",
+    };
+  }
+
+  return {
+    ...row,
+    value: "Unable to verify",
+    status: "unable-to-verify",
+    detail:
+      "No standard owner() or getOwner() value was readable. Hidden ownership is not ruled out.",
+  };
+}
+
+function buildProxyQuickRow(
+  row: SniffSignalRow,
+  contract: TokenChairContractData | null,
+): SniffSignalRow {
+  if (!contract) return row;
+
+  if (contract.proxy.detected === true) {
+    return {
+      ...row,
+      value: "Proxy signal found",
+      status: "warning",
+      detail: contract.proxy.checks.join(" ") ||
+        "A common proxy signal was found by read-only checks.",
+    };
+  }
+
+  if (contract.proxy.detected === false) {
+    return {
+      ...row,
+      value: "Common proxy signal not found",
+      status: "checked",
+      detail:
+        "Checked EIP-1967 implementation/admin/beacon slots and EIP-1167 bytecode. Other proxy patterns are still possible.",
+    };
+  }
+
+  return {
+    ...row,
+    value: "Unable to verify",
+    status: "unable-to-verify",
+    detail:
+      "Common proxy storage or bytecode checks could not be completed.",
+  };
+}
+
+function buildSourceSignalQuickRow(
+  row: SniffSignalRow,
+  contract: TokenChairContractData | null,
+): SniffSignalRow | null {
+  const signalKey = quickRowSourceSignalKey(row.label);
+  if (!signalKey) return null;
+  const explorer = contract?.explorer;
+  const signal = explorer?.sourceSignals.find((item) => item.key === signalKey);
+
+  if (!explorer || !signal || signal.found === null) {
+    return {
+      ...row,
+      value: explorer?.sourceVerified === false
+        ? "Unable to verify"
+        : row.value,
+      status: explorer?.sourceVerified === false
+        ? "unable-to-verify"
+        : row.status,
+      detail:
+        explorer?.sourceVerified === false
+          ? "PulseScan did not return verified source, so this source-based row cannot be checked."
+          : row.detail,
+    };
+  }
+
+  if (signal.found) {
+    return {
+      ...row,
+      value: "Source signal found",
+      status: "warning",
+      detail: signal.detail,
+    };
+  }
+
+  return {
+    ...row,
+    value: "Not flagged by source scan",
+    status: "checked",
+    detail: signal.detail,
+  };
+}
+
+function buildOwnerContractCard(
+  card: ContractSniffCard,
+  contract: TokenChairContractData | null,
+): ContractSniffCard {
+  if (!contract) return card;
+
+  if (contract.ownershipRenounced === true) {
+    return {
+      ...card,
+      value: "Appears renounced",
+      status: "checked",
+      detail:
+        "A standard owner function returned the zero address. Hidden controls are not ruled out.",
+    };
+  }
+
+  if (contract.ownerAddress) {
+    return {
+      ...card,
+      value: shortenSignalAddress(contract.ownerAddress),
+      status: "warning",
+      detail: `${contract.ownerFunction ?? "owner"}() returned a non-zero owner address.`,
+    };
+  }
+
+  if (contract.status === "unable-to-verify") {
+    return {
+      ...card,
+      value: "Unable to verify",
+      status: "unable-to-verify",
+      detail: "Standard ownership functions could not be read.",
+    };
+  }
+
+  return {
+    ...card,
+    value: "Unable to verify",
+    status: "unable-to-verify",
+    detail:
+      "No standard owner() or getOwner() value was readable from the token contract.",
+  };
+}
+
+function buildSourceVerifiedContractCard(
+  card: ContractSniffCard,
+  contract: TokenChairContractData | null,
+): ContractSniffCard {
+  const explorer = contract?.explorer;
+  if (!explorer) return card;
+
+  if (explorer.sourceVerified === true) {
+    return {
+      ...card,
+      value: "Verified on PulseScan",
+      status: "checked",
+      detail: [
+        explorer.contractName ?? "Contract source is verified.",
+        explorer.compilerVersion ? `Compiler ${explorer.compilerVersion}.` : null,
+      ].filter(Boolean).join(" "),
+    };
+  }
+
+  if (explorer.sourceVerified === false) {
+    return {
+      ...card,
+      value: "Not verified on PulseScan",
+      status: "warning",
+      detail:
+        "PulseScan did not return verified source, so source-based checks are limited.",
+    };
+  }
+
+  return {
+    ...card,
+    value: "Unable to verify",
+    status: "unable-to-verify",
+    detail: "PulseScan source metadata could not be loaded.",
+  };
+}
+
+function buildDeployerContractCard(
+  card: ContractSniffCard,
+  contract: TokenChairContractData | null,
+): ContractSniffCard {
+  const explorer = contract?.explorer;
+  if (!explorer) return card;
+
+  if (explorer.deployerAddress) {
+    return {
+      ...card,
+      value: shortenSignalAddress(explorer.deployerAddress),
+      status: "checked",
+      detail: explorer.creationTxHash
+        ? "PulseScan returned creator and creation transaction metadata."
+        : "PulseScan returned creator metadata without a creation transaction hash.",
+    };
+  }
+
+  if (explorer.status === "unable-to-verify") {
+    return {
+      ...card,
+      value: "Unable to verify",
+      status: "unable-to-verify",
+      detail: "PulseScan deployer metadata could not be loaded.",
+    };
+  }
+
+  return {
+    ...card,
+    value: "Unable to verify",
+    status: "unable-to-verify",
+    detail: "PulseScan did not return creator metadata for this contract.",
+  };
+}
+
 function sortMarketPairs(
   pairs: readonly TokenChairMarketData[],
 ): TokenChairMarketData[] {
@@ -625,4 +1065,20 @@ function addressesMatch(
   right: Address | null | undefined,
 ): boolean {
   return Boolean(left && right && left.toLowerCase() === right.toLowerCase());
+}
+
+function quickRowSourceSignalKey(
+  label: string,
+): TokenChairSourceSignalKey | null {
+  if (label === "Mintable") return "mintable";
+  if (label === "Transfer pausable") return "transfer-pausable";
+  if (label === "Trading cooldown") return "trading-cooldown";
+  if (label === "Blacklist") return "blacklist";
+  if (label === "Whitelist") return "whitelist";
+  if (label === "Suspicious functions") return "suspicious-functions";
+  return null;
+}
+
+function shortenSignalAddress(address: Address): string {
+  return `${address.slice(0, 6)}...${address.slice(-4)}`;
 }

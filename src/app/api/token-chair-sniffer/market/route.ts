@@ -5,7 +5,11 @@ import {
   TOKEN_CHAIR_CHAIN_ID,
   createTokenChairApiResponse,
   normalizeTokenChairAddress,
+  withTokenChairContractData,
+  withTokenChairExplorerData,
 } from "@/lib/token-chair-sniffer";
+import { fetchTokenChairContractData } from "@/lib/token-chair-sniffer-contract";
+import { fetchTokenChairExplorerData } from "@/lib/token-chair-sniffer-explorer";
 import { fetchDexScreenerTokenPairs } from "@/lib/token-chair-sniffer-server";
 
 export const runtime = "nodejs";
@@ -52,9 +56,22 @@ export async function GET(request: Request) {
     TOKEN_CHAIR_REQUEST_TIMEOUT_MS,
   );
 
-  const result = await fetchDexScreenerTokenPairs(tokenAddress, {
-    signal: controller.signal,
-  }).finally(() => clearTimeout(timeout));
+  const [marketResult, contractResult, explorerResult] = await Promise.all([
+    fetchDexScreenerTokenPairs(tokenAddress, {
+      signal: controller.signal,
+    }),
+    fetchTokenChairContractData(tokenAddress, {
+      signal: controller.signal,
+    }),
+    fetchTokenChairExplorerData(tokenAddress, {
+      signal: controller.signal,
+    }),
+  ]).finally(() => clearTimeout(timeout));
+
+  const result = withTokenChairExplorerData(
+    withTokenChairContractData(marketResult, contractResult),
+    explorerResult,
+  );
 
   const httpStatus =
     result.status === "upstream-unavailable" ||

@@ -20,6 +20,7 @@ import {
   type ContractSniffCard,
   type SniffSignalRow,
   type TokenChairApiResponse,
+  type TokenChairContractData,
   type TokenChairMarketData,
   type TokenChairVerdict,
 } from "@/lib/token-chair-sniffer";
@@ -64,13 +65,14 @@ export function TokenChairSniffer() {
   const unableToVerify =
     response?.status === "upstream-unavailable" ||
     response?.status === "malformed-response";
+  const contract = response?.contract ?? null;
   const quickRows = useMemo(
-    () => buildQuickSniffRows({ unableToVerify }),
-    [unableToVerify],
+    () => buildQuickSniffRows({ unableToVerify, contract }),
+    [unableToVerify, contract],
   );
   const contractCards = useMemo(
-    () => buildContractSniffCards({ unableToVerify }),
-    [unableToVerify],
+    () => buildContractSniffCards({ unableToVerify, contract }),
+    [unableToVerify, contract],
   );
   const market = response?.market ?? null;
   const verdict = response?.verdict ?? DEFAULT_VERDICT;
@@ -136,7 +138,7 @@ export function TokenChairSniffer() {
             />
           </section>
 
-          <StatusStrip response={response} state={state} />
+          <StatusStrip response={response} state={state} contract={contract} />
 
           <div className="grid gap-4 xl:grid-cols-[minmax(0,1.15fr)_minmax(360px,0.85fr)]">
             <QuickSniffRows rows={quickRows} />
@@ -147,7 +149,11 @@ export function TokenChairSniffer() {
             />
           </div>
 
-          <ContractSniffCards cards={contractCards} />
+          <ContractSniffCards
+            cards={contractCards}
+            contract={contract}
+            state={state}
+          />
           <DisclaimerPanel />
         </main>
       </div>
@@ -453,20 +459,23 @@ function RiskMeter({ verdict }: { verdict: TokenChairVerdict }) {
 function StatusStrip({
   response,
   state,
+  contract,
 }: {
   response: TokenChairApiResponse | null;
   state: SnifferUiState;
+  contract: TokenChairContractData | null;
 }) {
   const address = response?.tokenAddress ?? response?.market?.tokenAddress;
   const items = [
     ["Chain", TOKEN_CHAIR_CHAIN_LABEL],
     ["Route", TOKEN_CHAIR_API_ROUTE],
     ["Status", formatStatus(state, response)],
+    ["Contract", formatContractStatus(state, contract)],
     ["Token", address ? shortenAddress(address) : "Waiting"],
   ] as const;
 
   return (
-    <section className="grid gap-2 rounded-lg border border-pulse-border/75 bg-[#070b10] p-3 text-xs text-pulse-muted sm:grid-cols-4">
+    <section className="grid gap-2 rounded-lg border border-pulse-border/75 bg-[#070b10] p-3 text-xs text-pulse-muted sm:grid-cols-5">
       {items.map(([label, value]) => (
         <div key={label} className="min-w-0 rounded-lg border border-pulse-border/60 bg-[#0a1016] px-3 py-2">
           <p className="uppercase tracking-[0.14em] text-pulse-muted/80">{label}</p>
@@ -671,12 +680,21 @@ function QuickSniffRows({ rows }: { rows: readonly SniffSignalRow[] }) {
 
 function ContractSniffCards({
   cards,
+  contract,
+  state,
 }: {
   cards: readonly ContractSniffCard[];
+  contract: TokenChairContractData | null;
+  state: SnifferUiState;
 }) {
   return (
     <section className="rounded-lg border border-pulse-border/80 bg-[#080d12] p-4">
-      <PanelHeader icon="C" title="Contract Sniff" meta="Native checks pending" />
+      <PanelHeader
+        icon="C"
+        title="Contract Sniff"
+        meta={formatContractStatus(state, contract)}
+      />
+      <ContractMetadataStrip contract={contract} state={state} />
       <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
         {cards.map((card, index) => (
           <div
@@ -693,6 +711,42 @@ function ContractSniffCards({
         ))}
       </div>
     </section>
+  );
+}
+
+function ContractMetadataStrip({
+  contract,
+  state,
+}: {
+  contract: TokenChairContractData | null;
+  state: SnifferUiState;
+}) {
+  const loading = state === "loading";
+  const fallback = loading ? "Loading..." : "Not checked yet";
+  const items = [
+    ["Name", contract?.tokenName ?? fallback],
+    ["Symbol", contract?.tokenSymbol ?? fallback],
+    ["Decimals", contract?.decimals !== null && contract?.decimals !== undefined
+      ? contract.decimals.toString()
+      : fallback],
+    ["Source", formatSourceStatus(contract, fallback)],
+    ["ABI", formatAbiStatus(contract, fallback)],
+    ["Proxy", formatProxySignal(contract, fallback)],
+  ] as const;
+
+  return (
+    <div className="mt-4 grid gap-2 rounded-lg border border-pulse-border/70 bg-[#070b10] p-3 sm:grid-cols-3 xl:grid-cols-6">
+      {items.map(([label, value]) => (
+        <div key={label} className="min-w-0">
+          <p className="text-[11px] uppercase tracking-[0.14em] text-pulse-muted/75">
+            {label}
+          </p>
+          <p className="mt-1 truncate text-sm font-semibold text-pulse-text">
+            {value}
+          </p>
+        </div>
+      ))}
+    </div>
   );
 }
 
@@ -745,10 +799,12 @@ function SniffValueBadge({
 }: {
   row: Pick<SniffSignalRow, "status" | "value">;
 }) {
-  const toneClass =
-    row.status === "unable-to-verify"
-      ? "border-amber-400/40 bg-amber-400/10 text-amber-200"
-      : "border-pulse-border bg-pulse-panel/45 text-pulse-muted";
+  const toneClass = {
+    checked: "border-pulse-green/40 bg-pulse-green/10 text-pulse-green",
+    warning: "border-amber-400/45 bg-amber-400/10 text-amber-200",
+    "unable-to-verify": "border-amber-400/40 bg-amber-400/10 text-amber-200",
+    "not-checked": "border-pulse-border bg-pulse-panel/45 text-pulse-muted",
+  }[row.status];
 
   return (
     <span
@@ -804,6 +860,47 @@ function formatStatus(
   if (state === "loading") return "Loading";
   if (state === "error") return "Request failed";
   return response?.status ?? "Idle";
+}
+
+function formatContractStatus(
+  state: SnifferUiState,
+  contract: TokenChairContractData | null,
+): string {
+  if (state === "loading") return "Loading";
+  if (!contract) return "Not checked yet";
+  if (contract.status === "success") return "Read-only checks returned";
+  if (contract.status === "partial") return "Partially checked";
+  return "Unable to verify";
+}
+
+function formatProxySignal(
+  contract: TokenChairContractData | null,
+  fallback: string,
+): string {
+  if (!contract) return fallback;
+  if (contract.proxy.detected === true) return "Signal found";
+  if (contract.proxy.detected === false) return "Common signal not found";
+  return "Unable to verify";
+}
+
+function formatSourceStatus(
+  contract: TokenChairContractData | null,
+  fallback: string,
+): string {
+  const verified = contract?.explorer?.sourceVerified;
+  if (verified === true) return "Verified";
+  if (verified === false) return "Not verified";
+  return fallback;
+}
+
+function formatAbiStatus(
+  contract: TokenChairContractData | null,
+  fallback: string,
+): string {
+  const available = contract?.explorer?.abiAvailable;
+  if (available === true) return "Returned";
+  if (available === false) return "Not returned";
+  return fallback;
 }
 
 function verdictToneText(verdict: TokenChairVerdict): string {
