@@ -269,7 +269,7 @@ function buildSourceSignals({
       matches,
       detail:
         matches.length > 0
-          ? `Matched verified ABI/source terms: ${matches.join(", ")}. This is a signal to review, not a scam verdict.`
+          ? `Matched verified ABI/source terms: ${matches.join(", ")}. This is a signal to review, not a final verdict.`
           : `Verified ABI/source was scanned for common ${definition.label.toLowerCase()} terms and none were flagged by this lightweight pass.`,
     };
   }).map((signal) => ({

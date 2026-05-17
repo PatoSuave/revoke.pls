@@ -27,6 +27,7 @@ Implemented in this MVP:
 - Address context labels for zero/burn addresses, token contract, selected pair, owner, deployer, contracts, and wallets where visible metadata supports it
 - PulseScan links on live contract/source/deployer/holder cards
 - Compact Signal Details panel explaining the current verdict inputs
+- Source Signal Details panel listing exact matched ABI/source terms when lightweight source rows are flagged
 - Conservative Chair Verdict mapping
 - Market Chair Intel cards
 - Pair Candidates list showing the top returned DEX Screener pairs by visible liquidity
@@ -103,6 +104,8 @@ If verified ABI or source is available, Token Chair Sniffer runs a lightweight k
 - suspicious functions
 
 Rows with matches say `Source signal found`. Rows without matches say `Not flagged by source scan`, which means only that the lightweight keyword pass did not match obvious terms in returned ABI/source. It is not a full audit and does not prove the behavior is absent.
+
+The Source Signal Details panel expands these rows with the exact matched terms returned by the lightweight ABI/source pass. If PulseScan does not return verified source or ABI data, those detail rows stay `Unable to verify`. The panel is explanatory only; it does not add bytecode analysis, tax simulation, or honeypot execution.
 
 ## PulseScan Holder Concentration
 

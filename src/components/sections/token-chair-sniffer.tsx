@@ -14,6 +14,7 @@ import {
   buildContractSniffCards,
   buildPairCandidateRows,
   buildQuickSniffRows,
+  buildSourceSignalDetailRows,
   formatCompactNumber,
   formatPriceUsd,
   formatTxns24h,
@@ -21,10 +22,12 @@ import {
   normalizeTokenChairAddress,
   type ContractSniffCard,
   type SniffSignalRow,
+  type SniffRowStatus,
   type TokenChairApiResponse,
   type TokenChairContractData,
   type TokenChairMarketData,
   type TokenChairPairCandidateRow,
+  type TokenChairSourceSignalDetailRow,
   type TokenChairVerdict,
 } from "@/lib/token-chair-sniffer";
 
@@ -87,6 +90,10 @@ export function TokenChairSniffer({
   const quickRows = useMemo(
     () => buildQuickSniffRows({ unableToVerify, contract }),
     [unableToVerify, contract],
+  );
+  const sourceSignalRows = useMemo(
+    () => buildSourceSignalDetailRows({ contract }),
+    [contract],
   );
   const contractCards = useMemo(
     () => buildContractSniffCards({ unableToVerify, contract }),
@@ -190,6 +197,8 @@ export function TokenChairSniffer({
               market={market}
             />
           </div>
+
+          <SourceSignalDetails rows={sourceSignalRows} contract={contract} />
 
           <ContractSniffCards
             cards={contractCards}
@@ -868,6 +877,102 @@ function QuickSniffRows({ rows }: { rows: readonly SniffSignalRow[] }) {
         Source rows use lightweight PulseScan ABI/source keyword signals only.
       </p>
     </section>
+  );
+}
+
+function SourceSignalDetails({
+  rows,
+  contract,
+}: {
+  rows: readonly TokenChairSourceSignalDetailRow[];
+  contract: TokenChairContractData | null;
+}) {
+  if (!contract) return null;
+
+  const sourceMeta = contract.explorer?.sourceVerified === true
+    ? "PulseScan source/ABI"
+    : contract.explorer?.sourceVerified === false
+      ? "Source not verified"
+      : "Source metadata";
+
+  return (
+    <section className="rounded-lg border border-pulse-border/80 bg-[#080d12] p-4">
+      <PanelHeader
+        icon="D"
+        title="Source Signal Details"
+        meta={sourceMeta}
+      />
+      <div className="mt-4 grid gap-3 lg:grid-cols-2 2xl:grid-cols-3">
+        {rows.length > 0 ? (
+          rows.map((row) => (
+            <SourceSignalDetailCard key={row.label} row={row} />
+          ))
+        ) : (
+          <div className="rounded-lg border border-pulse-border/75 bg-[#0a1016] p-4 text-sm leading-6 text-pulse-muted">
+            PulseScan source details are not checked yet for this token.
+          </div>
+        )}
+      </div>
+      <p className="mt-4 text-xs leading-5 text-pulse-muted">
+        Source details are lightweight keyword and ABI-name signals from returned
+        PulseScan data. They are not bytecode analysis, tax simulation, or a full
+        audit.
+      </p>
+    </section>
+  );
+}
+
+function SourceSignalDetailCard({
+  row,
+}: {
+  row: TokenChairSourceSignalDetailRow;
+}) {
+  return (
+    <article className="rounded-lg border border-pulse-border/75 bg-[#0a1016] p-4">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div className="min-w-0">
+          <p className="truncate text-sm font-semibold text-pulse-text">
+            {row.label}
+          </p>
+          <p className="mt-2 text-xs leading-5 text-pulse-muted">
+            {row.detail}
+          </p>
+        </div>
+        <SniffValueBadge row={row} />
+      </div>
+      <MatchedTerms terms={row.matches} status={row.status} />
+    </article>
+  );
+}
+
+function MatchedTerms({
+  terms,
+  status,
+}: {
+  terms: readonly string[];
+  status: SniffRowStatus;
+}) {
+  if (terms.length === 0) {
+    return (
+      <p className="mt-3 rounded-lg border border-pulse-border/60 bg-[#070b10] px-3 py-2 text-xs text-pulse-muted">
+        {status === "checked"
+          ? "No matching terms were flagged by this lightweight source scan."
+          : "No terms available to display."}
+      </p>
+    );
+  }
+
+  return (
+    <div className="mt-3 flex flex-wrap gap-2">
+      {terms.map((term) => (
+        <span
+          key={term}
+          className="rounded-full border border-amber-400/35 bg-amber-400/10 px-2.5 py-1 font-mono text-xs font-semibold text-amber-200"
+        >
+          {term}
+        </span>
+      ))}
+    </div>
   );
 }
 

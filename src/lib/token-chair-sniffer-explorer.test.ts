@@ -4,6 +4,7 @@ import { getAddress } from "viem";
 import {
   buildContractSniffCards,
   buildQuickSniffRows,
+  buildSourceSignalDetailRows,
   normalizeDexScreenerTokenPairsResponse,
   withTokenChairContractData,
   withTokenChairExplorerData,
@@ -120,6 +121,25 @@ describe("Token Chair Sniffer PulseScan explorer integration", () => {
       found: true,
       matches: ["blacklist"],
     });
+
+    const details = buildSourceSignalDetailRows({
+      contract: { ...contractData(), explorer: result },
+    });
+    expect(details.find((row) => row.label === "Mintable")).toMatchObject({
+      value: "Source signal found",
+      status: "warning",
+      matches: ["mint"],
+    });
+    expect(
+      details.find((row) => row.label === "Trading cooldown"),
+    ).toMatchObject({
+      value: "Not flagged by source scan",
+      status: "checked",
+      matches: [],
+    });
+    expect(details.map((row) => row.detail).join(" ").toLowerCase()).not.toMatch(
+      /\bsafe\b|not\s+a\s+scam/,
+    );
   });
 
   it("marks unverified source rows unable instead of inventing clean results", () => {
@@ -133,6 +153,7 @@ describe("Token Chair Sniffer PulseScan explorer integration", () => {
     });
     const contract = { ...contractData(), explorer };
     const quickRows = buildQuickSniffRows({ contract });
+    const detailRows = buildSourceSignalDetailRows({ contract });
     const sourceCards = buildContractSniffCards({ contract });
 
     expect(explorer.status).toBe("partial");
@@ -141,6 +162,10 @@ describe("Token Chair Sniffer PulseScan explorer integration", () => {
       value: "Unable to verify",
       status: "unable-to-verify",
     });
+    expect(detailRows).toHaveLength(6);
+    expect(detailRows.every((row) => row.value === "Unable to verify")).toBe(
+      true,
+    );
     expect(sourceCards.find((card) => card.label === "Source verified")).toMatchObject({
       value: "Not verified on PulseScan",
       status: "warning",

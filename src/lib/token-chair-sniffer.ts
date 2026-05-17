@@ -177,6 +177,10 @@ export interface SniffSignalRow {
   detail: string;
 }
 
+export interface TokenChairSourceSignalDetailRow extends SniffSignalRow {
+  matches: string[];
+}
+
 export interface ContractSniffCard {
   label: string;
   value: string;
@@ -646,6 +650,43 @@ export function buildContractSniffCards(options: {
     }
 
     return card;
+  });
+}
+
+export function buildSourceSignalDetailRows(options: {
+  contract?: TokenChairContractData | null;
+} = {}): TokenChairSourceSignalDetailRow[] {
+  const explorer = options.contract?.explorer;
+  if (!explorer) return [];
+
+  return explorer.sourceSignals.map((signal) => {
+    if (signal.found === true) {
+      return {
+        label: signal.label,
+        value: "Source signal found",
+        status: "warning",
+        detail: signal.detail,
+        matches: signal.matches,
+      };
+    }
+
+    if (signal.found === false) {
+      return {
+        label: signal.label,
+        value: "Not flagged by source scan",
+        status: "checked",
+        detail: signal.detail,
+        matches: [],
+      };
+    }
+
+    return {
+      label: signal.label,
+      value: "Unable to verify",
+      status: "unable-to-verify",
+      detail: signal.detail,
+      matches: [],
+    };
   });
 }
 
