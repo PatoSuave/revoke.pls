@@ -164,6 +164,33 @@ export interface TokenChairTaxSignals {
   sell: TokenChairTaxGetterSignal;
 }
 
+export type TokenChairPublicGetterStatus =
+  | "found"
+  | "not-found"
+  | "unable-to-verify";
+
+export interface TokenChairBooleanGetterSignal {
+  status: TokenChairPublicGetterStatus;
+  value: boolean | null;
+  functionName: string | null;
+  checkedFunctions: string[];
+}
+
+export interface TokenChairNumericGetterSignal {
+  status: TokenChairPublicGetterStatus;
+  valueRaw: string | null;
+  functionName: string | null;
+  checkedFunctions: string[];
+}
+
+export interface TokenChairMechanicsSignals {
+  paused: TokenChairBooleanGetterSignal;
+  tradingEnabled: TokenChairBooleanGetterSignal;
+  limitsInEffect: TokenChairBooleanGetterSignal;
+  maxTx: TokenChairNumericGetterSignal;
+  maxWallet: TokenChairNumericGetterSignal;
+}
+
 export interface TokenChairContractData {
   tokenAddress: Address;
   status: TokenChairContractReadStatus;
@@ -177,6 +204,7 @@ export interface TokenChairContractData {
   pendingOwner?: TokenChairPendingOwnerSignal;
   accessControl?: TokenChairAccessControlSignal;
   taxes?: TokenChairTaxSignals;
+  mechanics?: TokenChairMechanicsSignals;
   explorer: TokenChairExplorerData | null;
   holders: TokenChairHolderData | null;
   warnings: string[];
@@ -657,7 +685,11 @@ export function buildQuickSniffRows(options: {
       return buildProxyQuickRow(row, options.contract ?? null);
     }
 
+    const mechanicsRow = buildMechanicsQuickRow(row, options.contract ?? null);
     const sourceRow = buildSourceSignalQuickRow(row, options.contract ?? null);
+    if (mechanicsRow?.status === "warning") return mechanicsRow;
+    if (sourceRow?.status === "warning") return sourceRow;
+    if (mechanicsRow) return mechanicsRow;
     if (sourceRow) return sourceRow;
 
     return row;
@@ -1116,6 +1148,10 @@ function getVisibleContractWarnings(
     }
   }
 
+  for (const warning of getMechanicsWarnings(contract.mechanics)) {
+    warnings.push({ severity: "warning", message: warning });
+  }
+
   const explorer = contract.explorer;
   if (explorer?.sourceVerified === false) {
     warnings.push({
@@ -1302,6 +1338,82 @@ function buildProxyQuickRow(
     detail:
       "Common proxy storage or bytecode checks could not be completed.",
   };
+}
+
+function buildMechanicsQuickRow(
+  row: SniffSignalRow,
+  contract: TokenChairContractData | null,
+): SniffSignalRow | null {
+  const mechanics = contract?.mechanics;
+  if (!mechanics) return null;
+
+  if (row.label === "Transfer pausable") {
+    return buildPausedQuickRow(row, mechanics.paused);
+  }
+
+  if (row.label === "Trading cooldown") {
+    return buildTradingLimitQuickRow(row, mechanics);
+  }
+
+  return null;
+}
+
+function buildPausedQuickRow(
+  row: SniffSignalRow,
+  signal: TokenChairBooleanGetterSignal,
+): SniffSignalRow | null {
+  if (signal.status !== "found" || signal.value === null || !signal.functionName) {
+    return null;
+  }
+
+  return {
+    ...row,
+    value: signal.value ? "Paused getter true" : "Paused getter false",
+    status: signal.value ? "warning" : "checked",
+    detail:
+      `Public ${signal.functionName}() returned ${signal.value}. This reports a visible pause state only and does not prove future pause controls are absent.`,
+  };
+}
+
+function buildTradingLimitQuickRow(
+  row: SniffSignalRow,
+  mechanics: TokenChairMechanicsSignals,
+): SniffSignalRow | null {
+  const limitSignal = mechanics.limitsInEffect;
+  if (
+    limitSignal.status === "found" &&
+    limitSignal.value !== null &&
+    limitSignal.functionName
+  ) {
+    return {
+      ...row,
+      value: limitSignal.value
+        ? "Limit getter true"
+        : "Limit getter false",
+      status: limitSignal.value ? "warning" : "checked",
+      detail:
+        `Public ${limitSignal.functionName}() returned ${limitSignal.value}. This is a trading-limit state signal, not a sell simulation.`,
+    };
+  }
+
+  for (const signal of [mechanics.maxTx, mechanics.maxWallet]) {
+    if (
+      signal.status === "found" &&
+      signal.valueRaw !== null &&
+      signal.functionName &&
+      isNonZeroRawNumber(signal.valueRaw)
+    ) {
+      return {
+        ...row,
+        value: "Limit getter found",
+        status: "warning",
+        detail:
+          `Public ${signal.functionName}() returned raw value ${signal.valueRaw}. This may indicate transaction or wallet limits, but it is not a cooldown simulation.`,
+      };
+    }
+  }
+
+  return null;
 }
 
 function buildSourceSignalQuickRow(
@@ -1641,6 +1753,34 @@ function isConcentrationWarning(
   const threshold = kind === "top-holder" ? 20 : 50;
   if (signal.percent < threshold) return false;
   return !isBurnLikeClassification(classifyConcentrationSignal(signal, contract));
+}
+
+function getMechanicsWarnings(
+  mechanics: TokenChairMechanicsSignals | null | undefined,
+): string[] {
+  if (!mechanics) return [];
+
+  return [
+    mechanics.paused.status === "found" && mechanics.paused.value === true
+      ? "A public pause-state getter returned true; transfers may currently be paused."
+      : null,
+    mechanics.tradingEnabled.status === "found" &&
+    mechanics.tradingEnabled.value === false
+      ? "A public trading-state getter returned false; trading may not be open through that getter."
+      : null,
+    mechanics.limitsInEffect.status === "found" &&
+    mechanics.limitsInEffect.value === true
+      ? "A public trading-limits getter returned true; transaction or wallet limits may be active."
+      : null,
+    mechanics.maxTx.status === "found" &&
+    isNonZeroRawNumber(mechanics.maxTx.valueRaw)
+      ? "A public max transaction getter returned a non-zero raw value."
+      : null,
+    mechanics.maxWallet.status === "found" &&
+    isNonZeroRawNumber(mechanics.maxWallet.valueRaw)
+      ? "A public max wallet getter returned a non-zero raw value."
+      : null,
+  ].filter((warning): warning is string => Boolean(warning));
 }
 
 function classifyConcentrationSignal(

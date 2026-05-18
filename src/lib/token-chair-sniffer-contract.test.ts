@@ -233,6 +233,64 @@ describe("Token Chair Sniffer contract reads", () => {
     });
   });
 
+  it("reads common token mechanics getters without simulating trades", async () => {
+    const result = await fetchTokenChairContractData(TOKEN, {
+      reader: buildReader({
+        readContract: vi.fn(async ({ functionName }) => {
+          if (functionName === "name") return "Limit Chair";
+          if (functionName === "symbol") return "LCHR";
+          if (functionName === "decimals") return 18;
+          if (functionName === "owner") {
+            return "0x0000000000000000000000000000000000000000";
+          }
+          if (functionName === "paused") return true;
+          if (functionName === "tradingEnabled") return false;
+          if (functionName === "limitsInEffect") return true;
+          if (functionName === "maxTxAmount") return 1000n;
+          if (functionName === "maxWalletAmount") return 2500n;
+          throw new Error(`Unexpected read ${functionName}`);
+        }),
+      }),
+    });
+    const quickRows = buildQuickSniffRows({ contract: result });
+    const response = withTokenChairContractData(
+      normalizeDexScreenerTokenPairsResponse([dexPair()], TOKEN),
+      result,
+    );
+    const verdictText = [
+      response.verdict.label,
+      response.verdict.displayLabel,
+      ...response.verdict.notes,
+    ].join(" ");
+
+    expect(result.mechanics?.paused).toMatchObject({
+      status: "found",
+      value: true,
+      functionName: "paused",
+    });
+    expect(result.mechanics?.tradingEnabled).toMatchObject({
+      status: "found",
+      value: false,
+      functionName: "tradingEnabled",
+    });
+    expect(result.mechanics?.maxTx).toMatchObject({
+      status: "found",
+      valueRaw: "1000",
+      functionName: "maxTxAmount",
+    });
+    expect(quickRows.find((row) => row.label === "Transfer pausable")).toMatchObject({
+      value: "Paused getter true",
+      status: "warning",
+    });
+    expect(quickRows.find((row) => row.label === "Trading cooldown")).toMatchObject({
+      value: "Limit getter true",
+      status: "warning",
+    });
+    expect(verdictText).toContain("pause-state getter");
+    expect(verdictText).toContain("trading-state getter");
+    expect(verdictText.toLowerCase()).not.toMatch(/\bsafe\b|guaranteed|certified/);
+  });
+
   it("returns unable-to-verify when no contract bytecode is present", async () => {
     const result = await fetchTokenChairContractData(TOKEN, {
       reader: buildReader({ code: "0x" }),

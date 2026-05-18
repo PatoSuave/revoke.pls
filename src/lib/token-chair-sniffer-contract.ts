@@ -12,6 +12,8 @@ import type {
   TokenChairAccessControlSignal,
   TokenChairContractData,
   TokenChairContractReadStatus,
+  TokenChairMechanicsSignals,
+  TokenChairNumericGetterSignal,
   TokenChairPendingOwnerSignal,
   TokenChairProxySignal,
   TokenChairTaxGetterSignal,
@@ -98,6 +100,16 @@ const uintGetterAbi = (name: string) => [
   },
 ] as const;
 
+const boolGetterAbi = (name: string) => [
+  {
+    type: "function",
+    name,
+    stateMutability: "view",
+    inputs: [],
+    outputs: [{ type: "bool" }],
+  },
+] as const;
+
 const defaultAdminRoleAbi = [
   {
     type: "function",
@@ -142,6 +154,34 @@ const TAX_GETTER_FUNCTIONS = {
     "totalSellFee",
     "_sellTax",
     "_sellFee",
+  ],
+} as const;
+
+const MECHANICS_GETTER_FUNCTIONS = {
+  paused: ["paused"],
+  tradingEnabled: [
+    "tradingEnabled",
+    "tradingOpen",
+    "tradingActive",
+    "isTradingEnabled",
+    "launched",
+  ],
+  limitsInEffect: [
+    "limitsInEffect",
+    "limitsEnabled",
+    "tradingLimitsEnabled",
+  ],
+  maxTx: [
+    "maxTxAmount",
+    "maxTransactionAmount",
+    "_maxTxAmount",
+    "maxTx",
+  ],
+  maxWallet: [
+    "maxWalletAmount",
+    "maxWalletSize",
+    "_maxWalletAmount",
+    "maxWallet",
   ],
 } as const;
 
@@ -206,6 +246,7 @@ export async function fetchTokenChairContractData(
     proxy,
     accessControl,
     taxes,
+    mechanics,
   ] =
     await Promise.all([
       readTokenString(reader, tokenAddress, "name", stringNameAbi, options.signal),
@@ -222,6 +263,7 @@ export async function fetchTokenChairContractData(
       readProxySignals(reader, tokenAddress, code, options.signal),
       readAccessControlSignal(reader, tokenAddress, options.signal),
       readTaxSignals(reader, tokenAddress, options.signal),
+      readMechanicsSignals(reader, tokenAddress, options.signal),
     ]);
 
   const warnings = [
@@ -243,6 +285,7 @@ export async function fetchTokenChairContractData(
       : null,
     taxGetterWarning("buy", taxes.buy),
     taxGetterWarning("sell", taxes.sell),
+    ...mechanicsWarnings(mechanics),
   ].filter((warning): warning is string => Boolean(warning));
 
   return {
@@ -258,6 +301,7 @@ export async function fetchTokenChairContractData(
     pendingOwner,
     accessControl,
     taxes,
+    mechanics,
     explorer: null,
     holders: null,
     warnings,
@@ -521,12 +565,69 @@ async function readTaxSignals(
   return { buy, sell };
 }
 
+async function readMechanicsSignals(
+  reader: TokenChairContractReader,
+  address: Address,
+  signal: AbortSignal | undefined,
+): Promise<TokenChairMechanicsSignals> {
+  const [paused, tradingEnabled, limitsInEffect, maxTx, maxWallet] =
+    await Promise.all([
+      readBooleanGetterSignal(
+        reader,
+        address,
+        MECHANICS_GETTER_FUNCTIONS.paused,
+        signal,
+      ),
+      readBooleanGetterSignal(
+        reader,
+        address,
+        MECHANICS_GETTER_FUNCTIONS.tradingEnabled,
+        signal,
+      ),
+      readBooleanGetterSignal(
+        reader,
+        address,
+        MECHANICS_GETTER_FUNCTIONS.limitsInEffect,
+        signal,
+      ),
+      readNumericGetterSignal(
+        reader,
+        address,
+        MECHANICS_GETTER_FUNCTIONS.maxTx,
+        signal,
+      ),
+      readNumericGetterSignal(
+        reader,
+        address,
+        MECHANICS_GETTER_FUNCTIONS.maxWallet,
+        signal,
+      ),
+    ]);
+
+  return {
+    paused,
+    tradingEnabled,
+    limitsInEffect,
+    maxTx,
+    maxWallet,
+  };
+}
+
 async function readTaxGetterSignal(
   reader: TokenChairContractReader,
   address: Address,
   functionNames: readonly string[],
   signal: AbortSignal | undefined,
 ): Promise<TokenChairTaxGetterSignal> {
+  return readNumericGetterSignal(reader, address, functionNames, signal);
+}
+
+async function readNumericGetterSignal(
+  reader: TokenChairContractReader,
+  address: Address,
+  functionNames: readonly string[],
+  signal: AbortSignal | undefined,
+): Promise<TokenChairNumericGetterSignal> {
   let timedOut = false;
 
   for (const functionName of functionNames) {
@@ -554,6 +655,43 @@ async function readTaxGetterSignal(
   return {
     status: timedOut ? "unable-to-verify" : "not-found",
     valueRaw: null,
+    functionName: null,
+    checkedFunctions: [...functionNames],
+  };
+}
+
+async function readBooleanGetterSignal(
+  reader: TokenChairContractReader,
+  address: Address,
+  functionNames: readonly string[],
+  signal: AbortSignal | undefined,
+): Promise<TokenChairMechanicsSignals["paused"]> {
+  let timedOut = false;
+
+  for (const functionName of functionNames) {
+    const result = await readWithAbort(
+      () =>
+        reader.readContract({
+          address,
+          abi: boolGetterAbi(functionName),
+          functionName,
+        }),
+      signal,
+    );
+    if (result.ok && typeof result.value === "boolean") {
+      return {
+        status: "found",
+        value: result.value,
+        functionName,
+        checkedFunctions: [...functionNames],
+      };
+    }
+    timedOut = timedOut || result.error === "PulseChain contract read timed out.";
+  }
+
+  return {
+    status: timedOut ? "unable-to-verify" : "not-found",
+    value: null,
     functionName: null,
     checkedFunctions: [...functionNames],
   };
@@ -648,6 +786,7 @@ function createUnableContractData(
       checks: [],
     },
     taxes: emptyTaxSignals("unable-to-verify"),
+    mechanics: emptyMechanicsSignals("unable-to-verify"),
     explorer: null,
     holders: null,
     warnings: [],
@@ -722,6 +861,51 @@ function emptyTaxSignals(
   };
 }
 
+function emptyMechanicsSignals(
+  status: TokenChairNumericGetterSignal["status"],
+): TokenChairMechanicsSignals {
+  return {
+    paused: emptyBooleanSignal(status, MECHANICS_GETTER_FUNCTIONS.paused),
+    tradingEnabled: emptyBooleanSignal(
+      status,
+      MECHANICS_GETTER_FUNCTIONS.tradingEnabled,
+    ),
+    limitsInEffect: emptyBooleanSignal(
+      status,
+      MECHANICS_GETTER_FUNCTIONS.limitsInEffect,
+    ),
+    maxTx: emptyNumericSignal(status, MECHANICS_GETTER_FUNCTIONS.maxTx),
+    maxWallet: emptyNumericSignal(
+      status,
+      MECHANICS_GETTER_FUNCTIONS.maxWallet,
+    ),
+  };
+}
+
+function emptyBooleanSignal(
+  status: TokenChairNumericGetterSignal["status"],
+  checkedFunctions: readonly string[],
+): TokenChairMechanicsSignals["paused"] {
+  return {
+    status,
+    value: null,
+    functionName: null,
+    checkedFunctions: [...checkedFunctions],
+  };
+}
+
+function emptyNumericSignal(
+  status: TokenChairNumericGetterSignal["status"],
+  checkedFunctions: readonly string[],
+): TokenChairNumericGetterSignal {
+  return {
+    status,
+    valueRaw: null,
+    functionName: null,
+    checkedFunctions: [...checkedFunctions],
+  };
+}
+
 function taxGetterWarning(
   kind: "buy" | "sell",
   signal: TokenChairTaxGetterSignal,
@@ -732,6 +916,36 @@ function taxGetterWarning(
   if (signal.status !== "found" || signal.valueRaw === null) return null;
   if (BigInt(signal.valueRaw) === 0n) return null;
   return `A public ${kind} tax/fee getter returned raw value ${signal.valueRaw}; this is not a trade simulation.`;
+}
+
+function mechanicsWarnings(
+  mechanics: TokenChairMechanicsSignals,
+): Array<string | null> {
+  return [
+    mechanics.paused.status === "found" && mechanics.paused.value === true
+      ? "A public pause-state getter returned true."
+      : null,
+    mechanics.tradingEnabled.status === "found" &&
+    mechanics.tradingEnabled.value === false
+      ? "A public trading-state getter returned false."
+      : null,
+    mechanics.limitsInEffect.status === "found" &&
+    mechanics.limitsInEffect.value === true
+      ? "A public trading-limits getter returned true."
+      : null,
+    mechanics.maxTx.status === "found" &&
+    isNonZeroIntegerString(mechanics.maxTx.valueRaw)
+      ? "A public max transaction getter returned a non-zero raw value."
+      : null,
+    mechanics.maxWallet.status === "found" &&
+    isNonZeroIntegerString(mechanics.maxWallet.valueRaw)
+      ? "A public max wallet getter returned a non-zero raw value."
+      : null,
+  ];
+}
+
+function isNonZeroIntegerString(value: string | null): boolean {
+  return value !== null && BigInt(value) !== 0n;
 }
 
 function addressFromStorageSlot(value: Hex | null | undefined): Address | null {
