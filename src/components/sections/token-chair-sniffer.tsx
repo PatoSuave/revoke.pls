@@ -1015,7 +1015,7 @@ function PairCandidateRow({
     available: "border-pulse-border bg-pulse-panel/45 text-pulse-muted",
   }[row.status];
   const content = (
-    <div className="grid gap-3 px-3 py-3 transition hover:bg-pulse-panel/25 md:grid-cols-[minmax(0,1.1fr)_minmax(0,1fr)]">
+    <div className="grid gap-3 px-3 py-3 transition hover:bg-pulse-panel/25">
       <div className="min-w-0">
         <div className="flex min-w-0 items-center gap-2">
           <span className="grid h-6 w-6 shrink-0 place-items-center rounded-full border border-pulse-border text-[11px] text-pulse-muted">
@@ -1033,7 +1033,7 @@ function PairCandidateRow({
         </p>
         <p className="mt-1 text-xs text-pulse-muted">{row.detail}</p>
       </div>
-      <div className="grid grid-cols-2 gap-2 text-xs sm:grid-cols-4 md:grid-cols-2 2xl:grid-cols-4">
+      <div className="grid grid-cols-2 gap-2 text-xs sm:grid-cols-4">
         <PairMetric label="Liq" value={row.liquidityUsd} />
         <PairMetric label="Vol" value={row.volume24h} />
         <PairMetric label="Txns" value={row.txns24h} />
@@ -1059,9 +1059,14 @@ function PairMetric({
   value: string;
 }) {
   return (
-    <div className="min-w-0 rounded-lg border border-pulse-border/60 bg-[#0a1016] px-2 py-1.5">
+    <div className="min-w-0 rounded-lg border border-pulse-border/60 bg-[#0a1016] px-3 py-2">
       <p className="uppercase tracking-[0.12em] text-pulse-muted/70">{label}</p>
-      <p className="mt-1 truncate font-semibold text-pulse-text">{value}</p>
+      <p
+        className="mt-1 break-words text-[13px] font-semibold leading-5 text-pulse-text"
+        title={value}
+      >
+        {value}
+      </p>
     </div>
   );
 }
