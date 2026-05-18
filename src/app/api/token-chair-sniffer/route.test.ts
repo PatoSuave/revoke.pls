@@ -70,6 +70,25 @@ vi.mock("@/lib/token-chair-sniffer-holders", () => ({
       valueRaw: "24250",
       pairAddress: "0x165C3410fC91EF562C50559f7d2289fEbed552d9",
     },
+    distribution: {
+      sampledHolderCount: 10,
+      holdersCount: 1234,
+      totalSupplyRaw: "1000000",
+      top1Percent: 12.5,
+      top5Percent: 31.5,
+      top10Percent: 48,
+      burnDeadPercent: 0,
+      selectedPairPercent: 8.5,
+      topHolders: [
+        {
+          rank: 1,
+          address: "0x3333333333333333333333333333333333333333",
+          percent: 12.5,
+          isContract: false,
+          valueRaw: "125000",
+        },
+      ],
+    },
     warnings: [],
     errors: [],
   })),
@@ -248,6 +267,7 @@ describe("Token Chair Sniffer API route", () => {
     );
     expect(body.contract.holders.token.percent).toBe(12.5);
     expect(body.contract.holders.lp.percent).toBe(24.25);
+    expect(body.contract.holders.distribution.top10Percent).toBe(48);
   });
 
   it("returns malformed-response as an upstream failure HTTP status", async () => {

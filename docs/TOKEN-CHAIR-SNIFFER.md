@@ -26,6 +26,7 @@ Implemented in this MVP:
 - PulseScan/Blockscout verified-source metadata for source status, ABI availability, deployer, and creation transaction
 - Lightweight ABI/source keyword signals for mint, pause, cooldown, blacklist, whitelist, and suspicious-function rows
 - PulseScan holder endpoint concentration reads for top token holder and LP holder data when available
+- Sampled holder-distribution buckets for top 1, top 5, top 10, selected pair balance, and zero/dead-address balances when PulseScan returns enough holder rows
 - Address context labels for zero/burn addresses, token contract, selected pair, owner, deployer, contracts, and wallets where visible metadata supports it
 - PulseScan links on live contract/source/deployer/holder cards
 - Compact Signal Details panel explaining the current verdict inputs
@@ -35,7 +36,7 @@ Implemented in this MVP:
 - Pair Candidates list showing the top returned DEX Screener pairs by visible liquidity
 - Quick Sniff checklist with live ownership/proxy rows and conservative placeholders for unchecked rows
 - Contract Sniff cards with live owner, source, deployer, holder, LP, and metadata signals
-- Holder Chair Intel panel explaining token-holder and LP-holder concentration address context
+- Holder Distribution panel explaining sampled token-holder buckets, top-holder rows, and LP-holder concentration address context
 - Unit tests for address validation, parser behavior, API states, verdict copy, and unchecked rows
 
 ## Market Data Source
@@ -131,6 +132,17 @@ GET /api/v2/tokens/{address}/holders
 
 The top-holder card reports the largest visible token holder as a percentage of the returned token total supply.
 
+The Holder Distribution panel also derives sampled buckets from the returned holder page:
+
+- top 1 holder percentage
+- top 5 holder percentage
+- top 10 holder percentage
+- selected pair token balance percentage when that pair address appears in the sampled token-holder rows
+- zero/dead-address balance percentage when those addresses appear in the sampled token-holder rows
+- a compact top-holder table with PulseScan links and address classification where available
+
+These buckets are sampled from the visible PulseScan holder response. They are not a full holder crawl and should not be presented as exhaustive distribution proof.
+
 The LP concentration card attempts the same read for the selected DEX Screener pair address. Some PulseScan pair contracts are not indexed as token holder endpoints; in that case LP concentration stays `Unable to verify` instead of guessing.
 
 These are visible holder signals only. They can be affected by explorer indexing, wrapped-token mechanics, staking contracts, bridges, protocol contracts, or holder data that changes after the scan.
@@ -149,7 +161,7 @@ Holder and LP cards classify the returned top address when possible:
 
 These labels are context, not audit conclusions. They use already-returned read-only RPC, DEX Screener, and PulseScan metadata.
 
-The Holder Chair Intel panel expands this context with the visible percent, holder count, shortened holder address, PulseScan link when available, and classification details. High concentration at owner, deployer, wallet, contract, selected pair, or unknown addresses remains a warning. High concentration at the zero or common burn/dead address is described as burn/dead holder context, not as proof of a liquidity lock or a token-quality conclusion.
+The Holder Distribution panel expands this context with visible percentages, holder count, shortened holder addresses, PulseScan links when available, and classification details. High concentration at owner, deployer, wallet, contract, selected pair, or unknown addresses remains a warning. High concentration at the zero or common burn/dead address is described as burn/dead holder context, not as proof of a liquidity lock or a token-quality conclusion.
 
 ## Placeholder Checks
 

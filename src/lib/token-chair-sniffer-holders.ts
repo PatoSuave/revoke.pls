@@ -3,6 +3,7 @@ import { getAddress, isAddress, type Address } from "viem";
 import { PULSECHAIN_CHAIN_ID, getChainConfig } from "@/lib/chains";
 import type {
   TokenChairConcentrationSignal,
+  TokenChairHolderDistribution,
   TokenChairHolderData,
 } from "@/lib/token-chair-sniffer";
 
@@ -28,6 +29,16 @@ interface TokenHolderItem {
     total_supply?: string | null;
   };
   value?: string | null;
+}
+
+interface NormalizedHolderItem {
+  address: Address | null;
+  isContract: boolean | null;
+  valueRaw: string | null;
+  value: bigint | null;
+  holdersCount: number | null;
+  totalSupplyRaw: string | null;
+  totalSupply: bigint | null;
 }
 
 export async function fetchTokenChairHolderData(
@@ -81,9 +92,13 @@ export function normalizeTokenChairHolderResponse({
   const token = normalizeConcentrationSignal(tokenPayload);
   const lpBase = normalizeConcentrationSignal(lpPayload);
   const lp = { ...lpBase, pairAddress };
+  const distribution = normalizeDistribution(tokenPayload, pairAddress);
   const warnings = [
     token.percent === null && !tokenError
       ? "PulseScan did not return token holder concentration data."
+      : null,
+    distribution === null && !tokenError
+      ? "PulseScan did not return enough token holder data for distribution buckets."
       : null,
     lp.percent === null
       ? lpWarning ??
@@ -102,6 +117,7 @@ export function normalizeTokenChairHolderResponse({
     status,
     token,
     lp,
+    distribution,
     warnings,
     errors,
   };
@@ -110,34 +126,89 @@ export function normalizeTokenChairHolderResponse({
 function normalizeConcentrationSignal(
   payload: unknown,
 ): TokenChairConcentrationSignal {
-  const items = asRecord(payload)?.items;
-  if (!Array.isArray(items) || items.length === 0) {
+  const holders = normalizeHolderItems(payload);
+  if (holders.length === 0) {
     return emptyConcentrationSignal(0);
   }
 
-  const holders = items
-    .map((item) => asRecord(item) as TokenHolderItem | null)
-    .filter((item): item is TokenHolderItem => Boolean(item));
-  const top = holders[0] ?? null;
-  const topValue = parsePositiveBigInt(top?.value);
-  const totalSupply = parsePositiveBigInt(top?.token?.total_supply);
+  const top = holders[0];
   const percent =
-    topValue !== null && totalSupply !== null && totalSupply > 0n
-      ? bigintPercent(topValue, totalSupply)
+    top.value !== null && top.totalSupply !== null && top.totalSupply > 0n
+      ? bigintPercent(top.value, top.totalSupply)
       : null;
 
   return {
     percent,
-    address: normalizeAddress(top?.address?.hash),
-    isContract:
-      typeof top?.address?.is_contract === "boolean"
-        ? top.address.is_contract
-        : null,
-    holdersCount: parsePositiveNumber(top?.token?.holders),
+    address: top.address,
+    isContract: top.isContract,
+    holdersCount: top.holdersCount,
     sampledHolderCount: holders.length,
-    totalSupplyRaw: top?.token?.total_supply ?? null,
-    valueRaw: top?.value ?? null,
+    totalSupplyRaw: top.totalSupplyRaw,
+    valueRaw: top.valueRaw,
   };
+}
+
+function normalizeDistribution(
+  payload: unknown,
+  pairAddress: Address | null,
+): TokenChairHolderDistribution | null {
+  const holders = normalizeHolderItems(payload);
+  if (holders.length === 0) return null;
+
+  const totalSupply = holders.find((holder) => holder.totalSupply !== null)
+    ?.totalSupply ?? null;
+  if (totalSupply === null || totalSupply <= 0n) return null;
+
+  const totalSupplyRaw = holders.find((holder) => holder.totalSupplyRaw)?.totalSupplyRaw ?? null;
+  const holdersCount = holders.find((holder) => holder.holdersCount !== null)
+    ?.holdersCount ?? null;
+  const selectedPair = pairAddress
+    ? holders.find((holder) => addressesMatch(holder.address, pairAddress)) ?? null
+    : null;
+
+  return {
+    sampledHolderCount: holders.length,
+    holdersCount,
+    totalSupplyRaw,
+    top1Percent: bucketPercent(holders.slice(0, 1), totalSupply),
+    top5Percent: bucketPercent(holders.slice(0, 5), totalSupply),
+    top10Percent: bucketPercent(holders.slice(0, 10), totalSupply),
+    burnDeadPercent: bucketPercent(
+      holders.filter((holder) => isBurnDeadAddress(holder.address)),
+      totalSupply,
+    ),
+    selectedPairPercent: selectedPair
+      ? bucketPercent([selectedPair], totalSupply)
+      : null,
+    topHolders: holders.slice(0, 10).map((holder, index) => ({
+      rank: index + 1,
+      address: holder.address,
+      percent: holder.value !== null ? bigintPercent(holder.value, totalSupply) : null,
+      isContract: holder.isContract,
+      valueRaw: holder.valueRaw,
+    })),
+  };
+}
+
+function normalizeHolderItems(payload: unknown): NormalizedHolderItem[] {
+  const items = asRecord(payload)?.items;
+  if (!Array.isArray(items)) return [];
+
+  return items
+    .map((item) => asRecord(item) as TokenHolderItem | null)
+    .filter((item): item is TokenHolderItem => Boolean(item))
+    .map((item) => ({
+      address: normalizeAddress(item.address?.hash),
+      isContract:
+        typeof item.address?.is_contract === "boolean"
+          ? item.address.is_contract
+          : null,
+      valueRaw: item.value ?? null,
+      value: parsePositiveBigInt(item.value),
+      holdersCount: parsePositiveNumber(item.token?.holders),
+      totalSupplyRaw: item.token?.total_supply ?? null,
+      totalSupply: parsePositiveBigInt(item.token?.total_supply),
+    }));
 }
 
 async function fetchHolderJson(
@@ -235,6 +306,33 @@ function parsePositiveNumber(value: unknown): number | null {
 
 function bigintPercent(value: bigint, total: bigint): number {
   return Number((value * 10_000n) / total) / 100;
+}
+
+function bucketPercent(
+  holders: readonly NormalizedHolderItem[],
+  totalSupply: bigint,
+): number | null {
+  const value = holders.reduce((sum, holder) => {
+    if (holder.value === null) return sum;
+    return sum + holder.value;
+  }, 0n);
+  return bigintPercent(value, totalSupply);
+}
+
+function addressesMatch(
+  left: Address | null | undefined,
+  right: Address | null | undefined,
+): boolean {
+  return Boolean(left && right && left.toLowerCase() === right.toLowerCase());
+}
+
+function isBurnDeadAddress(address: Address | null): boolean {
+  if (!address) return false;
+  const lower = address.toLowerCase();
+  return (
+    lower === "0x0000000000000000000000000000000000000000" ||
+    lower === "0x000000000000000000000000000000000000dead"
+  );
 }
 
 function holderErrorMessage(error: unknown): string {

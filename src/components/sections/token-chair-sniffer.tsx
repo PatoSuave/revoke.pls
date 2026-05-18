@@ -17,6 +17,7 @@ import {
   buildQuickSniffRows,
   buildSourceSignalDetailRows,
   buildTokenChairSnifferUrl,
+  classifyTokenChairAddress,
   formatCompactNumber,
   formatPriceUsd,
   formatTxns24h,
@@ -29,6 +30,7 @@ import {
   type TokenChairConcentrationDetailRow,
   type TokenChairContractData,
   type TokenChairEventHistoryDetailRow,
+  type TokenChairHolderDistributionRow,
   type TokenChairMarketData,
   type TokenChairPairCandidateRow,
   type TokenChairSourceSignalDetailRow,
@@ -1339,6 +1341,7 @@ function HolderChairIntel({
 }) {
   if (!contract) return null;
 
+  const distribution = contract.holders?.distribution ?? null;
   const holderStatus =
     contract.holders?.status === "success"
       ? "PulseScan holders"
@@ -1350,7 +1353,14 @@ function HolderChairIntel({
 
   return (
     <section className="rounded-lg border border-pulse-border/80 bg-[#080d12] p-4">
-      <PanelHeader icon="H" title="Holder Chair Intel" meta={holderStatus} />
+      <PanelHeader icon="H" title="Holder Distribution" meta={holderStatus} />
+      {distribution ? (
+        <HolderDistributionSummary contract={contract} />
+      ) : (
+        <div className="mt-4 rounded-lg border border-pulse-border/75 bg-[#0a1016] p-4 text-sm leading-6 text-pulse-muted">
+          PulseScan holder distribution buckets have not been returned yet.
+        </div>
+      )}
       <div className="mt-4 grid gap-3 lg:grid-cols-2">
         {rows.length > 0 ? (
           rows.map((row) => <HolderIntelCard key={row.kind} row={row} />)
@@ -1361,10 +1371,168 @@ function HolderChairIntel({
         )}
       </div>
       <p className="mt-4 text-xs leading-5 text-pulse-muted">
-        Holder concentration is visible explorer context only. Burn/dead holder
-        labels are not proof of an LP lock, and indexed holder data can change.
+        Holder distribution uses the visible PulseScan holder page returned during
+        the read-only scan. Burn/dead labels are not proof of an LP lock, pair
+        balances can move, and sampled top-holder data can change.
       </p>
     </section>
+  );
+}
+
+function HolderDistributionSummary({
+  contract,
+}: {
+  contract: TokenChairContractData;
+}) {
+  const distribution = contract.holders?.distribution;
+  if (!distribution) return null;
+
+  const metrics = [
+    {
+      label: "Top 1",
+      value: formatOptionalPercent(distribution.top1Percent),
+      detail: "Largest visible token holder.",
+    },
+    {
+      label: "Top 5",
+      value: formatOptionalPercent(distribution.top5Percent),
+      detail: "Combined first five sampled holders.",
+    },
+    {
+      label: "Top 10",
+      value: formatOptionalPercent(distribution.top10Percent),
+      detail: "Combined first ten sampled holders.",
+    },
+    {
+      label: "Pair balance",
+      value: formatOptionalPercent(distribution.selectedPairPercent),
+      detail: "Token supply held by the selected pair, if visible in the sample.",
+    },
+    {
+      label: "Burn/dead",
+      value: formatOptionalPercent(distribution.burnDeadPercent),
+      detail: "Zero and common dead-address balances visible in the sample.",
+    },
+    {
+      label: "Holders",
+      value: distribution.holdersCount === null
+        ? "Not returned"
+        : distribution.holdersCount.toLocaleString("en-US"),
+      detail: `${distribution.sampledHolderCount.toLocaleString("en-US")} sampled holder rows.`,
+    },
+  ];
+
+  return (
+    <div className="mt-4 grid gap-3 xl:grid-cols-[minmax(0,1fr)_420px]">
+      <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
+        {metrics.map((metric) => (
+          <HolderDistributionMetric key={metric.label} {...metric} />
+        ))}
+      </div>
+      <TopHolderTable rows={distribution.topHolders} contract={contract} />
+    </div>
+  );
+}
+
+function HolderDistributionMetric({
+  label,
+  value,
+  detail,
+}: {
+  label: string;
+  value: string;
+  detail: string;
+}) {
+  return (
+    <div className="min-w-0 rounded-lg border border-pulse-border/65 bg-[#0a1016] p-3">
+      <p className="text-[11px] uppercase tracking-[0.14em] text-pulse-muted/75">
+        {label}
+      </p>
+      <p className="mt-1 text-lg font-semibold text-pulse-text">{value}</p>
+      <p className="mt-2 text-xs leading-5 text-pulse-muted">{detail}</p>
+    </div>
+  );
+}
+
+function TopHolderTable({
+  rows,
+  contract,
+}: {
+  rows: readonly TokenChairHolderDistributionRow[];
+  contract: TokenChairContractData;
+}) {
+  if (rows.length === 0) {
+    return (
+      <div className="rounded-lg border border-pulse-border/75 bg-[#0a1016] p-4 text-sm leading-6 text-pulse-muted">
+        PulseScan did not return top-holder rows for this token.
+      </div>
+    );
+  }
+
+  return (
+    <div className="overflow-hidden rounded-lg border border-pulse-border/75 bg-[#0a1016]">
+      <div className="grid grid-cols-[48px_minmax(0,1fr)_76px] gap-2 border-b border-pulse-border/65 px-3 py-2 text-[11px] uppercase tracking-[0.14em] text-pulse-muted/75">
+        <span>Rank</span>
+        <span>Holder</span>
+        <span className="text-right">Supply</span>
+      </div>
+      <div className="divide-y divide-pulse-border/55">
+        {rows.map((row) => (
+          <TopHolderTableRow
+            key={`${row.rank}-${row.address ?? "unknown"}`}
+            row={row}
+            contract={contract}
+          />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function TopHolderTableRow({
+  row,
+  contract,
+}: {
+  row: TokenChairHolderDistributionRow;
+  contract: TokenChairContractData;
+}) {
+  const classification = classifyHolderRow(row, contract);
+  const addressLabel = row.address ? shortenAddress(row.address) : "Not returned";
+  const content = (
+    <>
+      <span className="font-semibold text-pulse-text">#{row.rank}</span>
+      <span className="min-w-0">
+        <span className="block truncate font-semibold text-pulse-text">
+          {addressLabel}
+        </span>
+        <span className="block truncate text-[11px] text-pulse-muted">
+          {classification?.label ?? (row.isContract ? "Contract" : "Wallet or unknown")}
+        </span>
+      </span>
+      <span className="text-right font-semibold text-pulse-text">
+        {formatOptionalPercent(row.percent)}
+      </span>
+    </>
+  );
+
+  if (classification?.explorerUrl) {
+    return (
+      <a
+        href={classification.explorerUrl}
+        target="_blank"
+        rel="noopener noreferrer"
+        title={classification.detail}
+        className="grid grid-cols-[48px_minmax(0,1fr)_76px] gap-2 px-3 py-2 text-xs transition hover:bg-pulse-green/5"
+      >
+        {content}
+      </a>
+    );
+  }
+
+  return (
+    <div className="grid grid-cols-[48px_minmax(0,1fr)_76px] gap-2 px-3 py-2 text-xs">
+      {content}
+    </div>
   );
 }
 
@@ -1438,6 +1606,19 @@ function HolderMetric({
       </p>
     </div>
   );
+}
+
+function classifyHolderRow(
+  row: TokenChairHolderDistributionRow,
+  contract: TokenChairContractData,
+) {
+  return classifyTokenChairAddress(row.address, {
+    tokenAddress: contract.tokenAddress,
+    pairAddress: contract.holders?.lp.pairAddress ?? null,
+    ownerAddress: contract.ownerAddress,
+    deployerAddress: contract.explorer?.deployerAddress ?? null,
+    isContract: row.isContract,
+  });
 }
 
 function ContractMetadataStrip({
@@ -1625,6 +1806,13 @@ function formatHolderSummary(
   return `${holders.token.percent.toLocaleString("en-US", {
     maximumFractionDigits: holders.token.percent < 1 ? 2 : 1,
   })}% top`;
+}
+
+function formatOptionalPercent(value: number | null): string {
+  if (value === null) return "Not returned";
+  return `${value.toLocaleString("en-US", {
+    maximumFractionDigits: value < 1 ? 2 : 1,
+  })}%`;
 }
 
 function formatEventHistoryStatus(

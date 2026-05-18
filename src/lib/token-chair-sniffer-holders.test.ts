@@ -28,12 +28,18 @@ function holdersPayload({
   totalSupply = "1000",
   holders = "42",
   isContract = false,
+  extraItems = [],
 }: {
   holder?: Address;
   value?: string;
   totalSupply?: string;
   holders?: string;
   isContract?: boolean;
+  extraItems?: Array<{
+    holder: Address;
+    value: string;
+    isContract?: boolean;
+  }>;
 } = {}) {
   return {
     items: [
@@ -48,6 +54,17 @@ function holdersPayload({
         },
         value,
       },
+      ...extraItems.map((item) => ({
+        address: {
+          hash: item.holder,
+          is_contract: item.isContract ?? false,
+        },
+        token: {
+          holders,
+          total_supply: totalSupply,
+        },
+        value: item.value,
+      })),
     ],
   };
 }
@@ -126,6 +143,13 @@ describe("Token Chair Sniffer holder concentration", () => {
     expect(result.status).toBe("success");
     expect(result.token.percent).toBe(25);
     expect(result.token.address).toBe(HOLDER);
+    expect(result.distribution).toMatchObject({
+      top1Percent: 25,
+      top5Percent: 25,
+      top10Percent: 25,
+      burnDeadPercent: 0,
+      sampledHolderCount: 1,
+    });
     expect(result.lp.percent).toBe(75);
     expect(result.lp.address).toBe(LP_HOLDER);
     expect(result.lp.pairAddress).toBe(PAIR);
@@ -140,6 +164,48 @@ describe("Token Chair Sniffer holder concentration", () => {
     expect(cards.find((card) => card.label === "LP concentration")).toMatchObject({
       value: "75%",
       status: "warning",
+    });
+  });
+
+  it("builds sampled top-holder distribution buckets", () => {
+    const result = normalizeTokenChairHolderResponse({
+      tokenPayload: holdersPayload({
+        value: "190",
+        totalSupply: "1000",
+        extraItems: [
+          { holder: OWNER, value: "180" },
+          { holder: PAIR, value: "170", isContract: true },
+          { holder: DEAD, value: "160" },
+          { holder: LP_HOLDER, value: "150" },
+          { holder: getAddress("0x5555555555555555555555555555555555555555"), value: "40" },
+          { holder: getAddress("0x6666666666666666666666666666666666666666"), value: "30" },
+          { holder: getAddress("0x7777777777777777777777777777777777777777"), value: "20" },
+          { holder: getAddress("0x8888888888888888888888888888888888888888"), value: "10" },
+          { holder: getAddress("0x9999999999999999999999999999999999999999"), value: "5" },
+        ],
+      }),
+      lpPayload: holdersPayload({
+        holder: LP_HOLDER,
+        value: "250",
+        totalSupply: "1000",
+      }),
+      pairAddress: PAIR,
+    });
+
+    expect(result.distribution).toMatchObject({
+      sampledHolderCount: 10,
+      top1Percent: 19,
+      top5Percent: 85,
+      top10Percent: 95.5,
+      burnDeadPercent: 16,
+      selectedPairPercent: 17,
+    });
+    expect(result.distribution?.topHolders).toHaveLength(10);
+    expect(result.distribution?.topHolders[2]).toMatchObject({
+      rank: 3,
+      address: PAIR,
+      percent: 17,
+      isContract: true,
     });
   });
 

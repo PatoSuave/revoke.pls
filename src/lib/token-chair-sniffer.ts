@@ -116,12 +116,33 @@ export interface TokenChairConcentrationSignal {
   valueRaw: string | null;
 }
 
+export interface TokenChairHolderDistributionRow {
+  rank: number;
+  address: Address | null;
+  percent: number | null;
+  isContract: boolean | null;
+  valueRaw: string | null;
+}
+
+export interface TokenChairHolderDistribution {
+  sampledHolderCount: number;
+  holdersCount: number | null;
+  totalSupplyRaw: string | null;
+  top1Percent: number | null;
+  top5Percent: number | null;
+  top10Percent: number | null;
+  burnDeadPercent: number | null;
+  selectedPairPercent: number | null;
+  topHolders: TokenChairHolderDistributionRow[];
+}
+
 export interface TokenChairHolderData {
   status: TokenChairContractReadStatus;
   token: TokenChairConcentrationSignal;
   lp: TokenChairConcentrationSignal & {
     pairAddress: Address | null;
   };
+  distribution: TokenChairHolderDistribution | null;
   warnings: string[];
   errors: string[];
 }
@@ -1291,10 +1312,12 @@ function getVisibleContractWarnings(
   const holders = contract.holders;
   const tokenHolderPercent = holders?.token.percent ?? null;
   const lpHolderPercent = holders?.lp.percent ?? null;
+  const top1Percent = holders?.distribution?.top1Percent ?? tokenHolderPercent;
+  const top10Percent = holders?.distribution?.top10Percent ?? null;
   if (
     holders &&
-    tokenHolderPercent !== null &&
-    tokenHolderPercent >= 20 &&
+    top1Percent !== null &&
+    top1Percent >= 20 &&
     isConcentrationWarning("top-holder", holders.token, contract)
   ) {
     warnings.push({
@@ -1304,6 +1327,19 @@ function getVisibleContractWarnings(
         holders.token,
         contract,
       ),
+    });
+  }
+
+  if (
+    holders &&
+    top10Percent !== null &&
+    top10Percent >= 50 &&
+    (top1Percent === null || top1Percent < 20)
+  ) {
+    warnings.push({
+      severity: "warning",
+      message:
+        `PulseScan sampled top-10 holders account for ${formatSignalPercent(top10Percent)} of supply. Review holder distribution before interacting.`,
     });
   }
 
