@@ -35,7 +35,6 @@ Implemented in this MVP:
 - Quick Sniff checklist with live ownership/proxy rows and conservative placeholders for unchecked rows
 - Contract Sniff cards with live owner, source, deployer, holder, LP, and metadata signals
 - Holder Chair Intel panel explaining token-holder and LP-holder concentration address context
-- Verdict-driven chair-sniffer mascot art: green/happy, yellow/concerned, red/stressed, with Pulse/Revoke pulse marks instead of coin logos
 - Unit tests for address validation, parser behavior, API states, verdict copy, and unchecked rows
 
 ## Market Data Source
@@ -221,8 +220,6 @@ The UI must not claim:
 Do not include real influencer faces, names, handles, logos, voices, endorsements, or likenesses in UI code or committed assets.
 
 Do not include influencer-specific naming in this phase. The page should remain PulseChain-culture-inspired without implying endorsement.
-
-Mascot art is code-drawn UI, not a real person or endorsement. Clothing marks use the app's Pulse/Revoke pulse glyph language rather than third-party coin logos.
 
 ## Future Phases
 
