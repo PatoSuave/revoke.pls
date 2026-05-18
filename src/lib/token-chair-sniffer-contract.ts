@@ -3,6 +3,7 @@ import {
   getAddress,
   http,
   isAddress,
+  parseAbiItem,
   type Address,
   type Hex,
 } from "viem";
@@ -12,6 +13,9 @@ import type {
   TokenChairAccessControlSignal,
   TokenChairContractData,
   TokenChairContractReadStatus,
+  TokenChairEventCounter,
+  TokenChairEventHistoryLogName,
+  TokenChairEventHistorySignal,
   TokenChairMechanicsSignals,
   TokenChairNumericGetterSignal,
   TokenChairPendingOwnerSignal,
@@ -185,6 +189,28 @@ const MECHANICS_GETTER_FUNCTIONS = {
   ],
 } as const;
 
+const TOKEN_CHAIR_EVENT_HISTORY_LOOKBACK_BLOCKS = 1_000_000n;
+const TOKEN_CHAIR_EVENT_HISTORY_EVENTS = {
+  ownershipTransferred: parseAbiItem(
+    "event OwnershipTransferred(address indexed previousOwner, address indexed newOwner)",
+  ),
+  roleGranted: parseAbiItem(
+    "event RoleGranted(bytes32 indexed role, address indexed account, address indexed sender)",
+  ),
+  roleRevoked: parseAbiItem(
+    "event RoleRevoked(bytes32 indexed role, address indexed account, address indexed sender)",
+  ),
+  paused: parseAbiItem("event Paused(address account)"),
+  unpaused: parseAbiItem("event Unpaused(address account)"),
+} as const;
+const TOKEN_CHAIR_EVENT_HISTORY_EVENT_NAMES: TokenChairEventHistoryLogName[] = [
+  "ownershipTransferred",
+  "roleGranted",
+  "roleRevoked",
+  "paused",
+  "unpaused",
+];
+
 export interface TokenChairContractReader {
   readContract(args: {
     address: Address;
@@ -194,6 +220,13 @@ export interface TokenChairContractReader {
   }): Promise<unknown>;
   getCode(args: { address: Address }): Promise<Hex | undefined>;
   getStorageAt(args: { address: Address; slot: Hex }): Promise<Hex | undefined>;
+  getBlockNumber(): Promise<bigint>;
+  getLogs(args: {
+    address: Address;
+    eventName: TokenChairEventHistoryLogName;
+    fromBlock: bigint;
+    toBlock: bigint;
+  }): Promise<readonly unknown[]>;
 }
 
 export interface FetchTokenChairContractOptions {
@@ -247,6 +280,7 @@ export async function fetchTokenChairContractData(
     accessControl,
     taxes,
     mechanics,
+    eventHistory,
   ] =
     await Promise.all([
       readTokenString(reader, tokenAddress, "name", stringNameAbi, options.signal),
@@ -264,6 +298,7 @@ export async function fetchTokenChairContractData(
       readAccessControlSignal(reader, tokenAddress, options.signal),
       readTaxSignals(reader, tokenAddress, options.signal),
       readMechanicsSignals(reader, tokenAddress, options.signal),
+      readEventHistorySignal(reader, tokenAddress, options.signal),
     ]);
 
   const warnings = [
@@ -286,6 +321,7 @@ export async function fetchTokenChairContractData(
     taxGetterWarning("buy", taxes.buy),
     taxGetterWarning("sell", taxes.sell),
     ...mechanicsWarnings(mechanics),
+    ...eventHistoryWarnings(eventHistory),
   ].filter((warning): warning is string => Boolean(warning));
 
   return {
@@ -302,6 +338,7 @@ export async function fetchTokenChairContractData(
     accessControl,
     taxes,
     mechanics,
+    eventHistory,
     explorer: null,
     holders: null,
     warnings,
@@ -322,6 +359,14 @@ export function createPulseChainContractReader(): TokenChairContractReader {
     readContract: (args) => client.readContract(args as never),
     getCode: (args) => client.getCode(args),
     getStorageAt: (args) => client.getStorageAt(args),
+    getBlockNumber: () => client.getBlockNumber(),
+    getLogs: ({ address, eventName, fromBlock, toBlock }) =>
+      client.getLogs({
+        address,
+        event: TOKEN_CHAIR_EVENT_HISTORY_EVENTS[eventName],
+        fromBlock,
+        toBlock,
+      } as never),
   };
 }
 
@@ -613,6 +658,94 @@ async function readMechanicsSignals(
   };
 }
 
+async function readEventHistorySignal(
+  reader: TokenChairContractReader,
+  address: Address,
+  signal: AbortSignal | undefined,
+): Promise<TokenChairEventHistorySignal> {
+  const blockNumberRead = await readWithAbort(
+    () => reader.getBlockNumber(),
+    signal,
+  );
+
+  if (!blockNumberRead.ok || typeof blockNumberRead.value !== "bigint") {
+    const errors = [
+      blockNumberRead.error ??
+        "Latest PulseChain block number could not be read for event history.",
+    ];
+    const eventHistory = emptyEventHistorySignal(
+      "unable-to-verify",
+      null,
+      null,
+      errors,
+    );
+    return {
+      ...eventHistory,
+      warnings: eventHistoryWarnings(eventHistory),
+    };
+  }
+
+  const toBlock = blockNumberRead.value;
+  const fromBlock =
+    toBlock > TOKEN_CHAIR_EVENT_HISTORY_LOOKBACK_BLOCKS
+      ? toBlock - TOKEN_CHAIR_EVENT_HISTORY_LOOKBACK_BLOCKS
+      : 0n;
+  const reads = await Promise.all(
+    TOKEN_CHAIR_EVENT_HISTORY_EVENT_NAMES.map(async (eventName) => [
+      eventName,
+      await readWithAbort(
+        () => reader.getLogs({ address, eventName, fromBlock, toBlock }),
+        signal,
+      ),
+    ] as const),
+  );
+  const errors: string[] = [];
+  const counters = emptyEventCounters();
+
+  for (const [eventName, read] of reads) {
+    if (!read.ok) {
+      errors.push(
+        `${eventHistoryLabel(eventName)} logs could not be read: ${
+          read.error ?? "unknown error"
+        }`,
+      );
+      continue;
+    }
+
+    if (!Array.isArray(read.value)) {
+      errors.push(`${eventHistoryLabel(eventName)} logs returned malformed data.`);
+      continue;
+    }
+
+    counters[eventName] = eventLogCounter(read.value);
+  }
+
+  const status: TokenChairContractReadStatus =
+    errors.length === 0
+      ? "success"
+      : errors.length === TOKEN_CHAIR_EVENT_HISTORY_EVENT_NAMES.length
+        ? "unable-to-verify"
+        : "partial";
+  const eventHistory: TokenChairEventHistorySignal = {
+    status,
+    fromBlock: fromBlock.toString(),
+    toBlock: toBlock.toString(),
+    lookbackBlocks: TOKEN_CHAIR_EVENT_HISTORY_LOOKBACK_BLOCKS.toString(),
+    ownershipTransferred: counters.ownershipTransferred,
+    roleGranted: counters.roleGranted,
+    roleRevoked: counters.roleRevoked,
+    paused: counters.paused,
+    unpaused: counters.unpaused,
+    warnings: [],
+    errors,
+  };
+
+  return {
+    ...eventHistory,
+    warnings: eventHistoryWarnings(eventHistory),
+  };
+}
+
 async function readTaxGetterSignal(
   reader: TokenChairContractReader,
   address: Address,
@@ -787,6 +920,7 @@ function createUnableContractData(
     },
     taxes: emptyTaxSignals("unable-to-verify"),
     mechanics: emptyMechanicsSignals("unable-to-verify"),
+    eventHistory: emptyEventHistorySignal("unable-to-verify", null, null),
     explorer: null,
     holders: null,
     warnings: [],
@@ -882,6 +1016,78 @@ function emptyMechanicsSignals(
   };
 }
 
+function emptyEventHistorySignal(
+  status: TokenChairContractReadStatus,
+  fromBlock: string | null,
+  toBlock: string | null,
+  errors: string[] = [],
+): TokenChairEventHistorySignal {
+  const counters = emptyEventCounters();
+  return {
+    status,
+    fromBlock,
+    toBlock,
+    lookbackBlocks: TOKEN_CHAIR_EVENT_HISTORY_LOOKBACK_BLOCKS.toString(),
+    ownershipTransferred: counters.ownershipTransferred,
+    roleGranted: counters.roleGranted,
+    roleRevoked: counters.roleRevoked,
+    paused: counters.paused,
+    unpaused: counters.unpaused,
+    warnings: [],
+    errors,
+  };
+}
+
+function emptyEventCounters(): Record<
+  TokenChairEventHistoryLogName,
+  TokenChairEventCounter
+> {
+  return {
+    ownershipTransferred: emptyEventCounter(),
+    roleGranted: emptyEventCounter(),
+    roleRevoked: emptyEventCounter(),
+    paused: emptyEventCounter(),
+    unpaused: emptyEventCounter(),
+  };
+}
+
+function emptyEventCounter(): TokenChairEventCounter {
+  return { count: 0, latestBlockNumber: null };
+}
+
+function eventLogCounter(logs: readonly unknown[]): TokenChairEventCounter {
+  let latestBlock: bigint | null = null;
+
+  for (const log of logs) {
+    const blockNumber = eventLogBlockNumber(log);
+    if (blockNumber !== null && (latestBlock === null || blockNumber > latestBlock)) {
+      latestBlock = blockNumber;
+    }
+  }
+
+  return {
+    count: logs.length,
+    latestBlockNumber: latestBlock === null ? null : latestBlock.toString(),
+  };
+}
+
+function eventLogBlockNumber(log: unknown): bigint | null {
+  if (!log || typeof log !== "object") return null;
+  const blockNumber = (log as { blockNumber?: unknown }).blockNumber;
+  if (typeof blockNumber === "bigint") return blockNumber;
+  if (
+    typeof blockNumber === "number" &&
+    Number.isInteger(blockNumber) &&
+    blockNumber >= 0
+  ) {
+    return BigInt(blockNumber);
+  }
+  if (typeof blockNumber === "string" && /^\d+$/.test(blockNumber)) {
+    return BigInt(blockNumber);
+  }
+  return null;
+}
+
 function emptyBooleanSignal(
   status: TokenChairNumericGetterSignal["status"],
   checkedFunctions: readonly string[],
@@ -942,6 +1148,55 @@ function mechanicsWarnings(
       ? "A public max wallet getter returned a non-zero raw value."
       : null,
   ];
+}
+
+function eventHistoryWarnings(
+  eventHistory: TokenChairEventHistorySignal,
+): string[] {
+  const warnings: string[] = [];
+
+  if (eventHistory.status === "unable-to-verify") {
+    warnings.push(
+      "Recent PulseChain contract event history could not be read.",
+    );
+    return warnings;
+  }
+
+  if (eventHistory.status === "partial") {
+    warnings.push(
+      "Some recent PulseChain contract event logs could not be read.",
+    );
+  }
+
+  if (eventHistory.ownershipTransferred.count > 0) {
+    warnings.push(
+      "OwnershipTransferred events were found in the recent event window; review owner history before interacting.",
+    );
+  }
+
+  if (eventHistory.roleGranted.count > 0 || eventHistory.roleRevoked.count > 0) {
+    warnings.push(
+      "AccessControl role-change events were found in the recent event window; admin permissions may have changed.",
+    );
+  }
+
+  if (eventHistory.paused.count > 0 || eventHistory.unpaused.count > 0) {
+    warnings.push(
+      "Pause or unpause events were found in the recent event window; pause controls appear to have been used.",
+    );
+  }
+
+  return warnings;
+}
+
+function eventHistoryLabel(eventName: TokenChairEventHistoryLogName): string {
+  return {
+    ownershipTransferred: "OwnershipTransferred",
+    roleGranted: "RoleGranted",
+    roleRevoked: "RoleRevoked",
+    paused: "Paused",
+    unpaused: "Unpaused",
+  }[eventName];
 }
 
 function isNonZeroIntegerString(value: string | null): boolean {

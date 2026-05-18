@@ -191,6 +191,32 @@ export interface TokenChairMechanicsSignals {
   maxWallet: TokenChairNumericGetterSignal;
 }
 
+export type TokenChairEventHistoryLogName =
+  | "ownershipTransferred"
+  | "roleGranted"
+  | "roleRevoked"
+  | "paused"
+  | "unpaused";
+
+export interface TokenChairEventCounter {
+  count: number;
+  latestBlockNumber: string | null;
+}
+
+export interface TokenChairEventHistorySignal {
+  status: TokenChairContractReadStatus;
+  fromBlock: string | null;
+  toBlock: string | null;
+  lookbackBlocks: string;
+  ownershipTransferred: TokenChairEventCounter;
+  roleGranted: TokenChairEventCounter;
+  roleRevoked: TokenChairEventCounter;
+  paused: TokenChairEventCounter;
+  unpaused: TokenChairEventCounter;
+  warnings: string[];
+  errors: string[];
+}
+
 export interface TokenChairContractData {
   tokenAddress: Address;
   status: TokenChairContractReadStatus;
@@ -205,6 +231,7 @@ export interface TokenChairContractData {
   accessControl?: TokenChairAccessControlSignal;
   taxes?: TokenChairTaxSignals;
   mechanics?: TokenChairMechanicsSignals;
+  eventHistory?: TokenChairEventHistorySignal;
   explorer: TokenChairExplorerData | null;
   holders: TokenChairHolderData | null;
   warnings: string[];
@@ -1149,6 +1176,10 @@ function getVisibleContractWarnings(
   }
 
   for (const warning of getMechanicsWarnings(contract.mechanics)) {
+    warnings.push({ severity: "warning", message: warning });
+  }
+
+  for (const warning of contract.eventHistory?.warnings ?? []) {
     warnings.push({ severity: "warning", message: warning });
   }
 

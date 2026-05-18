@@ -79,12 +79,15 @@ The API also performs PulseChain RPC reads without connecting a wallet:
 - common OpenZeppelin-style role getters: `DEFAULT_ADMIN_ROLE()` and `getRoleAdmin(bytes32)`
 - common public buy/sell tax or fee getters such as `buyTax()`, `buyFee()`, `sellTax()`, and `sellFee()`
 - common public mechanics getters such as `paused()`, `tradingEnabled()`, `limitsInEffect()`, `maxTxAmount()`, and `maxWalletAmount()`
+- bounded recent event-window log reads for `OwnershipTransferred`, `RoleGranted`, `RoleRevoked`, `Paused`, and `Unpaused`
 
 These checks are informational only. `owner()` returning the zero address is labeled `Appears renounced`, not as a guarantee. A missing common proxy signal is labeled `Common proxy signal not found`, not as proof that every proxy pattern is absent.
 
 Public tax getter reads are shown as raw getter values, for example `Getter returned 5`. Token Chair Sniffer does not interpret those values as percentages, does not simulate buys or sells, and does not claim the value reflects dynamic transfer behavior.
 
 Public mechanics getter reads are also state/context signals only. `paused()` returning `false`, for example, does not prove a token cannot be paused later, and max transaction or max wallet getter values are not honeypot or sell-simulation results.
+
+Recent event-history reads are limited to a bounded block window so the scanner stays lightweight on public PulseChain RPCs. A match is shown as visible history context, for example recent ownership transfers, role changes, or pause/unpause events. An empty recent window does not prove those events never happened earlier, and failed log reads are labeled as unable to verify.
 
 ## PulseScan Source Checks
 

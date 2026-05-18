@@ -26,10 +26,14 @@ function buildReader({
   code = "0x60806040" as Hex,
   readContract,
   getStorageAt,
+  getBlockNumber,
+  getLogs,
 }: {
   code?: Hex;
   readContract?: TokenChairContractReader["readContract"];
   getStorageAt?: TokenChairContractReader["getStorageAt"];
+  getBlockNumber?: TokenChairContractReader["getBlockNumber"];
+  getLogs?: TokenChairContractReader["getLogs"];
 } = {}): TokenChairContractReader {
   return {
     readContract:
@@ -45,6 +49,8 @@ function buildReader({
       }),
     getCode: vi.fn(async () => code),
     getStorageAt: getStorageAt ?? vi.fn(async () => ZERO_SLOT),
+    getBlockNumber: getBlockNumber ?? vi.fn(async () => 20_000_000n),
+    getLogs: getLogs ?? vi.fn(async () => []),
   };
 }
 
@@ -289,6 +295,87 @@ describe("Token Chair Sniffer contract reads", () => {
     expect(verdictText).toContain("pause-state getter");
     expect(verdictText).toContain("trading-state getter");
     expect(verdictText.toLowerCase()).not.toMatch(/\bsafe\b|guaranteed|certified/);
+  });
+
+  it("reads recent ownership, role, and pause events as conservative history signals", async () => {
+    const getLogs = vi.fn(async ({ eventName }) => {
+      if (eventName === "ownershipTransferred") {
+        return [{ blockNumber: 19_100_000n }, { blockNumber: 19_900_000n }];
+      }
+      if (eventName === "roleGranted") {
+        return [{ blockNumber: "19950000" }];
+      }
+      if (eventName === "paused") {
+        return [{ blockNumber: 19_800_000 }];
+      }
+      return [];
+    });
+
+    const result = await fetchTokenChairContractData(TOKEN, {
+      reader: buildReader({ getLogs }),
+    });
+    const response = withTokenChairContractData(
+      normalizeDexScreenerTokenPairsResponse([dexPair()], TOKEN),
+      result,
+    );
+    const verdictText = [
+      response.verdict.label,
+      response.verdict.displayLabel,
+      ...response.verdict.notes,
+    ].join(" ");
+
+    expect(getLogs).toHaveBeenCalledWith(expect.objectContaining({
+      eventName: "ownershipTransferred",
+      fromBlock: 19_000_000n,
+      toBlock: 20_000_000n,
+    }));
+    expect(result.eventHistory).toMatchObject({
+      status: "success",
+      fromBlock: "19000000",
+      toBlock: "20000000",
+      lookbackBlocks: "1000000",
+      ownershipTransferred: {
+        count: 2,
+        latestBlockNumber: "19900000",
+      },
+      roleGranted: {
+        count: 1,
+        latestBlockNumber: "19950000",
+      },
+      paused: {
+        count: 1,
+        latestBlockNumber: "19800000",
+      },
+    });
+    expect(result.warnings.join(" ")).toContain("OwnershipTransferred");
+    expect(result.warnings.join(" ")).toContain("AccessControl role-change");
+    expect(result.warnings.join(" ")).toContain("Pause or unpause events");
+    expect(response.verdict.label).toBe("Some warnings");
+    expect(verdictText.toLowerCase()).not.toMatch(/\bsafe\b|guaranteed|certified/);
+  });
+
+  it("marks event history unable to verify when recent logs cannot be read", async () => {
+    const result = await fetchTokenChairContractData(TOKEN, {
+      reader: buildReader({
+        getBlockNumber: vi.fn(async () => {
+          throw new Error("RPC unavailable");
+        }),
+      }),
+    });
+
+    expect(result.eventHistory).toMatchObject({
+      status: "unable-to-verify",
+      fromBlock: null,
+      toBlock: null,
+      ownershipTransferred: {
+        count: 0,
+        latestBlockNumber: null,
+      },
+    });
+    expect(result.eventHistory?.errors.join(" ")).toContain("RPC unavailable");
+    expect(result.warnings.join(" ")).toContain(
+      "Recent PulseChain contract event history could not be read.",
+    );
   });
 
   it("returns unable-to-verify when no contract bytecode is present", async () => {
