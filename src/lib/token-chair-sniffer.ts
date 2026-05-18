@@ -1,4 +1,4 @@
-import { getAddress, isAddress, type Address } from "viem";
+import { getAddress, isAddress, type Address, type Hex } from "viem";
 
 export const TOKEN_CHAIR_SNIFFER_ROUTE = "/app/token-chair-sniffer";
 export const TOKEN_CHAIR_API_ROUTE = "/api/token-chair-sniffer/market";
@@ -135,6 +135,35 @@ export interface TokenChairProxySignal {
   checks: string[];
 }
 
+export interface TokenChairPendingOwnerSignal {
+  address: Address | null;
+  functionName: "pendingOwner" | "pendingAdmin" | "newOwner" | null;
+}
+
+export interface TokenChairAccessControlSignal {
+  detected: boolean | null;
+  defaultAdminRole: Hex | null;
+  roleAdmin: Hex | null;
+  checks: string[];
+}
+
+export type TokenChairTaxGetterStatus =
+  | "found"
+  | "not-found"
+  | "unable-to-verify";
+
+export interface TokenChairTaxGetterSignal {
+  status: TokenChairTaxGetterStatus;
+  valueRaw: string | null;
+  functionName: string | null;
+  checkedFunctions: string[];
+}
+
+export interface TokenChairTaxSignals {
+  buy: TokenChairTaxGetterSignal;
+  sell: TokenChairTaxGetterSignal;
+}
+
 export interface TokenChairContractData {
   tokenAddress: Address;
   status: TokenChairContractReadStatus;
@@ -145,6 +174,9 @@ export interface TokenChairContractData {
   ownerFunction: "owner" | "getOwner" | null;
   ownershipRenounced: boolean | null;
   proxy: TokenChairProxySignal;
+  pendingOwner?: TokenChairPendingOwnerSignal;
+  accessControl?: TokenChairAccessControlSignal;
+  taxes?: TokenChairTaxSignals;
   explorer: TokenChairExplorerData | null;
   holders: TokenChairHolderData | null;
   warnings: string[];
@@ -597,6 +629,14 @@ export function buildQuickSniffRows(options: {
     status: fallbackStatus,
     detail,
   })).map((row) => {
+    if (row.label === "Buy tax") {
+      return buildTaxGetterQuickRow(row, options.contract?.taxes?.buy ?? null, "buy");
+    }
+
+    if (row.label === "Sell tax") {
+      return buildTaxGetterQuickRow(row, options.contract?.taxes?.sell ?? null, "sell");
+    }
+
     if (row.label === "Ownership renounced") {
       return buildOwnershipQuickRow(row, options.contract ?? null);
     }
@@ -1009,6 +1049,48 @@ function getVisibleContractWarnings(
     });
   }
 
+  if (contract.pendingOwner?.address) {
+    warnings.push({
+      severity: "warning",
+      message:
+        "A pending owner/admin getter returned an address; ownership or admin controls may be in transition.",
+    });
+  }
+
+  if (contract.accessControl?.detected === true) {
+    warnings.push({
+      severity: "warning",
+      message:
+        "Common AccessControl role functions responded; role-based admin controls may exist.",
+    });
+  } else if (contract.accessControl?.detected === null) {
+    warnings.push({
+      severity: "warning",
+      message:
+        "Common AccessControl checks were incomplete, so role-based controls could not be fully verified.",
+    });
+  }
+
+  for (const tax of [
+    ["buy", contract.taxes?.buy] as const,
+    ["sell", contract.taxes?.sell] as const,
+  ]) {
+    const [kind, signal] = tax;
+    if (signal?.status === "found" && isNonZeroRawNumber(signal.valueRaw)) {
+      warnings.push({
+        severity: "warning",
+        message:
+          `A public ${kind} tax/fee getter returned a non-zero value; this is not a trade simulation.`,
+      });
+    } else if (signal?.status === "unable-to-verify") {
+      warnings.push({
+        severity: "warning",
+        message:
+          `Common ${kind} tax/fee getter checks could not be completed.`,
+      });
+    }
+  }
+
   const explorer = contract.explorer;
   if (explorer?.sourceVerified === false) {
     warnings.push({
@@ -1069,6 +1151,43 @@ function getVisibleContractWarnings(
   }
 
   return warnings;
+}
+
+function buildTaxGetterQuickRow(
+  row: SniffSignalRow,
+  signal: TokenChairTaxGetterSignal | null,
+  kind: "buy" | "sell",
+): SniffSignalRow {
+  if (!signal) return row;
+
+  if (signal.status === "found" && signal.valueRaw !== null && signal.functionName) {
+    const nonZero = isNonZeroRawNumber(signal.valueRaw);
+    return {
+      ...row,
+      value: `Getter returned ${signal.valueRaw}`,
+      status: nonZero ? "warning" : "checked",
+      detail:
+        `Public ${signal.functionName}() returned raw ${kind} tax/fee value ${signal.valueRaw}. This is not a trade simulation and may not reflect dynamic transfer behavior.`,
+    };
+  }
+
+  if (signal.status === "unable-to-verify") {
+    return {
+      ...row,
+      value: "Unable to verify",
+      status: "unable-to-verify",
+      detail:
+        `Common public ${kind} tax/fee getter reads could not be completed.`,
+    };
+  }
+
+  return {
+    ...row,
+    value: "Not checked yet",
+    status: "not-checked",
+    detail:
+      `No common public ${kind} tax/fee getter responded. Trade simulation and bytecode tax analysis are not live yet.`,
+  };
 }
 
 function buildOwnershipQuickRow(
@@ -1434,6 +1553,16 @@ function warningHolderLabel(
   if (classification.kind === "contract") return "a contract address";
   if (classification.kind === "wallet") return "a wallet address";
   return "an unclassified address";
+}
+
+function isNonZeroRawNumber(value: string | null): boolean {
+  if (value === null) return false;
+  try {
+    return BigInt(value) !== 0n;
+  } catch {
+    const numeric = Number(value);
+    return Number.isFinite(numeric) && numeric !== 0;
+  }
 }
 
 function sortMarketPairs(

@@ -21,6 +21,7 @@ Implemented in this MVP:
 - Server-side DEX Screener token-pairs fetch for `pulsechain`
 - DEX Screener response normalization and main-pair selection by highest visible USD liquidity
 - Read-only PulseChain RPC contract reads for basic token metadata, standard ownership, and common proxy signals
+- Read-only pending owner/admin getter checks, common AccessControl role-function checks, and public buy/sell tax getter checks
 - PulseScan/Blockscout verified-source metadata for source status, ABI availability, deployer, and creation transaction
 - Lightweight ABI/source keyword signals for mint, pause, cooldown, blacklist, whitelist, and suspicious-function rows
 - PulseScan holder endpoint concentration reads for top token holder and LP holder data when available
@@ -70,10 +71,15 @@ The API also performs PulseChain RPC reads without connecting a wallet:
 - `eth_getCode` to confirm bytecode exists at the pasted address
 - ERC-20-style `name()`, `symbol()`, and `decimals()` view reads
 - standard `owner()` with `getOwner()` fallback
+- common pending owner/admin getters: `pendingOwner()`, `pendingAdmin()`, and `newOwner()`
 - EIP-1967 implementation/admin/beacon storage-slot reads
 - EIP-1167 minimal-proxy bytecode pattern detection
+- common OpenZeppelin-style role getters: `DEFAULT_ADMIN_ROLE()` and `getRoleAdmin(bytes32)`
+- common public buy/sell tax or fee getters such as `buyTax()`, `buyFee()`, `sellTax()`, and `sellFee()`
 
 These checks are informational only. `owner()` returning the zero address is labeled `Appears renounced`, not as a guarantee. A missing common proxy signal is labeled `Common proxy signal not found`, not as proof that every proxy pattern is absent.
+
+Public tax getter reads are shown as raw getter values, for example `Getter returned 5`. Token Chair Sniffer does not interpret those values as percentages, does not simulate buys or sells, and does not claim the value reflects dynamic transfer behavior.
 
 ## PulseScan Source Checks
 
@@ -139,7 +145,8 @@ These labels are context, not audit conclusions. They use already-returned read-
 
 The following sections are visually present but not live contract-analysis results in Phase 1:
 
-- Quick Sniff tax, hidden-owner, obfuscation, and honeypot rows
+- Quick Sniff hidden-owner, obfuscation, and honeypot rows
+- buy/sell tax rows when no common public tax/fee getter responds
 
 Unchecked rows must say `Not checked yet`. If an upstream or parser failure prevents even the placeholder context from being reliable, rows may say `Unable to verify`.
 

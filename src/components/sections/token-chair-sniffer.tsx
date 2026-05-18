@@ -1063,10 +1063,13 @@ function ContractMetadataStrip({
     ["Source", formatSourceStatus(contract, fallback)],
     ["ABI", formatAbiStatus(contract, fallback)],
     ["Proxy", formatProxySignal(contract, fallback)],
+    ["Pending", formatPendingOwnerSignal(contract, fallback)],
+    ["Roles", formatAccessControlSignal(contract, fallback)],
+    ["Tax getters", formatTaxGetterSignal(contract, fallback)],
   ] as const;
 
   return (
-    <div className="mt-4 grid gap-2 rounded-lg border border-pulse-border/70 bg-[#070b10] p-3 sm:grid-cols-3 xl:grid-cols-6">
+    <div className="mt-4 grid gap-2 rounded-lg border border-pulse-border/70 bg-[#070b10] p-3 sm:grid-cols-3 xl:grid-cols-9">
       {items.map(([label, value]) => (
         <div key={label} className="min-w-0">
           <p className="text-[11px] uppercase tracking-[0.14em] text-pulse-muted/75">
@@ -1212,6 +1215,40 @@ function formatProxySignal(
   if (contract.proxy.detected === true) return "Signal found";
   if (contract.proxy.detected === false) return "Common signal not found";
   return "Unable to verify";
+}
+
+function formatPendingOwnerSignal(
+  contract: TokenChairContractData | null,
+  fallback: string,
+): string {
+  const pendingOwner = contract?.pendingOwner;
+  if (!contract || !pendingOwner) return fallback;
+  if (pendingOwner.address) return shortenAddress(pendingOwner.address);
+  return "Common signal not found";
+}
+
+function formatAccessControlSignal(
+  contract: TokenChairContractData | null,
+  fallback: string,
+): string {
+  const detected = contract?.accessControl?.detected;
+  if (detected === true) return "Role signal found";
+  if (detected === false) return "Common signal not found";
+  return contract ? "Unable to verify" : fallback;
+}
+
+function formatTaxGetterSignal(
+  contract: TokenChairContractData | null,
+  fallback: string,
+): string {
+  const taxes = contract?.taxes;
+  if (!contract || !taxes) return fallback;
+  const found = [taxes.buy, taxes.sell].filter((tax) => tax.status === "found");
+  if (found.length > 0) return `${found.length} getter${found.length === 1 ? "" : "s"}`;
+  if ([taxes.buy, taxes.sell].some((tax) => tax.status === "unable-to-verify")) {
+    return "Unable to verify";
+  }
+  return "Common getter not found";
 }
 
 function formatSourceStatus(

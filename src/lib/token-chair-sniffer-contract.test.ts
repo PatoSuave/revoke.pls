@@ -16,9 +16,11 @@ import {
 const TOKEN = getAddress("0xcae394005c9c4c309621c53d53db9ceb701fc8d8");
 const OWNER = getAddress("0x1111111111111111111111111111111111111111");
 const IMPLEMENTATION = getAddress("0x2222222222222222222222222222222222222222");
+const PENDING_OWNER = getAddress("0x3333333333333333333333333333333333333333");
 const PAIR = getAddress("0x165C3410fC91EF562C50559f7d2289fEbed552d9");
 const QUOTE = getAddress("0xA1077a294dDE1B09bB078844df40758a5D0f9a27");
 const ZERO_SLOT = `0x${"0".repeat(64)}` as Hex;
+const ZERO_ROLE = `0x${"0".repeat(64)}` as Hex;
 
 function buildReader({
   code = "0x60806040" as Hex,
@@ -154,6 +156,80 @@ describe("Token Chair Sniffer contract reads", () => {
     expect(quickRows.find((row) => row.label === "Proxy contract")).toMatchObject({
       value: "Proxy signal found",
       status: "warning",
+    });
+  });
+
+  it("reads pending owner, AccessControl, and public tax getters as limited signals", async () => {
+    const result = await fetchTokenChairContractData(TOKEN, {
+      reader: buildReader({
+        readContract: vi.fn(async ({ functionName }) => {
+          if (functionName === "name") return "Admin Chair";
+          if (functionName === "symbol") return "ACHR";
+          if (functionName === "decimals") return 18;
+          if (functionName === "owner") return OWNER;
+          if (functionName === "pendingOwner") return PENDING_OWNER;
+          if (functionName === "DEFAULT_ADMIN_ROLE") return ZERO_ROLE;
+          if (functionName === "getRoleAdmin") return ZERO_ROLE;
+          if (functionName === "buyTax") return 5n;
+          if (functionName === "sellTax") return 0n;
+          throw new Error(`Unexpected read ${functionName}`);
+        }),
+      }),
+    });
+
+    expect(result.pendingOwner).toMatchObject({
+      address: PENDING_OWNER,
+      functionName: "pendingOwner",
+    });
+    expect(result.accessControl).toMatchObject({
+      detected: true,
+      defaultAdminRole: ZERO_ROLE,
+      roleAdmin: ZERO_ROLE,
+    });
+    expect(result.taxes?.buy).toMatchObject({
+      status: "found",
+      valueRaw: "5",
+      functionName: "buyTax",
+    });
+    expect(result.taxes?.sell).toMatchObject({
+      status: "found",
+      valueRaw: "0",
+      functionName: "sellTax",
+    });
+
+    const quickRows = buildQuickSniffRows({ contract: result });
+    expect(quickRows.find((row) => row.label === "Buy tax")).toMatchObject({
+      value: "Getter returned 5",
+      status: "warning",
+    });
+    expect(quickRows.find((row) => row.label === "Sell tax")).toMatchObject({
+      value: "Getter returned 0",
+      status: "checked",
+    });
+    expect(
+      quickRows
+        .filter((row) => row.label === "Buy tax" || row.label === "Sell tax")
+        .map((row) => row.detail)
+        .join(" ")
+        .toLowerCase(),
+    ).not.toMatch(/\bsafe\b|guaranteed|certified/);
+  });
+
+  it("keeps tax rows pending when common public tax getters are absent", async () => {
+    const result = await fetchTokenChairContractData(TOKEN, {
+      reader: buildReader(),
+    });
+    const quickRows = buildQuickSniffRows({ contract: result });
+
+    expect(result.taxes?.buy.status).toBe("not-found");
+    expect(result.taxes?.sell.status).toBe("not-found");
+    expect(quickRows.find((row) => row.label === "Buy tax")).toMatchObject({
+      value: "Not checked yet",
+      status: "not-checked",
+    });
+    expect(quickRows.find((row) => row.label === "Sell tax")).toMatchObject({
+      value: "Not checked yet",
+      status: "not-checked",
     });
   });
 

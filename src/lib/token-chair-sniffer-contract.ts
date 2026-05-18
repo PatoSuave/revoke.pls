@@ -9,12 +9,17 @@ import {
 
 import { PULSECHAIN_CHAIN_ID, getChainConfig, pulsechain } from "@/lib/chains";
 import type {
+  TokenChairAccessControlSignal,
   TokenChairContractData,
   TokenChairContractReadStatus,
+  TokenChairPendingOwnerSignal,
   TokenChairProxySignal,
+  TokenChairTaxGetterSignal,
+  TokenChairTaxSignals,
 } from "@/lib/token-chair-sniffer";
 
 const ZERO_ADDRESS = "0x0000000000000000000000000000000000000000";
+const ZERO_ROLE = `0x${"0".repeat(64)}` as Hex;
 
 const EIP_1967_IMPLEMENTATION_SLOT =
   "0x360894a13ba1a3210667c828492db98dca3e2076cc3735a920a3ca505d382bbc" as Hex;
@@ -73,11 +78,79 @@ const getOwnerAbi = [
   },
 ] as const;
 
+const addressGetterAbi = (name: string) => [
+  {
+    type: "function",
+    name,
+    stateMutability: "view",
+    inputs: [],
+    outputs: [{ type: "address" }],
+  },
+] as const;
+
+const uintGetterAbi = (name: string) => [
+  {
+    type: "function",
+    name,
+    stateMutability: "view",
+    inputs: [],
+    outputs: [{ type: "uint256" }],
+  },
+] as const;
+
+const defaultAdminRoleAbi = [
+  {
+    type: "function",
+    name: "DEFAULT_ADMIN_ROLE",
+    stateMutability: "view",
+    inputs: [],
+    outputs: [{ type: "bytes32" }],
+  },
+] as const;
+
+const getRoleAdminAbi = [
+  {
+    type: "function",
+    name: "getRoleAdmin",
+    stateMutability: "view",
+    inputs: [{ type: "bytes32" }],
+    outputs: [{ type: "bytes32" }],
+  },
+] as const;
+
+const PENDING_OWNER_FUNCTIONS = [
+  "pendingOwner",
+  "pendingAdmin",
+  "newOwner",
+] as const;
+
+const TAX_GETTER_FUNCTIONS = {
+  buy: [
+    "buyTax",
+    "buyFee",
+    "buyTaxFee",
+    "totalBuyTax",
+    "totalBuyFee",
+    "_buyTax",
+    "_buyFee",
+  ],
+  sell: [
+    "sellTax",
+    "sellFee",
+    "sellTaxFee",
+    "totalSellTax",
+    "totalSellFee",
+    "_sellTax",
+    "_sellFee",
+  ],
+} as const;
+
 export interface TokenChairContractReader {
   readContract(args: {
     address: Address;
     abi: readonly unknown[];
     functionName: string;
+    args?: readonly unknown[];
   }): Promise<unknown>;
   getCode(args: { address: Address }): Promise<Hex | undefined>;
   getStorageAt(args: { address: Address; slot: Hex }): Promise<Hex | undefined>;
@@ -124,7 +197,16 @@ export async function fetchTokenChairContractData(
     ]);
   }
 
-  const [nameRead, symbolRead, decimalsRead, ownerRead, proxy] =
+  const [
+    nameRead,
+    symbolRead,
+    decimalsRead,
+    ownerRead,
+    pendingOwner,
+    proxy,
+    accessControl,
+    taxes,
+  ] =
     await Promise.all([
       readTokenString(reader, tokenAddress, "name", stringNameAbi, options.signal),
       readTokenString(
@@ -136,7 +218,10 @@ export async function fetchTokenChairContractData(
       ),
       readDecimals(reader, tokenAddress, options.signal),
       readOwner(reader, tokenAddress, options.signal),
+      readPendingOwner(reader, tokenAddress, options.signal),
       readProxySignals(reader, tokenAddress, code, options.signal),
+      readAccessControlSignal(reader, tokenAddress, options.signal),
+      readTaxSignals(reader, tokenAddress, options.signal),
     ]);
 
   const warnings = [
@@ -144,9 +229,20 @@ export async function fetchTokenChairContractData(
     symbolRead.ok ? null : "Token symbol could not be read from the contract.",
     decimalsRead.ok ? null : "Token decimals could not be read from the contract.",
     ownerRead.warning,
+    pendingOwner.address
+      ? `A ${pendingOwner.functionName ?? "pending owner/admin"} getter returned ${pendingOwner.address}.`
+      : null,
     proxy.detected === null
       ? "Common proxy checks were incomplete for this contract."
       : null,
+    accessControl.detected === true
+      ? "Common AccessControl role functions responded for this contract."
+      : null,
+    accessControl.detected === null
+      ? "Common AccessControl role checks were incomplete for this contract."
+      : null,
+    taxGetterWarning("buy", taxes.buy),
+    taxGetterWarning("sell", taxes.sell),
   ].filter((warning): warning is string => Boolean(warning));
 
   return {
@@ -159,6 +255,9 @@ export async function fetchTokenChairContractData(
     ownerFunction: ownerRead.ownerFunction,
     ownershipRenounced: ownerRead.ownershipRenounced,
     proxy,
+    pendingOwner,
+    accessControl,
+    taxes,
     explorer: null,
     holders: null,
     warnings,
@@ -275,6 +374,30 @@ async function readOwnerFunction(
   };
 }
 
+async function readPendingOwner(
+  reader: TokenChairContractReader,
+  address: Address,
+  signal: AbortSignal | undefined,
+): Promise<TokenChairPendingOwnerSignal> {
+  for (const functionName of PENDING_OWNER_FUNCTIONS) {
+    const result = await readWithAbort(
+      () =>
+        reader.readContract({
+          address,
+          abi: addressGetterAbi(functionName),
+          functionName,
+        }),
+      signal,
+    );
+    const ownerAddress = normalizeAddress(result.value);
+    if (ownerAddress && ownerAddress !== ZERO_ADDRESS) {
+      return { address: ownerAddress, functionName };
+    }
+  }
+
+  return { address: null, functionName: null };
+}
+
 async function readProxySignals(
   reader: TokenChairContractReader,
   address: Address,
@@ -340,6 +463,122 @@ async function readProxySignals(
   };
 }
 
+async function readAccessControlSignal(
+  reader: TokenChairContractReader,
+  address: Address,
+  signal: AbortSignal | undefined,
+): Promise<TokenChairAccessControlSignal> {
+  const defaultRoleRead = await readHex32Function(
+    reader,
+    address,
+    "DEFAULT_ADMIN_ROLE",
+    defaultAdminRoleAbi,
+    [],
+    signal,
+  );
+  const defaultAdminRole = defaultRoleRead.value ?? ZERO_ROLE;
+  const roleAdminRead = await readHex32Function(
+    reader,
+    address,
+    "getRoleAdmin",
+    getRoleAdminAbi,
+    [defaultAdminRole],
+    signal,
+  );
+  const checks = [
+    defaultRoleRead.value
+      ? `DEFAULT_ADMIN_ROLE() returned ${defaultRoleRead.value}.`
+      : null,
+    roleAdminRead.value
+      ? `getRoleAdmin(DEFAULT_ADMIN_ROLE) returned ${roleAdminRead.value}.`
+      : null,
+  ].filter((check): check is string => Boolean(check));
+  const detected = checks.length > 0
+    ? true
+    : defaultRoleRead.error === "PulseChain contract read timed out." ||
+        roleAdminRead.error === "PulseChain contract read timed out."
+      ? null
+      : false;
+
+  return {
+    detected,
+    defaultAdminRole: defaultRoleRead.value,
+    roleAdmin: roleAdminRead.value,
+    checks,
+  };
+}
+
+async function readTaxSignals(
+  reader: TokenChairContractReader,
+  address: Address,
+  signal: AbortSignal | undefined,
+): Promise<TokenChairTaxSignals> {
+  const [buy, sell] = await Promise.all([
+    readTaxGetterSignal(reader, address, TAX_GETTER_FUNCTIONS.buy, signal),
+    readTaxGetterSignal(reader, address, TAX_GETTER_FUNCTIONS.sell, signal),
+  ]);
+
+  return { buy, sell };
+}
+
+async function readTaxGetterSignal(
+  reader: TokenChairContractReader,
+  address: Address,
+  functionNames: readonly string[],
+  signal: AbortSignal | undefined,
+): Promise<TokenChairTaxGetterSignal> {
+  let timedOut = false;
+
+  for (const functionName of functionNames) {
+    const result = await readWithAbort(
+      () =>
+        reader.readContract({
+          address,
+          abi: uintGetterAbi(functionName),
+          functionName,
+        }),
+      signal,
+    );
+    const valueRaw = normalizeIntegerString(result.value);
+    if (result.ok && valueRaw !== null) {
+      return {
+        status: "found",
+        valueRaw,
+        functionName,
+        checkedFunctions: [...functionNames],
+      };
+    }
+    timedOut = timedOut || result.error === "PulseChain contract read timed out.";
+  }
+
+  return {
+    status: timedOut ? "unable-to-verify" : "not-found",
+    valueRaw: null,
+    functionName: null,
+    checkedFunctions: [...functionNames],
+  };
+}
+
+async function readHex32Function(
+  reader: TokenChairContractReader,
+  address: Address,
+  functionName: string,
+  abi: readonly unknown[],
+  args: readonly unknown[],
+  signal: AbortSignal | undefined,
+): Promise<ReadAttempt<Hex>> {
+  const result = await readWithAbort(
+    () => reader.readContract({ address, abi, functionName, args }),
+    signal,
+  );
+  const value = normalizeHex32(result.value);
+  return {
+    ok: result.ok && value !== null,
+    value,
+    error: result.ok ? null : result.error,
+  };
+}
+
 async function readWithAbort<T>(
   task: () => Promise<T>,
   signal: AbortSignal | undefined,
@@ -401,6 +640,14 @@ function createUnableContractData(
       minimalProxyTarget: null,
       checks: [],
     },
+    pendingOwner: { address: null, functionName: null },
+    accessControl: {
+      detected: null,
+      defaultAdminRole: null,
+      roleAdmin: null,
+      checks: [],
+    },
+    taxes: emptyTaxSignals("unable-to-verify"),
     explorer: null,
     holders: null,
     warnings: [],
@@ -437,6 +684,54 @@ function normalizeDecimals(value: unknown): number | null {
 function normalizeAddress(value: unknown): Address | null {
   if (typeof value !== "string" || !isAddress(value)) return null;
   return getAddress(value);
+}
+
+function normalizeHex32(value: unknown): Hex | null {
+  if (typeof value !== "string") return null;
+  if (!/^0x[a-fA-F0-9]{64}$/.test(value)) return null;
+  return value as Hex;
+}
+
+function normalizeIntegerString(value: unknown): string | null {
+  if (typeof value === "bigint" && value >= 0n) return value.toString();
+  if (typeof value === "number" && Number.isInteger(value) && value >= 0) {
+    return value.toString();
+  }
+  if (typeof value === "string" && /^\d+$/.test(value.trim())) {
+    return BigInt(value.trim()).toString();
+  }
+  return null;
+}
+
+function emptyTaxSignals(
+  status: TokenChairTaxGetterSignal["status"],
+): TokenChairTaxSignals {
+  return {
+    buy: {
+      status,
+      valueRaw: null,
+      functionName: null,
+      checkedFunctions: [...TAX_GETTER_FUNCTIONS.buy],
+    },
+    sell: {
+      status,
+      valueRaw: null,
+      functionName: null,
+      checkedFunctions: [...TAX_GETTER_FUNCTIONS.sell],
+    },
+  };
+}
+
+function taxGetterWarning(
+  kind: "buy" | "sell",
+  signal: TokenChairTaxGetterSignal,
+): string | null {
+  if (signal.status === "unable-to-verify") {
+    return `Common ${kind} tax/fee getter reads could not be completed.`;
+  }
+  if (signal.status !== "found" || signal.valueRaw === null) return null;
+  if (BigInt(signal.valueRaw) === 0n) return null;
+  return `A public ${kind} tax/fee getter returned raw value ${signal.valueRaw}; this is not a trade simulation.`;
 }
 
 function addressFromStorageSlot(value: Hex | null | undefined): Address | null {
