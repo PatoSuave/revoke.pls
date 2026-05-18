@@ -1202,7 +1202,11 @@ function MatchedTerms({
       {terms.map((term) => (
         <span
           key={term}
-          className="rounded-full border border-amber-400/35 bg-amber-400/10 px-2.5 py-1 font-mono text-xs font-semibold text-amber-200"
+          className={`rounded-full border px-2.5 py-1 font-mono text-xs font-semibold ${
+            status === "danger"
+              ? "border-pulse-red/35 bg-pulse-red/10 text-pulse-red"
+              : "border-amber-400/35 bg-amber-400/10 text-amber-200"
+          }`}
         >
           {term}
         </span>
@@ -1812,6 +1816,7 @@ function SniffValueBadge({
   const toneClass = {
     checked: "border-pulse-green/40 bg-pulse-green/10 text-pulse-green",
     warning: "border-amber-400/45 bg-amber-400/10 text-amber-200",
+    danger: "border-pulse-red/45 bg-pulse-red/10 text-pulse-red",
     "unable-to-verify": "border-amber-400/40 bg-amber-400/10 text-amber-200",
     "not-checked": "border-pulse-border bg-pulse-panel/45 text-pulse-muted",
   }[row.status];

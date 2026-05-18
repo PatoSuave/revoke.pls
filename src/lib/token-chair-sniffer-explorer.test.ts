@@ -115,10 +115,12 @@ describe("Token Chair Sniffer PulseScan explorer integration", () => {
     expect(result.creationTxHash).toBe(TX);
     expect(result.sourceSignals.find((signal) => signal.key === "mintable")).toMatchObject({
       found: true,
+      severity: "warning",
       matches: ["mint"],
     });
     expect(result.sourceSignals.find((signal) => signal.key === "blacklist")).toMatchObject({
       found: true,
+      severity: "high",
       matches: ["blacklist"],
     });
 
@@ -129,6 +131,11 @@ describe("Token Chair Sniffer PulseScan explorer integration", () => {
       value: "Source signal found",
       status: "warning",
       matches: ["mint"],
+    });
+    expect(details.find((row) => row.label === "Blacklist")).toMatchObject({
+      value: "High source signal",
+      status: "danger",
+      matches: ["blacklist"],
     });
     expect(
       details.find((row) => row.label === "Trading cooldown"),
@@ -215,8 +222,10 @@ describe("Token Chair Sniffer PulseScan explorer integration", () => {
       ...response.verdict.notes,
     ].join(" ");
 
-    expect(response.verdict.label).toBe("Some warnings");
-    expect(verdictText).toContain("Suspicious functions source signal found");
+    expect(response.verdict.label).toBe("High risk");
+    expect(verdictText).toContain(
+      "Suspicious functions higher-severity source signal found",
+    );
     expect(verdictText.toLowerCase()).not.toMatch(/\bsafe\b/);
   });
 });

@@ -119,7 +119,7 @@ If verified ABI or source is available, Token Chair Sniffer runs a lightweight k
 - whitelist
 - suspicious functions
 
-Rows with matches say `Source signal found`. Rows without matches say `Not flagged by source scan`, which means only that the lightweight keyword pass did not match obvious terms in returned ABI/source. It is not a full audit and does not prove the behavior is absent.
+Rows with matches are tiered. Lower-severity findings such as mint, pause, cooldown, or whitelist terms say `Source signal found`. Higher-severity findings such as blacklist/bot controls or suspicious admin/trading functions say `High source signal`. Rows without matches say `Not flagged by source scan`, which means only that the lightweight keyword pass did not match obvious terms in returned ABI/source. It is not a full audit and does not prove the behavior is absent.
 
 The Source Signal Details panel expands these rows with the exact matched terms returned by the lightweight ABI/source pass. If PulseScan does not return verified source or ABI data, those detail rows stay `Unable to verify`. The panel is explanatory only; it does not add bytecode analysis, tax simulation, or honeypot execution.
 
@@ -226,7 +226,7 @@ Allowed internal verdict states:
 
 Phase 1 defaults complete-looking market results to `unable-to-fully-verify` unless visible market, read-only contract, source-signal, event-history, or concentration warnings are present, because hidden-owner, bytecode, and honeypot checks are not live yet.
 
-The UI may show `some-warnings` or `high-risk` for visible market-only warnings such as very low liquidity, new pairs, missing price, missing liquidity, no 24h transactions, a non-zero standard owner, common proxy signals, missing verified source, lightweight source-signal matches, high top-holder concentration, or high LP-holder concentration.
+The UI may show `some-warnings` or `high-risk` for visible warnings such as very low liquidity, new pairs, missing price, missing liquidity, no 24h transactions, a non-zero standard owner, common proxy signals, missing verified source, higher-severity lightweight source-signal matches, high top-holder concentration, or high LP-holder concentration.
 
 The positive word `safe` must not be used as a verdict or marketing claim. It may appear only in conservative disclaimer language, such as: "does not guarantee that a token is safe."
 

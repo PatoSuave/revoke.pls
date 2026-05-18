@@ -48,36 +48,43 @@ interface V2SmartContractInfo {
 const SOURCE_SIGNAL_DEFINITIONS: Array<{
   key: TokenChairSourceSignalKey;
   label: string;
+  severity: TokenChairSourceSignal["severity"];
   terms: string[];
 }> = [
   {
     key: "mintable",
     label: "Mintable",
+    severity: "warning",
     terms: ["mint", "mintTo", "ownerMint", "airdrop"],
   },
   {
     key: "transfer-pausable",
     label: "Transfer pausable",
+    severity: "warning",
     terms: ["pause", "unpause", "paused", "setPaused", "pauseTrading"],
   },
   {
     key: "trading-cooldown",
     label: "Trading cooldown",
+    severity: "warning",
     terms: ["cooldown", "transferDelay", "lastTransfer", "antiBot", "maxTx"],
   },
   {
     key: "blacklist",
     label: "Blacklist",
+    severity: "high",
     terms: ["blacklist", "blacklisted", "isBlacklisted", "setBot", "isBot"],
   },
   {
     key: "whitelist",
     label: "Whitelist",
+    severity: "warning",
     terms: ["whitelist", "allowlist", "isWhitelisted", "setWhitelist"],
   },
   {
     key: "suspicious-functions",
     label: "Suspicious functions",
+    severity: "high",
     terms: [
       "setTax",
       "setFee",
@@ -265,11 +272,12 @@ function buildSourceSignals({
     return {
       key: definition.key,
       label: definition.label,
+      severity: definition.severity,
       found: matches.length > 0,
       matches,
       detail:
         matches.length > 0
-          ? `Matched verified ABI/source terms: ${matches.join(", ")}. This is a signal to review, not a final verdict.`
+          ? `${sourceSignalSeverityCopy(definition.severity)} Matched verified ABI/source terms: ${matches.join(", ")}. This is a signal to review, not a final verdict.`
           : `Verified ABI/source was scanned for common ${definition.label.toLowerCase()} terms and none were flagged by this lightweight pass.`,
     };
   }).map((signal) => ({
@@ -286,11 +294,20 @@ function buildUnknownSourceSignals(): TokenChairSourceSignal[] {
   return SOURCE_SIGNAL_DEFINITIONS.map((definition) => ({
     key: definition.key,
     label: definition.label,
+    severity: definition.severity,
     found: null,
     matches: [],
     detail:
       "PulseScan did not return verified source or ABI data, so this row cannot be checked.",
   }));
+}
+
+function sourceSignalSeverityCopy(
+  severity: TokenChairSourceSignal["severity"],
+): string {
+  return severity === "high"
+    ? "Higher-severity source signal."
+    : "Source warning signal.";
 }
 
 function pulseScanV2BaseUrl(): string {

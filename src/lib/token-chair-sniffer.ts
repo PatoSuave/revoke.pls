@@ -80,9 +80,12 @@ export type TokenChairSourceSignalKey =
   | "whitelist"
   | "suspicious-functions";
 
+export type TokenChairSourceSignalSeverity = "warning" | "high";
+
 export interface TokenChairSourceSignal {
   key: TokenChairSourceSignalKey;
   label: string;
+  severity: TokenChairSourceSignalSeverity;
   found: boolean | null;
   matches: string[];
   detail: string;
@@ -278,6 +281,7 @@ export interface TokenChairApiResponse {
 export type SniffRowStatus =
   | "checked"
   | "warning"
+  | "danger"
   | "not-checked"
   | "unable-to-verify";
 
@@ -815,8 +819,8 @@ export function buildSourceSignalDetailRows(options: {
     if (signal.found === true) {
       return {
         label: signal.label,
-        value: "Source signal found",
-        status: "warning",
+        value: sourceSignalValue(signal),
+        status: sourceSignalStatus(signal),
         detail: signal.detail,
         matches: signal.matches,
       };
@@ -1306,8 +1310,8 @@ function getVisibleContractWarnings(
   for (const signal of explorer?.sourceSignals ?? []) {
     if (signal.found === true) {
       warnings.push({
-        severity: "warning",
-        message: `${signal.label} source signal found. Review verified source before interacting.`,
+        severity: signal.severity,
+        message: `${signal.label} ${signal.severity === "high" ? "higher-severity" : "warning"} source signal found. Review verified source before interacting.`,
       });
     }
   }
@@ -1595,8 +1599,8 @@ function buildSourceSignalQuickRow(
   if (signal.found) {
     return {
       ...row,
-      value: "Source signal found",
-      status: "warning",
+      value: sourceSignalValue(signal),
+      status: sourceSignalStatus(signal),
       detail: signal.detail,
     };
   }
@@ -1607,6 +1611,18 @@ function buildSourceSignalQuickRow(
     status: "checked",
     detail: signal.detail,
   };
+}
+
+function sourceSignalStatus(
+  signal: TokenChairSourceSignal,
+): SniffRowStatus {
+  return signal.severity === "high" ? "danger" : "warning";
+}
+
+function sourceSignalValue(signal: TokenChairSourceSignal): string {
+  return signal.severity === "high"
+    ? "High source signal"
+    : "Source signal found";
 }
 
 function buildOwnerContractCard(
