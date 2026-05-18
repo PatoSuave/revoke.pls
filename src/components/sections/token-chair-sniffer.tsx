@@ -195,6 +195,13 @@ export function TokenChairSniffer({
           </section>
 
           <StatusStrip response={response} state={state} contract={contract} />
+          <TokenInformationSummary
+            response={response}
+            state={state}
+            market={market}
+            contract={contract}
+            verdict={verdict}
+          />
           <SignalDetailsPanel
             response={response}
             state={state}
@@ -561,6 +568,209 @@ function StatusStrip({
         </div>
       ))}
     </section>
+  );
+}
+
+function TokenInformationSummary({
+  response,
+  state,
+  market,
+  contract,
+  verdict,
+}: {
+  response: TokenChairApiResponse | null;
+  state: SnifferUiState;
+  market: TokenChairMarketData | null;
+  contract: TokenChairContractData | null;
+  verdict: TokenChairVerdict;
+}) {
+  const loading = state === "loading";
+  const fallback = loading ? "Loading..." : "Not returned";
+  const tokenAddress =
+    response?.tokenAddress ?? market?.tokenAddress ?? contract?.tokenAddress ?? null;
+  const tokenName = market?.tokenName ?? contract?.tokenName ?? fallback;
+  const tokenSymbol = market?.tokenSymbol ?? contract?.tokenSymbol ?? fallback;
+  const pairAddress = market?.pairAddress ?? null;
+  const tokenHref = contract?.explorer?.explorerTokenUrl ?? null;
+  const pairHref = pairAddress ? `https://scan.pulsechain.com/address/${pairAddress}` : null;
+  const sourceStatus = formatSourceStatus(contract, fallback);
+  const ownerStatus = formatOwnerSummary(contract, fallback);
+  const proxyStatus = formatProxySignal(contract, fallback);
+  const eventStatus = formatEventHistoryStatus(contract, state);
+  const holderStatus = formatHolderSummary(contract, fallback);
+  const marketStatus = market
+    ? `${market.dexName}${market.quoteTokenSymbol ? ` / ${market.quoteTokenSymbol}` : ""}`
+    : response?.status === "no-pair-found"
+      ? "No DEX pair found"
+      : fallback;
+
+  const marketMetrics = [
+    { label: "Price", value: formatPriceUsd(market?.priceUsd ?? null) },
+    { label: "Liquidity", value: formatUsd(market?.liquidityUsd ?? null) },
+    { label: "24h Volume", value: formatUsd(market?.volume24h ?? null) },
+    { label: "24h Txns", value: formatTxns24h(market?.txns24h ?? null) },
+    {
+      label: "FDV / MCap",
+      value: `${formatCompactNumber(market?.fdv ?? null)} / ${formatCompactNumber(
+        market?.marketCap ?? null,
+      )}`,
+    },
+    { label: "Pair Age", value: market?.pairAgeLabel ?? fallback },
+  ];
+
+  const contractMetrics = [
+    { label: "Source", value: sourceStatus },
+    { label: "Owner", value: ownerStatus },
+    { label: "Proxy", value: proxyStatus },
+    { label: "Holders", value: holderStatus },
+    { label: "Events", value: eventStatus },
+    { label: "Taxes", value: formatTaxGetterSignal(contract, fallback) },
+  ];
+
+  return (
+    <section className="overflow-hidden rounded-lg border border-pulse-border/80 bg-[#080d12]">
+      <div className="grid gap-0 lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)]">
+        <div className="border-b border-pulse-border/70 bg-[#070b10] p-4 lg:border-b-0 lg:border-r">
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div className="min-w-0">
+              <p className="text-xs font-semibold uppercase tracking-[0.16em] text-pulse-cyan">
+                Token Information
+              </p>
+              <h2 className="mt-2 break-words text-3xl font-semibold text-pulse-text">
+                {tokenName}
+              </h2>
+              <div className="mt-3 flex flex-wrap items-center gap-2">
+                <span className="rounded-full border border-pulse-green/35 bg-pulse-green/10 px-3 py-1 text-sm font-semibold text-pulse-green">
+                  {tokenSymbol}
+                </span>
+                <span className={`rounded-full border px-3 py-1 text-sm ${verdictToneText(verdict)}`}>
+                  {verdict.label}
+                </span>
+              </div>
+            </div>
+            <span className="rounded-lg border border-pulse-border/70 bg-pulse-panel/45 px-3 py-2 text-xs font-semibold text-pulse-muted">
+              {TOKEN_CHAIR_CHAIN_LABEL}
+            </span>
+          </div>
+
+          <div className="mt-5 grid gap-2 text-sm">
+            <TokenInfoAddressRow
+              label="Token"
+              address={tokenAddress}
+              href={tokenHref}
+              fallback={fallback}
+            />
+            <TokenInfoAddressRow
+              label="Pair"
+              address={pairAddress}
+              href={pairHref}
+              fallback={market ? "Pair returned" : fallback}
+            />
+          </div>
+
+          <div className="mt-5 grid gap-2 sm:grid-cols-2">
+            <TokenInfoMiniMetric label="Market" value={marketStatus} />
+            <TokenInfoMiniMetric
+              label="Pairs"
+              value={market ? market.pairCount.toLocaleString("en-US") : fallback}
+            />
+          </div>
+
+          <p className="mt-4 text-xs leading-5 text-pulse-muted">
+            This panel summarizes returned public data only. It is not a safety
+            rating, simulation, or audit.
+          </p>
+        </div>
+
+        <div className="grid gap-4 p-4">
+          <TokenInfoMetricGroup title="Market Snapshot" metrics={marketMetrics} />
+          <TokenInfoMetricGroup title="Contract Snapshot" metrics={contractMetrics} />
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function TokenInfoAddressRow({
+  label,
+  address,
+  href,
+  fallback,
+}: {
+  label: string;
+  address: Address | string | null;
+  href: string | null;
+  fallback: string;
+}) {
+  const value = address ? shortenAddress(address, 6) : fallback;
+  const className =
+    "flex min-w-0 items-center justify-between gap-3 rounded-lg border border-pulse-border/65 bg-[#0a1016] px-3 py-2 transition";
+  const content = (
+    <>
+      <span className="shrink-0 text-xs uppercase tracking-[0.14em] text-pulse-muted/75">
+        {label}
+      </span>
+      <span className="truncate font-mono text-xs font-semibold text-pulse-text">
+        {value}
+      </span>
+    </>
+  );
+
+  if (href && address) {
+    return (
+      <a
+        href={href}
+        target="_blank"
+        rel="noopener noreferrer"
+        className={`${className} hover:border-pulse-green/35 hover:bg-pulse-green/5`}
+      >
+        {content}
+      </a>
+    );
+  }
+
+  return <div className={className}>{content}</div>;
+}
+
+function TokenInfoMetricGroup({
+  title,
+  metrics,
+}: {
+  title: string;
+  metrics: Array<{ label: string; value: string }>;
+}) {
+  return (
+    <div className="min-w-0">
+      <p className="text-sm font-semibold text-pulse-text">{title}</p>
+      <div className="mt-3 grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
+        {metrics.map((metric) => (
+          <TokenInfoMiniMetric
+            key={`${title}-${metric.label}`}
+            label={metric.label}
+            value={metric.value}
+          />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function TokenInfoMiniMetric({
+  label,
+  value,
+}: {
+  label: string;
+  value: string;
+}) {
+  return (
+    <div className="min-w-0 rounded-lg border border-pulse-border/65 bg-[#0a1016] px-3 py-2">
+      <p className="text-[11px] uppercase tracking-[0.14em] text-pulse-muted/75">
+        {label}
+      </p>
+      <p className="mt-1 truncate text-sm font-semibold text-pulse-text">
+        {value}
+      </p>
+    </div>
   );
 }
 
@@ -1391,6 +1601,30 @@ function formatContractStatus(
   if (contract.status === "success") return "Read-only checks returned";
   if (contract.status === "partial") return "Partially checked";
   return "Unable to verify";
+}
+
+function formatOwnerSummary(
+  contract: TokenChairContractData | null,
+  fallback: string,
+): string {
+  if (!contract) return fallback;
+  if (contract.ownershipRenounced === true) return "Appears renounced";
+  if (contract.ownerAddress) return shortenAddress(contract.ownerAddress);
+  if (contract.status === "unable-to-verify") return "Unable to verify";
+  return "Not returned";
+}
+
+function formatHolderSummary(
+  contract: TokenChairContractData | null,
+  fallback: string,
+): string {
+  const holders = contract?.holders;
+  if (!contract || !holders) return fallback;
+  if (holders.status === "unable-to-verify") return "Unable to verify";
+  if (holders.token.percent === null) return "Not returned";
+  return `${holders.token.percent.toLocaleString("en-US", {
+    maximumFractionDigits: holders.token.percent < 1 ? 2 : 1,
+  })}% top`;
 }
 
 function formatEventHistoryStatus(
