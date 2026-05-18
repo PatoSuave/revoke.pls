@@ -130,6 +130,7 @@ export const siteConfig = {
   /** Anchor targets for primary nav. */
   nav: [
     { href: "/app#scanner", label: "Scanner" },
+    { href: "/app/token-chair-sniffer", label: "Token Chair" },
     { href: "/app#how-it-works", label: "How it works" },
     { href: "/app#safety", label: "Safety" },
     { href: "/security", label: "Security" },
