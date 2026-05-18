@@ -130,6 +130,7 @@ export const siteConfig = {
   /** Anchor targets for primary nav. */
   nav: [
     { href: "/app#scanner", label: "Scanner" },
+    { href: "/app/retired-feature", label: "retired-feature" },
     { href: "/app#how-it-works", label: "How it works" },
     { href: "/app#safety", label: "Safety" },
     { href: "/security", label: "Security" },
