@@ -6,6 +6,7 @@ import {
   TOKEN_CHAIR_CHAIN_ID,
   TOKEN_CHAIR_SNIFFER_ROUTE,
   buildContractSniffCards,
+  buildEventHistoryDetailRows,
   buildPairCandidateRows,
   buildTokenChairSnifferUrl,
   buildQuickSniffRows,
@@ -15,6 +16,7 @@ import {
   normalizeDexScreenerTokenPairsResponse,
   normalizeTokenChairAddress,
   normalizeTokenChairQueryToken,
+  type TokenChairContractData,
 } from "@/lib/token-chair-sniffer";
 
 const TOKEN = getAddress("0xcae394005c9c4c309621c53d53db9ceb701fc8d8");
@@ -348,5 +350,42 @@ describe("Token Chair Sniffer helpers", () => {
     expect(quoteSideToken.status).toBe("success");
     expect(quoteSideToken.market?.tokenSymbol).toBe("WPLS");
     expect(buildQuickSniffRows()[0].value).toBe("Not checked yet");
+  });
+
+  it("builds visible recent event-history rows without broad safety claims", () => {
+    const rows = buildEventHistoryDetailRows({
+      contract: {
+        eventHistory: {
+          status: "success",
+          fromBlock: "19000000",
+          toBlock: "20000000",
+          lookbackBlocks: "1000000",
+          ownershipTransferred: {
+            count: 2,
+            latestBlockNumber: "19900000",
+          },
+          roleGranted: { count: 0, latestBlockNumber: null },
+          roleRevoked: { count: 0, latestBlockNumber: null },
+          paused: { count: 1, latestBlockNumber: "19800000" },
+          unpaused: { count: 0, latestBlockNumber: null },
+          warnings: [],
+          errors: [],
+        },
+      } as unknown as TokenChairContractData,
+    });
+    const rowText = rows.flatMap((row) => [row.value, row.detail]).join(" ");
+
+    expect(rows).toHaveLength(5);
+    expect(rows[0]).toMatchObject({
+      label: "Ownership transfers",
+      value: "2 recent events",
+      status: "warning",
+      latestBlockNumber: "19900000",
+    });
+    expect(rows[1]).toMatchObject({
+      value: "No recent events",
+      status: "checked",
+    });
+    expect(rowText.toLowerCase()).not.toMatch(/\bsafe\b|guaranteed|certified/);
   });
 });

@@ -5,7 +5,6 @@ import {
   TOKEN_CHAIR_SNIFFER_ROUTE,
   normalizeTokenChairQueryToken,
 } from "@/lib/token-chair-sniffer";
-import { fetchTokenChairScan } from "@/lib/token-chair-sniffer-scan";
 import { absoluteUrl, siteConfig } from "@/lib/site";
 
 type TokenChairSnifferSearchParams = Promise<{
@@ -46,14 +45,11 @@ export default async function TokenChairSnifferPage({
   const initialTokenAddress =
     normalizeTokenChairQueryToken(params.token) ??
     normalizeTokenChairQueryToken(params.address);
-  const initialResponse = initialTokenAddress
-    ? await fetchTokenChairScan(initialTokenAddress)
-    : null;
 
   return (
     <TokenChairSniffer
       initialTokenAddress={initialTokenAddress}
-      initialResponse={initialResponse}
+      initialResponse={null}
     />
   );
 }

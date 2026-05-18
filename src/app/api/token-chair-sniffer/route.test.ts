@@ -76,12 +76,14 @@ vi.mock("@/lib/token-chair-sniffer-holders", () => ({
 }));
 
 import { GET } from "./route";
+import { resetTokenChairApiRateLimitForTests } from "@/lib/token-chair-sniffer-controls";
 
 const TOKEN = getAddress("0xcae394005c9c4c309621c53d53db9ceb701fc8d8");
 const QUOTE = getAddress("0xA1077a294dDE1B09bB078844df40758a5D0f9a27");
 const PAIR = getAddress("0x165C3410fC91EF562C50559f7d2289fEbed552d9");
 
 afterEach(() => {
+  resetTokenChairApiRateLimitForTests();
   vi.unstubAllGlobals();
 });
 
@@ -130,6 +132,24 @@ describe("Token Chair Sniffer API route", () => {
     expect(body.errors.join(" ")).toContain("chainId=pulsechain");
   });
 
+  it("rejects caller-controlled read ranges before scanning", async () => {
+    const fetchSpy = vi.fn();
+    vi.stubGlobal("fetch", fetchSpy);
+
+    const response = await GET(
+      new Request(
+        `https://pulserevoke.test/api/token-chair-sniffer?token=${TOKEN}&fromBlock=1`,
+      ),
+    );
+    const body = await response.json();
+
+    expect(response.status).toBe(400);
+    expectNoStore(response);
+    expect(body.status).toBe("bad-request");
+    expect(body.errors.join(" ")).toContain("server-bounded read windows");
+    expect(fetchSpy).not.toHaveBeenCalled();
+  });
+
   it("returns no-pair-found from an empty DEX Screener response", async () => {
     vi.stubGlobal(
       "fetch",
@@ -145,8 +165,36 @@ describe("Token Chair Sniffer API route", () => {
 
     expect(response.status).toBe(200);
     expectNoStore(response);
+    expect(response.headers.get("X-Token-Chair-Timeout-Ms")).toBe("10000");
+    expect(response.headers.get("X-RateLimit-Limit")).toBe("20");
     expect(body.status).toBe("no-pair-found");
     expect(body.market).toBeNull();
+  });
+
+  it("rate-limits repeated public Token Chair scans", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => jsonResponse([])),
+    );
+
+    let response: Response | null = null;
+    for (let i = 0; i < 21; i += 1) {
+      response = await GET(
+        new Request(
+          `https://pulserevoke.test/api/token-chair-sniffer?token=${TOKEN}`,
+          { headers: { "x-forwarded-for": "203.0.113.22" } },
+        ),
+      );
+    }
+
+    expect(response?.status).toBe(429);
+    expectNoStore(response!);
+    expect(response?.headers.get("Retry-After")).toBeTruthy();
+    expect(response?.headers.get("X-RateLimit-Limit")).toBe("20");
+    const body = await response!.json();
+    expect(body.ok).toBe(false);
+    expect(body.status).toBe("upstream-unavailable");
+    expect(body.errors.join(" ")).toContain("rate limit exceeded");
   });
 
   it("returns success for normalized PulseChain market data", async () => {

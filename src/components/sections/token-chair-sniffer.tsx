@@ -11,11 +11,12 @@ import {
   TOKEN_CHAIR_CHAIN_LABEL,
   TOKEN_CHAIR_DISCLAIMER,
   buildConcentrationDetailRows,
-  buildTokenChairSnifferUrl,
   buildContractSniffCards,
+  buildEventHistoryDetailRows,
   buildPairCandidateRows,
   buildQuickSniffRows,
   buildSourceSignalDetailRows,
+  buildTokenChairSnifferUrl,
   formatCompactNumber,
   formatPriceUsd,
   formatTxns24h,
@@ -27,6 +28,7 @@ import {
   type TokenChairApiResponse,
   type TokenChairConcentrationDetailRow,
   type TokenChairContractData,
+  type TokenChairEventHistoryDetailRow,
   type TokenChairMarketData,
   type TokenChairPairCandidateRow,
   type TokenChairSourceSignalDetailRow,
@@ -99,6 +101,10 @@ export function TokenChairSniffer({
   );
   const concentrationRows = useMemo(
     () => buildConcentrationDetailRows({ contract }),
+    [contract],
+  );
+  const eventHistoryRows = useMemo(
+    () => buildEventHistoryDetailRows({ contract }),
     [contract],
   );
   const contractCards = useMemo(
@@ -208,6 +214,11 @@ export function TokenChairSniffer({
 
           <ContractSniffCards
             cards={contractCards}
+            contract={contract}
+            state={state}
+          />
+          <EventHistoryPanel
+            rows={eventHistoryRows}
             contract={contract}
             state={state}
           />
@@ -880,7 +891,7 @@ function QuickSniffRows({ rows }: { rows: readonly SniffSignalRow[] }) {
         ))}
       </div>
       <p className="mt-4 text-xs text-pulse-muted">
-        Tax, honeypot, hidden-owner, and obfuscation checks are not live yet.
+        Honeypot, hidden-owner, obfuscation, and full bytecode checks are not live yet.
         Source rows use lightweight PulseScan ABI/source keyword signals only.
       </p>
     </section>
@@ -1052,6 +1063,63 @@ function ContractSniffCardTile({
   return <div className={className}>{content}</div>;
 }
 
+function EventHistoryPanel({
+  rows,
+  contract,
+  state,
+}: {
+  rows: readonly TokenChairEventHistoryDetailRow[];
+  contract: TokenChairContractData | null;
+  state: SnifferUiState;
+}) {
+  if (!contract) return null;
+
+  const eventHistory = contract.eventHistory;
+  const windowLabel = eventHistory
+    ? `${Number(eventHistory.lookbackBlocks).toLocaleString("en-US")} blocks`
+    : state === "loading"
+      ? "Loading"
+      : "Not checked yet";
+
+  return (
+    <section className="rounded-lg border border-pulse-border/80 bg-[#080d12] p-4">
+      <PanelHeader
+        icon="E"
+        title="Recent Events"
+        meta={formatEventHistoryStatus(contract, state)}
+      />
+      <div className="mt-4 grid gap-3 lg:grid-cols-[240px_minmax(0,1fr)]">
+        <div className="rounded-lg border border-pulse-border/70 bg-[#070b10] p-3 text-sm leading-6 text-pulse-muted">
+          <p className="text-[11px] uppercase tracking-[0.14em] text-pulse-muted/75">
+            Window
+          </p>
+          <p className="mt-1 font-semibold text-pulse-text">{windowLabel}</p>
+          <p className="mt-2">
+            Bounded recent-log reads only. No matching logs in this window does
+            not rule out older ownership, role, pause, or unpause events.
+          </p>
+        </div>
+        <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-5">
+          {rows.map((row) => (
+            <article
+              key={row.eventName}
+              className="min-h-32 rounded-lg border border-pulse-border/75 bg-[#0a1016] p-3"
+            >
+              <div className="flex items-start justify-between gap-2">
+                <p className="text-sm font-semibold text-pulse-text">{row.label}</p>
+                <SniffValueBadge row={row} />
+              </div>
+              <p className="mt-3 text-xs leading-5 text-pulse-muted">
+                {row.detail}
+              </p>
+            </article>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
+
 function HolderChairIntel({
   rows,
   contract,
@@ -1183,10 +1251,11 @@ function ContractMetadataStrip({
     ["Pending", formatPendingOwnerSignal(contract, fallback)],
     ["Roles", formatAccessControlSignal(contract, fallback)],
     ["Tax getters", formatTaxGetterSignal(contract, fallback)],
+    ["Events", formatEventHistoryStatus(contract, state)],
   ] as const;
 
   return (
-    <div className="mt-4 grid gap-2 rounded-lg border border-pulse-border/70 bg-[#070b10] p-3 sm:grid-cols-3 xl:grid-cols-9">
+    <div className="mt-4 grid gap-2 rounded-lg border border-pulse-border/70 bg-[#070b10] p-3 sm:grid-cols-3 xl:grid-cols-10">
       {items.map(([label, value]) => (
         <div key={label} className="min-w-0">
           <p className="text-[11px] uppercase tracking-[0.14em] text-pulse-muted/75">
@@ -1324,6 +1393,27 @@ function formatContractStatus(
   return "Unable to verify";
 }
 
+function formatEventHistoryStatus(
+  contract: TokenChairContractData | null,
+  state: SnifferUiState,
+): string {
+  if (state === "loading") return "Loading";
+  const eventHistory = contract?.eventHistory;
+  if (!eventHistory) return "Not checked yet";
+  if (eventHistory.status === "unable-to-verify") return "Unable to verify";
+
+  const count =
+    eventHistory.ownershipTransferred.count +
+    eventHistory.roleGranted.count +
+    eventHistory.roleRevoked.count +
+    eventHistory.paused.count +
+    eventHistory.unpaused.count;
+
+  if (count > 0) return `${count} recent event${count === 1 ? "" : "s"}`;
+  if (eventHistory.status === "partial") return "Partially checked";
+  return "No recent events";
+}
+
 function formatProxySignal(
   contract: TokenChairContractData | null,
   fallback: string,
@@ -1444,7 +1534,7 @@ function buildSignalDetails(
 
   if (uniqueMessages.length === 0) {
     return [
-      "Visible market data returned, but tax and honeypot checks are still not live in this pass.",
+      "Visible market data returned, but hidden-owner, bytecode, and honeypot checks are still not live in this pass.",
     ];
   }
 

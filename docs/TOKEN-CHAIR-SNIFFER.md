@@ -201,7 +201,7 @@ Allowed internal verdict states:
 - `high-risk`
 - `low-visible-risk`
 
-Phase 1 defaults complete-looking market results to `unable-to-fully-verify` unless visible market, read-only contract, source-signal, or concentration warnings are present, because tax and honeypot checks are not live yet.
+Phase 1 defaults complete-looking market results to `unable-to-fully-verify` unless visible market, read-only contract, source-signal, event-history, or concentration warnings are present, because hidden-owner, bytecode, and honeypot checks are not live yet.
 
 The UI may show `some-warnings` or `high-risk` for visible market-only warnings such as very low liquidity, new pairs, missing price, missing liquidity, no 24h transactions, a non-zero standard owner, common proxy signals, missing verified source, lightweight source-signal matches, high top-holder concentration, or high LP-holder concentration.
 

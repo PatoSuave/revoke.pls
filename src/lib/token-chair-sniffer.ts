@@ -288,6 +288,12 @@ export interface TokenChairConcentrationDetailRow extends SniffSignalRow {
   classificationDetail: string;
 }
 
+export interface TokenChairEventHistoryDetailRow extends SniffSignalRow {
+  eventName: TokenChairEventHistoryLogName;
+  count: number;
+  latestBlockNumber: string | null;
+}
+
 export type TokenChairPairCandidateStatus =
   | "selected"
   | "warning"
@@ -375,12 +381,23 @@ const QUICK_SNIFF_DETAILS: Record<string, string> = {
 };
 
 const CONTRACT_SNIFF_DETAILS: Record<string, string> = {
-  "Source verified": "Future PulseChain explorer/source check.",
-  Owner: "Future owner() or ownership-event check.",
-  Deployer: "Future deployment trace or explorer metadata check.",
-  "Top holder concentration": "Future holder distribution check.",
-  "LP concentration": "Future LP holder distribution check.",
+  "Source verified": "Reads PulseScan source and ABI metadata when available.",
+  Owner: "Reads standard owner() or getOwner() when available.",
+  Deployer: "Reads PulseScan creation metadata when available.",
+  "Top holder concentration": "Reads PulseScan token holder data when available.",
+  "LP concentration": "Reads PulseScan holder data for the selected pair when available.",
 };
+
+const EVENT_HISTORY_DETAIL_DEFINITIONS: Array<{
+  eventName: TokenChairEventHistoryLogName;
+  label: string;
+}> = [
+  { eventName: "ownershipTransferred", label: "Ownership transfers" },
+  { eventName: "roleGranted", label: "Role grants" },
+  { eventName: "roleRevoked", label: "Role revokes" },
+  { eventName: "paused", label: "Pause events" },
+  { eventName: "unpaused", label: "Unpause events" },
+];
 
 const DEX_NAME_OVERRIDES: Record<string, string> = {
   pulsex: "PulseX",
@@ -674,7 +691,7 @@ export function getTokenChairVerdict({
     displayLabel: "Chair Verdict: Nose Blocked, Could Not Verify",
     tone: "neutral",
     notes: [
-      "No major DEX Screener market warnings were found, but contract, tax, ownership, and honeypot checks are not live yet.",
+      "No major DEX Screener market warnings were found, but hidden-owner, bytecode, and honeypot checks are still not live yet.",
     ],
   };
 }
@@ -797,6 +814,70 @@ export function buildSourceSignalDetailRows(options: {
       status: "unable-to-verify",
       detail: signal.detail,
       matches: [],
+    };
+  });
+}
+
+export function buildEventHistoryDetailRows(options: {
+  contract?: TokenChairContractData | null;
+} = {}): TokenChairEventHistoryDetailRow[] {
+  const eventHistory = options.contract?.eventHistory;
+  if (!eventHistory) return [];
+
+  return EVENT_HISTORY_DETAIL_DEFINITIONS.map(({ eventName, label }) => {
+    const counter = eventHistory[eventName];
+    const latest = counter.latestBlockNumber;
+    const eventLabel = counter.count === 1 ? "event" : "events";
+
+    if (eventHistory.status === "unable-to-verify") {
+      return {
+        eventName,
+        count: counter.count,
+        latestBlockNumber: latest,
+        label,
+        value: "Unable to verify",
+        status: "unable-to-verify",
+        detail:
+          "The recent event-window log read failed for this scan. This does not prove the event is absent.",
+      };
+    }
+
+    if (counter.count > 0) {
+      return {
+        eventName,
+        count: counter.count,
+        latestBlockNumber: latest,
+        label,
+        value: `${counter.count} recent ${eventLabel}`,
+        status: "warning",
+        detail: latest
+          ? `Latest matching event returned in block ${latest}. Review recent contract history before interacting.`
+          : "Matching events were returned, but the latest block number was not available.",
+      };
+    }
+
+    if (eventHistory.status === "partial") {
+      return {
+        eventName,
+        count: 0,
+        latestBlockNumber: null,
+        label,
+        value: "Unable to verify",
+        status: "unable-to-verify",
+        detail:
+          "No matching logs were counted, but at least one recent event-window read failed.",
+      };
+    }
+
+    return {
+      eventName,
+      count: 0,
+      latestBlockNumber: null,
+      label,
+      value: "No recent events",
+      status: "checked",
+      detail:
+        "No matching logs were returned in the bounded recent event window. Older events are not ruled out.",
     };
   });
 }
