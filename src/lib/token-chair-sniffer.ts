@@ -72,6 +72,21 @@ export type TokenChairContractReadStatus =
   | "partial"
   | "unable-to-verify";
 
+export interface TokenChairPairContractData {
+  status: TokenChairContractReadStatus;
+  pairAddress: Address | null;
+  token0: Address | null;
+  token1: Address | null;
+  containsScannedToken: boolean | null;
+  reserve0Raw: string | null;
+  reserve1Raw: string | null;
+  scannedTokenReserveRaw: string | null;
+  quoteTokenReserveRaw: string | null;
+  totalSupplyRaw: string | null;
+  warnings: string[];
+  errors: string[];
+}
+
 export type TokenChairSourceSignalKey =
   | "mintable"
   | "transfer-pausable"
@@ -271,6 +286,7 @@ export interface TokenChairApiResponse {
   chainId: typeof TOKEN_CHAIR_CHAIN_ID;
   tokenAddress: Address | null;
   market: TokenChairMarketData | null;
+  pairContract: TokenChairPairContractData | null;
   contract: TokenChairContractData | null;
   pairs: TokenChairMarketData[];
   verdict: TokenChairVerdict;
@@ -642,6 +658,7 @@ export function createTokenChairApiResponse({
   status,
   tokenAddress,
   contract = null,
+  pairContract = null,
   pairs = [],
   warnings = [],
   errors = [],
@@ -649,6 +666,7 @@ export function createTokenChairApiResponse({
   status: TokenChairApiStatus;
   tokenAddress: Address | null;
   contract?: TokenChairContractData | null;
+  pairContract?: TokenChairPairContractData | null;
   pairs?: TokenChairMarketData[];
   warnings?: string[];
   errors?: string[];
@@ -660,6 +678,7 @@ export function createTokenChairApiResponse({
     chainId: TOKEN_CHAIR_CHAIN_ID,
     tokenAddress,
     market,
+    pairContract,
     contract,
     pairs,
     warnings,
@@ -675,8 +694,9 @@ export function createTokenChairApiResponse({
 export function getTokenChairVerdict({
   status,
   market,
+  pairContract,
   contract,
-}: Pick<TokenChairApiResponse, "status" | "market" | "contract">): TokenChairVerdict {
+}: Pick<TokenChairApiResponse, "status" | "market" | "pairContract" | "contract">): TokenChairVerdict {
   if (status !== "success" || !market) {
     return {
       kind: "unable-to-fully-verify",
@@ -691,6 +711,7 @@ export function getTokenChairVerdict({
 
   const visibleWarnings = [
     ...getVisibleMarketWarnings(market),
+    ...getVisiblePairContractWarnings(pairContract),
     ...getVisibleContractWarnings(contract),
   ];
   if (visibleWarnings.some((warning) => warning.severity === "high")) {
@@ -937,6 +958,23 @@ export function withTokenChairContractData(
   return {
     ...withContract,
     verdict: getTokenChairVerdict(withContract),
+  };
+}
+
+export function withTokenChairPairContractData(
+  response: TokenChairApiResponse,
+  pairContract: TokenChairPairContractData,
+): TokenChairApiResponse {
+  const withPairContract: Omit<TokenChairApiResponse, "verdict"> = {
+    ...response,
+    pairContract,
+    warnings: [...response.warnings, ...pairContract.warnings],
+    errors: [...response.errors, ...pairContract.errors],
+  };
+
+  return {
+    ...withPairContract,
+    verdict: getTokenChairVerdict(withPairContract),
   };
 }
 
@@ -1200,6 +1238,48 @@ function getVisibleMarketWarnings(
     warnings.push({
       severity: "warning",
       message: "DEX Screener shows no 24h transactions for the selected pair.",
+    });
+  }
+
+  return warnings;
+}
+
+function getVisiblePairContractWarnings(
+  pairContract: TokenChairPairContractData | null,
+): VisibleMarketWarning[] {
+  if (!pairContract) return [];
+  const warnings: VisibleMarketWarning[] = [];
+
+  if (pairContract.status === "unable-to-verify") {
+    warnings.push({
+      severity: "warning",
+      message:
+        "Read-only selected-pair contract checks could not be completed.",
+    });
+  }
+
+  if (pairContract.containsScannedToken === false) {
+    warnings.push({
+      severity: "high",
+      message:
+        "The selected pair contract did not report the scanned token in token0/token1.",
+    });
+  } else if (pairContract.containsScannedToken === null) {
+    warnings.push({
+      severity: "warning",
+      message:
+        "The selected pair contract token0/token1 values could not be fully verified.",
+    });
+  }
+
+  if (
+    pairContract.reserve0Raw === "0" ||
+    pairContract.reserve1Raw === "0"
+  ) {
+    warnings.push({
+      severity: "warning",
+      message:
+        "The selected pair contract returned a zero raw reserve on one side.",
     });
   }
 

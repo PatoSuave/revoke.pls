@@ -282,6 +282,7 @@ describe("Token Chair Sniffer helpers", () => {
     const unable = getTokenChairVerdict({
       status: "upstream-unavailable",
       market: null,
+      pairContract: null,
       contract: null,
     });
     const combined = [
@@ -300,6 +301,34 @@ describe("Token Chair Sniffer helpers", () => {
     expect(combined).not.toMatch(/\bsafe\b/);
     expect(success.verdict.label).toBe("Unable to fully verify");
     expect(highRisk.verdict.label).toBe("High risk");
+  });
+
+  it("marks selected-pair contract token mismatches as high risk", () => {
+    const response = normalizeDexScreenerTokenPairsResponse([dexPair()], TOKEN);
+    const verdict = getTokenChairVerdict({
+      status: response.status,
+      market: response.market,
+      pairContract: {
+        status: "partial",
+        pairAddress: PAIR,
+        token0: getAddress("0x0000000000000000000000000000000000000001"),
+        token1: getAddress("0x0000000000000000000000000000000000000002"),
+        containsScannedToken: false,
+        reserve0Raw: "1000",
+        reserve1Raw: "2000",
+        scannedTokenReserveRaw: null,
+        quoteTokenReserveRaw: null,
+        totalSupplyRaw: "3000",
+        warnings: [
+          "Selected pair token0/token1 did not include the scanned token address.",
+        ],
+        errors: [],
+      },
+      contract: null,
+    });
+
+    expect(verdict.label).toBe("High risk");
+    expect(verdict.notes.join(" ")).toContain("did not report the scanned token");
   });
 
   it("marks all-missing liquidity pair selection as weak", () => {

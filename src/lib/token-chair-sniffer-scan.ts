@@ -4,11 +4,13 @@ import {
   withTokenChairContractData,
   withTokenChairExplorerData,
   withTokenChairHolderData,
+  withTokenChairPairContractData,
   type TokenChairApiResponse,
 } from "@/lib/token-chair-sniffer";
 import { fetchTokenChairContractData } from "@/lib/token-chair-sniffer-contract";
 import { fetchTokenChairExplorerData } from "@/lib/token-chair-sniffer-explorer";
 import { fetchTokenChairHolderData } from "@/lib/token-chair-sniffer-holders";
+import { fetchTokenChairPairContractData } from "@/lib/token-chair-sniffer-pair";
 import { fetchDexScreenerTokenPairs } from "@/lib/token-chair-sniffer-server";
 
 export const TOKEN_CHAIR_REQUEST_TIMEOUT_MS = 10_000;
@@ -33,19 +35,30 @@ export async function fetchTokenChairScan(
       }),
     ]);
 
-    const holderResult = await fetchTokenChairHolderData(
-      tokenAddress,
-      marketResult.market?.pairAddress,
-      {
+    const selectedPairAddress = marketResult.market?.pairAddress;
+    const [holderResult, pairContractResult] = await Promise.all([
+      fetchTokenChairHolderData(tokenAddress, selectedPairAddress, {
         signal: controller.signal,
-      },
+      }),
+      selectedPairAddress
+        ? fetchTokenChairPairContractData(tokenAddress, selectedPairAddress, {
+            signal: controller.signal,
+          })
+        : Promise.resolve(null),
+    ]);
+    const responseWithMarketContractAndExplorer = withTokenChairExplorerData(
+      withTokenChairContractData(marketResult, contractResult),
+      explorerResult,
     );
+    const responseWithPairContract = pairContractResult
+      ? withTokenChairPairContractData(
+          responseWithMarketContractAndExplorer,
+          pairContractResult,
+        )
+      : responseWithMarketContractAndExplorer;
 
     return withTokenChairHolderData(
-      withTokenChairExplorerData(
-        withTokenChairContractData(marketResult, contractResult),
-        explorerResult,
-      ),
+      responseWithPairContract,
       holderResult,
     );
   } finally {

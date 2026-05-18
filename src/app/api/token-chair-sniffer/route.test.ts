@@ -117,6 +117,23 @@ vi.mock("@/lib/token-chair-sniffer-holders", () => ({
   })),
 }));
 
+vi.mock("@/lib/token-chair-sniffer-pair", () => ({
+  fetchTokenChairPairContractData: vi.fn(async () => ({
+    status: "success",
+    pairAddress: "0x165C3410fC91EF562C50559f7d2289fEbed552d9",
+    token0: "0xcAe394005C9C4c309621c53D53Db9cEb701FC8d8",
+    token1: "0xA1077a294dDE1B09bB078844df40758a5D0f9a27",
+    containsScannedToken: true,
+    reserve0Raw: "1000000000000000000000",
+    reserve1Raw: "2000000000000000000000",
+    scannedTokenReserveRaw: "1000000000000000000000",
+    quoteTokenReserveRaw: "2000000000000000000000",
+    totalSupplyRaw: "3000000000000000000000",
+    warnings: [],
+    errors: [],
+  })),
+}));
+
 import { GET } from "./route";
 import { resetTokenChairApiRateLimitForTests } from "@/lib/token-chair-sniffer-controls";
 
@@ -292,6 +309,9 @@ describe("Token Chair Sniffer API route", () => {
     expect(body.contract.holders.lp.percent).toBe(24.25);
     expect(body.contract.holders.distribution.top10Percent).toBe(48);
     expect(body.contract.holders.lpDistribution.top1Percent).toBe(24.25);
+    expect(body.pairContract.containsScannedToken).toBe(true);
+    expect(body.pairContract.scannedTokenReserveRaw).toBe("1000000000000000000000");
+    expect(body.pairContract.totalSupplyRaw).toBe("3000000000000000000000");
   });
 
   it("returns malformed-response as an upstream failure HTTP status", async () => {

@@ -33,6 +33,7 @@ import {
   type TokenChairHolderDistributionRow,
   type TokenChairMarketData,
   type TokenChairPairCandidateRow,
+  type TokenChairPairContractData,
   type TokenChairSourceSignalDetailRow,
   type TokenChairVerdict,
 } from "@/lib/token-chair-sniffer";
@@ -593,6 +594,7 @@ function TokenInformationSummary({
   const tokenName = market?.tokenName ?? contract?.tokenName ?? fallback;
   const tokenSymbol = market?.tokenSymbol ?? contract?.tokenSymbol ?? fallback;
   const pairAddress = market?.pairAddress ?? null;
+  const pairContract = response?.pairContract ?? null;
   const tokenHref = contract?.explorer?.explorerTokenUrl ?? null;
   const pairHref = pairAddress ? `https://scan.pulsechain.com/address/${pairAddress}` : null;
   const sourceStatus = formatSourceStatus(contract, fallback);
@@ -627,6 +629,30 @@ function TokenInformationSummary({
     { label: "Holders", value: holderStatus },
     { label: "Events", value: eventStatus },
     { label: "Taxes", value: formatTaxGetterSignal(contract, fallback) },
+  ];
+  const pairContractMetrics = [
+    { label: "Pair Check", value: formatPairContractStatus(pairContract, fallback) },
+    { label: "Contains Token", value: formatPairContainsToken(pairContract, fallback) },
+    {
+      label: "Token0",
+      value: formatPairTokenAddress(pairContract?.token0 ?? null, pairContract, fallback),
+    },
+    {
+      label: "Token1",
+      value: formatPairTokenAddress(pairContract?.token1 ?? null, pairContract, fallback),
+    },
+    {
+      label: "Token Reserve",
+      value: formatRawIntegerMagnitude(pairContract?.scannedTokenReserveRaw ?? null),
+    },
+    {
+      label: "Quote Reserve",
+      value: formatRawIntegerMagnitude(pairContract?.quoteTokenReserveRaw ?? null),
+    },
+    {
+      label: "LP Supply",
+      value: formatRawIntegerMagnitude(pairContract?.totalSupplyRaw ?? null),
+    },
   ];
 
   return (
@@ -686,6 +712,7 @@ function TokenInformationSummary({
 
         <div className="grid gap-4 p-4">
           <TokenInfoMetricGroup title="Market Snapshot" metrics={marketMetrics} />
+          <TokenInfoMetricGroup title="Pair Contract Snapshot" metrics={pairContractMetrics} />
           <TokenInfoMetricGroup title="Contract Snapshot" metrics={contractMetrics} />
         </div>
       </div>
@@ -1886,6 +1913,61 @@ function formatContractStatus(
   if (contract.status === "success") return "Read-only checks returned";
   if (contract.status === "partial") return "Partially checked";
   return "Unable to verify";
+}
+
+function formatPairContractStatus(
+  pairContract: TokenChairPairContractData | null,
+  fallback: string,
+): string {
+  if (!pairContract) return fallback;
+  if (pairContract.status === "success") return "Verified on-chain";
+  if (pairContract.status === "partial") return "Partially checked";
+  return "Unable to verify";
+}
+
+function formatPairContainsToken(
+  pairContract: TokenChairPairContractData | null,
+  fallback: string,
+): string {
+  if (!pairContract) return fallback;
+  if (pairContract.containsScannedToken === true) return "Yes";
+  if (pairContract.containsScannedToken === false) return "No";
+  return "Unable to verify";
+}
+
+function formatPairTokenAddress(
+  address: Address | null,
+  pairContract: TokenChairPairContractData | null,
+  fallback: string,
+): string {
+  if (!pairContract) return fallback;
+  if (address) return shortenAddress(address, 4);
+  return pairContract.status === "unable-to-verify" ? "Unable to verify" : "Not returned";
+}
+
+function formatRawIntegerMagnitude(value: string | null): string {
+  if (!value) return "Not returned";
+  if (!/^\d+$/.test(value)) return value;
+  const normalized = value.replace(/^0+(?=\d)/, "");
+  if (normalized.length <= 6) {
+    return Number(normalized).toLocaleString("en-US");
+  }
+
+  const suffixes = [
+    { suffix: "Q", digits: 15 },
+    { suffix: "T", digits: 12 },
+    { suffix: "B", digits: 9 },
+    { suffix: "M", digits: 6 },
+    { suffix: "K", digits: 3 },
+  ];
+  const unit = suffixes.find((item) => normalized.length > item.digits);
+  if (!unit) return normalized;
+
+  const wholeLength = normalized.length - unit.digits;
+  const whole = normalized.slice(0, wholeLength);
+  const fraction = normalized.slice(wholeLength, wholeLength + 2);
+  const trimmedFraction = fraction.replace(/0+$/, "");
+  return `${whole}${trimmedFraction ? `.${trimmedFraction}` : ""}${unit.suffix} raw`;
 }
 
 function formatOwnerSummary(

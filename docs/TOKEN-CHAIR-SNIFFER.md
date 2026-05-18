@@ -28,6 +28,7 @@ Implemented in this MVP:
 - PulseScan holder endpoint concentration reads for top token holder and LP holder data when available
 - Bounded multi-page sampled holder-distribution buckets for top 1, top 5, top 10, selected pair balance, and zero/dead-address balances when PulseScan returns enough holder rows
 - LP-token holder-control buckets for the selected pair when PulseScan indexes that pair contract as a token
+- Native selected-pair contract reads for `token0()`, `token1()`, `getReserves()`, and LP `totalSupply()`
 - Address context labels for zero/burn addresses, token contract, selected pair, owner, deployer, contracts, and wallets where visible metadata supports it
 - PulseScan links on live contract/source/deployer/holder cards
 - Compact Signal Details panel explaining the current verdict inputs
@@ -68,6 +69,8 @@ If DEX Screener returns multiple PulseChain pairs, the UI selects the pair with 
 
 The Market Chair Intel panel also shows a compact Pair Candidates list from the already-normalized DEX Screener response. Candidate rows include pair rank, DEX, quote token, liquidity, volume, transaction count, age, and a DEX Screener link when returned. These rows are market context only; labels like `Selected pair`, `Low liquidity`, and `Visible market data` are not contract-risk conclusions.
 
+After DEX Screener selects the primary pair, the API also performs read-only PulseChain RPC checks against that selected pair contract. It verifies whether the pair's `token0()` or `token1()` matches the scanned token address, reads raw `getReserves()` values, and reads raw LP `totalSupply()`. These values are displayed as raw contract integers because token decimals differ by asset. They are useful for confirming the selected pair address is internally consistent, but they are not a swap simulation, LP lock proof, or exhaustive liquidity analysis.
+
 ## Native Read-Only Contract Checks
 
 The API also performs PulseChain RPC reads without connecting a wallet:
@@ -82,6 +85,7 @@ The API also performs PulseChain RPC reads without connecting a wallet:
 - common public buy/sell tax or fee getters such as `buyTax()`, `buyFee()`, `sellTax()`, and `sellFee()`
 - common public mechanics getters such as `paused()`, `tradingEnabled()`, `limitsInEffect()`, `maxTxAmount()`, and `maxWalletAmount()`
 - bounded recent event-window log reads for `OwnershipTransferred`, `RoleGranted`, `RoleRevoked`, `Paused`, and `Unpaused`
+- selected-pair contract reads for `token0()`, `token1()`, `getReserves()`, and LP `totalSupply()` when a primary pair is available
 
 These checks are informational only. `owner()` returning the zero address is labeled `Appears renounced`, not as a guarantee. A missing common proxy signal is labeled `Common proxy signal not found`, not as proof that every proxy pattern is absent.
 
