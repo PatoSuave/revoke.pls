@@ -221,6 +221,18 @@ export interface ContractSniffCard {
   href?: string;
 }
 
+export type TokenChairConcentrationKind = "top-holder" | "lp-holder";
+
+export interface TokenChairConcentrationDetailRow extends SniffSignalRow {
+  kind: TokenChairConcentrationKind;
+  address: Address | null;
+  href?: string;
+  percentLabel: string;
+  holderCountLabel: string;
+  classificationLabel: string;
+  classificationDetail: string;
+}
+
 export type TokenChairPairCandidateStatus =
   | "selected"
   | "warning"
@@ -730,6 +742,19 @@ export function buildSourceSignalDetailRows(options: {
   });
 }
 
+export function buildConcentrationDetailRows(options: {
+  contract?: TokenChairContractData | null;
+} = {}): TokenChairConcentrationDetailRow[] {
+  const contract = options.contract;
+  const holders = contract?.holders;
+  if (!contract || !holders) return [];
+
+  return [
+    buildConcentrationDetailRow("top-holder", holders.token, contract),
+    buildConcentrationDetailRow("lp-holder", holders.lp, contract),
+  ];
+}
+
 export function withTokenChairContractData(
   response: TokenChairApiResponse,
   contract: TokenChairContractData,
@@ -1118,7 +1143,12 @@ function getVisibleContractWarnings(
   const holders = contract.holders;
   const tokenHolderPercent = holders?.token.percent ?? null;
   const lpHolderPercent = holders?.lp.percent ?? null;
-  if (holders && tokenHolderPercent !== null && tokenHolderPercent >= 20) {
+  if (
+    holders &&
+    tokenHolderPercent !== null &&
+    tokenHolderPercent >= 20 &&
+    isConcentrationWarning("top-holder", holders.token, contract)
+  ) {
     warnings.push({
       severity: "warning",
       message: buildConcentrationWarningMessage(
@@ -1129,7 +1159,12 @@ function getVisibleContractWarnings(
     });
   }
 
-  if (holders && lpHolderPercent !== null && lpHolderPercent >= 50) {
+  if (
+    holders &&
+    lpHolderPercent !== null &&
+    lpHolderPercent >= 50 &&
+    isConcentrationWarning("lp-holder", holders.lp, contract)
+  ) {
     warnings.push({
       severity: "warning",
       message: buildConcentrationWarningMessage(
@@ -1449,7 +1484,7 @@ function buildTopHolderContractCard(
   return {
     ...card,
     value: formatSignalPercent(signal.percent),
-    status: signal.percent >= 20 ? "warning" : "checked",
+    status: concentrationStatus("top-holder", signal, contract),
     href: classifyConcentrationSignal(signal, contract)?.explorerUrl,
     detail: [
       signal.address ? describeConcentrationSignal(signal, contract, "top-holder") : null,
@@ -1480,11 +1515,42 @@ function buildLpConcentrationContractCard(
   return {
     ...card,
     value: formatSignalPercent(signal.percent),
-    status: signal.percent >= 50 ? "warning" : "checked",
+    status: concentrationStatus("lp-holder", signal, contract),
     href: classifyConcentrationSignal(signal, contract)?.explorerUrl,
     detail: signal.address
       ? describeConcentrationSignal(signal, contract, "lp-holder")
       : "Largest visible LP holder concentration returned by PulseScan.",
+  };
+}
+
+function buildConcentrationDetailRow(
+  kind: TokenChairConcentrationKind,
+  signal: TokenChairConcentrationSignal,
+  contract: TokenChairContractData,
+): TokenChairConcentrationDetailRow {
+  const classification = classifyConcentrationSignal(signal, contract);
+  const percentLabel =
+    signal.percent === null ? "Unable to verify" : formatSignalPercent(signal.percent);
+  const holderCountLabel = signal.holdersCount === null
+    ? "Not returned"
+    : signal.holdersCount.toLocaleString("en-US");
+  const status = concentrationStatus(kind, signal, contract);
+  const classificationLabel = classification?.label ?? "Unknown address";
+  const classificationDetail =
+    classification?.detail ?? "PulseScan did not return enough holder address context.";
+
+  return {
+    kind,
+    label: kind === "top-holder" ? "Top holder" : "LP holder",
+    value: concentrationValue(kind, signal, contract),
+    status,
+    detail: concentrationDetail(kind, signal, contract),
+    address: signal.address,
+    href: classification?.explorerUrl,
+    percentLabel,
+    holderCountLabel,
+    classificationLabel,
+    classificationDetail,
   };
 }
 
@@ -1507,6 +1573,74 @@ function buildConcentrationWarningMessage(
   return holder
     ? `PulseScan shows high visible LP-token holder concentration${percentCopy} at ${holder}.`
     : `PulseScan shows high visible LP-token holder concentration${percentCopy} for the selected pair.`;
+}
+
+function concentrationStatus(
+  kind: TokenChairConcentrationKind,
+  signal: TokenChairConcentrationSignal,
+  contract: TokenChairContractData,
+): SniffRowStatus {
+  if (signal.percent === null) return "unable-to-verify";
+  const threshold = kind === "top-holder" ? 20 : 50;
+  if (signal.percent < threshold) return "checked";
+  return isConcentrationWarning(kind, signal, contract) ? "warning" : "checked";
+}
+
+function concentrationValue(
+  kind: TokenChairConcentrationKind,
+  signal: TokenChairConcentrationSignal,
+  contract: TokenChairContractData,
+): string {
+  if (signal.percent === null) return "Unable to verify";
+  const classification = classifyConcentrationSignal(signal, contract);
+  if (isBurnLikeClassification(classification)) {
+    return kind === "lp-holder"
+      ? "Burn/dead LP holder"
+      : "Burn/dead token holder";
+  }
+  if (signal.percent >= (kind === "top-holder" ? 20 : 50)) {
+    return "High visible concentration";
+  }
+  return "Visible concentration returned";
+}
+
+function concentrationDetail(
+  kind: TokenChairConcentrationKind,
+  signal: TokenChairConcentrationSignal,
+  contract: TokenChairContractData,
+): string {
+  if (signal.percent === null) {
+    return kind === "top-holder"
+      ? "PulseScan did not return token holder concentration data."
+      : "PulseScan did not return LP-token holder concentration for the selected pair.";
+  }
+
+  const classification = classifyConcentrationSignal(signal, contract);
+  const prefix = kind === "top-holder"
+    ? "Largest visible token holder"
+    : "Largest visible LP-token holder";
+  const percent = formatSignalPercent(signal.percent);
+
+  if (isBurnLikeClassification(classification)) {
+    return `${prefix} is ${percent} at ${warningHolderLabel(classification)}. This can be useful context, but it is not proof of an LP lock or a full liquidity analysis.`;
+  }
+
+  if (signal.percent >= (kind === "top-holder" ? 20 : 50)) {
+    return `${prefix} is ${percent}. Review the holder address context before interacting.`;
+  }
+
+  return `${prefix} is ${percent}. This is visible PulseScan holder context only.`;
+}
+
+function isConcentrationWarning(
+  kind: TokenChairConcentrationKind,
+  signal: TokenChairConcentrationSignal,
+  contract: TokenChairContractData,
+): boolean {
+  if (signal.percent === null) return false;
+  const threshold = kind === "top-holder" ? 20 : 50;
+  if (signal.percent < threshold) return false;
+  return !isBurnLikeClassification(classifyConcentrationSignal(signal, contract));
 }
 
 function classifyConcentrationSignal(
@@ -1553,6 +1687,15 @@ function warningHolderLabel(
   if (classification.kind === "contract") return "a contract address";
   if (classification.kind === "wallet") return "a wallet address";
   return "an unclassified address";
+}
+
+function isBurnLikeClassification(
+  classification: TokenChairAddressClassification | null,
+): classification is TokenChairAddressClassification {
+  return (
+    classification?.kind === "zero-address" ||
+    classification?.kind === "burn-address"
+  );
 }
 
 function isNonZeroRawNumber(value: string | null): boolean {

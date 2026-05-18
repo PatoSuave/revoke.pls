@@ -10,6 +10,7 @@ import {
   TOKEN_CHAIR_API_ROUTE,
   TOKEN_CHAIR_CHAIN_LABEL,
   TOKEN_CHAIR_DISCLAIMER,
+  buildConcentrationDetailRows,
   buildTokenChairSnifferUrl,
   buildContractSniffCards,
   buildPairCandidateRows,
@@ -24,6 +25,7 @@ import {
   type SniffSignalRow,
   type SniffRowStatus,
   type TokenChairApiResponse,
+  type TokenChairConcentrationDetailRow,
   type TokenChairContractData,
   type TokenChairMarketData,
   type TokenChairPairCandidateRow,
@@ -93,6 +95,10 @@ export function TokenChairSniffer({
   );
   const sourceSignalRows = useMemo(
     () => buildSourceSignalDetailRows({ contract }),
+    [contract],
+  );
+  const concentrationRows = useMemo(
+    () => buildConcentrationDetailRows({ contract }),
     [contract],
   );
   const contractCards = useMemo(
@@ -205,6 +211,7 @@ export function TokenChairSniffer({
             contract={contract}
             state={state}
           />
+          <HolderChairIntel rows={concentrationRows} contract={contract} />
           <DisclaimerPanel />
         </main>
       </div>
@@ -1043,6 +1050,116 @@ function ContractSniffCardTile({
   }
 
   return <div className={className}>{content}</div>;
+}
+
+function HolderChairIntel({
+  rows,
+  contract,
+}: {
+  rows: readonly TokenChairConcentrationDetailRow[];
+  contract: TokenChairContractData | null;
+}) {
+  if (!contract) return null;
+
+  const holderStatus =
+    contract.holders?.status === "success"
+      ? "PulseScan holders"
+      : contract.holders?.status === "partial"
+        ? "Partial holder data"
+        : contract.holders
+          ? "Unable to verify"
+          : "Not checked yet";
+
+  return (
+    <section className="rounded-lg border border-pulse-border/80 bg-[#080d12] p-4">
+      <PanelHeader icon="H" title="Holder Chair Intel" meta={holderStatus} />
+      <div className="mt-4 grid gap-3 lg:grid-cols-2">
+        {rows.length > 0 ? (
+          rows.map((row) => <HolderIntelCard key={row.kind} row={row} />)
+        ) : (
+          <div className="rounded-lg border border-pulse-border/75 bg-[#0a1016] p-4 text-sm leading-6 text-pulse-muted">
+            PulseScan holder concentration has not been checked yet.
+          </div>
+        )}
+      </div>
+      <p className="mt-4 text-xs leading-5 text-pulse-muted">
+        Holder concentration is visible explorer context only. Burn/dead holder
+        labels are not proof of an LP lock, and indexed holder data can change.
+      </p>
+    </section>
+  );
+}
+
+function HolderIntelCard({
+  row,
+}: {
+  row: TokenChairConcentrationDetailRow;
+}) {
+  const content = (
+    <>
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div className="min-w-0">
+          <p className="text-sm font-semibold text-pulse-text">{row.label}</p>
+          <p className="mt-2 text-xs leading-5 text-pulse-muted">
+            {row.detail}
+          </p>
+        </div>
+        <SniffValueBadge row={row} />
+      </div>
+      <div className="mt-4 grid gap-2 sm:grid-cols-3">
+        <HolderMetric label="Percent" value={row.percentLabel} />
+        <HolderMetric label="Holders" value={row.holderCountLabel} />
+        <HolderMetric
+          label="Address"
+          value={row.address ? shortenAddress(row.address) : "Not returned"}
+        />
+      </div>
+      <div className="mt-3 rounded-lg border border-pulse-border/60 bg-[#070b10] px-3 py-2">
+        <p className="text-xs font-semibold text-pulse-text">
+          {row.classificationLabel}
+        </p>
+        <p className="mt-1 text-xs leading-5 text-pulse-muted">
+          {row.classificationDetail}
+        </p>
+      </div>
+    </>
+  );
+
+  if (row.href) {
+    return (
+      <a
+        href={row.href}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="rounded-lg border border-pulse-border/75 bg-[#0a1016] p-4 transition hover:border-pulse-green/35 hover:bg-pulse-green/5"
+      >
+        {content}
+      </a>
+    );
+  }
+
+  return (
+    <article className="rounded-lg border border-pulse-border/75 bg-[#0a1016] p-4">
+      {content}
+    </article>
+  );
+}
+
+function HolderMetric({
+  label,
+  value,
+}: {
+  label: string;
+  value: string;
+}) {
+  return (
+    <div className="min-w-0 rounded-lg border border-pulse-border/60 bg-[#070b10] px-3 py-2">
+      <p className="uppercase tracking-[0.12em] text-pulse-muted/70">{label}</p>
+      <p className="mt-1 truncate text-sm font-semibold text-pulse-text">
+        {value}
+      </p>
+    </div>
+  );
 }
 
 function ContractMetadataStrip({

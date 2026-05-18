@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 import { getAddress, type Address } from "viem";
 
 import {
+  buildConcentrationDetailRows,
   buildContractSniffCards,
   normalizeDexScreenerTokenPairsResponse,
   withTokenChairContractData,
@@ -19,6 +20,7 @@ const QUOTE = getAddress("0xA1077a294dDE1B09bB078844df40758a5D0f9a27");
 const HOLDER = getAddress("0x1111111111111111111111111111111111111111");
 const LP_HOLDER = getAddress("0x2222222222222222222222222222222222222222");
 const OWNER = getAddress("0x3333333333333333333333333333333333333333");
+const DEAD = getAddress("0x000000000000000000000000000000000000dEaD");
 
 function holdersPayload({
   holder = HOLDER,
@@ -193,6 +195,48 @@ describe("Token Chair Sniffer holder concentration", () => {
       href: `https://scan.pulsechain.com/address/${PAIR}`,
     });
     expect(lpHolder?.detail).toContain("Selected DEX pair");
+  });
+
+  it("explains burn/dead LP concentration without treating it like wallet concentration", () => {
+    const marketResponse = normalizeDexScreenerTokenPairsResponse(
+      [dexPair()],
+      TOKEN,
+    );
+    const holders = normalizeTokenChairHolderResponse({
+      tokenPayload: holdersPayload({
+        value: "100",
+        totalSupply: "1000",
+      }),
+      lpPayload: holdersPayload({
+        holder: DEAD,
+        value: "900",
+        totalSupply: "1000",
+      }),
+      pairAddress: PAIR,
+    });
+    const contract = { ...contractData(), holders };
+    const cards = buildContractSniffCards({ contract });
+    const rows = buildConcentrationDetailRows({ contract });
+    const response = withTokenChairHolderData(
+      withTokenChairContractData(marketResponse, contractData()),
+      holders,
+    );
+    const verdictText = response.verdict.notes.join(" ").toLowerCase();
+
+    expect(cards.find((card) => card.label === "LP concentration")).toMatchObject({
+      value: "90%",
+      status: "checked",
+    });
+    expect(rows.find((row) => row.kind === "lp-holder")).toMatchObject({
+      value: "Burn/dead LP holder",
+      status: "checked",
+      classificationLabel: "Burn address",
+    });
+    expect(rows.find((row) => row.kind === "lp-holder")?.detail).toContain(
+      "not proof of an LP lock",
+    );
+    expect(verdictText).not.toContain("lp-token holder concentration");
+    expect(verdictText).not.toMatch(/\bsafe\b|guaranteed|certified/);
   });
 
   it("adds concentration warnings to the conservative verdict without safe claims", () => {
