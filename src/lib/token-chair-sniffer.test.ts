@@ -7,6 +7,7 @@ import {
   TOKEN_CHAIR_SNIFFER_ROUTE,
   buildContractSniffCards,
   buildEventHistoryDetailRows,
+  buildLpControlSummary,
   buildPairCandidateRows,
   buildTokenChairSnifferUrl,
   buildQuickSniffRows,
@@ -22,6 +23,7 @@ import {
 const TOKEN = getAddress("0xcae394005c9c4c309621c53d53db9ceb701fc8d8");
 const QUOTE = getAddress("0xA1077a294dDE1B09bB078844df40758a5D0f9a27");
 const PAIR = getAddress("0x165C3410fC91EF562C50559f7d2289fEbed552d9");
+const DEPLOYER = getAddress("0x4444444444444444444444444444444444444444");
 const CREATED_AT = 1_700_000_000_000;
 
 function dexPair(overrides: Record<string, unknown> = {}) {
@@ -68,6 +70,101 @@ function jsonResponse(body: unknown, init: ResponseInit = {}) {
     headers: { "content-type": "application/json" },
     ...init,
   });
+}
+
+function contractWithLpHolder(overrides: {
+  lpAddress?: Address;
+  lpPercent?: number | null;
+  lpIsContract?: boolean | null;
+  burnDeadPercent?: number | null;
+} = {}): TokenChairContractData {
+  const lpAddress = overrides.lpAddress ?? DEPLOYER;
+  const lpPercent = overrides.lpPercent ?? 100;
+  const burnDeadPercent = overrides.burnDeadPercent ?? 0;
+
+  return {
+    tokenAddress: TOKEN,
+    status: "success",
+    tokenName: "Chair Token",
+    tokenSymbol: "CHAIR",
+    decimals: 18,
+    ownerAddress: null,
+    ownerFunction: "owner",
+    ownershipRenounced: false,
+    proxy: {
+      detected: false,
+      implementationAddress: null,
+      adminAddress: null,
+      beaconAddress: null,
+      minimalProxyTarget: null,
+      checks: [],
+    },
+    explorer: {
+      status: "success",
+      sourceVerified: true,
+      abiAvailable: true,
+      sourceCodeAvailable: true,
+      contractName: "Chair Token",
+      compilerVersion: "v0.8.24",
+      verifiedAt: "2026-01-01T00:00:00Z",
+      deployerAddress: DEPLOYER,
+      creationTxHash: null,
+      explorerAddressUrl: `https://scan.pulsechain.com/address/${TOKEN}`,
+      explorerTokenUrl: `https://scan.pulsechain.com/token/${TOKEN}`,
+      explorerTxUrl: null,
+      sourceSignals: [],
+      warnings: [],
+      errors: [],
+    },
+    holders: {
+      status: "success",
+      token: {
+        percent: 10,
+        address: getAddress("0x1111111111111111111111111111111111111111"),
+        isContract: false,
+        holdersCount: 100,
+        sampledHolderCount: 10,
+        totalSupplyRaw: "1000000",
+        valueRaw: "100000",
+      },
+      lp: {
+        percent: lpPercent,
+        address: lpAddress,
+        isContract: overrides.lpIsContract ?? false,
+        holdersCount: 12,
+        sampledHolderCount: 12,
+        totalSupplyRaw: "100000",
+        valueRaw: "100000",
+        pairAddress: PAIR,
+      },
+      distribution: null,
+      lpDistribution: {
+        sampledHolderCount: 12,
+        pageCount: 1,
+        maxPagesReached: false,
+        holdersCount: 12,
+        totalSupplyRaw: "100000",
+        top1Percent: lpPercent,
+        top5Percent: lpPercent,
+        top10Percent: lpPercent,
+        burnDeadPercent,
+        selectedPairPercent: null,
+        topHolders: [
+          {
+            rank: 1,
+            address: lpAddress,
+            percent: lpPercent,
+            isContract: overrides.lpIsContract ?? false,
+            valueRaw: "100000",
+          },
+        ],
+      },
+      warnings: [],
+      errors: [],
+    },
+    warnings: [],
+    errors: [],
+  };
 }
 
 describe("Token Chair Sniffer helpers", () => {
@@ -352,6 +449,58 @@ describe("Token Chair Sniffer helpers", () => {
     );
     expect(result.warnings.join(" ")).toContain("pair selection is weak");
     expect(result.verdict.label).toBe("Some warnings");
+  });
+
+  it("builds conservative LP-control interpretation for deployer-held LP", () => {
+    const summary = buildLpControlSummary({
+      contract: contractWithLpHolder(),
+    });
+
+    expect(summary).toMatchObject({
+      value: "Deployer controls visible LP",
+      status: "warning",
+      holderLabel: "Deployer",
+      holderPercentLabel: "100%",
+      burnDeadPercentLabel: "0%",
+      sampledRowsLabel: "12 sampled rows",
+    });
+    expect(summary?.detail).toContain("deployer address");
+    expect(summary?.detail.toLowerCase()).not.toMatch(/\bsafe\b|guaranteed|certified|formal liquidity-lock proof/);
+  });
+
+  it("treats burn/dead LP concentration as context instead of lock proof", () => {
+    const summary = buildLpControlSummary({
+      contract: contractWithLpHolder({
+        lpAddress: getAddress("0x000000000000000000000000000000000000dEaD"),
+        burnDeadPercent: 100,
+      }),
+    });
+
+    expect(summary).toMatchObject({
+      value: "Burn/dead LP holder",
+      status: "checked",
+      holderLabel: "Burn address",
+      holderPercentLabel: "100%",
+      burnDeadPercentLabel: "100%",
+    });
+    expect(summary?.detail).toContain("not proof of a formal liquidity lock");
+  });
+
+  it("shows non-dominant LP holders without escalating to warnings", () => {
+    const summary = buildLpControlSummary({
+      contract: contractWithLpHolder({
+        lpAddress: getAddress("0x5555555555555555555555555555555555555555"),
+        lpPercent: 12.5,
+        lpIsContract: false,
+      }),
+    });
+
+    expect(summary).toMatchObject({
+      value: "No dominant LP holder",
+      status: "checked",
+      holderLabel: "Wallet",
+      holderPercentLabel: "12.5%",
+    });
   });
 
   it("keeps unchecked Quick Sniff and Contract Sniff rows explicit", () => {

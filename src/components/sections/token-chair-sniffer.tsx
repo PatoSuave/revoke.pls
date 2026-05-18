@@ -13,6 +13,7 @@ import {
   buildConcentrationDetailRows,
   buildContractSniffCards,
   buildEventHistoryDetailRows,
+  buildLpControlSummary,
   buildPairCandidateRows,
   buildQuickSniffRows,
   buildSourceSignalDetailRows,
@@ -31,6 +32,7 @@ import {
   type TokenChairContractData,
   type TokenChairEventHistoryDetailRow,
   type TokenChairHolderDistributionRow,
+  type TokenChairLpControlSummary,
   type TokenChairMarketData,
   type TokenChairPairCandidateRow,
   type TokenChairPairContractData,
@@ -108,6 +110,10 @@ export function TokenChairSniffer({
   );
   const eventHistoryRows = useMemo(
     () => buildEventHistoryDetailRows({ contract }),
+    [contract],
+  );
+  const lpControlSummary = useMemo(
+    () => buildLpControlSummary({ contract }),
     [contract],
   );
   const contractCards = useMemo(
@@ -232,7 +238,11 @@ export function TokenChairSniffer({
             contract={contract}
             state={state}
           />
-          <HolderChairIntel rows={concentrationRows} contract={contract} />
+          <HolderChairIntel
+            rows={concentrationRows}
+            contract={contract}
+            lpControlSummary={lpControlSummary}
+          />
           <DisclaimerPanel />
         </main>
       </div>
@@ -1371,9 +1381,11 @@ function EventHistoryPanel({
 function HolderChairIntel({
   rows,
   contract,
+  lpControlSummary,
 }: {
   rows: readonly TokenChairConcentrationDetailRow[];
   contract: TokenChairContractData | null;
+  lpControlSummary: TokenChairLpControlSummary | null;
 }) {
   if (!contract) return null;
 
@@ -1391,7 +1403,10 @@ function HolderChairIntel({
     <section className="rounded-lg border border-pulse-border/80 bg-[#080d12] p-4">
       <PanelHeader icon="H" title="Holder Distribution" meta={holderStatus} />
       {distribution ? (
-        <HolderDistributionSummary contract={contract} />
+        <HolderDistributionSummary
+          contract={contract}
+          lpControlSummary={lpControlSummary}
+        />
       ) : (
         <div className="mt-4 rounded-lg border border-pulse-border/75 bg-[#0a1016] p-4 text-sm leading-6 text-pulse-muted">
           PulseScan holder distribution buckets have not been returned yet.
@@ -1417,8 +1432,10 @@ function HolderChairIntel({
 
 function HolderDistributionSummary({
   contract,
+  lpControlSummary,
 }: {
   contract: TokenChairContractData;
+  lpControlSummary: TokenChairLpControlSummary | null;
 }) {
   const distribution = contract.holders?.distribution;
   if (!distribution) return null;
@@ -1479,7 +1496,11 @@ function HolderDistributionSummary({
         </p>
       ) : null}
       {lpDistribution ? (
-        <LpControlSummary distribution={lpDistribution} contract={contract} />
+        <LpControlSummary
+          distribution={lpDistribution}
+          contract={contract}
+          lpControlSummary={lpControlSummary}
+        />
       ) : (
         <div className="rounded-lg border border-pulse-border/65 bg-[#0a1016] p-3 text-sm leading-6 text-pulse-muted">
           LP-token holder distribution was not returned for the selected pair.
@@ -1492,9 +1513,11 @@ function HolderDistributionSummary({
 function LpControlSummary({
   distribution,
   contract,
+  lpControlSummary,
 }: {
   distribution: NonNullable<TokenChairContractData["holders"]>["lpDistribution"];
   contract: TokenChairContractData;
+  lpControlSummary: TokenChairLpControlSummary | null;
 }) {
   if (!distribution) return null;
 
@@ -1539,6 +1562,9 @@ function LpControlSummary({
             Selected pair token
           </span>
         </div>
+        {lpControlSummary ? (
+          <LpControlInterpretation summary={lpControlSummary} />
+        ) : null}
         <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
           {metrics.map((metric) => (
             <HolderDistributionMetric key={metric.label} {...metric} />
@@ -1556,6 +1582,53 @@ function LpControlSummary({
         contract={contract}
       />
     </div>
+  );
+}
+
+function LpControlInterpretation({
+  summary,
+}: {
+  summary: TokenChairLpControlSummary;
+}) {
+  const content = (
+    <>
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div className="min-w-0">
+          <p className="text-sm font-semibold text-pulse-text">
+            {summary.value}
+          </p>
+          <p className="mt-2 text-xs leading-5 text-pulse-muted">
+            {summary.detail}
+          </p>
+        </div>
+        <SniffValueBadge row={summary} />
+      </div>
+      <div className="mt-3 grid gap-2 sm:grid-cols-4">
+        <HolderMetric label="Top LP holder" value={summary.holderPercentLabel} />
+        <HolderMetric label="Holder type" value={summary.holderLabel} />
+        <HolderMetric label="Burn/dead LP" value={summary.burnDeadPercentLabel} />
+        <HolderMetric label="Sample" value={summary.sampledRowsLabel} />
+      </div>
+    </>
+  );
+
+  if (summary.href) {
+    return (
+      <a
+        href={summary.href}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="mb-3 block rounded-lg border border-pulse-border/65 bg-[#0a1016] p-3 transition hover:border-pulse-green/35 hover:bg-pulse-green/5"
+      >
+        {content}
+      </a>
+    );
+  }
+
+  return (
+    <article className="mb-3 rounded-lg border border-pulse-border/65 bg-[#0a1016] p-3">
+      {content}
+    </article>
   );
 }
 

@@ -332,6 +332,15 @@ export interface TokenChairConcentrationDetailRow extends SniffSignalRow {
   classificationDetail: string;
 }
 
+export interface TokenChairLpControlSummary extends SniffSignalRow {
+  address: Address | null;
+  href?: string;
+  holderLabel: string;
+  holderPercentLabel: string;
+  burnDeadPercentLabel: string;
+  sampledRowsLabel: string;
+}
+
 export interface TokenChairEventHistoryDetailRow extends SniffSignalRow {
   eventName: TokenChairEventHistoryLogName;
   count: number;
@@ -942,6 +951,92 @@ export function buildConcentrationDetailRows(options: {
     buildConcentrationDetailRow("top-holder", holders.token, contract),
     buildConcentrationDetailRow("lp-holder", holders.lp, contract),
   ];
+}
+
+export function buildLpControlSummary(options: {
+  contract?: TokenChairContractData | null;
+} = {}): TokenChairLpControlSummary | null {
+  const contract = options.contract;
+  const holders = contract?.holders;
+  if (!contract || !holders) return null;
+
+  const lp = holders.lp;
+  const distribution = holders.lpDistribution;
+  const classification = classifyConcentrationSignal(lp, contract);
+  const holderPercentLabel =
+    lp.percent === null ? "Unable to verify" : formatSignalPercent(lp.percent);
+  const burnDeadPercentLabel = distribution?.burnDeadPercent === null ||
+    distribution?.burnDeadPercent === undefined
+    ? "Not returned"
+    : formatSignalPercent(distribution.burnDeadPercent);
+  const sampledRowsLabel = distribution
+    ? `${distribution.sampledHolderCount.toLocaleString("en-US")} sampled rows`
+    : "Not returned";
+  const holderLabel = classification?.label ?? "Unknown address";
+  const base = {
+    address: lp.address,
+    href: classification?.explorerUrl,
+    holderLabel,
+    holderPercentLabel,
+    burnDeadPercentLabel,
+    sampledRowsLabel,
+  };
+
+  if (lp.percent === null) {
+    return {
+      ...base,
+      label: "LP control",
+      value: "Unable to verify",
+      status: "unable-to-verify",
+      detail:
+        "PulseScan did not return LP-token holder concentration for the selected pair.",
+    };
+  }
+
+  if (isBurnLikeClassification(classification)) {
+    return {
+      ...base,
+      label: "LP control",
+      value: "Burn/dead LP holder",
+      status: "checked",
+      detail:
+        `Largest visible LP-token holder is ${holderPercentLabel} at ${warningHolderLabel(classification)}. This is useful context, but it is not proof of a formal liquidity lock.`,
+    };
+  }
+
+  if (
+    distribution?.burnDeadPercent !== null &&
+    distribution?.burnDeadPercent !== undefined &&
+    distribution.burnDeadPercent >= 50
+  ) {
+    return {
+      ...base,
+      label: "LP control",
+      value: "Major burn/dead LP balance",
+      status: "checked",
+      detail:
+        `PulseScan sampled ${formatSignalPercent(distribution.burnDeadPercent)} of LP tokens at zero/dead addresses. Treat this as burn/dead context, not a formal liquidity-lock proof.`,
+    };
+  }
+
+  if (lp.percent >= 50) {
+    return {
+      ...base,
+      label: "LP control",
+      value: lpControlWarningValue(classification),
+      status: "warning",
+      detail: lpControlWarningDetail(lp, contract, classification),
+    };
+  }
+
+  return {
+    ...base,
+    label: "LP control",
+    value: "No dominant LP holder",
+    status: "checked",
+    detail:
+      `Largest visible LP-token holder is ${holderPercentLabel}. This is sampled PulseScan context only.`,
+  };
 }
 
 export function withTokenChairContractData(
@@ -1932,6 +2027,44 @@ function buildConcentrationWarningMessage(
   return holder
     ? `PulseScan shows high visible LP-token holder concentration${percentCopy} at ${holder}.`
     : `PulseScan shows high visible LP-token holder concentration${percentCopy} for the selected pair.`;
+}
+
+function lpControlWarningValue(
+  classification: TokenChairAddressClassification | null,
+): string {
+  if (classification?.kind === "owner") return "Owner controls visible LP";
+  if (classification?.kind === "deployer") return "Deployer controls visible LP";
+  if (classification?.kind === "wallet") return "Wallet controls visible LP";
+  if (classification?.kind === "contract") return "Contract controls visible LP";
+  if (classification?.kind === "token-contract") return "Token contract holds visible LP";
+  if (classification?.kind === "selected-pair") return "Pair holds visible LP";
+  return "Dominant LP holder";
+}
+
+function lpControlWarningDetail(
+  signal: TokenChairConcentrationSignal,
+  contract: TokenChairContractData,
+  classification: TokenChairAddressClassification | null,
+): string {
+  const percent = signal.percent === null
+    ? "an unknown share"
+    : formatSignalPercent(signal.percent);
+  const holder = classification ? warningHolderLabel(classification) : "an unclassified address";
+  const address = signal.address ? ` (${shortenSignalAddress(signal.address)})` : "";
+
+  if (classification?.kind === "owner" || classification?.kind === "deployer") {
+    return `PulseScan shows ${holder}${address} holding ${percent} of visible LP tokens. That may mean removable liquidity is controlled by the project-side address unless other lock/burn evidence exists.`;
+  }
+
+  if (classification?.kind === "contract") {
+    return `PulseScan shows a contract address${address} holding ${percent} of visible LP tokens. Review that contract before treating this as locked liquidity.`;
+  }
+
+  if (classification?.kind === "wallet") {
+    return `PulseScan shows a wallet address${address} holding ${percent} of visible LP tokens. This can indicate removable liquidity control.`;
+  }
+
+  return `PulseScan shows ${holder}${address} holding ${percent} of visible LP tokens. Review the holder before interacting.`;
 }
 
 function concentrationStatus(
