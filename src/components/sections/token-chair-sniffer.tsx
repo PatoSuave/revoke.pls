@@ -167,7 +167,7 @@ export function TokenChairSniffer({
         <main id="sniffer" className="min-w-0 flex-1 space-y-4">
           <MobileRail />
           <section className="grid gap-4 rounded-lg border border-pulse-border/80 bg-[#080d12] p-4 shadow-glow lg:grid-cols-[250px_minmax(0,1fr)_360px] lg:p-5">
-            <ChairHeroArt />
+            <ChairHeroArt verdict={verdict} />
             <HeroSearch
               input={input}
               hasInput={hasInput}
@@ -334,36 +334,393 @@ function RailInfoCard({
   );
 }
 
-function ChairHeroArt() {
+function ChairHeroArt({ verdict }: { verdict: TokenChairVerdict }) {
+  const mood = chairMoodFromVerdict(verdict);
+  const visual = chairMoodVisual(mood);
+  const frameClass = {
+    success:
+      "border-pulse-green/45 shadow-[0_0_48px_rgba(0,229,160,0.15)]",
+    warning:
+      "border-amber-500/45 shadow-[0_0_48px_rgba(255,157,18,0.16)]",
+    danger:
+      "border-pulse-red/45 shadow-[0_0_52px_rgba(255,77,109,0.16)]",
+    neutral:
+      "border-pulse-border/80 shadow-[0_0_42px_rgba(124,58,237,0.12)]",
+  }[mood];
+  const bgClass = {
+    success:
+      "bg-[radial-gradient(circle_at_70%_18%,rgba(0,229,160,0.22),transparent_34%),linear-gradient(125deg,rgba(0,229,160,0.14),transparent_48%),linear-gradient(38deg,rgba(124,58,237,0.18),transparent_58%)]",
+    warning:
+      "bg-[radial-gradient(circle_at_70%_18%,rgba(255,157,18,0.24),transparent_34%),linear-gradient(125deg,rgba(0,229,160,0.12),transparent_48%),linear-gradient(38deg,rgba(255,157,18,0.18),transparent_58%)]",
+    danger:
+      "bg-[radial-gradient(circle_at_70%_18%,rgba(255,77,109,0.26),transparent_34%),linear-gradient(125deg,rgba(255,77,109,0.14),transparent_48%),linear-gradient(38deg,rgba(255,157,18,0.12),transparent_58%)]",
+    neutral:
+      "bg-[radial-gradient(circle_at_70%_18%,rgba(124,58,237,0.22),transparent_34%),linear-gradient(125deg,rgba(0,229,160,0.12),transparent_48%),linear-gradient(38deg,rgba(255,157,18,0.14),transparent_58%)]",
+  }[mood];
+
   return (
-    <div className="relative hidden min-h-[260px] overflow-hidden rounded-lg border border-pulse-border/80 bg-[#05090d] sm:block">
-      <div className="absolute inset-0 bg-[linear-gradient(115deg,rgba(0,229,160,0.12),transparent_46%),linear-gradient(40deg,rgba(255,150,18,0.18),transparent_52%)]" />
-      <div className="absolute left-8 top-8 h-52 w-36 rounded-t-[48px] border border-amber-500/65 bg-[linear-gradient(150deg,rgba(255,165,18,0.2),rgba(8,13,18,0.92))] shadow-[0_0_40px_rgba(255,150,18,0.22)]" />
-      <div className="absolute left-12 top-12 h-40 w-28 rounded-t-[34px] border border-pulse-green/40 bg-[linear-gradient(150deg,rgba(0,229,160,0.18),rgba(8,13,18,0.96))]" />
-      <div className="absolute left-5 top-36 h-14 w-16 rounded-full border border-amber-500/50 bg-[#0b0f13]" />
-      <div className="absolute left-[8.5rem] top-36 h-14 w-16 rounded-full border border-amber-500/50 bg-[#0b0f13]" />
-      <div className="absolute left-11 top-[12.75rem] h-16 w-3 rounded-full bg-amber-500/45" />
-      <div className="absolute left-36 top-[12.75rem] h-16 w-3 rounded-full bg-amber-500/45" />
-      <ScentTrail className="left-36 top-8 rotate-[-12deg]" />
-      <ScentTrail className="left-[10.5rem] top-16 rotate-[8deg] opacity-75" />
-      <ScentTrail className="left-32 top-24 rotate-[-4deg] opacity-60" />
-      <div className="absolute bottom-4 left-4 right-4 rounded-lg border border-pulse-border/70 bg-[#070b10]/80 px-3 py-2 text-xs text-pulse-muted">
-        Chair-forward, wallet-free token sniffing.
+    <div
+      className={`relative hidden min-h-[300px] overflow-hidden rounded-lg border bg-[#05090d] sm:block ${frameClass}`}
+      aria-label={`Token Chair Sniffer mascot showing ${visual.label} mood`}
+      role="img"
+    >
+      <div className={`absolute inset-0 ${bgClass}`} />
+      <div className="absolute inset-x-0 bottom-0 h-24 bg-[linear-gradient(0deg,rgba(5,7,10,0.92),transparent)]" />
+      <svg
+        viewBox="0 0 280 320"
+        className="absolute inset-0 h-full w-full"
+        aria-hidden
+        xmlns="http://www.w3.org/2000/svg"
+      >
+        <defs>
+          <linearGradient id="chairHero-gold" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0%" stopColor="#f5c25b" />
+            <stop offset="100%" stopColor="#7a4a13" />
+          </linearGradient>
+          <linearGradient id="chairHero-cushion" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0%" stopColor="#202a23" />
+            <stop offset="100%" stopColor="#07100c" />
+          </linearGradient>
+          <linearGradient id="chairHero-shirt" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0%" stopColor={visual.shirtTop} />
+            <stop offset="100%" stopColor={visual.shirtBottom} />
+          </linearGradient>
+          <linearGradient id="chairHero-pulseMark" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0%" stopColor="rgb(var(--pulse-cyan))" />
+            <stop offset="50%" stopColor="rgb(var(--pulse-purple))" />
+            <stop offset="100%" stopColor="rgb(var(--pulse-pink))" />
+          </linearGradient>
+          <filter id="chairHero-softGlow" x="-40%" y="-40%" width="180%" height="180%">
+            <feGaussianBlur stdDeviation="5" result="blur" />
+            <feMerge>
+              <feMergeNode in="blur" />
+              <feMergeNode in="SourceGraphic" />
+            </feMerge>
+          </filter>
+        </defs>
+
+        <path
+          d="M45 278 C62 225 55 100 80 48 C96 15 150 8 188 30 C222 50 232 97 228 158 C225 210 235 248 248 278 Z"
+          fill="url(#chairHero-gold)"
+          opacity="0.9"
+        />
+        <path
+          d="M70 268 C82 220 74 105 94 62 C108 32 154 29 183 48 C207 65 211 104 207 160 C204 211 212 242 224 268 Z"
+          fill="url(#chairHero-cushion)"
+          stroke="#d99422"
+          strokeOpacity="0.55"
+          strokeWidth="1.5"
+        />
+        <circle cx="61" cy="177" r="24" fill="#0a0f14" stroke="#d99422" strokeOpacity="0.65" />
+        <circle cx="220" cy="177" r="24" fill="#0a0f14" stroke="#d99422" strokeOpacity="0.65" />
+        <rect x="75" y="252" width="12" height="44" rx="6" fill="#9b651b" />
+        <rect x="193" y="252" width="12" height="44" rx="6" fill="#9b651b" />
+
+        <path
+          d="M61 130 C37 110 30 64 55 38"
+          fill="none"
+          stroke={visual.scent}
+          strokeWidth="5"
+          strokeLinecap="round"
+          opacity={mood === "danger" ? 0.9 : 0.55}
+          filter="url(#chairHero-softGlow)"
+        />
+        <path
+          d="M48 125 C24 101 24 72 43 53"
+          fill="none"
+          stroke={visual.scent}
+          strokeWidth="2"
+          strokeLinecap="round"
+          opacity="0.55"
+        />
+
+        <path
+          d="M75 204 C89 164 112 148 144 151 C180 154 204 179 214 213 C194 235 99 236 75 204 Z"
+          fill="url(#chairHero-shirt)"
+          stroke="#f2d2b6"
+          strokeOpacity="0.35"
+        />
+        <path
+          d="M83 211 C101 236 118 260 134 292 L85 294 C75 260 70 236 83 211 Z"
+          fill="#101722"
+          stroke="#293244"
+          strokeWidth="2"
+        />
+        <path
+          d="M198 211 C183 238 169 263 154 292 L208 294 C215 259 214 234 198 211 Z"
+          fill="#101722"
+          stroke="#293244"
+          strokeWidth="2"
+        />
+        <PulsePantsMark idPrefix="chairHero" x={101} y={237} rotate={-14} scale={1.08} />
+        <PulsePantsMark idPrefix="chairHero" x={178} y={239} rotate={13} scale={1.08} />
+        <PulsePantsMark idPrefix="chairHero" x={139} y={266} rotate={0} scale={0.82} />
+
+        <path
+          d="M88 170 C56 174 42 195 39 222"
+          fill="none"
+          stroke="#f2c19b"
+          strokeWidth="18"
+          strokeLinecap="round"
+        />
+        <path
+          d="M197 170 C222 176 234 195 236 221"
+          fill="none"
+          stroke="#f2c19b"
+          strokeWidth="18"
+          strokeLinecap="round"
+        />
+        <rect x="222" y="184" width="26" height="42" rx="5" fill="#2d261f" stroke="#d6a15c" />
+        <circle cx="235" cy="207" r="2" fill="#b78d55" />
+        <path
+          d="M80 129 C75 95 98 67 135 65 C173 64 196 91 191 128 C186 158 168 176 136 176 C105 176 85 158 80 129 Z"
+          fill="#f1b990"
+          stroke="#7b4629"
+          strokeOpacity="0.55"
+        />
+        <path
+          d="M86 89 C98 59 128 47 164 57 C186 63 195 83 194 103 C169 91 126 92 86 107 Z"
+          fill="#2d261f"
+        />
+        <path
+          d="M93 73 C114 45 158 43 184 68 L179 86 C151 73 119 74 92 91 Z"
+          fill={visual.cap}
+          stroke="#3c1f13"
+          strokeOpacity="0.45"
+        />
+        <PulseCapMark idPrefix="chairHero" x={136} y={69} />
+        <ellipse cx="107" cy="119" rx={visual.eyeRx} ry={visual.eyeRy} fill="#fff7ec" />
+        <ellipse cx="165" cy="119" rx={visual.eyeRx} ry={visual.eyeRy} fill="#fff7ec" />
+        <circle cx={visual.leftPupilX} cy={visual.pupilY} r={visual.pupilR} fill="#17202a" />
+        <circle cx={visual.rightPupilX} cy={visual.pupilY} r={visual.pupilR} fill="#17202a" />
+        <path
+          d={visual.leftBrow}
+          fill="none"
+          stroke="#241811"
+          strokeWidth="5"
+          strokeLinecap="round"
+        />
+        <path
+          d={visual.rightBrow}
+          fill="none"
+          stroke="#241811"
+          strokeWidth="5"
+          strokeLinecap="round"
+        />
+        <path
+          d="M130 122 C126 134 127 140 136 141"
+          fill="none"
+          stroke="#9d5b38"
+          strokeWidth="3"
+          strokeLinecap="round"
+        />
+        <ellipse cx="111" cy="143" rx="15" ry="9" fill={visual.cheek} opacity={visual.cheekOpacity} />
+        <ellipse cx="163" cy="143" rx="15" ry="9" fill={visual.cheek} opacity={visual.cheekOpacity} />
+        <path
+          d={visual.mouth}
+          fill="none"
+          stroke="#3a2118"
+          strokeWidth="5"
+          strokeLinecap="round"
+        />
+        <path
+          d="M77 132 C61 123 48 124 38 132"
+          fill="none"
+          stroke="#111827"
+          strokeWidth="4"
+          strokeLinecap="round"
+        />
+        <path
+          d="M39 132 C61 136 75 144 88 155"
+          fill="none"
+          stroke={visual.scent}
+          strokeWidth="4"
+          strokeLinecap="round"
+          opacity="0.8"
+          filter="url(#chairHero-softGlow)"
+        />
+        {mood === "danger" ? (
+          <>
+            <path d="M190 104 C201 93 215 93 224 105" fill="none" stroke="#ff4d6d" strokeWidth="4" strokeLinecap="round" />
+            <path d="M200 118 L214 132 M214 118 L200 132" stroke="#ff4d6d" strokeWidth="4" strokeLinecap="round" />
+            <path d="M219 143 C228 153 226 164 217 173" fill="none" stroke="#ffb020" strokeWidth="4" strokeLinecap="round" />
+          </>
+        ) : null}
+        {mood === "success" ? (
+          <path d="M202 111 C215 101 230 105 237 119" fill="none" stroke="#00e5a0" strokeWidth="4" strokeLinecap="round" opacity="0.85" />
+        ) : null}
+      </svg>
+      <div className="absolute bottom-4 left-4 right-4 rounded-lg border border-pulse-border/70 bg-[#070b10]/85 px-3 py-2 text-xs text-pulse-muted">
+        <span className={visual.textClass}>{visual.caption}</span>
+        <span className="text-pulse-muted"> Wallet-free token sniffing.</span>
       </div>
     </div>
   );
 }
 
-function ScentTrail({ className }: { className: string }) {
+type ChairMood = "success" | "warning" | "danger" | "neutral";
+
+function chairMoodFromVerdict(verdict: TokenChairVerdict): ChairMood {
+  if (verdict.tone === "danger" || verdict.kind === "high-risk") {
+    return "danger";
+  }
+  if (verdict.tone === "success" || verdict.kind === "low-visible-risk") {
+    return "success";
+  }
+  if (verdict.tone === "neutral") return "warning";
+  return verdict.tone;
+}
+
+function chairMoodVisual(mood: ChairMood) {
+  return {
+    success: {
+      label: "happy",
+      caption: "Chair verdict has a calmer sniff.",
+      textClass: "font-semibold text-pulse-green",
+      scent: "#00e5a0",
+      shirtTop: "#d9fbe9",
+      shirtBottom: "#7dddb8",
+      cap: "#5b2be0",
+      cheek: "#ff9eb4",
+      cheekOpacity: 0.38,
+      eyeRx: 11,
+      eyeRy: 8,
+      pupilR: 3.4,
+      pupilY: 120,
+      leftPupilX: 108,
+      rightPupilX: 164,
+      leftBrow: "M94 106 C105 99 118 99 126 106",
+      rightBrow: "M148 106 C158 99 172 99 181 106",
+      mouth: "M111 145 C124 160 150 160 163 145",
+    },
+    warning: {
+      label: "concerned",
+      caption: "Chair verdict is sniffing with caution.",
+      textClass: "font-semibold text-amber-300",
+      scent: "#ffb020",
+      shirtTop: "#f0eee9",
+      shirtBottom: "#bfc5ca",
+      cap: "#9d2d2d",
+      cheek: "#ff9e73",
+      cheekOpacity: 0.32,
+      eyeRx: 12,
+      eyeRy: 10,
+      pupilR: 3.8,
+      pupilY: 121,
+      leftPupilX: 109,
+      rightPupilX: 164,
+      leftBrow: "M94 103 L125 111",
+      rightBrow: "M148 111 L181 103",
+      mouth: "M111 153 C124 142 150 142 163 153",
+    },
+    danger: {
+      label: "stressed",
+      caption: "Chair verdict is holding its nose.",
+      textClass: "font-semibold text-pulse-red",
+      scent: "#ff4d6d",
+      shirtTop: "#ffd1d8",
+      shirtBottom: "#f27b7b",
+      cap: "#5b121c",
+      cheek: "#ff3f5f",
+      cheekOpacity: 0.55,
+      eyeRx: 14,
+      eyeRy: 11,
+      pupilR: 3.2,
+      pupilY: 122,
+      leftPupilX: 112,
+      rightPupilX: 160,
+      leftBrow: "M94 111 L126 99",
+      rightBrow: "M148 99 L181 111",
+      mouth: "M110 156 C125 137 149 137 164 156",
+    },
+    neutral: {
+      label: "watchful",
+      caption: "Chair verdict is waiting for a sniff.",
+      textClass: "font-semibold text-pulse-muted",
+      scent: "#9ca3ff",
+      shirtTop: "#f0eee9",
+      shirtBottom: "#bfc5ca",
+      cap: "#5b2be0",
+      cheek: "#ff9e73",
+      cheekOpacity: 0.24,
+      eyeRx: 11,
+      eyeRy: 9,
+      pupilR: 3.4,
+      pupilY: 121,
+      leftPupilX: 108,
+      rightPupilX: 164,
+      leftBrow: "M94 104 C105 101 118 102 126 107",
+      rightBrow: "M148 107 C158 102 172 101 181 104",
+      mouth: "M116 150 C128 146 146 146 158 150",
+    },
+  }[mood];
+}
+
+function PulsePantsMark({
+  idPrefix,
+  x,
+  y,
+  rotate,
+  scale,
+}: {
+  idPrefix: string;
+  x: number;
+  y: number;
+  rotate: number;
+  scale: number;
+}) {
   return (
-    <div
-      className={`absolute h-12 w-28 rounded-full border-t border-pulse-green/55 ${className}`}
-      aria-hidden
-    >
-      <span className="absolute left-4 top-2 h-1.5 w-1.5 rounded-full bg-pulse-green shadow-[0_0_18px_rgb(var(--pulse-green))]" />
-      <span className="absolute left-[3.75rem] top-0 h-1 w-1 rounded-full bg-pulse-green/80" />
-      <span className="absolute left-24 top-4 h-1.5 w-1.5 rounded-full bg-pulse-green/70" />
-    </div>
+    <g transform={`translate(${x} ${y}) rotate(${rotate}) scale(${scale})`}>
+      <rect
+        x="-10"
+        y="-10"
+        width="20"
+        height="20"
+        rx="6"
+        fill={`url(#${idPrefix}-pulseMark)`}
+        opacity="0.96"
+      />
+      <path
+        d="M-6 2 L-2 2 L0 -5 L3 8 L5 2 L8 2"
+        fill="none"
+        stroke="#05070a"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </g>
+  );
+}
+
+function PulseCapMark({
+  idPrefix,
+  x,
+  y,
+}: {
+  idPrefix: string;
+  x: number;
+  y: number;
+}) {
+  return (
+    <g transform={`translate(${x} ${y})`}>
+      <rect
+        x="-12"
+        y="-9"
+        width="24"
+        height="18"
+        rx="6"
+        fill={`url(#${idPrefix}-pulseMark)`}
+        opacity="0.92"
+      />
+      <path
+        d="M-7 2 L-2 2 L0 -6 L4 8 L6 2 L9 2"
+        fill="none"
+        stroke="#05070a"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </g>
   );
 }
 
@@ -471,7 +828,7 @@ function VerdictPanel({
       <div className="absolute right-5 top-5 h-40 w-40 rounded-full border border-amber-500/20" />
       <div className="absolute right-10 top-10 h-28 w-28 rounded-full border border-amber-500/25" />
       <div className="absolute right-[3.75rem] top-[3.75rem] h-16 w-16 rounded-full border border-amber-500/35" />
-      <MiniChairIcon />
+      <MiniChairIcon verdict={verdict} />
       <div className="relative">
         <p className="text-sm text-pulse-muted">Chair verdict</p>
         <h2 className="mt-3 max-w-72 text-3xl font-bold leading-tight text-amber-400">
@@ -492,13 +849,69 @@ function VerdictPanel({
   );
 }
 
-function MiniChairIcon() {
+function MiniChairIcon({ verdict }: { verdict: TokenChairVerdict }) {
+  const mood = chairMoodFromVerdict(verdict);
+  const visual = chairMoodVisual(mood);
+
   return (
     <div className="absolute right-10 top-[4.5rem] hidden h-20 w-20 sm:block" aria-hidden>
-      <div className="absolute left-5 top-2 h-12 w-10 rounded-t-lg border border-amber-400 bg-amber-400/10 shadow-[0_0_24px_rgba(255,188,44,0.35)]" />
-      <div className="absolute left-3 top-10 h-8 w-14 rounded-lg border border-amber-400 bg-amber-400/10" />
-      <div className="absolute left-1 top-8 h-8 w-4 rounded-lg border border-amber-400/80" />
-      <div className="absolute right-1 top-8 h-8 w-4 rounded-lg border border-amber-400/80" />
+      <svg viewBox="0 0 88 88" className="h-full w-full" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <linearGradient id="miniChairPulseMark" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0%" stopColor="rgb(var(--pulse-cyan))" />
+            <stop offset="50%" stopColor="rgb(var(--pulse-purple))" />
+            <stop offset="100%" stopColor="rgb(var(--pulse-pink))" />
+          </linearGradient>
+        </defs>
+        <circle
+          cx="44"
+          cy="44"
+          r="41"
+          fill="#071017"
+          stroke={visual.scent}
+          strokeOpacity="0.65"
+        />
+        <path
+          d="M20 64 C24 36 29 18 46 16 C65 14 70 38 68 64 Z"
+          fill="#111b18"
+          stroke="#d99422"
+          strokeOpacity="0.7"
+        />
+        <path
+          d="M25 62 C31 51 40 47 49 48 C59 50 65 56 67 64 Z"
+          fill={visual.shirtBottom}
+          opacity="0.9"
+        />
+        <rect x="37" y="58" width="16" height="14" rx="4" fill="url(#miniChairPulseMark)" />
+        <path
+          d="M40 66 L43 66 L45 60 L48 70 L50 66 L53 66"
+          fill="none"
+          stroke="#05070a"
+          strokeWidth="2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
+        <ellipse cx="45" cy="38" rx="20" ry="19" fill="#f1b990" />
+        <path d="M27 31 C34 16 54 14 65 29 C50 24 38 24 27 31 Z" fill={visual.cap} />
+        <ellipse cx="37" cy="38" rx={visual.eyeRx / 2} ry={visual.eyeRy / 2} fill="#fff7ec" />
+        <ellipse cx="53" cy="38" rx={visual.eyeRx / 2} ry={visual.eyeRy / 2} fill="#fff7ec" />
+        <circle cx={mood === "danger" ? 39 : 37} cy="39" r="1.9" fill="#17202a" />
+        <circle cx={mood === "danger" ? 51 : 53} cy="39" r="1.9" fill="#17202a" />
+        <path
+          d={
+            mood === "success"
+              ? "M35 50 C40 57 51 57 56 50"
+              : mood === "danger"
+                ? "M35 55 C41 47 51 47 57 55"
+                : "M35 54 C41 49 51 49 57 54"
+          }
+          fill="none"
+          stroke="#3a2118"
+          strokeWidth="3"
+          strokeLinecap="round"
+        />
+        <path d="M20 40 C12 34 12 24 20 18" fill="none" stroke={visual.scent} strokeWidth="3" strokeLinecap="round" />
+      </svg>
     </div>
   );
 }
