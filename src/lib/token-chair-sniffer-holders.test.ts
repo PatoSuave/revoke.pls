@@ -77,6 +77,14 @@ function jsonResponse(body: unknown, init: ResponseInit = {}) {
   });
 }
 
+function rawJsonResponse(body: string, init: ResponseInit = {}) {
+  return new Response(body, {
+    status: 200,
+    headers: { "content-type": "application/json" },
+    ...init,
+  });
+}
+
 function contractData(): TokenChairContractData {
   return {
     tokenAddress: TOKEN,
@@ -149,6 +157,8 @@ describe("Token Chair Sniffer holder concentration", () => {
       top10Percent: 25,
       burnDeadPercent: 0,
       sampledHolderCount: 1,
+      pageCount: 1,
+      maxPagesReached: false,
     });
     expect(result.lp.percent).toBe(75);
     expect(result.lp.address).toBe(LP_HOLDER);
@@ -207,6 +217,104 @@ describe("Token Chair Sniffer holder concentration", () => {
       percent: 17,
       isContract: true,
     });
+  });
+
+  it("fetches bounded holder pages while preserving large cursor values", async () => {
+    const requestedUrls: string[] = [];
+    const bigCursor = "3000000000000000000000";
+    const tokenPageOne = rawJsonResponse(
+      `{"items":[${JSON.stringify(
+        holdersPayload({
+          value: "500",
+          totalSupply: "1000",
+          extraItems: [{ holder: OWNER, value: "300" }],
+        }).items[0],
+      )},${JSON.stringify(
+        holdersPayload({
+          holder: OWNER,
+          value: "300",
+          totalSupply: "1000",
+        }).items[0],
+      )}],"next_page_params":{"address_hash":"${OWNER.toLowerCase()}","items_count":2,"value":${bigCursor}}}`,
+    );
+    const tokenPageTwo = jsonResponse({
+      items: [
+        holdersPayload({
+          holder: DEAD,
+          value: "100",
+          totalSupply: "1000",
+        }).items[0],
+        holdersPayload({
+          holder: PAIR,
+          value: "50",
+          totalSupply: "1000",
+          isContract: true,
+        }).items[0],
+      ],
+      next_page_params: null,
+    });
+    const fetchImpl = vi.fn(async (url: string) => {
+      requestedUrls.push(url);
+      const parsed = new URL(url);
+      if (parsed.pathname.toLowerCase().includes(PAIR.toLowerCase())) {
+        return jsonResponse(holdersPayload({
+          holder: LP_HOLDER,
+          value: "900",
+          totalSupply: "1000",
+        }));
+      }
+      if (parsed.searchParams.has("value")) {
+        expect(parsed.searchParams.get("value")).toBe(bigCursor);
+        return tokenPageTwo;
+      }
+      return tokenPageOne;
+    }) as unknown as typeof fetch;
+
+    const result = await fetchTokenChairHolderData(TOKEN, PAIR, {
+      fetchImpl,
+      maxPages: 2,
+    });
+
+    expect(result.status).toBe("success");
+    expect(result.distribution).toMatchObject({
+      sampledHolderCount: 4,
+      pageCount: 2,
+      maxPagesReached: false,
+      top1Percent: 50,
+      top5Percent: 95,
+      top10Percent: 95,
+      burnDeadPercent: 10,
+      selectedPairPercent: 5,
+    });
+    expect(result.lpDistribution).toMatchObject({
+      sampledHolderCount: 1,
+      top1Percent: 90,
+    });
+    expect(requestedUrls).toHaveLength(3);
+  });
+
+  it("marks holder pagination as capped when the page limit is reached", async () => {
+    const fetchImpl = vi.fn(async () =>
+      rawJsonResponse(
+        `{"items":[${JSON.stringify(holdersPayload({ value: "500" }).items[0])}],"next_page_params":{"address_hash":"${HOLDER.toLowerCase()}","items_count":1,"value":500}}`,
+      ),
+    ) as unknown as typeof fetch;
+
+    const result = await fetchTokenChairHolderData(TOKEN, PAIR, {
+      fetchImpl,
+      maxPages: 1,
+    });
+
+    expect(result.status).toBe("partial");
+    expect(result.distribution).toMatchObject({
+      sampledHolderCount: 1,
+      pageCount: 1,
+      maxPagesReached: true,
+    });
+    expect(result.lpDistribution).toMatchObject({
+      maxPagesReached: true,
+    });
+    expect(result.warnings.join(" ")).toContain("capped");
   });
 
   it("keeps LP concentration unable when PulseScan does not index the pair as a token", async () => {

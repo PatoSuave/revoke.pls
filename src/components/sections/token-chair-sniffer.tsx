@@ -679,7 +679,7 @@ function TokenInformationSummary({
           </div>
 
           <p className="mt-4 text-xs leading-5 text-pulse-muted">
-            This panel summarizes returned public data only. It is not a safety
+            This panel summarizes returned public data only. It is not a risk
             rating, simulation, or audit.
           </p>
         </div>
@@ -1386,6 +1386,7 @@ function HolderDistributionSummary({
 }) {
   const distribution = contract.holders?.distribution;
   if (!distribution) return null;
+  const lpDistribution = contract.holders?.lpDistribution ?? null;
 
   const metrics = [
     {
@@ -1418,18 +1419,106 @@ function HolderDistributionSummary({
       value: distribution.holdersCount === null
         ? "Not returned"
         : distribution.holdersCount.toLocaleString("en-US"),
-      detail: `${distribution.sampledHolderCount.toLocaleString("en-US")} sampled holder rows.`,
+      detail: sampledRowsDetail(distribution),
     },
   ];
 
   return (
-    <div className="mt-4 grid gap-3 xl:grid-cols-[minmax(0,1fr)_420px]">
-      <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
-        {metrics.map((metric) => (
-          <HolderDistributionMetric key={metric.label} {...metric} />
-        ))}
+    <div className="mt-4 grid gap-3">
+      <div className="grid gap-3 xl:grid-cols-[minmax(0,1fr)_420px]">
+        <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
+          {metrics.map((metric) => (
+            <HolderDistributionMetric key={metric.label} {...metric} />
+          ))}
+        </div>
+        <TopHolderTable
+          title="Token holders"
+          rows={distribution.topHolders}
+          contract={contract}
+        />
       </div>
-      <TopHolderTable rows={distribution.topHolders} contract={contract} />
+      {distribution.maxPagesReached ? (
+        <p className="rounded-lg border border-amber-400/30 bg-amber-400/10 px-3 py-2 text-xs leading-5 text-amber-100">
+          Token-holder crawl was capped at {distribution.sampledHolderCount.toLocaleString("en-US")} rows for response time. Percent buckets are based on the sampled pages returned.
+        </p>
+      ) : null}
+      {lpDistribution ? (
+        <LpControlSummary distribution={lpDistribution} contract={contract} />
+      ) : (
+        <div className="rounded-lg border border-pulse-border/65 bg-[#0a1016] p-3 text-sm leading-6 text-pulse-muted">
+          LP-token holder distribution was not returned for the selected pair.
+        </div>
+      )}
+    </div>
+  );
+}
+
+function LpControlSummary({
+  distribution,
+  contract,
+}: {
+  distribution: NonNullable<TokenChairContractData["holders"]>["lpDistribution"];
+  contract: TokenChairContractData;
+}) {
+  if (!distribution) return null;
+
+  const metrics = [
+    {
+      label: "LP Top 1",
+      value: formatOptionalPercent(distribution.top1Percent),
+      detail: "Largest visible holder of the selected pair token.",
+    },
+    {
+      label: "LP Top 5",
+      value: formatOptionalPercent(distribution.top5Percent),
+      detail: "Combined first five sampled LP-token holders.",
+    },
+    {
+      label: "LP Top 10",
+      value: formatOptionalPercent(distribution.top10Percent),
+      detail: "Combined first ten sampled LP-token holders.",
+    },
+    {
+      label: "LP Burn/dead",
+      value: formatOptionalPercent(distribution.burnDeadPercent),
+      detail: "Zero and common dead-address LP-token balances in the sample.",
+    },
+    {
+      label: "LP holders",
+      value: distribution.holdersCount === null
+        ? "Not returned"
+        : distribution.holdersCount.toLocaleString("en-US"),
+      detail: sampledRowsDetail(distribution),
+    },
+  ];
+
+  return (
+    <div className="grid gap-3 rounded-lg border border-pulse-border/65 bg-[#070b10] p-3 xl:grid-cols-[minmax(0,1fr)_420px]">
+      <div>
+        <div className="mb-3 flex items-center justify-between gap-3">
+          <h3 className="text-sm font-semibold text-pulse-text">
+            LP Token Control
+          </h3>
+          <span className="text-xs text-pulse-muted">
+            Selected pair token
+          </span>
+        </div>
+        <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
+          {metrics.map((metric) => (
+            <HolderDistributionMetric key={metric.label} {...metric} />
+          ))}
+        </div>
+        {distribution.maxPagesReached ? (
+          <p className="mt-3 rounded-lg border border-amber-400/30 bg-amber-400/10 px-3 py-2 text-xs leading-5 text-amber-100">
+            LP-holder crawl was capped at {distribution.sampledHolderCount.toLocaleString("en-US")} rows for response time. Review the pair token on PulseScan for deeper liquidity-control context.
+          </p>
+        ) : null}
+      </div>
+      <TopHolderTable
+        title="LP holders"
+        rows={distribution.topHolders}
+        contract={contract}
+      />
     </div>
   );
 }
@@ -1455,9 +1544,11 @@ function HolderDistributionMetric({
 }
 
 function TopHolderTable({
+  title,
   rows,
   contract,
 }: {
+  title: string;
   rows: readonly TokenChairHolderDistributionRow[];
   contract: TokenChairContractData;
 }) {
@@ -1471,6 +1562,9 @@ function TopHolderTable({
 
   return (
     <div className="overflow-hidden rounded-lg border border-pulse-border/75 bg-[#0a1016]">
+      <div className="border-b border-pulse-border/65 px-3 py-2 text-sm font-semibold text-pulse-text">
+        {title}
+      </div>
       <div className="grid grid-cols-[48px_minmax(0,1fr)_76px] gap-2 border-b border-pulse-border/65 px-3 py-2 text-[11px] uppercase tracking-[0.14em] text-pulse-muted/75">
         <span>Rank</span>
         <span>Holder</span>
@@ -1813,6 +1907,17 @@ function formatOptionalPercent(value: number | null): string {
   return `${value.toLocaleString("en-US", {
     maximumFractionDigits: value < 1 ? 2 : 1,
   })}%`;
+}
+
+function sampledRowsDetail({
+  sampledHolderCount,
+  pageCount,
+}: {
+  sampledHolderCount: number;
+  pageCount: number;
+}): string {
+  const pageLabel = pageCount === 1 ? "page" : "pages";
+  return `${sampledHolderCount.toLocaleString("en-US")} sampled rows across ${pageCount.toLocaleString("en-US")} ${pageLabel}.`;
 }
 
 function formatEventHistoryStatus(

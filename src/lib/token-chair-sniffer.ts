@@ -126,6 +126,8 @@ export interface TokenChairHolderDistributionRow {
 
 export interface TokenChairHolderDistribution {
   sampledHolderCount: number;
+  pageCount: number;
+  maxPagesReached: boolean;
   holdersCount: number | null;
   totalSupplyRaw: string | null;
   top1Percent: number | null;
@@ -143,6 +145,7 @@ export interface TokenChairHolderData {
     pairAddress: Address | null;
   };
   distribution: TokenChairHolderDistribution | null;
+  lpDistribution: TokenChairHolderDistribution | null;
   warnings: string[];
   errors: string[];
 }

@@ -26,7 +26,8 @@ Implemented in this MVP:
 - PulseScan/Blockscout verified-source metadata for source status, ABI availability, deployer, and creation transaction
 - Lightweight ABI/source keyword signals for mint, pause, cooldown, blacklist, whitelist, and suspicious-function rows
 - PulseScan holder endpoint concentration reads for top token holder and LP holder data when available
-- Sampled holder-distribution buckets for top 1, top 5, top 10, selected pair balance, and zero/dead-address balances when PulseScan returns enough holder rows
+- Bounded multi-page sampled holder-distribution buckets for top 1, top 5, top 10, selected pair balance, and zero/dead-address balances when PulseScan returns enough holder rows
+- LP-token holder-control buckets for the selected pair when PulseScan indexes that pair contract as a token
 - Address context labels for zero/burn addresses, token contract, selected pair, owner, deployer, contracts, and wallets where visible metadata supports it
 - PulseScan links on live contract/source/deployer/holder cards
 - Compact Signal Details panel explaining the current verdict inputs
@@ -132,7 +133,7 @@ GET /api/v2/tokens/{address}/holders
 
 The top-holder card reports the largest visible token holder as a percentage of the returned token total supply.
 
-The Holder Distribution panel also derives sampled buckets from the returned holder page:
+The Holder Distribution panel also derives sampled buckets from the returned holder pages:
 
 - top 1 holder percentage
 - top 5 holder percentage
@@ -141,9 +142,19 @@ The Holder Distribution panel also derives sampled buckets from the returned hol
 - zero/dead-address balance percentage when those addresses appear in the sampled token-holder rows
 - a compact top-holder table with PulseScan links and address classification where available
 
-These buckets are sampled from the visible PulseScan holder response. They are not a full holder crawl and should not be presented as exhaustive distribution proof.
+These buckets are sampled from visible PulseScan holder responses. The route can follow bounded pagination and preserves large PulseScan cursor values as strings when requesting the next page, but it still caps the crawl so the public read-only API remains responsive. The buckets should not be presented as exhaustive distribution proof.
 
 The LP concentration card attempts the same read for the selected DEX Screener pair address. Some PulseScan pair contracts are not indexed as token holder endpoints; in that case LP concentration stays `Unable to verify` instead of guessing.
+
+When PulseScan does index the selected pair as a token, the Holder Distribution panel also shows LP-token control buckets:
+
+- largest visible LP-token holder
+- top 5 sampled LP-token holders
+- top 10 sampled LP-token holders
+- zero/dead-address LP-token balances
+- sampled LP-token holder rows and page count
+
+This is useful for spotting whether removable liquidity appears concentrated in one wallet, owner, deployer, contract, or burn/dead address. Burn/dead LP-token balances are still context only; they are not proof of a formal liquidity lock.
 
 These are visible holder signals only. They can be affected by explorer indexing, wrapped-token mechanics, staking contracts, bridges, protocol contracts, or holder data that changes after the scan.
 

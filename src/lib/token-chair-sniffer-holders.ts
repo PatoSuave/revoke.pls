@@ -10,6 +10,7 @@ import type {
 export interface FetchTokenChairHolderOptions {
   fetchImpl?: typeof fetch;
   signal?: AbortSignal;
+  maxPages?: number;
 }
 
 interface HolderFetchResult {
@@ -17,6 +18,9 @@ interface HolderFetchResult {
   status: number | null;
   payload: unknown;
   error: string | null;
+  warning: string | null;
+  pageCount: number;
+  maxPagesReached: boolean;
 }
 
 interface TokenHolderItem {
@@ -41,6 +45,20 @@ interface NormalizedHolderItem {
   totalSupply: bigint | null;
 }
 
+interface HolderPageParams {
+  address_hash?: string;
+  items_count?: string;
+  value?: string;
+}
+
+interface HolderPagesPayload {
+  items: unknown[];
+  pageCount: number;
+  maxPagesReached: boolean;
+}
+
+const DEFAULT_HOLDER_MAX_PAGES = 4;
+
 export async function fetchTokenChairHolderData(
   tokenAddress: Address,
   pairAddress: string | null | undefined,
@@ -48,31 +66,41 @@ export async function fetchTokenChairHolderData(
 ): Promise<TokenChairHolderData> {
   const fetchImpl = options.fetchImpl ?? fetch;
   const normalizedPairAddress = normalizeAddress(pairAddress);
+  const maxPages = options.maxPages ?? DEFAULT_HOLDER_MAX_PAGES;
   const baseUrl = pulseScanV2BaseUrl();
-  const tokenRead = await fetchHolderJson(
-    `${baseUrl}/tokens/${tokenAddress}/holders`,
-    fetchImpl,
-    options.signal,
-  );
-  const lpRead = normalizedPairAddress
-    ? await fetchHolderJson(
-        `${baseUrl}/tokens/${normalizedPairAddress}/holders`,
-        fetchImpl,
-        options.signal,
-      )
-    : {
-        ok: false,
-        status: null,
-        payload: null,
-        error: "No selected pair address was available for LP concentration.",
-      };
+  const [tokenRead, lpRead] = await Promise.all([
+    fetchHolderPages(
+      `${baseUrl}/tokens/${tokenAddress}/holders`,
+      fetchImpl,
+      options.signal,
+      maxPages,
+    ),
+    normalizedPairAddress
+      ? fetchHolderPages(
+          `${baseUrl}/tokens/${normalizedPairAddress}/holders`,
+          fetchImpl,
+          options.signal,
+          maxPages,
+        )
+      : Promise.resolve({
+          ok: false,
+          status: null,
+          payload: null,
+          error: "No selected pair address was available for LP concentration.",
+          warning: null,
+          pageCount: 0,
+          maxPagesReached: false,
+        }),
+  ]);
 
   return normalizeTokenChairHolderResponse({
     tokenPayload: tokenRead.payload,
     lpPayload: lpRead.payload,
     pairAddress: normalizedPairAddress,
     tokenError: tokenRead.ok ? null : tokenRead.error,
+    tokenWarning: tokenRead.warning,
     lpWarning: lpRead.ok ? null : lpRead.error,
+    lpPaginationWarning: lpRead.warning,
   });
 }
 
@@ -81,25 +109,32 @@ export function normalizeTokenChairHolderResponse({
   lpPayload,
   pairAddress,
   tokenError = null,
+  tokenWarning = null,
   lpWarning = null,
+  lpPaginationWarning = null,
 }: {
   tokenPayload: unknown;
   lpPayload: unknown;
   pairAddress: Address | null;
   tokenError?: string | null;
+  tokenWarning?: string | null;
   lpWarning?: string | null;
+  lpPaginationWarning?: string | null;
 }): TokenChairHolderData {
   const token = normalizeConcentrationSignal(tokenPayload);
   const lpBase = normalizeConcentrationSignal(lpPayload);
   const lp = { ...lpBase, pairAddress };
   const distribution = normalizeDistribution(tokenPayload, pairAddress);
+  const lpDistribution = normalizeDistribution(lpPayload, null);
   const warnings = [
+    tokenWarning,
     token.percent === null && !tokenError
       ? "PulseScan did not return token holder concentration data."
       : null,
     distribution === null && !tokenError
       ? "PulseScan did not return enough token holder data for distribution buckets."
       : null,
+    lpPaginationWarning,
     lp.percent === null
       ? lpWarning ??
         "PulseScan did not return LP holder concentration for the selected pair."
@@ -118,6 +153,7 @@ export function normalizeTokenChairHolderResponse({
     token,
     lp,
     distribution,
+    lpDistribution,
     warnings,
     errors,
   };
@@ -168,6 +204,8 @@ function normalizeDistribution(
 
   return {
     sampledHolderCount: holders.length,
+    pageCount: normalizePageCount(payload),
+    maxPagesReached: normalizeMaxPagesReached(payload),
     holdersCount,
     totalSupplyRaw,
     top1Percent: bucketPercent(holders.slice(0, 1), totalSupply),
@@ -211,11 +249,112 @@ function normalizeHolderItems(payload: unknown): NormalizedHolderItem[] {
     }));
 }
 
-async function fetchHolderJson(
+function normalizePageCount(payload: unknown): number {
+  const value = asRecord(payload)?.pageCount;
+  return typeof value === "number" && Number.isSafeInteger(value) && value > 0
+    ? value
+    : 1;
+}
+
+function normalizeMaxPagesReached(payload: unknown): boolean {
+  return asRecord(payload)?.maxPagesReached === true;
+}
+
+async function fetchHolderPages(
+  baseUrl: string,
+  fetchImpl: typeof fetch,
+  signal: AbortSignal | undefined,
+  maxPages: number,
+): Promise<HolderFetchResult> {
+  const pageLimit = Math.max(1, Math.min(maxPages, 8));
+  const allItems: unknown[] = [];
+  let nextParams: HolderPageParams | null = null;
+  let lastStatus: number | null = null;
+
+  for (let page = 0; page < pageLimit; page += 1) {
+    const pageResult = await fetchHolderPage(
+      holderPageUrl(baseUrl, nextParams),
+      fetchImpl,
+      signal,
+    );
+    lastStatus = pageResult.status;
+
+    if (!pageResult.ok) {
+      if (allItems.length > 0) {
+        return {
+          ok: true,
+          status: lastStatus,
+          payload: {
+            items: allItems,
+            pageCount: page,
+            maxPagesReached: false,
+          } satisfies HolderPagesPayload,
+          error: null,
+          warning: pageResult.error,
+          pageCount: page,
+          maxPagesReached: false,
+        };
+      }
+
+      return pageResult;
+    }
+
+    const pageItems = asRecord(pageResult.payload)?.items;
+    if (Array.isArray(pageItems)) {
+      allItems.push(...pageItems);
+    }
+
+    nextParams = pageResult.nextPageParams;
+    if (!nextParams) {
+      return {
+        ok: true,
+        status: lastStatus,
+        payload: {
+          items: allItems,
+          pageCount: page + 1,
+          maxPagesReached: false,
+        } satisfies HolderPagesPayload,
+        error: null,
+        warning: null,
+        pageCount: page + 1,
+        maxPagesReached: false,
+      };
+    }
+  }
+
+  return {
+    ok: true,
+    status: lastStatus,
+    payload: {
+      items: allItems,
+      pageCount: pageLimit,
+      maxPagesReached: true,
+    } satisfies HolderPagesPayload,
+    error: null,
+    warning:
+      `PulseScan holder distribution was capped at ${allItems.length.toLocaleString("en-US")} sampled rows to keep the read-only scan responsive.`,
+    pageCount: pageLimit,
+    maxPagesReached: true,
+  };
+}
+
+function holderPageUrl(
+  baseUrl: string,
+  params: HolderPageParams | null,
+): string {
+  if (!params) return baseUrl;
+  const url = new URL(baseUrl);
+  for (const [key, value] of Object.entries(params)) {
+    if (value) url.searchParams.set(key, value);
+  }
+  return url.toString();
+}
+
+async function fetchHolderPage(
   url: string,
   fetchImpl: typeof fetch,
   signal: AbortSignal | undefined,
-): Promise<HolderFetchResult> {
+): Promise<HolderFetchResult & { nextPageParams: HolderPageParams | null }> {
   let response: Response;
   try {
     response = await fetchImpl(url, {
@@ -230,6 +369,10 @@ async function fetchHolderJson(
       status: null,
       payload: null,
       error: holderErrorMessage(error),
+      warning: null,
+      pageCount: 0,
+      maxPagesReached: false,
+      nextPageParams: null,
     };
   }
 
@@ -239,15 +382,25 @@ async function fetchHolderJson(
       status: response.status,
       payload: null,
       error: `PulseScan holder data returned HTTP ${response.status}.`,
+      warning: null,
+      pageCount: 0,
+      maxPagesReached: false,
+      nextPageParams: null,
     };
   }
 
   try {
+    const text = await response.text();
+    const payload = JSON.parse(text) as unknown;
     return {
       ok: true,
       status: response.status,
-      payload: await response.json(),
+      payload,
       error: null,
+      warning: null,
+      pageCount: 1,
+      maxPagesReached: false,
+      nextPageParams: extractNextPageParams(text),
     };
   } catch {
     return {
@@ -255,8 +408,42 @@ async function fetchHolderJson(
       status: response.status,
       payload: null,
       error: "PulseScan holder data could not be parsed as JSON.",
+      warning: null,
+      pageCount: 0,
+      maxPagesReached: false,
+      nextPageParams: null,
     };
   }
+}
+
+function extractNextPageParams(text: string): HolderPageParams | null {
+  const match = /"next_page_params"\s*:\s*(null|\{[^{}]*\})/.exec(text);
+  if (!match || match[1] === "null") return null;
+
+  const objectText = match[1];
+  const addressHash = matchStringProperty(objectText, "address_hash");
+  const itemsCount = matchPrimitiveProperty(objectText, "items_count");
+  const value = matchPrimitiveProperty(objectText, "value");
+
+  if (!addressHash || !itemsCount || !value) return null;
+
+  return {
+    address_hash: addressHash,
+    items_count: itemsCount,
+    value,
+  };
+}
+
+function matchStringProperty(text: string, key: string): string | null {
+  const escaped = escapeRegExp(key);
+  const match = new RegExp(`"${escaped}"\\s*:\\s*"([^"]+)"`).exec(text);
+  return match?.[1] ?? null;
+}
+
+function matchPrimitiveProperty(text: string, key: string): string | null {
+  const escaped = escapeRegExp(key);
+  const match = new RegExp(`"${escaped}"\\s*:\\s*("?)([0-9]+)\\1`).exec(text);
+  return match?.[2] ?? null;
 }
 
 function emptyConcentrationSignal(
@@ -333,6 +520,10 @@ function isBurnDeadAddress(address: Address | null): boolean {
     lower === "0x0000000000000000000000000000000000000000" ||
     lower === "0x000000000000000000000000000000000000dead"
   );
+}
+
+function escapeRegExp(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
 function holderErrorMessage(error: unknown): string {
