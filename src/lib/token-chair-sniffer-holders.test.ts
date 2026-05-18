@@ -331,6 +331,22 @@ describe("Token Chair Sniffer holder concentration", () => {
     expect(result.warnings.join(" ")).toContain("HTTP 404");
   });
 
+  it("uses clear copy when PulseScan rate-limits holder data", async () => {
+    const fetchImpl = vi.fn(async () =>
+      jsonResponse({ message: "Too many requests" }, { status: 429 }),
+    ) as unknown as typeof fetch;
+
+    const result = await fetchTokenChairHolderData(TOKEN, PAIR, { fetchImpl });
+
+    expect(result.status).toBe("unable-to-verify");
+    expect([...result.warnings, ...result.errors].join(" ")).toContain(
+      "rate-limited holder data",
+    );
+    expect([...result.warnings, ...result.errors].join(" ")).toContain(
+      "Holder and LP distribution checks are temporarily unavailable",
+    );
+  });
+
   it("adds address context and PulseScan links to concentration cards", () => {
     const holders = normalizeTokenChairHolderResponse({
       tokenPayload: holdersPayload({

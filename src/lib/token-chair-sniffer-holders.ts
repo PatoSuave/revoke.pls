@@ -381,7 +381,7 @@ async function fetchHolderPage(
       ok: false,
       status: response.status,
       payload: null,
-      error: `PulseScan holder data returned HTTP ${response.status}.`,
+      error: holderHttpErrorMessage(response.status),
       warning: null,
       pageCount: 0,
       maxPagesReached: false,
@@ -432,6 +432,13 @@ function extractNextPageParams(text: string): HolderPageParams | null {
     items_count: itemsCount,
     value,
   };
+}
+
+function holderHttpErrorMessage(status: number): string {
+  if (status === 429) {
+    return "PulseScan rate-limited holder data. Holder and LP distribution checks are temporarily unavailable.";
+  }
+  return `PulseScan holder data returned HTTP ${status}.`;
 }
 
 function matchStringProperty(text: string, key: string): string | null {

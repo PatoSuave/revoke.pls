@@ -33,6 +33,7 @@ Implemented in this MVP:
 - Address context labels for zero/burn addresses, token contract, selected pair, owner, deployer, contracts, and wallets where visible metadata supports it
 - PulseScan links on live contract/source/deployer/holder cards
 - Compact Signal Details panel explaining the current verdict inputs
+- Signal Details source-status chips for market, explorer metadata, holder data, and read-only mode, including clearer rate-limit states
 - Source Signal Details panel listing exact matched ABI/source terms when lightweight source rows are flagged
 - Conservative Chair Verdict mapping
 - Market Chair Intel cards
@@ -180,6 +181,8 @@ Holder and LP cards classify the returned top address when possible:
 These labels are context, not audit conclusions. They use already-returned read-only RPC, DEX Screener, and PulseScan metadata.
 
 The Holder Distribution panel expands this context with visible percentages, holder count, shortened holder addresses, PulseScan links when available, and classification details. High concentration at owner, deployer, wallet, contract, selected pair, or unknown addresses remains a warning. High concentration at the zero or common burn/dead address is described as burn/dead holder context, not as proof of a liquidity lock or a token-quality conclusion.
+
+If PulseScan temporarily rate-limits metadata or holder reads, the UI should say that explorer or holder data is `Rate-limited` while preserving any DEX Screener market data and PulseChain RPC pair-contract data that did return. Rate-limited PulseScan reads are degraded source availability, not token-safety conclusions.
 
 ## Placeholder Checks
 

@@ -853,6 +853,22 @@ function SignalDetailsPanel({
           </div>
           <div>
             <p className="uppercase tracking-[0.14em] text-pulse-muted/75">
+              Explorer
+            </p>
+            <p className="mt-1 font-semibold text-pulse-text">
+              {formatExplorerDataStatus(response, state)}
+            </p>
+          </div>
+          <div>
+            <p className="uppercase tracking-[0.14em] text-pulse-muted/75">
+              Holders
+            </p>
+            <p className="mt-1 font-semibold text-pulse-text">
+              {formatHolderDataStatus(response, state)}
+            </p>
+          </div>
+          <div>
+            <p className="uppercase tracking-[0.14em] text-pulse-muted/75">
               Mode
             </p>
             <p className="mt-1 font-semibold text-pulse-text">
@@ -1988,6 +2004,36 @@ function formatContractStatus(
   return "Unable to verify";
 }
 
+function formatExplorerDataStatus(
+  response: TokenChairApiResponse | null,
+  state: SnifferUiState,
+): string {
+  if (state === "loading") return "Loading";
+  const explorer = response?.contract?.explorer;
+  if (!response || !explorer) return "Not checked yet";
+  if (explorer.status === "success") return "Returned";
+  if (explorer.status === "partial") return "Partial";
+  if (hasRateLimitMessage([...explorer.warnings, ...explorer.errors])) {
+    return "Rate-limited";
+  }
+  return "Unable to verify";
+}
+
+function formatHolderDataStatus(
+  response: TokenChairApiResponse | null,
+  state: SnifferUiState,
+): string {
+  if (state === "loading") return "Loading";
+  const holders = response?.contract?.holders;
+  if (!response || !holders) return "Not checked yet";
+  if (holders.status === "success") return "Returned";
+  if (hasRateLimitMessage([...holders.warnings, ...holders.errors])) {
+    return "Rate-limited";
+  }
+  if (holders.status === "partial") return "Partial";
+  return "Unable to verify";
+}
+
 function formatPairContractStatus(
   pairContract: TokenChairPairContractData | null,
   fallback: string,
@@ -2220,7 +2266,7 @@ function buildSignalDetails(
     ...response.warnings,
     ...response.errors,
   ]
-    .map((message) => message.trim())
+    .map((message) => normalizeSignalDetailMessage(message))
     .filter(Boolean);
   const uniqueMessages = [...new Set(messages)];
 
@@ -2231,4 +2277,20 @@ function buildSignalDetails(
   }
 
   return uniqueMessages.slice(0, 5);
+}
+
+function normalizeSignalDetailMessage(message: string): string {
+  const trimmed = message.trim();
+  if (!trimmed) return "";
+  if (/rate-limited .*explorer metadata/i.test(trimmed)) {
+    return "PulseScan rate-limited explorer metadata. Market and pair-contract data may still be available, but source and deployer checks are temporarily unavailable.";
+  }
+  if (/rate-limited .*holder data/i.test(trimmed)) {
+    return "PulseScan rate-limited holder data. Market and pair-contract data may still be available, but holder and LP distribution checks are temporarily unavailable.";
+  }
+  return trimmed;
+}
+
+function hasRateLimitMessage(messages: readonly string[]): boolean {
+  return messages.some((message) => /rate-limited|HTTP 429/i.test(message));
 }

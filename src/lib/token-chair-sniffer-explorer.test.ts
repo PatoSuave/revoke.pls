@@ -194,6 +194,22 @@ describe("Token Chair Sniffer PulseScan explorer integration", () => {
     expect(result.sourceSignals.every((signal) => signal.found === null)).toBe(true);
   });
 
+  it("uses clear copy when PulseScan rate-limits explorer metadata", async () => {
+    const fetchImpl = vi.fn(async () =>
+      jsonResponse({ message: "Too many requests" }, { status: 429 }),
+    ) as unknown as typeof fetch;
+
+    const result = await fetchTokenChairExplorerData(TOKEN, { fetchImpl });
+
+    expect(result.status).toBe("unable-to-verify");
+    expect([...result.warnings, ...result.errors].join(" ")).toContain(
+      "rate-limited explorer metadata",
+    );
+    expect([...result.warnings, ...result.errors].join(" ")).toContain(
+      "Source and deployer checks are temporarily unavailable",
+    );
+  });
+
   it("adds source signals to the conservative verdict without safe claims", () => {
     const marketResponse = normalizeDexScreenerTokenPairsResponse(
       [dexPair()],

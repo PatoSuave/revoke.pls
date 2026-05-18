@@ -225,7 +225,7 @@ async function fetchExplorerJson(
       ok: false,
       status: response.status,
       payload: null,
-      error: `PulseScan returned HTTP ${response.status}.`,
+      error: explorerHttpErrorMessage(response.status),
     };
   }
 
@@ -300,6 +300,13 @@ function buildUnknownSourceSignals(): TokenChairSourceSignal[] {
     detail:
       "PulseScan did not return verified source or ABI data, so this row cannot be checked.",
   }));
+}
+
+function explorerHttpErrorMessage(status: number): string {
+  if (status === 429) {
+    return "PulseScan rate-limited explorer metadata. Source and deployer checks are temporarily unavailable.";
+  }
+  return `PulseScan explorer metadata returned HTTP ${status}.`;
 }
 
 function sourceSignalSeverityCopy(
