@@ -5,6 +5,7 @@ import { fetchDexScreenerTokenPairs } from "@/lib/token-chair-sniffer-server";
 import {
   TOKEN_CHAIR_CHAIN_ID,
   TOKEN_CHAIR_SNIFFER_ROUTE,
+  buildDextoolsDetailRows,
   buildContractSniffCards,
   buildEventHistoryDetailRows,
   buildLpControlSummary,
@@ -17,7 +18,9 @@ import {
   normalizeDexScreenerTokenPairsResponse,
   normalizeTokenChairAddress,
   normalizeTokenChairQueryToken,
+  withTokenChairDextoolsData,
   type TokenChairContractData,
+  type TokenChairDextoolsData,
 } from "@/lib/token-chair-sniffer";
 
 const TOKEN = getAddress("0xcae394005c9c4c309621c53d53db9ceb701fc8d8");
@@ -165,6 +168,29 @@ function contractWithLpHolder(overrides: {
     },
     warnings: [],
     errors: [],
+  };
+}
+
+function dextoolsData(
+  overrides: Partial<TokenChairDextoolsData> = {},
+): TokenChairDextoolsData {
+  return {
+    status: "success",
+    sourceLabel: "DEXTools",
+    tokenAddress: TOKEN,
+    pairAddress: PAIR,
+    priceUsd: "0.012345",
+    liquidityUsd: 50000,
+    volume24h: 12345.67,
+    dextScore: 72,
+    holderCount: 1234,
+    tokenUrl: `https://www.dextools.io/app/en/pulse/pair-explorer/${PAIR}`,
+    pairUrl: `https://www.dextools.io/app/en/pulse/pair-explorer/${PAIR}`,
+    websiteUrl: "https://example.com",
+    socials: [{ label: "X", url: "https://x.com/example" }],
+    warnings: [],
+    errors: [],
+    ...overrides,
   };
 }
 
@@ -438,6 +464,57 @@ describe("Token Chair Sniffer helpers", () => {
 
     expect(verdict.label).toBe("High risk");
     expect(verdict.notes.join(" ")).toContain("did not report the scanned token");
+  });
+
+  it("uses DEXTools as warning context without blocking unconfigured scans", () => {
+    const response = normalizeDexScreenerTokenPairsResponse([dexPair()], TOKEN);
+    const notConfigured = withTokenChairDextoolsData(
+      response,
+      dextoolsData({
+        status: "not-configured",
+        priceUsd: null,
+        liquidityUsd: null,
+        volume24h: null,
+        dextScore: null,
+        holderCount: null,
+        websiteUrl: null,
+        socials: [],
+      }),
+    );
+    const mismatch = withTokenChairDextoolsData(
+      response,
+      dextoolsData({
+        priceUsd: "0.025",
+        liquidityUsd: 200000,
+        dextScore: 42,
+      }),
+    );
+
+    expect(notConfigured.verdict.label).toBe(response.verdict.label);
+    expect(mismatch.verdict.label).toBe("Some warnings");
+    expect(mismatch.verdict.notes.join(" ")).toContain("DEXTools");
+    expect(mismatch.verdict.notes.join(" ")).toContain("DEXTScore");
+    expect(mismatch.verdict.notes.join(" ").toLowerCase()).not.toMatch(
+      /\bsafe\b|guaranteed|certified|not a scam/,
+    );
+  });
+
+  it("builds DEXTools detail rows with conservative external-score copy", () => {
+    const rows = buildDextoolsDetailRows({
+      dextools: dextoolsData({ dextScore: 38, holderCount: 9876 }),
+    });
+
+    expect(rows).toHaveLength(3);
+    expect(rows[0]).toMatchObject({
+      label: "DEXTScore",
+      value: "38/99",
+      status: "warning",
+      sourceLabel: "DEXTools",
+    });
+    expect(rows[1]?.value).toBe("9,876");
+    expect(rows.map((row) => row.detail).join(" ").toLowerCase()).not.toMatch(
+      /\bsafe\b|guaranteed|certified|not a scam/,
+    );
   });
 
   it("marks all-missing liquidity pair selection as weak", () => {

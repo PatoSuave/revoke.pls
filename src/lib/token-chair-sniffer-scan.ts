@@ -2,12 +2,14 @@ import type { Address } from "viem";
 
 import {
   withTokenChairContractData,
+  withTokenChairDextoolsData,
   withTokenChairExplorerData,
   withTokenChairHolderData,
   withTokenChairPairContractData,
   type TokenChairApiResponse,
 } from "@/lib/token-chair-sniffer";
 import { fetchTokenChairContractData } from "@/lib/token-chair-sniffer-contract";
+import { fetchDextoolsTokenChairData } from "@/lib/token-chair-sniffer-dextools";
 import { fetchTokenChairExplorerData } from "@/lib/token-chair-sniffer-explorer";
 import { fetchTokenChairHolderData } from "@/lib/token-chair-sniffer-holders";
 import { fetchTokenChairPairContractData } from "@/lib/token-chair-sniffer-pair";
@@ -36,6 +38,10 @@ export async function fetchTokenChairScan(
 
     const marketResult = await marketPromise;
     const selectedPairAddress = marketResult.market?.pairAddress;
+    const dextoolsPromise = fetchDextoolsTokenChairData(tokenAddress, {
+      pairAddress: selectedPairAddress,
+      signal: controller.signal,
+    });
     const holderPromise = fetchTokenChairHolderData(
       tokenAddress,
       selectedPairAddress,
@@ -55,11 +61,13 @@ export async function fetchTokenChairScan(
       explorerResult,
       holderResult,
       pairContractResult,
+      dextoolsResult,
     ] = await Promise.all([
       contractPromise,
       explorerPromise,
       holderPromise,
       pairContractPromise,
+      dextoolsPromise,
     ]);
 
     const responseWithMarketContractAndExplorer = withTokenChairExplorerData(
@@ -72,9 +80,13 @@ export async function fetchTokenChairScan(
           pairContractResult,
         )
       : responseWithMarketContractAndExplorer;
+    const responseWithDextools = withTokenChairDextoolsData(
+      responseWithPairContract,
+      dextoolsResult,
+    );
 
     return withTokenChairHolderData(
-      responseWithPairContract,
+      responseWithDextools,
       holderResult,
     );
   } finally {

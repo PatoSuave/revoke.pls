@@ -26,6 +26,26 @@ vi.mock("@/lib/token-chair-sniffer-contract", () => ({
   })),
 }));
 
+vi.mock("@/lib/token-chair-sniffer-dextools", () => ({
+  fetchDextoolsTokenChairData: vi.fn(async (tokenAddress: string, options?: { pairAddress?: string | null }) => ({
+    status: "not-configured",
+    sourceLabel: "DEXTools",
+    tokenAddress,
+    pairAddress: options?.pairAddress ?? null,
+    priceUsd: null,
+    liquidityUsd: null,
+    volume24h: null,
+    dextScore: null,
+    holderCount: null,
+    tokenUrl: null,
+    pairUrl: null,
+    websiteUrl: null,
+    socials: [],
+    warnings: [],
+    errors: [],
+  })),
+}));
+
 vi.mock("@/lib/token-chair-sniffer-explorer", () => ({
   fetchTokenChairExplorerData: vi.fn(async (tokenAddress: string) => ({
     status: "success",
@@ -135,6 +155,7 @@ vi.mock("@/lib/token-chair-sniffer-pair", () => ({
 }));
 
 import { GET } from "./route";
+import { fetchDextoolsTokenChairData } from "@/lib/token-chair-sniffer-dextools";
 import { resetTokenChairApiRateLimitForTests } from "@/lib/token-chair-sniffer-controls";
 
 const TOKEN = getAddress("0xcae394005c9c4c309621c53d53db9ceb701fc8d8");
@@ -309,9 +330,72 @@ describe("Token Chair Sniffer API route", () => {
     expect(body.contract.holders.lp.percent).toBe(24.25);
     expect(body.contract.holders.distribution.top10Percent).toBe(48);
     expect(body.contract.holders.lpDistribution.top1Percent).toBe(24.25);
+    expect(body.dextools.status).toBe("not-configured");
     expect(body.pairContract.containsScannedToken).toBe(true);
     expect(body.pairContract.scannedTokenReserveRaw).toBe("1000000000000000000000");
     expect(body.pairContract.totalSupplyRaw).toBe("3000000000000000000000");
+  });
+
+  it("keeps core scans successful when DEXTools enrichment fails", async () => {
+    vi.mocked(fetchDextoolsTokenChairData).mockResolvedValueOnce({
+      status: "unable-to-verify",
+      sourceLabel: "DEXTools",
+      tokenAddress: TOKEN,
+      pairAddress: PAIR,
+      priceUsd: null,
+      liquidityUsd: null,
+      volume24h: null,
+      dextScore: null,
+      holderCount: null,
+      tokenUrl: null,
+      pairUrl: null,
+      websiteUrl: null,
+      socials: [],
+      warnings: [],
+      errors: ["DEXTools returned HTTP 403."],
+    });
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () =>
+        jsonResponse([
+          {
+            chainId: "pulsechain",
+            dexId: "pulsex",
+            url: `https://dexscreener.com/pulsechain/${PAIR}`,
+            pairAddress: PAIR,
+            baseToken: {
+              address: TOKEN,
+              name: "Chair Token",
+              symbol: "CHAIR",
+            },
+            quoteToken: {
+              address: QUOTE,
+              name: "Wrapped Pulse",
+              symbol: "WPLS",
+            },
+            priceUsd: "0.01",
+            txns: { h24: { buys: 1, sells: 2 } },
+            volume: { h24: 99 },
+            liquidity: { usd: 10000 },
+            fdv: 100000,
+            marketCap: 90000,
+            pairCreatedAt: 1700000000000,
+          },
+        ]),
+      ),
+    );
+
+    const response = await GET(
+      new Request(
+        `https://pulserevoke.test/api/token-chair-sniffer?token=${TOKEN}`,
+      ),
+    );
+    const body = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(body.status).toBe("success");
+    expect(body.dextools.status).toBe("unable-to-verify");
+    expect(body.market.tokenSymbol).toBe("CHAIR");
   });
 
   it("returns malformed-response as an upstream failure HTTP status", async () => {

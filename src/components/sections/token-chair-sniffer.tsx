@@ -12,6 +12,7 @@ import {
   TOKEN_CHAIR_DISCLAIMER,
   buildConcentrationDetailRows,
   buildContractSniffCards,
+  buildDextoolsDetailRows,
   buildEventHistoryDetailRows,
   buildLpControlSummary,
   buildPairCandidateRows,
@@ -30,6 +31,8 @@ import {
   type TokenChairApiResponse,
   type TokenChairConcentrationDetailRow,
   type TokenChairContractData,
+  type TokenChairDextoolsData,
+  type TokenChairDextoolsDetailRow,
   type TokenChairEventHistoryDetailRow,
   type TokenChairHolderDistributionRow,
   type TokenChairLpControlSummary,
@@ -831,6 +834,9 @@ function SignalDetailsPanel({
   requestError: string | null;
 }) {
   const details = buildSignalDetails(response, state, requestError);
+  const dextoolsRows = buildDextoolsDetailRows({
+    dextools: response?.dextools ?? null,
+  });
 
   return (
     <section className="rounded-lg border border-pulse-border/75 bg-[#070b10] p-4">
@@ -877,6 +883,14 @@ function SignalDetailsPanel({
           </div>
           <div>
             <p className="uppercase tracking-[0.14em] text-pulse-muted/75">
+              DEXTools
+            </p>
+            <p className="mt-1 font-semibold text-pulse-text">
+              {formatDextoolsStatus(response?.dextools ?? null, state)}
+            </p>
+          </div>
+          <div>
+            <p className="uppercase tracking-[0.14em] text-pulse-muted/75">
               Mode
             </p>
             <p className="mt-1 font-semibold text-pulse-text">
@@ -885,6 +899,12 @@ function SignalDetailsPanel({
           </div>
         </div>
       </div>
+      {response?.dextools ? (
+        <DextoolsSignalCard
+          dextools={response.dextools}
+          rows={dextoolsRows}
+        />
+      ) : null}
       {response?.verdict.reasons.length ? (
         <div className="mt-3 rounded-lg border border-pulse-border/60 bg-[#0a1016] p-3">
           <p className="text-xs font-semibold uppercase tracking-[0.14em] text-pulse-muted/75">
@@ -913,6 +933,96 @@ function SignalDetailsPanel({
         </div>
       ) : null}
     </section>
+  );
+}
+
+function DextoolsSignalCard({
+  dextools,
+  rows,
+}: {
+  dextools: TokenChairDextoolsData;
+  rows: readonly TokenChairDextoolsDetailRow[];
+}) {
+  const status = formatDextoolsStatus(dextools, "settled");
+  const content = (
+    <>
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div className="min-w-0">
+          <p className="text-sm font-semibold text-pulse-text">
+            DEXTools Context
+          </p>
+          <p className="mt-2 text-xs leading-5 text-pulse-muted">
+            External market and score context. DEXTScore is not a safety verdict,
+            certification, or Token Chair audit result.
+          </p>
+        </div>
+        <span className="rounded-full border border-pulse-border bg-pulse-panel/45 px-2.5 py-1 text-xs font-semibold text-pulse-muted">
+          {status}
+        </span>
+      </div>
+      <div className="mt-3 grid gap-2 md:grid-cols-3">
+        {rows.map((row) => (
+          <DextoolsSignalMetric key={row.label} row={row} />
+        ))}
+      </div>
+      {dextools.pairUrl || dextools.tokenUrl || dextools.websiteUrl || dextools.socials.length > 0 ? (
+        <div className="mt-3 flex flex-wrap gap-2">
+          {dextools.pairUrl ?? dextools.tokenUrl ? (
+            <ExternalPill
+              href={(dextools.pairUrl ?? dextools.tokenUrl)!}
+              label="DEXTools"
+            />
+          ) : null}
+          {dextools.websiteUrl ? (
+            <ExternalPill href={dextools.websiteUrl} label="Website" />
+          ) : null}
+          {dextools.socials.map((social) => (
+            <ExternalPill
+              key={`${social.label}-${social.url}`}
+              href={social.url}
+              label={social.label}
+            />
+          ))}
+        </div>
+      ) : null}
+    </>
+  );
+
+  return (
+    <article className="mt-3 rounded-lg border border-pulse-border/60 bg-[#0a1016] p-3">
+      {content}
+    </article>
+  );
+}
+
+function DextoolsSignalMetric({
+  row,
+}: {
+  row: TokenChairDextoolsDetailRow;
+}) {
+  return (
+    <div className="min-w-0 rounded-lg border border-pulse-border/60 bg-[#070b10] px-3 py-2">
+      <div className="flex items-start justify-between gap-2">
+        <p className="min-w-0 truncate text-xs font-semibold text-pulse-text">
+          {row.label}
+        </p>
+        <SniffValueBadge row={row} />
+      </div>
+      <p className="mt-2 text-xs leading-5 text-pulse-muted">{row.detail}</p>
+    </div>
+  );
+}
+
+function ExternalPill({ href, label }: { href: string; label: string }) {
+  return (
+    <a
+      href={href}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="rounded-full border border-pulse-border/60 bg-[#070b10] px-2.5 py-1 text-xs font-semibold text-pulse-cyan transition hover:border-pulse-green/35 hover:text-pulse-green"
+    >
+      {label}
+    </a>
   );
 }
 
@@ -2077,6 +2187,19 @@ function formatHolderDataStatus(
     return "Rate-limited";
   }
   if (holders.status === "partial") return "Partial";
+  return "Unable to verify";
+}
+
+function formatDextoolsStatus(
+  dextools: TokenChairDextoolsData | null,
+  state: SnifferUiState,
+): string {
+  if (state === "loading") return "Loading";
+  if (!dextools) return "Not checked yet";
+  if (dextools.status === "not-configured") return "Not configured";
+  if (dextools.status === "success") return "Returned";
+  if (dextools.status === "partial") return "Partial";
+  if (dextools.status === "rate-limited") return "Rate-limited";
   return "Unable to verify";
 }
 
