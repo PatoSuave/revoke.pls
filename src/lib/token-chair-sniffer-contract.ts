@@ -215,7 +215,7 @@ const MECHANICS_GETTER_FUNCTIONS = {
   ],
 } as const;
 
-const TOKEN_CHAIR_EVENT_HISTORY_LOOKBACK_BLOCKS = 1_000_000n;
+const TOKEN_CHAIR_EVENT_HISTORY_LOOKBACK_BLOCKS = 250_000n;
 const TOKEN_CHAIR_EVENT_HISTORY_EVENTS = {
   ownershipTransferred: parseAbiItem(
     "event OwnershipTransferred(address indexed previousOwner, address indexed newOwner)",

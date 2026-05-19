@@ -535,9 +535,9 @@ describe("Token Chair Sniffer helpers", () => {
       contract: {
         eventHistory: {
           status: "success",
-          fromBlock: "19000000",
+          fromBlock: "19750000",
           toBlock: "20000000",
-          lookbackBlocks: "1000000",
+          lookbackBlocks: "250000",
           ownershipTransferred: {
             count: 2,
             latestBlockNumber: "19900000",

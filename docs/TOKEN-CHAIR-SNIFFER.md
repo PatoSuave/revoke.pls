@@ -29,6 +29,7 @@ Implemented in this MVP:
 - Bounded multi-page sampled holder-distribution buckets for top 1, top 5, top 10, selected pair balance, and zero/dead-address balances when PulseScan returns enough holder rows
 - LP-token holder-control buckets for the selected pair when PulseScan indexes that pair contract as a token
 - Conservative LP-control interpretation for dominant deployer, owner, wallet, contract, burn/dead, or non-dominant visible LP holders
+- Vercel-oriented scan scheduling that starts holder and selected-pair reads as soon as market pair selection is available, while contract and explorer reads continue in parallel
 - Native selected-pair contract reads for `token0()`, `token1()`, `getReserves()`, and LP `totalSupply()`
 - Address context labels for zero/burn addresses, token contract, selected pair, owner, deployer, proxy admin, proxy implementation, public admin-getter addresses, contracts, and wallets where visible metadata supports it
 - PulseScan links on live contract/source/deployer/holder cards
@@ -98,7 +99,7 @@ Public tax getter reads are shown as raw getter values, for example `Getter retu
 
 Public mechanics getter reads are also state/context signals only. `paused()` returning `false`, for example, does not prove a token cannot be paused later, and max transaction or max wallet getter values are not honeypot or sell-simulation results.
 
-Recent event-history reads are limited to a bounded block window so the scanner stays lightweight on public PulseChain RPCs. A match is shown as visible history context, for example recent ownership transfers, role changes, or pause/unpause events. An empty recent window does not prove those events never happened earlier, and failed log reads are labeled as unable to verify.
+Recent event-history reads are limited to a bounded block window so the scanner stays lightweight on public PulseChain RPCs. The live route uses a smaller recent window than the earliest MVP pass so deployed scans leave more room for selected-pair, holder, and source reads. A match is shown as visible history context, for example recent ownership transfers, role changes, or pause/unpause events. An empty recent window does not prove those events never happened earlier, and failed log reads are labeled as unable to verify.
 
 ## PulseScan Source Checks
 
@@ -157,7 +158,7 @@ The Holder Distribution panel also derives sampled buckets from the returned hol
 - zero/dead-address balance percentage when those addresses appear in the sampled token-holder rows
 - a compact top-holder table with PulseScan links and address classification where available
 
-These buckets are sampled from visible PulseScan holder responses. The route can follow bounded pagination and preserves large PulseScan cursor values as strings when requesting the next page, but it still caps the crawl so the public read-only API remains responsive. The buckets should not be presented as exhaustive distribution proof.
+These buckets are sampled from visible PulseScan holder responses. The route can follow bounded pagination and preserves large PulseScan cursor values as strings when requesting the next page, but it still caps the deployed scan crawl so the public read-only API remains responsive. The buckets should not be presented as exhaustive distribution proof.
 
 The LP concentration card attempts the same read for the selected DEX Screener pair address. Some PulseScan pair contracts are not indexed as token holder endpoints; in that case LP concentration stays `Unable to verify` instead of guessing.
 

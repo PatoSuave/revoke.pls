@@ -377,14 +377,14 @@ describe("Token Chair Sniffer contract reads", () => {
 
     expect(getLogs).toHaveBeenCalledWith(expect.objectContaining({
       eventName: "ownershipTransferred",
-      fromBlock: 19_000_000n,
+      fromBlock: 19_750_000n,
       toBlock: 20_000_000n,
     }));
     expect(result.eventHistory).toMatchObject({
       status: "success",
-      fromBlock: "19000000",
+      fromBlock: "19750000",
       toBlock: "20000000",
-      lookbackBlocks: "1000000",
+      lookbackBlocks: "250000",
       ownershipTransferred: {
         count: 2,
         latestBlockNumber: "19900000",

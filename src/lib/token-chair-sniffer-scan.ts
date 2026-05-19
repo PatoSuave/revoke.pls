@@ -14,6 +14,7 @@ import { fetchTokenChairPairContractData } from "@/lib/token-chair-sniffer-pair"
 import { fetchDexScreenerTokenPairs } from "@/lib/token-chair-sniffer-server";
 
 export const TOKEN_CHAIR_REQUEST_TIMEOUT_MS = 10_000;
+export const TOKEN_CHAIR_SCAN_HOLDER_MAX_PAGES = 2;
 
 export async function fetchTokenChairScan(
   tokenAddress: Address,
@@ -23,29 +24,44 @@ export async function fetchTokenChairScan(
   const timeout = setTimeout(() => controller.abort(), timeoutMs);
 
   try {
-    const [marketResult, contractResult, explorerResult] = await Promise.all([
-      fetchDexScreenerTokenPairs(tokenAddress, {
+    const marketPromise = fetchDexScreenerTokenPairs(tokenAddress, {
+      signal: controller.signal,
+    });
+    const contractPromise = fetchTokenChairContractData(tokenAddress, {
+      signal: controller.signal,
+    });
+    const explorerPromise = fetchTokenChairExplorerData(tokenAddress, {
+      signal: controller.signal,
+    });
+
+    const marketResult = await marketPromise;
+    const selectedPairAddress = marketResult.market?.pairAddress;
+    const holderPromise = fetchTokenChairHolderData(
+      tokenAddress,
+      selectedPairAddress,
+      {
         signal: controller.signal,
-      }),
-      fetchTokenChairContractData(tokenAddress, {
-        signal: controller.signal,
-      }),
-      fetchTokenChairExplorerData(tokenAddress, {
-        signal: controller.signal,
-      }),
+        maxPages: TOKEN_CHAIR_SCAN_HOLDER_MAX_PAGES,
+      },
+    );
+    const pairContractPromise = selectedPairAddress
+      ? fetchTokenChairPairContractData(tokenAddress, selectedPairAddress, {
+          signal: controller.signal,
+        })
+      : Promise.resolve(null);
+
+    const [
+      contractResult,
+      explorerResult,
+      holderResult,
+      pairContractResult,
+    ] = await Promise.all([
+      contractPromise,
+      explorerPromise,
+      holderPromise,
+      pairContractPromise,
     ]);
 
-    const selectedPairAddress = marketResult.market?.pairAddress;
-    const [holderResult, pairContractResult] = await Promise.all([
-      fetchTokenChairHolderData(tokenAddress, selectedPairAddress, {
-        signal: controller.signal,
-      }),
-      selectedPairAddress
-        ? fetchTokenChairPairContractData(tokenAddress, selectedPairAddress, {
-            signal: controller.signal,
-          })
-        : Promise.resolve(null),
-    ]);
     const responseWithMarketContractAndExplorer = withTokenChairExplorerData(
       withTokenChairContractData(marketResult, contractResult),
       explorerResult,
