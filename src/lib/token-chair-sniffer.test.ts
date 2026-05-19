@@ -569,6 +569,25 @@ describe("Token Chair Sniffer helpers", () => {
       burnDeadPercentLabel: "0%",
       sampledRowsLabel: "12 sampled rows",
     });
+    expect(summary?.evidenceRows).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          key: "largest-holder",
+          value: "100%",
+          status: "warning",
+        }),
+        expect.objectContaining({
+          key: "holder-context",
+          value: "Deployer",
+          status: "warning",
+        }),
+        expect.objectContaining({
+          key: "formal-lock",
+          value: "Not verified",
+          status: "unable-to-verify",
+        }),
+      ]),
+    );
     expect(summary?.detail).toContain("deployer address");
     expect(summary?.detail.toLowerCase()).not.toMatch(/\bsafe\b|guaranteed|certified|formal liquidity-lock proof/);
   });
@@ -588,6 +607,23 @@ describe("Token Chair Sniffer helpers", () => {
       holderPercentLabel: "100%",
       burnDeadPercentLabel: "100%",
     });
+    expect(summary?.evidenceRows).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          key: "largest-holder",
+          status: "checked",
+        }),
+        expect.objectContaining({
+          key: "burn-dead-sample",
+          value: "100%",
+          status: "checked",
+        }),
+        expect.objectContaining({
+          key: "formal-lock",
+          status: "unable-to-verify",
+        }),
+      ]),
+    );
     expect(summary?.detail).toContain("not proof of a formal liquidity lock");
   });
 
@@ -608,6 +644,19 @@ describe("Token Chair Sniffer helpers", () => {
       holderPercentLabel: "72%",
       holderSourceLabel: "Pulse Revoke registry",
     });
+    expect(summary?.evidenceRows).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          key: "holder-context",
+          value: "PulseX Router v1",
+          status: "warning",
+        }),
+        expect.objectContaining({
+          key: "formal-lock",
+          value: "Not verified",
+        }),
+      ]),
+    );
     expect(summary?.detail).toContain("known router contract");
     expect(summary?.detail).toContain("not proof of locked liquidity");
     expect(summary?.detail.toLowerCase()).not.toMatch(/\bsafe\b|guaranteed|certified/);
@@ -629,6 +678,19 @@ describe("Token Chair Sniffer helpers", () => {
       holderAddressLabel: "0x5555...5555",
       holderPercentLabel: "12.5%",
     });
+    expect(summary?.evidenceRows).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          key: "largest-holder",
+          status: "checked",
+        }),
+        expect.objectContaining({
+          key: "holder-context",
+          value: "Wallet",
+          status: "checked",
+        }),
+      ]),
+    );
   });
 
   it("keeps unchecked Quick Sniff and Contract Sniff rows explicit", () => {

@@ -409,6 +409,17 @@ export interface TokenChairLpControlSummary extends SniffSignalRow {
   burnDeadPercentLabel: string;
   sampledRowsLabel: string;
   holderSourceLabel: string;
+  evidenceRows: TokenChairLpControlEvidenceRow[];
+}
+
+export type TokenChairLpControlEvidenceKey =
+  | "largest-holder"
+  | "holder-context"
+  | "burn-dead-sample"
+  | "formal-lock";
+
+export interface TokenChairLpControlEvidenceRow extends SniffSignalRow {
+  key: TokenChairLpControlEvidenceKey;
 }
 
 export interface TokenChairEventHistoryDetailRow extends SniffSignalRow {
@@ -1265,8 +1276,17 @@ export function buildLpControlSummary(options: {
     ? `${distribution.sampledHolderCount.toLocaleString("en-US")} sampled rows`
     : "Not returned";
   const holderLabel = classification?.label ?? "Unknown address";
-  const holderAddressLabel = lp.address ? shortenSignalAddress(lp.address) : "Not returned";
+  const holderAddressLabel = lp.address
+    ? shortenSignalAddress(lp.address)
+    : "Not returned";
   const holderSourceLabel = classificationSourceLabel(classification);
+  const evidenceRows = buildLpControlEvidenceRows({
+    classification,
+    distribution,
+    holderLabel,
+    holderPercentLabel,
+    lp,
+  });
   const base = {
     address: lp.address,
     href: classification?.explorerUrl,
@@ -1276,6 +1296,7 @@ export function buildLpControlSummary(options: {
     burnDeadPercentLabel,
     sampledRowsLabel,
     holderSourceLabel,
+    evidenceRows,
   };
 
   if (lp.percent === null) {
@@ -1367,6 +1388,92 @@ export function withTokenChairPairContractData(
     ...withPairContract,
     verdict: getTokenChairVerdict(withPairContract),
   };
+}
+
+function buildLpControlEvidenceRows({
+  classification,
+  distribution,
+  holderLabel,
+  holderPercentLabel,
+  lp,
+}: {
+  classification: TokenChairAddressClassification | null;
+  distribution: TokenChairHolderDistribution | null;
+  holderLabel: string;
+  holderPercentLabel: string;
+  lp: TokenChairHolderData["lp"];
+}): TokenChairLpControlEvidenceRow[] {
+  const dominant = lp.percent !== null && lp.percent >= 50;
+  const burnLike = isBurnLikeClassification(classification);
+  const burnDeadPercent = distribution?.burnDeadPercent ?? null;
+  const holderAddress = lp.address ? shortenSignalAddress(lp.address) : null;
+
+  return [
+    {
+      key: "largest-holder",
+      label: "Largest LP holder",
+      value: lp.percent === null ? "Unable to verify" : holderPercentLabel,
+      status:
+        lp.percent === null
+          ? "unable-to-verify"
+          : dominant && !burnLike
+            ? "warning"
+            : "checked",
+      detail:
+        lp.percent === null
+          ? "PulseScan did not return the largest visible LP-token holder for the selected pair."
+          : holderAddress
+            ? `${holderPercentLabel} of sampled LP tokens appears at ${holderAddress}.`
+            : `${holderPercentLabel} of sampled LP tokens appears at the largest returned holder.`,
+    },
+    {
+      key: "holder-context",
+      label: "Holder context",
+      value: holderLabel,
+      status: lpHolderContextStatus(classification, dominant),
+      detail: classification
+        ? classification.detail
+        : "PulseScan did not return enough holder address context to classify the largest LP holder.",
+    },
+    {
+      key: "burn-dead-sample",
+      label: "Burn/dead sample",
+      value:
+        burnDeadPercent === null
+          ? "Not returned"
+          : formatSignalPercent(burnDeadPercent),
+      status:
+        burnDeadPercent === null
+          ? "unable-to-verify"
+          : burnDeadPercent >= 50 || burnLike
+            ? "checked"
+            : "not-checked",
+      detail:
+        burnDeadPercent === null
+          ? "PulseScan did not return sampled zero/dead LP-token balance context."
+          : burnDeadPercent > 0
+            ? `${formatSignalPercent(burnDeadPercent)} of sampled LP tokens appears at zero/dead addresses. This is burn context only, not formal lock proof.`
+            : "No zero/dead LP-token balance appeared in the sampled holder rows.",
+    },
+    {
+      key: "formal-lock",
+      label: "Formal lock proof",
+      value: "Not verified",
+      status: "unable-to-verify",
+      detail:
+        "Token Chair does not yet read locker contracts, unlock dates, or vesting positions. Treat LP-holder and burn/dead rows as visible context only.",
+    },
+  ];
+}
+
+function lpHolderContextStatus(
+  classification: TokenChairAddressClassification | null,
+  dominant: boolean,
+): SniffRowStatus {
+  if (!classification) return "unable-to-verify";
+  if (isBurnLikeClassification(classification)) return "checked";
+  if (!dominant) return "checked";
+  return "warning";
 }
 
 export function withTokenChairDextoolsData(

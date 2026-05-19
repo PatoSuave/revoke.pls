@@ -175,7 +175,7 @@ When PulseScan does index the selected pair as a token, the Holder Distribution 
 
 This is useful for spotting whether removable liquidity appears concentrated in one wallet, owner, deployer, contract, or burn/dead address. Burn/dead LP-token balances are still context only; they are not proof of a formal liquidity lock.
 
-The LP Token Control panel also summarizes the largest visible LP holder, context source, and sampled burn/dead LP percentage. Dominant owner, deployer, wallet, unknown contract, token-contract, pair-contract, or unknown LP holders are warning context. Dominant known registry protocol contracts, such as routers, bridges, farms, or staking contracts, get distinct known-protocol wording so users can understand what type of contract appears to hold the LP tokens. They still remain warning context unless separate burn/dead or formal lock evidence exists. Dominant zero/dead LP holders and major sampled burn/dead balances are presented as burn/dead context, not as a formal lock certificate.
+The LP Token Control panel also summarizes the largest visible LP holder, context source, sampled burn/dead LP percentage, and an LP evidence checklist. The checklist separates largest-holder concentration, holder classification, burn/dead sample context, and formal-lock status so the UI can show what is visible without overstating what is proved. Dominant owner, deployer, wallet, unknown contract, token-contract, pair-contract, or unknown LP holders are warning context. Dominant known registry protocol contracts, such as routers, bridges, farms, or staking contracts, get distinct known-protocol wording so users can understand what type of contract appears to hold the LP tokens. They still remain warning context unless separate burn/dead or formal lock evidence exists. Dominant zero/dead LP holders and major sampled burn/dead balances are presented as burn/dead context, not as a formal lock certificate.
 
 These are visible holder signals only. They can be affected by explorer indexing, wrapped-token mechanics, staking contracts, bridges, protocol contracts, or holder data that changes after the scan.
 
@@ -294,7 +294,7 @@ Possible remaining scope:
 - expanded proxy detection
 - richer ABI/source analysis with severity tiers
 - richer holder concentration with known-contract tagging
-- richer LP concentration with lock/burn detection
+- richer LP concentration with native locker/unlock-date detection
 
 Later phases:
 

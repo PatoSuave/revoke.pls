@@ -35,6 +35,7 @@ import {
   type TokenChairDextoolsDetailRow,
   type TokenChairEventHistoryDetailRow,
   type TokenChairHolderDistributionRow,
+  type TokenChairLpControlEvidenceRow,
   type TokenChairLpControlSummary,
   type TokenChairMarketData,
   type TokenChairPairCandidateRow,
@@ -1778,6 +1779,7 @@ function LpControlInterpretation({
         <HolderMetric label="Burn/dead LP" value={summary.burnDeadPercentLabel} />
         <HolderMetric label="Sample" value={summary.sampledRowsLabel} />
       </div>
+      <LpEvidenceRows rows={summary.evidenceRows} />
     </>
   );
 
@@ -1798,6 +1800,35 @@ function LpControlInterpretation({
     <article className="mb-3 rounded-lg border border-pulse-border/65 bg-[#0a1016] p-3">
       {content}
     </article>
+  );
+}
+
+function LpEvidenceRows({
+  rows,
+}: {
+  rows: readonly TokenChairLpControlEvidenceRow[];
+}) {
+  if (rows.length === 0) return null;
+
+  return (
+    <div className="mt-3 grid gap-2 md:grid-cols-2">
+      {rows.map((row) => (
+        <div
+          key={row.key}
+          className="min-w-0 rounded-lg border border-pulse-border/60 bg-[#070b10] px-3 py-2"
+        >
+          <div className="flex flex-wrap items-start justify-between gap-2">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-pulse-muted/75">
+              {row.label}
+            </p>
+            <SniffValueBadge row={row} />
+          </div>
+          <p className="mt-2 text-xs leading-5 text-pulse-muted">
+            {row.detail}
+          </p>
+        </div>
+      ))}
+    </div>
   );
 }
 
