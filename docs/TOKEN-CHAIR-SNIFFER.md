@@ -21,7 +21,7 @@ Implemented in this MVP:
 - Server-side DEX Screener token-pairs fetch for `pulsechain`
 - DEX Screener response normalization and main-pair selection by highest visible USD liquidity
 - Read-only PulseChain RPC contract reads for basic token metadata, standard ownership, and common proxy signals
-- Read-only pending owner/admin getter checks, common AccessControl role-function checks, and public buy/sell tax getter checks
+- Read-only pending owner/admin getter checks, common public admin/operator/fee-wallet getter checks, common AccessControl role-function checks, and public buy/sell tax getter checks
 - Read-only public mechanics getter checks for pause state, trading state, trading limits, max transaction, and max wallet where common getter names are present
 - PulseScan/Blockscout verified-source metadata for source status, ABI availability, deployer, and creation transaction
 - Lightweight ABI/source keyword signals for mint, pause, cooldown, blacklist, whitelist, and suspicious-function rows
@@ -30,9 +30,10 @@ Implemented in this MVP:
 - LP-token holder-control buckets for the selected pair when PulseScan indexes that pair contract as a token
 - Conservative LP-control interpretation for dominant deployer, owner, wallet, contract, burn/dead, or non-dominant visible LP holders
 - Native selected-pair contract reads for `token0()`, `token1()`, `getReserves()`, and LP `totalSupply()`
-- Address context labels for zero/burn addresses, token contract, selected pair, owner, deployer, contracts, and wallets where visible metadata supports it
+- Address context labels for zero/burn addresses, token contract, selected pair, owner, deployer, proxy admin, proxy implementation, public admin-getter addresses, contracts, and wallets where visible metadata supports it
 - PulseScan links on live contract/source/deployer/holder cards
 - Compact Signal Details panel explaining the current verdict inputs
+- Why This Verdict breakdown with the visible signals that drove the current verdict
 - Signal Details source-status chips for market, explorer metadata, holder data, and read-only mode, including clearer rate-limit states
 - Source Signal Details panel listing exact matched ABI/source terms when lightweight source rows are flagged
 - Conservative Chair Verdict mapping
@@ -81,7 +82,9 @@ The API also performs PulseChain RPC reads without connecting a wallet:
 - ERC-20-style `name()`, `symbol()`, and `decimals()` view reads
 - standard `owner()` with `getOwner()` fallback
 - common pending owner/admin getters: `pendingOwner()`, `pendingAdmin()`, and `newOwner()`
+- common public control-address getters such as `admin()`, `governance()`, `operator()`, `feeManager()`, `taxWallet()`, `marketingWallet()`, `treasury()`, and router getters
 - EIP-1967 implementation/admin/beacon storage-slot reads
+- public implementation/admin proxy getter reads where exposed
 - EIP-1167 minimal-proxy bytecode pattern detection
 - common OpenZeppelin-style role getters: `DEFAULT_ADMIN_ROLE()` and `getRoleAdmin(bytes32)`
 - common public buy/sell tax or fee getters such as `buyTax()`, `buyFee()`, `sellTax()`, and `sellFee()`
@@ -123,11 +126,17 @@ If verified ABI or source is available, Token Chair Sniffer runs a lightweight k
 - trading cooldown
 - blacklist
 - whitelist
+- trading gates
+- fee controls
+- rescue functions
+- ownership controls
 - suspicious functions
 
 Rows with matches are tiered. Lower-severity findings such as mint, pause, cooldown, or whitelist terms say `Source signal found`. Higher-severity findings such as blacklist/bot controls or suspicious admin/trading functions say `High source signal`. Rows without matches say `Not flagged by source scan`, which means only that the lightweight keyword pass did not match obvious terms in returned ABI/source. It is not a full audit and does not prove the behavior is absent.
 
 The Source Signal Details panel expands these rows with the exact matched terms returned by the lightweight ABI/source pass. If PulseScan does not return verified source or ABI data, those detail rows stay `Unable to verify`. The panel is explanatory only; it does not add bytecode analysis, tax simulation, or honeypot execution.
+
+The Why This Verdict breakdown mirrors the current verdict notes as structured rows. Each row has a severity, label, and detail so a user can see whether the result came from market data, pair-contract checks, owner/admin/proxy context, source/ABI signals, event history, holder concentration, or LP concentration. These are still visible-signal explanations, not audit findings.
 
 ## PulseScan Holder Concentration
 
@@ -174,6 +183,9 @@ Holder and LP cards classify the returned top address when possible:
 - selected DEX pair
 - standard owner
 - deployer
+- proxy admin
+- proxy implementation
+- public admin getter address
 - PulseScan contract
 - wallet
 - unknown address

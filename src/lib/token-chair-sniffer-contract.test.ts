@@ -17,6 +17,7 @@ const TOKEN = getAddress("0xcae394005c9c4c309621c53d53db9ceb701fc8d8");
 const OWNER = getAddress("0x1111111111111111111111111111111111111111");
 const IMPLEMENTATION = getAddress("0x2222222222222222222222222222222222222222");
 const PENDING_OWNER = getAddress("0x3333333333333333333333333333333333333333");
+const FEE_MANAGER = getAddress("0x4444444444444444444444444444444444444444");
 const PAIR = getAddress("0x165C3410fC91EF562C50559f7d2289fEbed552d9");
 const QUOTE = getAddress("0xA1077a294dDE1B09bB078844df40758a5D0f9a27");
 const ZERO_SLOT = `0x${"0".repeat(64)}` as Hex;
@@ -219,6 +220,56 @@ describe("Token Chair Sniffer contract reads", () => {
         .join(" ")
         .toLowerCase(),
     ).not.toMatch(/\bsafe\b|guaranteed|certified/);
+  });
+
+  it("surfaces public admin getters and public proxy implementation getters as visible control context", async () => {
+    const result = await fetchTokenChairContractData(TOKEN, {
+      reader: buildReader({
+        readContract: vi.fn(async ({ functionName }) => {
+          if (functionName === "name") return "Control Chair";
+          if (functionName === "symbol") return "CCHR";
+          if (functionName === "decimals") return 18;
+          if (functionName === "owner") return OWNER;
+          if (functionName === "feeManager") return FEE_MANAGER;
+          if (functionName === "implementation") return IMPLEMENTATION;
+          throw new Error(`Unexpected read ${functionName}`);
+        }),
+      }),
+    });
+    const quickRows = buildQuickSniffRows({ contract: result });
+    const cards = buildContractSniffCards({ contract: result });
+    const response = withTokenChairContractData(
+      normalizeDexScreenerTokenPairsResponse([dexPair()], TOKEN),
+      result,
+    );
+
+    expect(result.adminGetters).toEqual([
+      {
+        functionName: "feeManager",
+        address: FEE_MANAGER,
+        category: "fee-wallet",
+      },
+    ]);
+    expect(result.proxy).toMatchObject({
+      detected: true,
+      publicImplementationAddress: IMPLEMENTATION,
+      detectedKinds: ["implementation"],
+    });
+    expect(quickRows.find((row) => row.label === "Hidden owner")).toMatchObject({
+      value: "Admin getter found",
+      status: "warning",
+    });
+    expect(cards.find((card) => card.label === "Admin getters")).toMatchObject({
+      value: "1 visible getter",
+      status: "warning",
+    });
+    expect(cards.find((card) => card.label === "Proxy details")).toMatchObject({
+      value: "implementation",
+      status: "warning",
+    });
+    expect(response.verdict.reasons.map((reason) => reason.label)).toEqual(
+      expect.arrayContaining(["Admin getters", "Proxy signal"]),
+    );
   });
 
   it("keeps tax rows pending when common public tax getters are absent", async () => {

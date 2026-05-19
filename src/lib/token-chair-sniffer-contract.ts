@@ -11,6 +11,7 @@ import {
 import { PULSECHAIN_CHAIN_ID, getChainConfig, pulsechain } from "@/lib/chains";
 import type {
   TokenChairAccessControlSignal,
+  TokenChairAdminGetterSignal,
   TokenChairContractData,
   TokenChairContractReadStatus,
   TokenChairEventCounter,
@@ -138,6 +139,31 @@ const PENDING_OWNER_FUNCTIONS = [
   "pendingOwner",
   "pendingAdmin",
   "newOwner",
+] as const;
+
+const ADMIN_GETTER_FUNCTIONS: ReadonlyArray<{
+  functionName: string;
+  category: TokenChairAdminGetterSignal["category"];
+}> = [
+  { functionName: "admin", category: "admin" },
+  { functionName: "getAdmin", category: "admin" },
+  { functionName: "proxyAdmin", category: "admin" },
+  { functionName: "governance", category: "admin" },
+  { functionName: "controller", category: "operator" },
+  { functionName: "operator", category: "operator" },
+  { functionName: "manager", category: "operator" },
+  { functionName: "feeManager", category: "fee-wallet" },
+  { functionName: "taxWallet", category: "fee-wallet" },
+  { functionName: "marketingWallet", category: "fee-wallet" },
+  { functionName: "treasury", category: "treasury" },
+  { functionName: "treasuryWallet", category: "treasury" },
+  { functionName: "uniswapV2Router", category: "router" },
+  { functionName: "router", category: "router" },
+];
+
+const IMPLEMENTATION_GETTER_FUNCTIONS = [
+  "implementation",
+  "getImplementation",
 ] as const;
 
 const TAX_GETTER_FUNCTIONS = {
@@ -276,6 +302,7 @@ export async function fetchTokenChairContractData(
     decimalsRead,
     ownerRead,
     pendingOwner,
+    adminGetters,
     proxy,
     accessControl,
     taxes,
@@ -294,6 +321,7 @@ export async function fetchTokenChairContractData(
       readDecimals(reader, tokenAddress, options.signal),
       readOwner(reader, tokenAddress, options.signal),
       readPendingOwner(reader, tokenAddress, options.signal),
+      readAdminGetterSignals(reader, tokenAddress, options.signal),
       readProxySignals(reader, tokenAddress, code, options.signal),
       readAccessControlSignal(reader, tokenAddress, options.signal),
       readTaxSignals(reader, tokenAddress, options.signal),
@@ -309,6 +337,10 @@ export async function fetchTokenChairContractData(
     pendingOwner.address
       ? `A ${pendingOwner.functionName ?? "pending owner/admin"} getter returned ${pendingOwner.address}.`
       : null,
+    ...adminGetters.map(
+      (getter) =>
+        `Public ${getter.functionName}() returned ${getter.address} as a visible ${getter.category} address.`,
+    ),
     proxy.detected === null
       ? "Common proxy checks were incomplete for this contract."
       : null,
@@ -335,6 +367,7 @@ export async function fetchTokenChairContractData(
     ownershipRenounced: ownerRead.ownershipRenounced,
     proxy,
     pendingOwner,
+    adminGetters,
     accessControl,
     taxes,
     mechanics,
@@ -487,13 +520,48 @@ async function readPendingOwner(
   return { address: null, functionName: null };
 }
 
+async function readAdminGetterSignals(
+  reader: TokenChairContractReader,
+  address: Address,
+  signal: AbortSignal | undefined,
+): Promise<TokenChairAdminGetterSignal[]> {
+  const reads = await Promise.all(
+    ADMIN_GETTER_FUNCTIONS.map(async (definition) => {
+      const result = await readWithAbort(
+        () =>
+          reader.readContract({
+            address,
+            abi: addressGetterAbi(definition.functionName),
+            functionName: definition.functionName,
+          }),
+        signal,
+      );
+      const getterAddress = normalizeAddress(result.value);
+      if (!getterAddress || getterAddress === ZERO_ADDRESS) return null;
+      return {
+        functionName: definition.functionName,
+        address: getterAddress,
+        category: definition.category,
+      } satisfies TokenChairAdminGetterSignal;
+    }),
+  );
+
+  return dedupeAdminGetters(reads.filter(Boolean) as TokenChairAdminGetterSignal[]);
+}
+
 async function readProxySignals(
   reader: TokenChairContractReader,
   address: Address,
   code: Hex,
   signal: AbortSignal | undefined,
 ): Promise<TokenChairProxySignal> {
-  const [implementationRead, adminRead, beaconRead] = await Promise.all([
+  const [
+    implementationRead,
+    adminRead,
+    beaconRead,
+    publicImplementationRead,
+    publicAdminRead,
+  ] = await Promise.all([
     readWithAbort(
       () =>
         reader.getStorageAt({
@@ -518,29 +586,58 @@ async function readProxySignals(
         }),
       signal,
     ),
+    readAddressGetterFirstMatch(
+      reader,
+      address,
+      IMPLEMENTATION_GETTER_FUNCTIONS,
+      signal,
+    ),
+    readAddressGetterFirstMatch(reader, address, ["admin", "proxyAdmin"], signal),
   ]);
 
   const implementationAddress = addressFromStorageSlot(implementationRead.value);
   const adminAddress = addressFromStorageSlot(adminRead.value);
   const beaconAddress = addressFromStorageSlot(beaconRead.value);
+  const publicImplementationAddress = publicImplementationRead.value;
+  const publicAdminAddress = publicAdminRead.value;
   const minimalProxyTarget = extractMinimalProxyTarget(code);
+  const detectedKinds = [
+    implementationAddress || publicImplementationAddress ? "implementation" : null,
+    adminAddress || (publicAdminAddress && publicImplementationAddress)
+      ? "admin"
+      : null,
+    beaconAddress ? "beacon" : null,
+    minimalProxyTarget ? "minimal-proxy" : null,
+  ].filter((kind): kind is string => Boolean(kind));
   const checks = [
     implementationAddress
       ? `EIP-1967 implementation slot points to ${implementationAddress}.`
       : null,
     adminAddress ? `EIP-1967 admin slot points to ${adminAddress}.` : null,
     beaconAddress ? `EIP-1967 beacon slot points to ${beaconAddress}.` : null,
+    publicImplementationAddress
+      ? `Public implementation getter points to ${publicImplementationAddress}.`
+      : null,
+    publicAdminAddress
+      ? `Public admin getter points to ${publicAdminAddress}.`
+      : null,
     minimalProxyTarget
       ? `EIP-1167 minimal proxy bytecode points to ${minimalProxyTarget}.`
       : null,
   ].filter((check): check is string => Boolean(check));
   const detected = Boolean(
     implementationAddress ||
+      publicImplementationAddress ||
+      adminAddress ||
       beaconAddress ||
       minimalProxyTarget,
   );
   const storageReadsComplete =
-    implementationRead.ok && adminRead.ok && beaconRead.ok;
+    implementationRead.ok &&
+    adminRead.ok &&
+    beaconRead.ok &&
+    publicImplementationRead.ok &&
+    publicAdminRead.ok;
 
   return {
     detected: detected ? true : storageReadsComplete ? false : null,
@@ -548,6 +645,9 @@ async function readProxySignals(
     adminAddress,
     beaconAddress,
     minimalProxyTarget,
+    publicImplementationAddress,
+    publicAdminAddress,
+    detectedKinds,
     checks,
   };
 }
@@ -850,6 +950,54 @@ async function readHex32Function(
   };
 }
 
+async function readAddressGetterFirstMatch(
+  reader: TokenChairContractReader,
+  address: Address,
+  functionNames: readonly string[],
+  signal: AbortSignal | undefined,
+): Promise<ReadAttempt<Address>> {
+  let timedOut = false;
+
+  for (const functionName of functionNames) {
+    const result = await readWithAbort(
+      () =>
+        reader.readContract({
+          address,
+          abi: addressGetterAbi(functionName),
+          functionName,
+        }),
+      signal,
+    );
+    const getterAddress = normalizeAddress(result.value);
+    if (result.ok && getterAddress && getterAddress !== ZERO_ADDRESS) {
+      return { ok: true, value: getterAddress, error: null };
+    }
+    timedOut = timedOut || result.error === "PulseChain contract read timed out.";
+  }
+
+  return {
+    ok: !timedOut,
+    value: null,
+    error: timedOut ? "PulseChain contract read timed out." : null,
+  };
+}
+
+function dedupeAdminGetters(
+  getters: TokenChairAdminGetterSignal[],
+): TokenChairAdminGetterSignal[] {
+  const seen = new Set<string>();
+  const deduped: TokenChairAdminGetterSignal[] = [];
+
+  for (const getter of getters) {
+    const key = `${getter.functionName}:${getter.address.toLowerCase()}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    deduped.push(getter);
+  }
+
+  return deduped;
+}
+
 async function readWithAbort<T>(
   task: () => Promise<T>,
   signal: AbortSignal | undefined,
@@ -909,9 +1057,13 @@ function createUnableContractData(
       adminAddress: null,
       beaconAddress: null,
       minimalProxyTarget: null,
+      publicImplementationAddress: null,
+      publicAdminAddress: null,
+      detectedKinds: [],
       checks: [],
     },
     pendingOwner: { address: null, functionName: null },
+    adminGetters: [],
     accessControl: {
       detected: null,
       defaultAdminRole: null,

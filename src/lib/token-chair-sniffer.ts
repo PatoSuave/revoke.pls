@@ -37,6 +37,13 @@ export interface TokenChairVerdict {
     | "Chair Verdict: Nose Blocked, Could Not Verify";
   tone: "success" | "warning" | "danger" | "neutral";
   notes: string[];
+  reasons: TokenChairVerdictReason[];
+}
+
+export interface TokenChairVerdictReason {
+  severity: "info" | "warning" | "high";
+  label: string;
+  detail: string;
 }
 
 export interface TokenChairTxnWindow {
@@ -93,6 +100,10 @@ export type TokenChairSourceSignalKey =
   | "trading-cooldown"
   | "blacklist"
   | "whitelist"
+  | "trading-gates"
+  | "fee-controls"
+  | "rescue-functions"
+  | "ownership-controls"
   | "suspicious-functions";
 
 export type TokenChairSourceSignalSeverity = "warning" | "high";
@@ -174,7 +185,23 @@ export interface TokenChairProxySignal {
   adminAddress: Address | null;
   beaconAddress: Address | null;
   minimalProxyTarget: Address | null;
+  publicImplementationAddress?: Address | null;
+  publicAdminAddress?: Address | null;
+  detectedKinds?: string[];
   checks: string[];
+}
+
+export type TokenChairAdminGetterCategory =
+  | "admin"
+  | "operator"
+  | "fee-wallet"
+  | "treasury"
+  | "router";
+
+export interface TokenChairAdminGetterSignal {
+  functionName: string;
+  address: Address;
+  category: TokenChairAdminGetterCategory;
 }
 
 export interface TokenChairPendingOwnerSignal {
@@ -270,6 +297,7 @@ export interface TokenChairContractData {
   ownershipRenounced: boolean | null;
   proxy: TokenChairProxySignal;
   pendingOwner?: TokenChairPendingOwnerSignal;
+  adminGetters?: TokenChairAdminGetterSignal[];
   accessControl?: TokenChairAccessControlSignal;
   taxes?: TokenChairTaxSignals;
   mechanics?: TokenChairMechanicsSignals;
@@ -376,6 +404,9 @@ export type TokenChairAddressKind =
   | "selected-pair"
   | "owner"
   | "deployer"
+  | "proxy-admin"
+  | "proxy-implementation"
+  | "admin-getter"
   | "contract"
   | "wallet"
   | "unknown";
@@ -385,6 +416,9 @@ export interface TokenChairAddressClassificationContext {
   pairAddress?: Address | string | null;
   ownerAddress?: Address | null;
   deployerAddress?: Address | null;
+  proxyAdminAddress?: Address | null;
+  proxyImplementationAddress?: Address | null;
+  adminGetterAddresses?: readonly Address[];
   isContract?: boolean | null;
 }
 
@@ -409,6 +443,7 @@ interface NormalizePairResult {
 
 interface VisibleMarketWarning {
   severity: "warning" | "high";
+  label: string;
   message: string;
 }
 
@@ -431,11 +466,17 @@ const QUICK_SNIFF_DETAILS: Record<string, string> = {
   "Trading cooldown": "Needs source, ABI, or bytecode review.",
   Blacklist: "Needs source, ABI, or bytecode review.",
   Whitelist: "Needs source, ABI, or bytecode review.",
+  "Trading gates": "Needs source, ABI, or bytecode review.",
+  "Fee controls": "Needs source, ABI, or bytecode review.",
+  "Rescue functions": "Needs source, ABI, or bytecode review.",
+  "Ownership controls": "Needs source, ABI, or bytecode review.",
 };
 
 const CONTRACT_SNIFF_DETAILS: Record<string, string> = {
   "Source verified": "Reads PulseScan source and ABI metadata when available.",
   Owner: "Reads standard owner() or getOwner() when available.",
+  "Admin getters": "Reads common public admin, operator, treasury, router, and fee-wallet getters when available.",
+  "Proxy details": "Checks common proxy storage slots, public implementation/admin getters, and minimal-proxy bytecode.",
   Deployer: "Reads PulseScan creation metadata when available.",
   "Top holder concentration": "Reads PulseScan token holder data when available.",
   "LP concentration": "Reads PulseScan holder data for the selected pair when available.",
@@ -551,6 +592,34 @@ export function classifyTokenChairAddress(
       kind: "deployer",
       label: "Deployer",
       detail: "This address matches the deployer returned by PulseScan metadata.",
+    };
+  }
+
+  if (addressesMatch(normalized, context.proxyAdminAddress)) {
+    return {
+      ...base,
+      kind: "proxy-admin",
+      label: "Proxy admin",
+      detail: "This address matches a visible proxy admin signal.",
+    };
+  }
+
+  if (addressesMatch(normalized, context.proxyImplementationAddress)) {
+    return {
+      ...base,
+      kind: "proxy-implementation",
+      label: "Proxy implementation",
+      detail: "This address matches a visible proxy implementation signal.",
+    };
+  }
+
+  if (context.adminGetterAddresses?.some((item) => addressesMatch(normalized, item))) {
+    return {
+      ...base,
+      kind: "admin-getter",
+      label: "Admin getter address",
+      detail:
+        "This address was returned by a public admin/operator/fee-wallet getter.",
     };
   }
 
@@ -715,6 +784,14 @@ export function getTokenChairVerdict({
       notes: [
         "The scanner could not read enough visible market data to form a market-only verdict.",
       ],
+      reasons: [
+        {
+          severity: "info",
+          label: "Market data unavailable",
+          detail:
+            "The scanner could not read enough visible market data to form a market-only verdict.",
+        },
+      ],
     };
   }
 
@@ -730,6 +807,7 @@ export function getTokenChairVerdict({
       displayLabel: "Chair Verdict: This Chair Is on Fire",
       tone: "danger",
       notes: visibleWarnings.map((warning) => warning.message),
+      reasons: visibleWarnings.map(verdictReasonFromVisibleWarning),
     };
   }
 
@@ -740,6 +818,7 @@ export function getTokenChairVerdict({
       displayLabel: "Chair Verdict: Something Smells Funny",
       tone: "warning",
       notes: visibleWarnings.map((warning) => warning.message),
+      reasons: visibleWarnings.map(verdictReasonFromVisibleWarning),
     };
   }
 
@@ -750,6 +829,14 @@ export function getTokenChairVerdict({
     tone: "neutral",
     notes: [
       "No major DEX Screener market warnings were found, but hidden-owner, bytecode, and honeypot checks are still not live yet.",
+    ],
+    reasons: [
+      {
+        severity: "info",
+        label: "Read-only limits",
+        detail:
+          "No major DEX Screener market warnings were found, but hidden-owner, bytecode, and honeypot checks are still not live yet.",
+      },
     ],
   };
 }
@@ -787,6 +874,10 @@ export function buildQuickSniffRows(options: {
       return buildProxyQuickRow(row, options.contract ?? null);
     }
 
+    if (row.label === "Hidden owner") {
+      return buildHiddenOwnerQuickRow(row, options.contract ?? null);
+    }
+
     const mechanicsRow = buildMechanicsQuickRow(row, options.contract ?? null);
     const sourceRow = buildSourceSignalQuickRow(row, options.contract ?? null);
     if (mechanicsRow?.status === "warning") return mechanicsRow;
@@ -796,6 +887,46 @@ export function buildQuickSniffRows(options: {
 
     return row;
   });
+}
+
+function buildHiddenOwnerQuickRow(
+  row: SniffSignalRow,
+  contract: TokenChairContractData | null,
+): SniffSignalRow {
+  if (!contract) return row;
+
+  const getters = contract.adminGetters ?? [];
+  if (getters.length > 0) {
+    return {
+      ...row,
+      value: "Admin getter found",
+      status: "warning",
+      detail:
+        `Visible public admin/operator/fee-wallet getters returned ${getters.map((getter) => getter.functionName).join(", ")}. This is not hidden-owner proof, but it is control context to review.`,
+    };
+  }
+
+  if (contract.accessControl?.detected === true) {
+    return {
+      ...row,
+      value: "Role signal found",
+      status: "warning",
+      detail:
+        "Common AccessControl role functions responded. Role-based controls may exist even when standard ownership appears renounced.",
+    };
+  }
+
+  return row;
+}
+
+function verdictReasonFromVisibleWarning(
+  warning: VisibleMarketWarning,
+): TokenChairVerdictReason {
+  return {
+    severity: warning.severity,
+    label: warning.label,
+    detail: warning.message,
+  };
 }
 
 export function buildContractSniffCards(options: {
@@ -821,6 +952,14 @@ export function buildContractSniffCards(options: {
 
     if (card.label === "Owner") {
       return buildOwnerContractCard(card, options.contract ?? null);
+    }
+
+    if (card.label === "Admin getters") {
+      return buildAdminGettersContractCard(card, options.contract ?? null);
+    }
+
+    if (card.label === "Proxy details") {
+      return buildProxyDetailsContractCard(card, options.contract ?? null);
     }
 
     if (card.label === "Deployer") {
@@ -1296,6 +1435,7 @@ function getVisibleMarketWarnings(
   if (market.priceUsd === null) {
     warnings.push({
       severity: "warning",
+      label: "Missing price",
       message: "DEX Screener did not return a USD price for the selected pair.",
     });
   }
@@ -1303,21 +1443,25 @@ function getVisibleMarketWarnings(
   if (market.liquidityUsd === null) {
     warnings.push({
       severity: "warning",
+      label: "Missing liquidity",
       message: "DEX Screener did not return visible liquidity for the selected pair.",
     });
   } else if (market.liquidityUsd <= 0) {
     warnings.push({
       severity: "high",
+      label: "No visible liquidity",
       message: "The selected pair shows no visible USD liquidity.",
     });
   } else if (market.liquidityUsd < 1_000) {
     warnings.push({
       severity: "high",
+      label: "Very low liquidity",
       message: "The selected pair has very low visible liquidity.",
     });
   } else if (market.liquidityUsd < 10_000) {
     warnings.push({
       severity: "warning",
+      label: "Low liquidity",
       message: "The selected pair has low visible liquidity.",
     });
   }
@@ -1325,6 +1469,7 @@ function getVisibleMarketWarnings(
   if (market.pairAgeMs !== null && market.pairAgeMs < DAY_MS) {
     warnings.push({
       severity: "warning",
+      label: "New pair",
       message: "The selected pair appears to be less than 24 hours old.",
     });
   }
@@ -1332,6 +1477,7 @@ function getVisibleMarketWarnings(
   if (market.txns24h && market.txns24h.total === 0) {
     warnings.push({
       severity: "warning",
+      label: "No recent transactions",
       message: "DEX Screener shows no 24h transactions for the selected pair.",
     });
   }
@@ -1348,6 +1494,7 @@ function getVisiblePairContractWarnings(
   if (pairContract.status === "unable-to-verify") {
     warnings.push({
       severity: "warning",
+      label: "Pair check incomplete",
       message:
         "Read-only selected-pair contract checks could not be completed.",
     });
@@ -1356,12 +1503,14 @@ function getVisiblePairContractWarnings(
   if (pairContract.containsScannedToken === false) {
     warnings.push({
       severity: "high",
+      label: "Pair token mismatch",
       message:
         "The selected pair contract did not report the scanned token in token0/token1.",
     });
   } else if (pairContract.containsScannedToken === null) {
     warnings.push({
       severity: "warning",
+      label: "Pair token check incomplete",
       message:
         "The selected pair contract token0/token1 values could not be fully verified.",
     });
@@ -1373,6 +1522,7 @@ function getVisiblePairContractWarnings(
   ) {
     warnings.push({
       severity: "warning",
+      label: "Zero reserve",
       message:
         "The selected pair contract returned a zero raw reserve on one side.",
     });
@@ -1391,6 +1541,7 @@ function getVisibleContractWarnings(
   if (contract.status === "unable-to-verify") {
     warnings.push({
       severity: "warning",
+      label: "Contract check incomplete",
       message: "Read-only PulseChain contract checks could not be completed.",
     });
   }
@@ -1398,6 +1549,7 @@ function getVisibleContractWarnings(
   if (contract.ownershipRenounced === false && contract.ownerAddress) {
     warnings.push({
       severity: "warning",
+      label: "Owner present",
       message:
         "A standard owner function returned a non-zero owner address; owner controls may remain.",
     });
@@ -1406,12 +1558,14 @@ function getVisibleContractWarnings(
   if (contract.proxy.detected === true) {
     warnings.push({
       severity: "warning",
+      label: "Proxy signal",
       message:
         "A common proxy signal was found; implementation behavior can depend on proxy administration.",
     });
   } else if (contract.proxy.detected === null) {
     warnings.push({
       severity: "warning",
+      label: "Proxy check incomplete",
       message:
         "Common proxy checks were incomplete, so proxy status could not be fully verified.",
     });
@@ -1420,20 +1574,35 @@ function getVisibleContractWarnings(
   if (contract.pendingOwner?.address) {
     warnings.push({
       severity: "warning",
+      label: "Pending owner/admin",
       message:
         "A pending owner/admin getter returned an address; ownership or admin controls may be in transition.",
+    });
+  }
+
+  if (contract.adminGetters && contract.adminGetters.length > 0) {
+    const labels = contract.adminGetters
+      .map((getter) => `${getter.functionName}()`)
+      .join(", ");
+    warnings.push({
+      severity: "warning",
+      label: "Admin getters",
+      message:
+        `Public admin/operator/fee-wallet getters returned visible addresses: ${labels}. Review who controls those addresses before interacting.`,
     });
   }
 
   if (contract.accessControl?.detected === true) {
     warnings.push({
       severity: "warning",
+      label: "AccessControl",
       message:
         "Common AccessControl role functions responded; role-based admin controls may exist.",
     });
   } else if (contract.accessControl?.detected === null) {
     warnings.push({
       severity: "warning",
+      label: "AccessControl incomplete",
       message:
         "Common AccessControl checks were incomplete, so role-based controls could not be fully verified.",
     });
@@ -1447,12 +1616,14 @@ function getVisibleContractWarnings(
     if (signal?.status === "found" && isNonZeroRawNumber(signal.valueRaw)) {
       warnings.push({
         severity: "warning",
+        label: `${kind} tax getter`,
         message:
           `A public ${kind} tax/fee getter returned a non-zero value; this is not a trade simulation.`,
       });
     } else if (signal?.status === "unable-to-verify") {
       warnings.push({
         severity: "warning",
+        label: `${kind} tax check incomplete`,
         message:
           `Common ${kind} tax/fee getter checks could not be completed.`,
       });
@@ -1460,23 +1631,25 @@ function getVisibleContractWarnings(
   }
 
   for (const warning of getMechanicsWarnings(contract.mechanics)) {
-    warnings.push({ severity: "warning", message: warning });
+    warnings.push({ severity: "warning", label: "Trading mechanics", message: warning });
   }
 
   for (const warning of contract.eventHistory?.warnings ?? []) {
-    warnings.push({ severity: "warning", message: warning });
+    warnings.push({ severity: "warning", label: "Recent events", message: warning });
   }
 
   const explorer = contract.explorer;
   if (explorer?.sourceVerified === false) {
     warnings.push({
       severity: "warning",
+      label: "Source not verified",
       message:
         "PulseScan did not return verified source for this contract, limiting source-based checks.",
     });
   } else if (explorer?.status === "unable-to-verify") {
     warnings.push({
       severity: "warning",
+      label: "Source unavailable",
       message:
         "PulseScan source metadata could not be loaded, limiting source-based checks.",
     });
@@ -1486,6 +1659,7 @@ function getVisibleContractWarnings(
     if (signal.found === true) {
       warnings.push({
         severity: signal.severity,
+        label: signal.label,
         message: `${signal.label} ${signal.severity === "high" ? "higher-severity" : "warning"} source signal found. Review verified source before interacting.`,
       });
     }
@@ -1504,6 +1678,7 @@ function getVisibleContractWarnings(
   ) {
     warnings.push({
       severity: "warning",
+      label: "Holder concentration",
       message: buildConcentrationWarningMessage(
         "top-holder",
         holders.token,
@@ -1520,6 +1695,7 @@ function getVisibleContractWarnings(
   ) {
     warnings.push({
       severity: "warning",
+      label: "Top-10 holder concentration",
       message:
         `PulseScan sampled top-10 holders account for ${formatSignalPercent(top10Percent)} of supply. Review holder distribution before interacting.`,
     });
@@ -1533,6 +1709,7 @@ function getVisibleContractWarnings(
   ) {
     warnings.push({
       severity: "warning",
+      label: "LP concentration",
       message: buildConcentrationWarningMessage(
         "lp-holder",
         holders.lp,
@@ -1546,6 +1723,7 @@ function getVisibleContractWarnings(
   ) {
     warnings.push({
       severity: "warning",
+      label: "LP holder unavailable",
       message:
         "PulseScan did not return LP holder concentration for the selected pair.",
     });
@@ -1657,7 +1835,7 @@ function buildProxyQuickRow(
       value: "Common proxy signal not found",
       status: "checked",
       detail:
-        "Checked EIP-1967 implementation/admin/beacon slots and EIP-1167 bytecode. Other proxy patterns are still possible.",
+        "Checked EIP-1967 implementation/admin/beacon slots, public implementation/admin getters, and EIP-1167 bytecode. Other proxy patterns are still possible.",
     };
   }
 
@@ -1665,8 +1843,8 @@ function buildProxyQuickRow(
     ...row,
     value: "Unable to verify",
     status: "unable-to-verify",
-    detail:
-      "Common proxy storage or bytecode checks could not be completed.",
+      detail:
+      "Common proxy storage, getter, or bytecode checks could not be completed.",
   };
 }
 
@@ -1841,6 +2019,89 @@ function buildOwnerContractCard(
     status: "unable-to-verify",
     detail:
       "No standard owner() or getOwner() value was readable from the token contract.",
+  };
+}
+
+function buildAdminGettersContractCard(
+  card: ContractSniffCard,
+  contract: TokenChairContractData | null,
+): ContractSniffCard {
+  if (!contract) return card;
+
+  const getters = contract.adminGetters ?? [];
+  if (getters.length > 0) {
+    const first = getters[0];
+    return {
+      ...card,
+      value: `${getters.length} visible getter${getters.length === 1 ? "" : "s"}`,
+      status: "warning",
+      href: pulseScanAddressUrl(first.address),
+      detail:
+        `Public admin/operator/fee-wallet getter signals returned: ${getters.map((getter) => `${getter.functionName}() -> ${shortenSignalAddress(getter.address)}`).join(", ")}. These are control-context signals, not proof of malicious behavior.`,
+    };
+  }
+
+  if (contract.status === "unable-to-verify") {
+    return {
+      ...card,
+      value: "Unable to verify",
+      status: "unable-to-verify",
+      detail: "Common public admin getter checks could not be completed.",
+    };
+  }
+
+  return {
+    ...card,
+    value: "No common getters found",
+    status: "checked",
+    detail:
+      "Common public admin/operator/fee-wallet getters did not return visible addresses. Hidden controls are not ruled out.",
+  };
+}
+
+function buildProxyDetailsContractCard(
+  card: ContractSniffCard,
+  contract: TokenChairContractData | null,
+): ContractSniffCard {
+  if (!contract) return card;
+
+  if (contract.proxy.detected === true) {
+    const kinds = contract.proxy.detectedKinds?.length
+      ? contract.proxy.detectedKinds.join(", ")
+      : "common signal";
+    const href =
+      contract.proxy.implementationAddress ??
+      contract.proxy.publicImplementationAddress ??
+      contract.proxy.minimalProxyTarget ??
+      contract.proxy.adminAddress ??
+      contract.proxy.publicAdminAddress ??
+      contract.proxy.beaconAddress;
+    return {
+      ...card,
+      value: kinds,
+      status: "warning",
+      href: href ? pulseScanAddressUrl(href) : undefined,
+      detail:
+        contract.proxy.checks.join(" ") ||
+        "Common proxy checks returned a visible proxy-related signal.",
+    };
+  }
+
+  if (contract.proxy.detected === false) {
+    return {
+      ...card,
+      value: "Common signal not found",
+      status: "checked",
+      detail:
+        "Checked EIP-1967 implementation/admin/beacon slots, public implementation/admin getters, and EIP-1167 bytecode. Other proxy patterns are still possible.",
+    };
+  }
+
+  return {
+    ...card,
+    value: "Unable to verify",
+    status: "unable-to-verify",
+    detail: "Common proxy storage, getter, or bytecode checks could not be completed.",
   };
 }
 
@@ -2172,6 +2433,14 @@ function classifyConcentrationSignal(
     pairAddress: contract.holders?.lp.pairAddress ?? null,
     ownerAddress: contract.ownerAddress,
     deployerAddress: contract.explorer?.deployerAddress ?? null,
+    proxyAdminAddress:
+      contract.proxy.adminAddress ?? contract.proxy.publicAdminAddress ?? null,
+    proxyImplementationAddress:
+      contract.proxy.implementationAddress ??
+      contract.proxy.publicImplementationAddress ??
+      contract.proxy.minimalProxyTarget ??
+      null,
+    adminGetterAddresses: contract.adminGetters?.map((getter) => getter.address) ?? [],
     isContract: signal.isContract,
   });
 }
@@ -2204,6 +2473,13 @@ function warningHolderLabel(
   if (classification.kind === "selected-pair") return "the selected DEX pair";
   if (classification.kind === "owner") return "the standard owner address";
   if (classification.kind === "deployer") return "the deployer address";
+  if (classification.kind === "proxy-admin") return "a proxy admin address";
+  if (classification.kind === "proxy-implementation") {
+    return "a proxy implementation address";
+  }
+  if (classification.kind === "admin-getter") {
+    return "an address returned by a public admin getter";
+  }
   if (classification.kind === "contract") return "a contract address";
   if (classification.kind === "wallet") return "a wallet address";
   return "an unclassified address";
@@ -2325,6 +2601,10 @@ function quickRowSourceSignalKey(
   if (label === "Trading cooldown") return "trading-cooldown";
   if (label === "Blacklist") return "blacklist";
   if (label === "Whitelist") return "whitelist";
+  if (label === "Trading gates") return "trading-gates";
+  if (label === "Fee controls") return "fee-controls";
+  if (label === "Rescue functions") return "rescue-functions";
+  if (label === "Ownership controls") return "ownership-controls";
   if (label === "Suspicious functions") return "suspicious-functions";
   return null;
 }

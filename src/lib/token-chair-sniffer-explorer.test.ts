@@ -100,9 +100,11 @@ describe("Token Chair Sniffer PulseScan explorer integration", () => {
         abi: [
           { type: "function", name: "mint" },
           { type: "function", name: "pauseTrading" },
+          { type: "function", name: "enableTrading" },
+          { type: "function", name: "rescueTokens" },
           { type: "function", name: "transfer" },
         ],
-        source_code: "contract ChairToken { function setBlacklist(address user) external {} }",
+        source_code: "contract ChairToken { function setBlacklist(address user) external {} function setTax(uint256 fee) external {} }",
       },
     });
 
@@ -122,6 +124,21 @@ describe("Token Chair Sniffer PulseScan explorer integration", () => {
       found: true,
       severity: "high",
       matches: ["blacklist"],
+    });
+    expect(result.sourceSignals.find((signal) => signal.key === "trading-gates")).toMatchObject({
+      found: true,
+      severity: "high",
+      matches: ["enableTrading"],
+    });
+    expect(result.sourceSignals.find((signal) => signal.key === "fee-controls")).toMatchObject({
+      found: true,
+      severity: "warning",
+      matches: ["setTax"],
+    });
+    expect(result.sourceSignals.find((signal) => signal.key === "rescue-functions")).toMatchObject({
+      found: true,
+      severity: "warning",
+      matches: ["rescueTokens"],
     });
 
     const details = buildSourceSignalDetailRows({
@@ -169,7 +186,7 @@ describe("Token Chair Sniffer PulseScan explorer integration", () => {
       value: "Unable to verify",
       status: "unable-to-verify",
     });
-    expect(detailRows).toHaveLength(6);
+    expect(detailRows).toHaveLength(10);
     expect(detailRows.every((row) => row.value === "Unable to verify")).toBe(
       true,
     );

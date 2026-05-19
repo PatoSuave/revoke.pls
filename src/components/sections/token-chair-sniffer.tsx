@@ -53,6 +53,13 @@ const DEFAULT_VERDICT: TokenChairVerdict = {
   notes: [
     "Paste a token address to read visible PulseChain market data.",
   ],
+  reasons: [
+    {
+      severity: "info",
+      label: "Waiting for token",
+      detail: "Paste a token address to read visible PulseChain market data.",
+    },
+  ],
 };
 
 const NAV_ITEMS = [
@@ -635,6 +642,7 @@ function TokenInformationSummary({
   const contractMetrics = [
     { label: "Source", value: sourceStatus },
     { label: "Owner", value: ownerStatus },
+    { label: "Admin", value: formatAdminGetterSummary(contract, fallback) },
     { label: "Proxy", value: proxyStatus },
     { label: "Holders", value: holderStatus },
     { label: "Events", value: eventStatus },
@@ -877,6 +885,33 @@ function SignalDetailsPanel({
           </div>
         </div>
       </div>
+      {response?.verdict.reasons.length ? (
+        <div className="mt-3 rounded-lg border border-pulse-border/60 bg-[#0a1016] p-3">
+          <p className="text-xs font-semibold uppercase tracking-[0.14em] text-pulse-muted/75">
+            Why This Verdict
+          </p>
+          <div className="mt-3 grid gap-2 md:grid-cols-2">
+            {response.verdict.reasons.slice(0, 6).map((reason) => (
+              <div
+                key={`${reason.label}-${reason.detail}`}
+                className="rounded-lg border border-pulse-border/60 bg-[#070b10] px-3 py-2"
+              >
+                <div className="flex items-center justify-between gap-2">
+                  <p className="min-w-0 truncate text-sm font-semibold text-pulse-text">
+                    {reason.label}
+                  </p>
+                  <span className={`shrink-0 rounded-full border px-2 py-0.5 text-[11px] ${reasonToneClass(reason.severity)}`}>
+                    {reason.severity === "high" ? "High" : reason.severity === "warning" ? "Warning" : "Info"}
+                  </span>
+                </div>
+                <p className="mt-2 text-xs leading-5 text-pulse-muted">
+                  {reason.detail}
+                </p>
+              </div>
+            ))}
+          </div>
+        </div>
+      ) : null}
     </section>
   );
 }
@@ -1836,6 +1871,14 @@ function classifyHolderRow(
     pairAddress: contract.holders?.lp.pairAddress ?? null,
     ownerAddress: contract.ownerAddress,
     deployerAddress: contract.explorer?.deployerAddress ?? null,
+    proxyAdminAddress:
+      contract.proxy.adminAddress ?? contract.proxy.publicAdminAddress ?? null,
+    proxyImplementationAddress:
+      contract.proxy.implementationAddress ??
+      contract.proxy.publicImplementationAddress ??
+      contract.proxy.minimalProxyTarget ??
+      null,
+    adminGetterAddresses: contract.adminGetters?.map((getter) => getter.address) ?? [],
     isContract: row.isContract,
   });
 }
@@ -1859,13 +1902,14 @@ function ContractMetadataStrip({
     ["ABI", formatAbiStatus(contract, fallback)],
     ["Proxy", formatProxySignal(contract, fallback)],
     ["Pending", formatPendingOwnerSignal(contract, fallback)],
+    ["Admin", formatAdminGetterSummary(contract, fallback)],
     ["Roles", formatAccessControlSignal(contract, fallback)],
     ["Tax getters", formatTaxGetterSignal(contract, fallback)],
     ["Events", formatEventHistoryStatus(contract, state)],
   ] as const;
 
   return (
-    <div className="mt-4 grid gap-2 rounded-lg border border-pulse-border/70 bg-[#070b10] p-3 sm:grid-cols-3 xl:grid-cols-10">
+    <div className="mt-4 grid gap-2 rounded-lg border border-pulse-border/70 bg-[#070b10] p-3 sm:grid-cols-3 xl:grid-cols-11">
       {items.map(([label, value]) => (
         <div key={label} className="min-w-0">
           <p className="text-[11px] uppercase tracking-[0.14em] text-pulse-muted/75">
@@ -2157,7 +2201,11 @@ function formatProxySignal(
   fallback: string,
 ): string {
   if (!contract) return fallback;
-  if (contract.proxy.detected === true) return "Signal found";
+  if (contract.proxy.detected === true) {
+    return contract.proxy.detectedKinds?.length
+      ? contract.proxy.detectedKinds.join(", ")
+      : "Signal found";
+  }
   if (contract.proxy.detected === false) return "Common signal not found";
   return "Unable to verify";
 }
@@ -2180,6 +2228,17 @@ function formatAccessControlSignal(
   if (detected === true) return "Role signal found";
   if (detected === false) return "Common signal not found";
   return contract ? "Unable to verify" : fallback;
+}
+
+function formatAdminGetterSummary(
+  contract: TokenChairContractData | null,
+  fallback: string,
+): string {
+  if (!contract) return fallback;
+  const count = contract.adminGetters?.length ?? 0;
+  if (count > 0) return `${count} visible getter${count === 1 ? "" : "s"}`;
+  if (contract.status === "unable-to-verify") return "Unable to verify";
+  return "Common getter not found";
 }
 
 function formatTaxGetterSignal(
@@ -2223,6 +2282,16 @@ function verdictToneText(verdict: TokenChairVerdict): string {
     danger: "font-semibold text-pulse-red",
     neutral: "font-semibold text-pulse-muted",
   }[verdict.tone];
+}
+
+function reasonToneClass(
+  severity: TokenChairVerdict["reasons"][number]["severity"],
+): string {
+  return {
+    info: "border-pulse-border bg-pulse-panel text-pulse-muted",
+    warning: "border-amber-400/45 bg-amber-400/10 text-amber-300",
+    high: "border-pulse-red/45 bg-pulse-red/10 text-pulse-red",
+  }[severity];
 }
 
 function contractAccent(
