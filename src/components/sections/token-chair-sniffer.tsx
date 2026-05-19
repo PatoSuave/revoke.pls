@@ -834,8 +834,12 @@ function SignalDetailsPanel({
   requestError: string | null;
 }) {
   const details = buildSignalDetails(response, state, requestError);
+  const visibleDextools =
+    response?.dextools && response.dextools.status !== "not-configured"
+      ? response.dextools
+      : null;
   const dextoolsRows = buildDextoolsDetailRows({
-    dextools: response?.dextools ?? null,
+    dextools: visibleDextools,
   });
 
   return (
@@ -881,14 +885,16 @@ function SignalDetailsPanel({
               {formatHolderDataStatus(response, state)}
             </p>
           </div>
-          <div>
-            <p className="uppercase tracking-[0.14em] text-pulse-muted/75">
-              DEXTools
-            </p>
-            <p className="mt-1 font-semibold text-pulse-text">
-              {formatDextoolsStatus(response?.dextools ?? null, state)}
-            </p>
-          </div>
+          {visibleDextools ? (
+            <div>
+              <p className="uppercase tracking-[0.14em] text-pulse-muted/75">
+                DEXTools
+              </p>
+              <p className="mt-1 font-semibold text-pulse-text">
+                {formatDextoolsStatus(visibleDextools, state)}
+              </p>
+            </div>
+          ) : null}
           <div>
             <p className="uppercase tracking-[0.14em] text-pulse-muted/75">
               Mode
@@ -899,9 +905,9 @@ function SignalDetailsPanel({
           </div>
         </div>
       </div>
-      {response?.dextools ? (
+      {visibleDextools ? (
         <DextoolsSignalCard
-          dextools={response.dextools}
+          dextools={visibleDextools}
           rows={dextoolsRows}
         />
       ) : null}
@@ -1764,8 +1770,9 @@ function LpControlInterpretation({
         </div>
         <SniffValueBadge row={summary} />
       </div>
-      <div className="mt-3 grid gap-2 sm:grid-cols-2 xl:grid-cols-5">
+      <div className="mt-3 grid gap-2 sm:grid-cols-2 xl:grid-cols-6">
         <HolderMetric label="Top LP holder" value={summary.holderPercentLabel} />
+        <HolderMetric label="Holder address" value={summary.holderAddressLabel} />
         <HolderMetric label="Holder type" value={summary.holderLabel} />
         <HolderMetric label="Context source" value={summary.holderSourceLabel} />
         <HolderMetric label="Burn/dead LP" value={summary.burnDeadPercentLabel} />

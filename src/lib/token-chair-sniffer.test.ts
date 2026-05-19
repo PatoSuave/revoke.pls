@@ -517,6 +517,21 @@ describe("Token Chair Sniffer helpers", () => {
     );
   });
 
+  it("hides DEXTools detail rows when the paid provider is not configured", () => {
+    expect(
+      buildDextoolsDetailRows({
+        dextools: dextoolsData({
+          status: "not-configured",
+          priceUsd: null,
+          liquidityUsd: null,
+          volume24h: null,
+          dextScore: null,
+          holderCount: null,
+        }),
+      }),
+    ).toEqual([]);
+  });
+
   it("marks all-missing liquidity pair selection as weak", () => {
     const result = normalizeDexScreenerTokenPairsResponse(
       [
@@ -549,6 +564,7 @@ describe("Token Chair Sniffer helpers", () => {
       value: "Deployer controls visible LP",
       status: "warning",
       holderLabel: "Deployer",
+      holderAddressLabel: "0x4444...4444",
       holderPercentLabel: "100%",
       burnDeadPercentLabel: "0%",
       sampledRowsLabel: "12 sampled rows",
@@ -588,6 +604,7 @@ describe("Token Chair Sniffer helpers", () => {
       value: "Known protocol holds visible LP",
       status: "warning",
       holderLabel: "PulseX Router v1",
+      holderAddressLabel: "0x98bf...cc02",
       holderPercentLabel: "72%",
       holderSourceLabel: "Pulse Revoke registry",
     });
@@ -609,6 +626,7 @@ describe("Token Chair Sniffer helpers", () => {
       value: "No dominant LP holder",
       status: "checked",
       holderLabel: "Wallet",
+      holderAddressLabel: "0x5555...5555",
       holderPercentLabel: "12.5%",
     });
   });

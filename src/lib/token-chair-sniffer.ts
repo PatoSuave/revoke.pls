@@ -404,6 +404,7 @@ export interface TokenChairLpControlSummary extends SniffSignalRow {
   address: Address | null;
   href?: string;
   holderLabel: string;
+  holderAddressLabel: string;
   holderPercentLabel: string;
   burnDeadPercentLabel: string;
   sampledRowsLabel: string;
@@ -1110,6 +1111,7 @@ export function buildDextoolsDetailRows(options: {
 } = {}): TokenChairDextoolsDetailRow[] {
   const dextools = options.dextools;
   if (!dextools) return [];
+  if (dextools.status === "not-configured") return [];
 
   const rows: TokenChairDextoolsDetailRow[] = [
     {
@@ -1120,14 +1122,12 @@ export function buildDextoolsDetailRows(options: {
           ? "Not returned"
           : `${formatDextScore(dextools.dextScore)}/99`,
       status:
-        dextools.status === "not-configured"
-          ? "not-checked"
-          : dextools.status === "rate-limited" ||
-              dextools.status === "unable-to-verify"
-            ? "unable-to-verify"
-            : dextools.dextScore !== null && dextools.dextScore < 50
-              ? "warning"
-              : "checked",
+        dextools.status === "rate-limited" ||
+        dextools.status === "unable-to-verify"
+          ? "unable-to-verify"
+          : dextools.dextScore !== null && dextools.dextScore < 50
+            ? "warning"
+            : "checked",
       detail:
         "External DEXTools score context when returned. It is not a safety verdict, certification, or Token Chair audit result.",
       href: dextools.tokenUrl ?? dextools.pairUrl ?? undefined,
@@ -1139,7 +1139,11 @@ export function buildDextoolsDetailRows(options: {
         dextools.holderCount === null
           ? "Not returned"
           : dextools.holderCount.toLocaleString("en-US"),
-      status: dextools.status === "not-configured" ? "not-checked" : "checked",
+      status:
+        dextools.status === "rate-limited" ||
+        dextools.status === "unable-to-verify"
+          ? "unable-to-verify"
+          : "checked",
       detail:
         "External holder-count context from DEXTools when available. Holder count should be reviewed with distribution, liquidity, and volume.",
       href: dextools.tokenUrl ?? undefined,
@@ -1150,15 +1154,11 @@ export function buildDextoolsDetailRows(options: {
       value:
         dextools.priceUsd || dextools.liquidityUsd !== null
           ? "Returned"
-          : dextools.status === "not-configured"
-            ? "Not configured"
-            : "Not returned",
+          : "Not returned",
       status:
-        dextools.status === "not-configured"
-          ? "not-checked"
-          : dextools.status === "success" || dextools.status === "partial"
-            ? "checked"
-            : "unable-to-verify",
+        dextools.status === "success" || dextools.status === "partial"
+          ? "checked"
+          : "unable-to-verify",
       detail:
         `Price ${formatPriceUsd(dextools.priceUsd)}. Liquidity ${formatUsd(dextools.liquidityUsd)}. 24h volume ${formatUsd(dextools.volume24h)}.`,
       href: dextools.pairUrl ?? dextools.tokenUrl ?? undefined,
@@ -1265,11 +1265,13 @@ export function buildLpControlSummary(options: {
     ? `${distribution.sampledHolderCount.toLocaleString("en-US")} sampled rows`
     : "Not returned";
   const holderLabel = classification?.label ?? "Unknown address";
+  const holderAddressLabel = lp.address ? shortenSignalAddress(lp.address) : "Not returned";
   const holderSourceLabel = classificationSourceLabel(classification);
   const base = {
     address: lp.address,
     href: classification?.explorerUrl,
     holderLabel,
+    holderAddressLabel,
     holderPercentLabel,
     burnDeadPercentLabel,
     sampledRowsLabel,
