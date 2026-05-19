@@ -1654,9 +1654,10 @@ function LpControlInterpretation({
         </div>
         <SniffValueBadge row={summary} />
       </div>
-      <div className="mt-3 grid gap-2 sm:grid-cols-4">
+      <div className="mt-3 grid gap-2 sm:grid-cols-2 xl:grid-cols-5">
         <HolderMetric label="Top LP holder" value={summary.holderPercentLabel} />
         <HolderMetric label="Holder type" value={summary.holderLabel} />
+        <HolderMetric label="Context source" value={summary.holderSourceLabel} />
         <HolderMetric label="Burn/dead LP" value={summary.burnDeadPercentLabel} />
         <HolderMetric label="Sample" value={summary.sampledRowsLabel} />
       </div>
@@ -1806,9 +1807,10 @@ function HolderIntelCard({
         </div>
         <SniffValueBadge row={row} />
       </div>
-      <div className="mt-4 grid gap-2 sm:grid-cols-3">
+      <div className="mt-4 grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
         <HolderMetric label="Percent" value={row.percentLabel} />
         <HolderMetric label="Holders" value={row.holderCountLabel} />
+        <HolderMetric label="Context source" value={row.classificationSourceLabel} />
         <HolderMetric
           label="Address"
           value={row.address ? shortenAddress(row.address) : "Not returned"}

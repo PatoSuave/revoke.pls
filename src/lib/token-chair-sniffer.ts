@@ -361,6 +361,7 @@ export interface TokenChairConcentrationDetailRow extends SniffSignalRow {
   holderCountLabel: string;
   classificationLabel: string;
   classificationDetail: string;
+  classificationSourceLabel: string;
 }
 
 export interface TokenChairLpControlSummary extends SniffSignalRow {
@@ -370,6 +371,7 @@ export interface TokenChairLpControlSummary extends SniffSignalRow {
   holderPercentLabel: string;
   burnDeadPercentLabel: string;
   sampledRowsLabel: string;
+  holderSourceLabel: string;
 }
 
 export interface TokenChairEventHistoryDetailRow extends SniffSignalRow {
@@ -433,6 +435,9 @@ export interface TokenChairAddressClassification {
   label: string;
   detail: string;
   explorerUrl: string;
+  sourceLabel?: string;
+  registryProtocol?: string;
+  registryCategory?: string;
 }
 
 interface NormalizeOptions {
@@ -551,6 +556,7 @@ export function classifyTokenChairAddress(
       label: "Zero address",
       detail:
         "This is the zero address, commonly used for renounced ownership or inaccessible balances.",
+      sourceLabel: "Address convention",
     };
   }
 
@@ -561,6 +567,7 @@ export function classifyTokenChairAddress(
       label: "Burn address",
       detail:
         "This is a common dead/burn address; balances here are generally inaccessible.",
+      sourceLabel: "Address convention",
     };
   }
 
@@ -570,6 +577,7 @@ export function classifyTokenChairAddress(
       kind: "token-contract",
       label: "Token contract",
       detail: "This address matches the token contract being scanned.",
+      sourceLabel: "Scan input",
     };
   }
 
@@ -579,6 +587,7 @@ export function classifyTokenChairAddress(
       kind: "selected-pair",
       label: "Selected DEX pair",
       detail: "This address matches the primary DEX Screener pair for this scan.",
+      sourceLabel: "DEX Screener pair context",
     };
   }
 
@@ -588,6 +597,7 @@ export function classifyTokenChairAddress(
       kind: "owner",
       label: "Owner",
       detail: "This address matches the standard owner returned by read-only checks.",
+      sourceLabel: "Read-only contract checks",
     };
   }
 
@@ -597,6 +607,7 @@ export function classifyTokenChairAddress(
       kind: "deployer",
       label: "Deployer",
       detail: "This address matches the deployer returned by PulseScan metadata.",
+      sourceLabel: "PulseScan metadata",
     };
   }
 
@@ -606,6 +617,7 @@ export function classifyTokenChairAddress(
       kind: "proxy-admin",
       label: "Proxy admin",
       detail: "This address matches a visible proxy admin signal.",
+      sourceLabel: "Read-only proxy checks",
     };
   }
 
@@ -615,6 +627,7 @@ export function classifyTokenChairAddress(
       kind: "proxy-implementation",
       label: "Proxy implementation",
       detail: "This address matches a visible proxy implementation signal.",
+      sourceLabel: "Read-only proxy checks",
     };
   }
 
@@ -625,6 +638,7 @@ export function classifyTokenChairAddress(
       label: "Admin getter address",
       detail:
         "This address was returned by a public admin/operator/fee-wallet getter.",
+      sourceLabel: "Read-only contract checks",
     };
   }
 
@@ -635,6 +649,9 @@ export function classifyTokenChairAddress(
       kind: "known-spender",
       label: knownSpender.label,
       detail: `Known ${knownSpender.protocol} ${knownSpender.category} entry in the Pulse Revoke registry. This label is context only, not a risk rating.`,
+      sourceLabel: "Pulse Revoke registry",
+      registryProtocol: knownSpender.protocol,
+      registryCategory: knownSpender.category,
     };
   }
 
@@ -645,6 +662,8 @@ export function classifyTokenChairAddress(
       kind: "known-token",
       label: `${knownToken.symbol} token`,
       detail: `Known PulseChain token registry entry for ${knownToken.name} (${knownToken.category}). This label is context only, not a risk rating.`,
+      sourceLabel: "Pulse Revoke registry",
+      registryCategory: knownToken.category,
     };
   }
 
@@ -654,6 +673,7 @@ export function classifyTokenChairAddress(
       kind: "contract",
       label: "Contract",
       detail: "PulseScan marks this address as a contract.",
+      sourceLabel: "PulseScan metadata",
     };
   }
 
@@ -663,6 +683,7 @@ export function classifyTokenChairAddress(
       kind: "wallet",
       label: "Wallet",
       detail: "PulseScan does not mark this address as a contract.",
+      sourceLabel: "PulseScan metadata",
     };
   }
 
@@ -671,6 +692,7 @@ export function classifyTokenChairAddress(
     kind: "unknown",
     label: "Unknown address",
     detail: "PulseScan did not return enough context to classify this address.",
+    sourceLabel: "PulseScan metadata",
   };
 }
 
@@ -1137,6 +1159,7 @@ export function buildLpControlSummary(options: {
     ? `${distribution.sampledHolderCount.toLocaleString("en-US")} sampled rows`
     : "Not returned";
   const holderLabel = classification?.label ?? "Unknown address";
+  const holderSourceLabel = classificationSourceLabel(classification);
   const base = {
     address: lp.address,
     href: classification?.explorerUrl,
@@ -1144,6 +1167,7 @@ export function buildLpControlSummary(options: {
     holderPercentLabel,
     burnDeadPercentLabel,
     sampledRowsLabel,
+    holderSourceLabel,
   };
 
   if (lp.percent === null) {
@@ -2278,6 +2302,7 @@ function buildConcentrationDetailRow(
   const classificationLabel = classification?.label ?? "Unknown address";
   const classificationDetail =
     classification?.detail ?? "PulseScan did not return enough holder address context.";
+  const classificationSource = classificationSourceLabel(classification);
 
   return {
     kind,
@@ -2291,6 +2316,7 @@ function buildConcentrationDetailRow(
     holderCountLabel,
     classificationLabel,
     classificationDetail,
+    classificationSourceLabel: classificationSource,
   };
 }
 
@@ -2310,9 +2336,20 @@ function buildConcentrationWarningMessage(
       : `PulseScan shows high visible top-holder concentration${percentCopy} for this token.`;
   }
 
+  if (classification?.kind === "known-spender") {
+    const category = classification.registryCategory ?? "protocol";
+    return `PulseScan shows high visible LP-token holder concentration${percentCopy} at a known ${category} contract from the Pulse Revoke registry. Review that holder before treating the LP as locked.`;
+  }
+
   return holder
     ? `PulseScan shows high visible LP-token holder concentration${percentCopy} at ${holder}.`
     : `PulseScan shows high visible LP-token holder concentration${percentCopy} for the selected pair.`;
+}
+
+function classificationSourceLabel(
+  classification: TokenChairAddressClassification | null,
+): string {
+  return classification?.sourceLabel ?? "Visible scan context";
 }
 
 function lpControlWarningValue(
@@ -2320,6 +2357,12 @@ function lpControlWarningValue(
 ): string {
   if (classification?.kind === "owner") return "Owner controls visible LP";
   if (classification?.kind === "deployer") return "Deployer controls visible LP";
+  if (classification?.kind === "known-spender") {
+    return "Known protocol holds visible LP";
+  }
+  if (classification?.kind === "known-token") {
+    return "Known token contract holds visible LP";
+  }
   if (classification?.kind === "wallet") return "Wallet controls visible LP";
   if (classification?.kind === "contract") return "Contract controls visible LP";
   if (classification?.kind === "token-contract") return "Token contract holds visible LP";
@@ -2344,6 +2387,18 @@ function lpControlWarningDetail(
 
   if (classification?.kind === "contract") {
     return `PulseScan shows a contract address${address} holding ${percent} of visible LP tokens. Review that contract before treating this as locked liquidity.`;
+  }
+
+  if (classification?.kind === "known-spender") {
+    const category = classification.registryCategory ?? "protocol";
+    const protocol = classification.registryProtocol
+      ? ` for ${classification.registryProtocol}`
+      : "";
+    return `PulseScan shows a known ${category} contract${protocol}${address} holding ${percent} of visible LP tokens. The Pulse Revoke registry label can explain the holder, but it is not proof of locked liquidity. Review the holder contract and position before interacting.`;
+  }
+
+  if (classification?.kind === "known-token") {
+    return `PulseScan shows a known registry token contract${address} holding ${percent} of visible LP tokens. Treat this as address context only; review the holder before interacting.`;
   }
 
   if (classification?.kind === "wallet") {
@@ -2401,6 +2456,11 @@ function concentrationDetail(
 
   if (isBurnLikeClassification(classification)) {
     return `${prefix} is ${percent} at ${warningHolderLabel(classification)}. This can be useful context, but it is not proof of an LP lock or a full liquidity analysis.`;
+  }
+
+  if (kind === "lp-holder" && classification?.kind === "known-spender") {
+    const category = classification.registryCategory ?? "protocol";
+    return `${prefix} is ${percent} at ${classification.label}, a known ${category} contract from the Pulse Revoke registry. This explains the holder context but is not proof of locked liquidity.`;
   }
 
   if (signal.percent >= (kind === "top-holder" ? 20 : 50)) {
@@ -2507,7 +2567,8 @@ function warningHolderLabel(
   }
   if (classification.kind === "known-token") return "a known token contract";
   if (classification.kind === "known-spender") {
-    return "a known protocol contract";
+    const category = classification.registryCategory ?? "protocol";
+    return `a known ${category} contract`;
   }
   if (classification.kind === "contract") return "a contract address";
   if (classification.kind === "wallet") return "a wallet address";
@@ -2516,7 +2577,9 @@ function warningHolderLabel(
 
 function isBurnLikeClassification(
   classification: TokenChairAddressClassification | null,
-): classification is TokenChairAddressClassification {
+): classification is TokenChairAddressClassification & {
+  kind: "zero-address" | "burn-address";
+} {
   return (
     classification?.kind === "zero-address" ||
     classification?.kind === "burn-address"

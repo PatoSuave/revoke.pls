@@ -28,7 +28,7 @@ Implemented in this MVP:
 - PulseScan holder endpoint concentration reads for top token holder and LP holder data when available
 - Bounded multi-page sampled holder-distribution buckets for top 1, top 5, top 10, selected pair balance, and zero/dead-address balances when PulseScan returns enough holder rows
 - LP-token holder-control buckets for the selected pair when PulseScan indexes that pair contract as a token
-- Conservative LP-control interpretation for dominant deployer, owner, wallet, contract, burn/dead, or non-dominant visible LP holders
+- Conservative LP-control interpretation for dominant deployer, owner, wallet, unknown contract, known registry protocol contract, burn/dead, or non-dominant visible LP holders
 - Vercel-oriented scan scheduling that starts holder and selected-pair reads as soon as market pair selection is available, while contract and explorer reads continue in parallel
 - Native selected-pair contract reads for `token0()`, `token1()`, `getReserves()`, and LP `totalSupply()`
 - Address context labels for zero/burn addresses, token contract, selected pair, owner, deployer, proxy admin, proxy implementation, public admin-getter addresses, known registry tokens/spenders, contracts, and wallets where visible metadata supports it
@@ -172,7 +172,7 @@ When PulseScan does index the selected pair as a token, the Holder Distribution 
 
 This is useful for spotting whether removable liquidity appears concentrated in one wallet, owner, deployer, contract, or burn/dead address. Burn/dead LP-token balances are still context only; they are not proof of a formal liquidity lock.
 
-The LP Token Control panel also summarizes the largest visible LP holder and sampled burn/dead LP percentage. Dominant owner, deployer, wallet, contract, token-contract, pair-contract, or unknown LP holders are warning context. Dominant zero/dead LP holders and major sampled burn/dead balances are presented as burn/dead context, not as a formal lock certificate.
+The LP Token Control panel also summarizes the largest visible LP holder, context source, and sampled burn/dead LP percentage. Dominant owner, deployer, wallet, unknown contract, token-contract, pair-contract, or unknown LP holders are warning context. Dominant known registry protocol contracts, such as routers, bridges, farms, or staking contracts, get distinct known-protocol wording so users can understand what type of contract appears to hold the LP tokens. They still remain warning context unless separate burn/dead or formal lock evidence exists. Dominant zero/dead LP holders and major sampled burn/dead balances are presented as burn/dead context, not as a formal lock certificate.
 
 These are visible holder signals only. They can be affected by explorer indexing, wrapped-token mechanics, staking contracts, bridges, protocol contracts, or holder data that changes after the scan.
 
@@ -193,7 +193,7 @@ Holder and LP cards classify the returned top address when possible:
 - wallet
 - unknown address
 
-These labels are context, not audit conclusions. They use already-returned read-only RPC, DEX Screener, PulseScan metadata, and the curated chain-scoped Pulse Revoke token/spender registries. A known registry label is not a risk rating.
+These labels are context, not audit conclusions. They use already-returned read-only RPC, DEX Screener, PulseScan metadata, and the curated chain-scoped Pulse Revoke token/spender registries. Holder cards show the context source where available. A known registry label is not a risk rating.
 
 The Holder Distribution panel expands this context with visible percentages, holder count, shortened holder addresses, PulseScan links when available, and classification details. High concentration at owner, deployer, wallet, contract, selected pair, or unknown addresses remains a warning. High concentration at the zero or common burn/dead address is described as burn/dead holder context, not as proof of a liquidity lock or a token-quality conclusion.
 

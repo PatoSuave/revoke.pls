@@ -23,6 +23,7 @@ import {
 const TOKEN = getAddress("0xcae394005c9c4c309621c53d53db9ceb701fc8d8");
 const QUOTE = getAddress("0xA1077a294dDE1B09bB078844df40758a5D0f9a27");
 const PAIR = getAddress("0x165C3410fC91EF562C50559f7d2289fEbed552d9");
+const PULSEX_ROUTER_V1 = getAddress("0x98bf93ebf5c380C0e6Ae8e192A7e2AE08edAcc02");
 const DEPLOYER = getAddress("0x4444444444444444444444444444444444444444");
 const CREATED_AT = 1_700_000_000_000;
 
@@ -217,10 +218,13 @@ describe("Token Chair Sniffer helpers", () => {
     expect(knownSpender?.kind).toBe("known-spender");
     expect(knownSpender?.label).toBe("PulseX Router v2");
     expect(knownSpender?.detail).toContain("not a risk rating");
+    expect(knownSpender?.sourceLabel).toBe("Pulse Revoke registry");
+    expect(knownSpender?.registryCategory).toBe("router");
     const knownToken = classifyTokenChairAddress(QUOTE);
     expect(knownToken?.kind).toBe("known-token");
     expect(knownToken?.label).toBe("WPLS token");
     expect(knownToken?.detail).toContain("not a risk rating");
+    expect(knownToken?.sourceLabel).toBe("Pulse Revoke registry");
     expect(
       classifyTokenChairAddress(owner, {
         tokenAddress: TOKEN,
@@ -492,6 +496,27 @@ describe("Token Chair Sniffer helpers", () => {
       burnDeadPercentLabel: "100%",
     });
     expect(summary?.detail).toContain("not proof of a formal liquidity lock");
+  });
+
+  it("labels known protocol LP holders without treating them as lock proof", () => {
+    const summary = buildLpControlSummary({
+      contract: contractWithLpHolder({
+        lpAddress: PULSEX_ROUTER_V1,
+        lpPercent: 72,
+        lpIsContract: true,
+      }),
+    });
+
+    expect(summary).toMatchObject({
+      value: "Known protocol holds visible LP",
+      status: "warning",
+      holderLabel: "PulseX Router v1",
+      holderPercentLabel: "72%",
+      holderSourceLabel: "Pulse Revoke registry",
+    });
+    expect(summary?.detail).toContain("known router contract");
+    expect(summary?.detail).toContain("not proof of locked liquidity");
+    expect(summary?.detail.toLowerCase()).not.toMatch(/\bsafe\b|guaranteed|certified/);
   });
 
   it("shows non-dominant LP holders without escalating to warnings", () => {
