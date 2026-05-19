@@ -282,6 +282,9 @@ supports it.
 | `OPTIMISM_EXPLORER_API_URL` | Optional | Server-only Etherscan API V2 endpoint override. Defaults to `https://api.etherscan.io/v2/api`. |
 | `OPTIMISM_EXPLORER_CHAIN_ID` | Optional | Etherscan API V2 chain ID for OP Mainnet logs. Defaults to `10`; keep it at `10`. |
 | `OPTIMISM_EXPLORER_API_KEY` / `OPTIMISTIC_ETHERSCAN_API_KEY` / `ETHERSCAN_API_KEY` | Required for Optimism scan | Server-only Etherscan API V2 key for Optimism approval discovery. Do not use a `NEXT_PUBLIC_` key for this route. |
+| `DEXTOOLS_API_KEY` | Optional | Server-only DEXTools key for retired-feature market/score enrichment. Do not use a `NEXT_PUBLIC_` key. Start at `https://developer.dextools.io/` to request access. |
+| `DEXTOOLS_API_BASE_URL` | Optional | DEXTools API base URL override. Defaults to `https://public-api.dextools.io/free/v2`. |
+| `DEXTOOLS_API_KEY_HEADER` | Optional | DEXTools API key header. Defaults to `X-API-Key`; override only if the DEXTools portal specifies another header. |
 
 See [docs/ENVIRONMENT.md](docs/ENVIRONMENT.md) for details.
 

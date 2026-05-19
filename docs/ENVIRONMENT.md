@@ -27,6 +27,9 @@ plus Optimism ERC-20/NFT verified-row revoke, configure:
 | `ARBISCAN_API_KEY` | Required for Arbitrum scan | Server-only Arbiscan/Etherscan-compatible API key. Do not use a `NEXT_PUBLIC_` key for Arbitrum server discovery. |
 | `OPTIMISM_RPC_URL` / `OPTIMISM_MAINNET_RPC_URL` / `OP_MAINNET_RPC_URL` | Required for Optimism scan | Server-only OP Mainnet RPC URL for `/api/optimism/approvals`. |
 | `OPTIMISM_EXPLORER_API_KEY` / `OPTIMISTIC_ETHERSCAN_API_KEY` / `ETHERSCAN_API_KEY` | Required for Optimism scan | Server-only Etherscan API V2 key with OP Mainnet access. Do not use a `NEXT_PUBLIC_` key for Optimism server discovery. |
+| `DEXTOOLS_API_KEY` | Optional retired-feature enrichment | Server-only DEXTools API key for `/api/retired-feature/market`. Do not use a `NEXT_PUBLIC_` key. |
+| `DEXTOOLS_API_BASE_URL` | Optional | DEXTools API base URL override. Defaults to `https://public-api.dextools.io/free/v2`. |
+| `DEXTOOLS_API_KEY_HEADER` | Optional | Header name for the DEXTools key. Defaults to `X-API-Key`; change only if the DEXTools portal gives a different header. |
 
 PulseChain has defaults for RPC and explorer API, but hosted production can
 override them for reliability.
@@ -228,6 +231,39 @@ Required for Optimism approval discovery unless `ETHERSCAN_API_KEY` is used as
 the shared server-side Etherscan API V2 key. Do not configure these values as
 `NEXT_PUBLIC_*`; the frontend does not need an Optimism explorer key.
 
+### `DEXTOOLS_API_KEY`
+
+Optional. Enables DEXTools enrichment inside retired-feature. The app uses
+DEXTools as external market/score context only; it does not replace DEX
+Screener pair selection, PulseScan holder/source reads, or native PulseChain
+RPC checks.
+
+Get access through the DEXTools API portal:
+
+```text
+https://developer.dextools.io/
+```
+
+Keep this key server-only. Do not configure `NEXT_PUBLIC_DEXTOOLS_API_KEY`;
+the route ignores that public variable name so the key is not bundled into the
+browser.
+
+### `DEXTOOLS_API_BASE_URL`
+
+Optional. Defaults to:
+
+```text
+https://public-api.dextools.io/free/v2
+```
+
+Override this only if the DEXTools portal gives a different API base URL for
+your plan.
+
+### `DEXTOOLS_API_KEY_HEADER`
+
+Optional. Defaults to `X-API-Key`. Override only if the DEXTools portal tells
+you to use a different header name.
+
 ### `NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID`
 
 Optional. Enables WalletConnect QR pairing through Reown / WalletConnect. If
@@ -282,6 +318,10 @@ OPTIMISM_EXPLORER_API_URL=https://api.etherscan.io/v2/api
 OPTIMISM_EXPLORER_CHAIN_ID=10
 OPTIMISM_EXPLORER_API_KEY=replace_with_server_only_etherscan_v2_key
 OPTIMISTIC_ETHERSCAN_API_KEY=
+
+DEXTOOLS_API_KEY=
+DEXTOOLS_API_BASE_URL=https://public-api.dextools.io/free/v2
+DEXTOOLS_API_KEY_HEADER=X-API-Key
 ```
 
 ## Provider Limitations
