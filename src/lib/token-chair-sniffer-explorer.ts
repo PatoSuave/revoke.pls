@@ -93,7 +93,6 @@ const SOURCE_SIGNAL_DEFINITIONS: Array<{
       "tradingActive",
       "swapEnabled",
       "setTrading",
-      "launch",
     ],
   },
   {
