@@ -236,7 +236,8 @@ the shared server-side Etherscan API V2 key. Do not configure these values as
 Optional. Enables DEXTools enrichment inside retired-feature. The app uses
 DEXTools as external market/score context only; it does not replace DEX
 Screener pair selection, PulseScan holder/source reads, or native PulseChain
-RPC checks.
+RPC checks. Because DEXTools access is paid/plan-gated, the Signal Details UI
+keeps this integration hidden unless a server-side key is configured.
 
 Get access through the DEXTools API portal:
 
