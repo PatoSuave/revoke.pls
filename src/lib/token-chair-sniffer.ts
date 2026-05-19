@@ -1,5 +1,8 @@
 import { getAddress, isAddress, type Address, type Hex } from "viem";
 
+import { PULSECHAIN_CHAIN_ID } from "@/lib/chains";
+import { getSpenderMetadataEntry, getTokenEntry } from "@/lib/registry";
+
 export const TOKEN_CHAIR_SNIFFER_ROUTE = "/app/token-chair-sniffer";
 export const TOKEN_CHAIR_API_ROUTE = "/api/token-chair-sniffer/market";
 export const TOKEN_CHAIR_CHAIN_ID = "pulsechain";
@@ -407,6 +410,8 @@ export type TokenChairAddressKind =
   | "proxy-admin"
   | "proxy-implementation"
   | "admin-getter"
+  | "known-token"
+  | "known-spender"
   | "contract"
   | "wallet"
   | "unknown";
@@ -620,6 +625,26 @@ export function classifyTokenChairAddress(
       label: "Admin getter address",
       detail:
         "This address was returned by a public admin/operator/fee-wallet getter.",
+    };
+  }
+
+  const knownSpender = getSpenderMetadataEntry(PULSECHAIN_CHAIN_ID, normalized);
+  if (knownSpender) {
+    return {
+      ...base,
+      kind: "known-spender",
+      label: knownSpender.label,
+      detail: `Known ${knownSpender.protocol} ${knownSpender.category} entry in the Pulse Revoke registry. This label is context only, not a risk rating.`,
+    };
+  }
+
+  const knownToken = getTokenEntry(PULSECHAIN_CHAIN_ID, normalized);
+  if (knownToken) {
+    return {
+      ...base,
+      kind: "known-token",
+      label: `${knownToken.symbol} token`,
+      detail: `Known PulseChain token registry entry for ${knownToken.name} (${knownToken.category}). This label is context only, not a risk rating.`,
     };
   }
 
@@ -2479,6 +2504,10 @@ function warningHolderLabel(
   }
   if (classification.kind === "admin-getter") {
     return "an address returned by a public admin getter";
+  }
+  if (classification.kind === "known-token") return "a known token contract";
+  if (classification.kind === "known-spender") {
+    return "a known protocol contract";
   }
   if (classification.kind === "contract") return "a contract address";
   if (classification.kind === "wallet") return "a wallet address";

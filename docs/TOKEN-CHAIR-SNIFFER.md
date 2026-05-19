@@ -31,7 +31,7 @@ Implemented in this MVP:
 - Conservative LP-control interpretation for dominant deployer, owner, wallet, contract, burn/dead, or non-dominant visible LP holders
 - Vercel-oriented scan scheduling that starts holder and selected-pair reads as soon as market pair selection is available, while contract and explorer reads continue in parallel
 - Native selected-pair contract reads for `token0()`, `token1()`, `getReserves()`, and LP `totalSupply()`
-- Address context labels for zero/burn addresses, token contract, selected pair, owner, deployer, proxy admin, proxy implementation, public admin-getter addresses, contracts, and wallets where visible metadata supports it
+- Address context labels for zero/burn addresses, token contract, selected pair, owner, deployer, proxy admin, proxy implementation, public admin-getter addresses, known registry tokens/spenders, contracts, and wallets where visible metadata supports it
 - PulseScan links on live contract/source/deployer/holder cards
 - Compact Signal Details panel explaining the current verdict inputs
 - Why This Verdict breakdown with the visible signals that drove the current verdict
@@ -187,11 +187,13 @@ Holder and LP cards classify the returned top address when possible:
 - proxy admin
 - proxy implementation
 - public admin getter address
+- known PulseChain registry token
+- known protocol spender/router/bridge/farm contract
 - PulseScan contract
 - wallet
 - unknown address
 
-These labels are context, not audit conclusions. They use already-returned read-only RPC, DEX Screener, and PulseScan metadata.
+These labels are context, not audit conclusions. They use already-returned read-only RPC, DEX Screener, PulseScan metadata, and the curated chain-scoped Pulse Revoke token/spender registries. A known registry label is not a risk rating.
 
 The Holder Distribution panel expands this context with visible percentages, holder count, shortened holder addresses, PulseScan links when available, and classification details. High concentration at owner, deployer, wallet, contract, selected pair, or unknown addresses remains a warning. High concentration at the zero or common burn/dead address is described as burn/dead holder context, not as proof of a liquidity lock or a token-quality conclusion.
 

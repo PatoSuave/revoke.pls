@@ -213,6 +213,14 @@ describe("Token Chair Sniffer helpers", () => {
         isContract: true,
       })?.kind,
     ).toBe("selected-pair");
+    const knownSpender = classifyTokenChairAddress(PAIR);
+    expect(knownSpender?.kind).toBe("known-spender");
+    expect(knownSpender?.label).toBe("PulseX Router v2");
+    expect(knownSpender?.detail).toContain("not a risk rating");
+    const knownToken = classifyTokenChairAddress(QUOTE);
+    expect(knownToken?.kind).toBe("known-token");
+    expect(knownToken?.label).toBe("WPLS token");
+    expect(knownToken?.detail).toContain("not a risk rating");
     expect(
       classifyTokenChairAddress(owner, {
         tokenAddress: TOKEN,
