@@ -244,6 +244,25 @@ export function protocolMetadataItems(
   return items;
 }
 
+export function riskSignalItems(
+  drivers: readonly string[] | undefined,
+): ApprovalMeaningItem[] {
+  if (!drivers?.length) return [];
+
+  return [
+    {
+      label: "Risk signals",
+      value: (
+        <ul className="grid gap-1">
+          {drivers.map((driver) => (
+            <li key={driver}>{driver}</li>
+          ))}
+        </ul>
+      ),
+    },
+  ];
+}
+
 function contractStatusLabel(
   contractStatus: SpenderProtocolMetadata["contractStatus"],
 ): string {
