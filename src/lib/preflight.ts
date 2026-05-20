@@ -6,6 +6,12 @@ import { erc20Abi, formatAllowance, isUnlimitedAllowance } from "@/lib/erc20";
 import type { NftApproval } from "@/lib/nft-approvals";
 import { nftReadAbi, ZERO_ADDRESS } from "@/lib/nft-approvals";
 import {
+  PERMIT2_ADDRESS,
+  isPermit2AllowanceActive,
+  parsePermit2AllowanceRead,
+  permit2ReadAbi,
+} from "@/lib/permit2";
+import {
   getGasWarningLevel,
   getNativeGasSymbol,
   getRevokeGasThresholds,
@@ -35,6 +41,8 @@ export const HIGH_GAS_WARNING_HELPER =
 export interface Erc20PreflightContext {
   tokenSymbol: string;
   tokenDecimals: number | null;
+  approvalKind?: "erc20" | "permit2";
+  nowUnix?: number;
 }
 
 export interface Erc20PreflightResult {
@@ -115,8 +123,20 @@ export const EMPTY_BATCH_PREFLIGHT_SUMMARY: BatchPreflightSummary = {
 
 export function buildErc20PreflightRead(
   ownerAddress: Address,
-  target: Pick<RevokeTarget, "tokenAddress" | "spenderAddress">,
+  target: Pick<
+    RevokeTarget,
+    "tokenAddress" | "spenderAddress" | "approvalKind" | "approvalContractAddress"
+  >,
 ) {
+  if (target.approvalKind === "permit2") {
+    return {
+      address: target.approvalContractAddress ?? PERMIT2_ADDRESS,
+      abi: permit2ReadAbi,
+      functionName: "allowance" as const,
+      args: [ownerAddress, target.tokenAddress, target.spenderAddress] as const,
+    };
+  }
+
   return {
     address: target.tokenAddress,
     abi: erc20Abi,
@@ -166,6 +186,28 @@ export function evaluateErc20AllowancePreflight(
   result: unknown,
   context: Erc20PreflightContext,
 ): Erc20PreflightResult {
+  if (context.approvalKind === "permit2") {
+    const permit2Read = parsePermit2AllowanceRead(result);
+    if (!permit2Read) {
+      return {
+        kind: "erc20",
+        status: "unverified",
+        error: "Unexpected Permit2 allowance read result",
+      };
+    }
+
+    const active = isPermit2AllowanceActive(permit2Read, {
+      nowUnix: context.nowUnix,
+    });
+
+    return {
+      kind: "erc20",
+      status: active ? "active" : "cleared",
+      currentAllowance: permit2Read.amount,
+      currentLabel: formatPreflightAllowance(permit2Read.amount, context),
+    };
+  }
+
   if (typeof result !== "bigint") {
     return {
       kind: "erc20",
@@ -452,11 +494,12 @@ export function summarizeBatchPreflight(
 }
 
 export function batchPreflightContext(
-  approval: Pick<Approval, "tokenSymbol" | "tokenDecimals">,
+  approval: Pick<Approval, "tokenSymbol" | "tokenDecimals" | "approvalKind">,
 ): Erc20PreflightContext {
   return {
     tokenSymbol: approval.tokenSymbol,
     tokenDecimals: approval.tokenDecimals,
+    approvalKind: approval.approvalKind,
   };
 }
 

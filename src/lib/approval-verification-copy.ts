@@ -1,4 +1,8 @@
-export type ApprovalVerificationKind = "erc20" | "nft-token" | "nft-operator";
+export type ApprovalVerificationKind =
+  | "erc20"
+  | "permit2"
+  | "nft-token"
+  | "nft-operator";
 
 export const CURRENT_APPROVAL_STATE_UNVERIFIED_TITLE =
   "Current state not verified";
@@ -13,6 +17,8 @@ export const ZERO_ADDRESS_EXPLANATION_BODY =
 
 const VERIFICATION_METHOD_COPY: Record<ApprovalVerificationKind, string> = {
   erc20: "To verify this row, the app must read allowance(owner, spender).",
+  permit2:
+    "To verify this row, the app must read Permit2 allowance(owner, token, spender).",
   "nft-token":
     "To verify this row, the app must read getApproved(tokenId).",
   "nft-operator":

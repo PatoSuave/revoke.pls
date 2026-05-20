@@ -1417,6 +1417,10 @@ function EthereumDiagnostics({
       diagnostics?.decodedErc20ApprovalCount.toString() ?? "Not returned",
     ],
     [
+      "Decoded Permit2 approvals",
+      diagnostics?.decodedPermit2ApprovalCount?.toString() ?? "Not returned",
+    ],
+    [
       "Decoded NFT approvals",
       diagnostics?.decodedNftApprovalCount.toString() ?? "Not returned",
     ],
@@ -1432,6 +1436,12 @@ function EthereumDiagnostics({
       "ERC-20 live read failures",
       diagnostics
         ? (skippedReasons["erc20-live-read-failure"] ?? 0).toString()
+        : "Not returned",
+    ],
+    [
+      "Permit2 live read failures",
+      diagnostics
+        ? (skippedReasons["permit2-live-read-failure"] ?? 0).toString()
         : "Not returned",
     ],
     [
