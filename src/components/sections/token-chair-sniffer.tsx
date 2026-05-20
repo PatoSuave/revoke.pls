@@ -217,6 +217,19 @@ export function TokenChairSniffer({
           </section>
 
           <StatusStrip response={response} state={state} contract={contract} />
+          <ScanReport
+            response={response}
+            state={state}
+            requestError={requestError}
+            market={market}
+            contract={contract}
+            verdict={verdict}
+            quickRows={quickRows}
+            sourceSignalRows={sourceSignalRows}
+            concentrationRows={concentrationRows}
+            eventHistoryRows={eventHistoryRows}
+            lpControlSummary={lpControlSummary}
+          />
           <TokenInformationSummary
             response={response}
             state={state}
@@ -595,6 +608,557 @@ function StatusStrip({
       ))}
     </section>
   );
+}
+
+function ScanReport({
+  response,
+  state,
+  requestError,
+  market,
+  contract,
+  verdict,
+  quickRows,
+  sourceSignalRows,
+  concentrationRows,
+  eventHistoryRows,
+  lpControlSummary,
+}: {
+  response: TokenChairApiResponse | null;
+  state: SnifferUiState;
+  requestError: string | null;
+  market: TokenChairMarketData | null;
+  contract: TokenChairContractData | null;
+  verdict: TokenChairVerdict;
+  quickRows: readonly SniffSignalRow[];
+  sourceSignalRows: readonly TokenChairSourceSignalDetailRow[];
+  concentrationRows: readonly TokenChairConcentrationDetailRow[];
+  eventHistoryRows: readonly TokenChairEventHistoryDetailRow[];
+  lpControlSummary: TokenChairLpControlSummary | null;
+}) {
+  const [copied, setCopied] = useState(false);
+  const tokenAddress =
+    response?.tokenAddress ?? market?.tokenAddress ?? contract?.tokenAddress ?? null;
+  const tokenLabel =
+    market?.tokenSymbol ?? contract?.tokenSymbol ?? (state === "loading" ? "Loading" : "Waiting");
+  const reportRisks = buildReportRiskRows({
+    response,
+    quickRows,
+    sourceSignalRows,
+    concentrationRows,
+    eventHistoryRows,
+    lpControlSummary,
+    state,
+    requestError,
+  });
+  const evidenceRows = buildEvidenceRows({
+    response,
+    state,
+    contract,
+    market,
+    lpControlSummary,
+  });
+  const reviewRows = buildReviewRows({
+    evidenceRows,
+    reportRisks,
+    tokenAddress,
+    state,
+  });
+  const sharePath = tokenAddress ? buildTokenChairSnifferUrl(tokenAddress) : null;
+
+  async function copyReportLink() {
+    if (!sharePath || typeof window === "undefined" || !navigator.clipboard) {
+      return;
+    }
+
+    await navigator.clipboard.writeText(new URL(sharePath, window.location.origin).toString());
+    setCopied(true);
+    window.setTimeout(() => setCopied(false), 1600);
+  }
+
+  return (
+    <section className="rounded-lg border border-pulse-border/80 bg-[#080d12] p-4">
+      <div className="grid gap-4 xl:grid-cols-[minmax(0,0.95fr)_minmax(420px,1.05fr)]">
+        <div className="min-w-0 rounded-lg border border-pulse-border/70 bg-[#070b10] p-4">
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div className="min-w-0">
+              <p className="text-xs font-semibold uppercase tracking-[0.16em] text-pulse-cyan">
+                Scan Report
+              </p>
+              <h2 className="mt-2 break-words text-2xl font-semibold text-pulse-text">
+                {tokenLabel} review summary
+              </h2>
+            </div>
+            <span className={`rounded-full border px-3 py-1 text-sm ${verdictToneText(verdict)}`}>
+              {verdict.label}
+            </span>
+          </div>
+
+          <div className="mt-4 grid gap-2 sm:grid-cols-2">
+            <ReportMetric
+              label="Token"
+              value={tokenAddress ? shortenAddress(tokenAddress, 6) : "Waiting"}
+              detail={market?.tokenName ?? contract?.tokenName ?? "Paste a PulseChain token to start."}
+            />
+            <ReportMetric
+              label="Market"
+              value={market ? `${market.dexName}${market.quoteTokenSymbol ? ` / ${market.quoteTokenSymbol}` : ""}` : formatStatus(state, response)}
+              detail={market ? `${formatUsd(market.liquidityUsd)} liquidity, ${formatTxns24h(market.txns24h)} in 24h` : requestError ?? "Market data has not returned yet."}
+            />
+            <ReportMetric
+              label="LP control"
+              value={lpControlSummary?.value ?? "Not checked yet"}
+              detail={lpControlSummary?.detail ?? "LP holder and locker evidence appears here after a scan."}
+            />
+            <ReportMetric
+              label="Source"
+              value={formatSourceStatus(contract, state === "loading" ? "Loading..." : "Not checked yet")}
+              detail={sourceSignalRows.length > 0
+                ? `${sourceSignalRows.filter((row) => row.status === "danger" || row.status === "warning").length.toLocaleString("en-US")} source signal rows need review.`
+                : "PulseScan source/ABI rows appear here when available."}
+            />
+          </div>
+
+          <div className="mt-4 rounded-lg border border-pulse-border/60 bg-[#0a1016] p-3">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <p className="text-sm font-semibold text-pulse-text">
+                Shareable report
+              </p>
+              <button
+                type="button"
+                disabled={!sharePath}
+                onClick={() => void copyReportLink()}
+                className="rounded-lg border border-pulse-border bg-pulse-panel/55 px-3 py-2 text-xs font-semibold text-pulse-text transition hover:border-pulse-green/35 hover:text-pulse-green disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {copied ? "Copied" : "Copy report link"}
+              </button>
+            </div>
+            <p className="mt-2 break-all font-mono text-xs text-pulse-muted">
+              {sharePath ?? "A scanned token creates a canonical report URL."}
+            </p>
+          </div>
+        </div>
+
+        <div className="grid min-w-0 gap-4">
+          <ReportRiskList rows={reportRisks} />
+          <EvidenceChecklist rows={evidenceRows} />
+        </div>
+      </div>
+
+      <ReviewBeforeBuying rows={reviewRows} />
+    </section>
+  );
+}
+
+function ReportMetric({
+  label,
+  value,
+  detail,
+}: {
+  label: string;
+  value: string;
+  detail: string;
+}) {
+  return (
+    <div className="min-w-0 rounded-lg border border-pulse-border/60 bg-[#0a1016] px-3 py-2">
+      <p className="text-[11px] uppercase tracking-[0.14em] text-pulse-muted/75">
+        {label}
+      </p>
+      <p className="mt-1 truncate text-sm font-semibold text-pulse-text">
+        {value}
+      </p>
+      <p className="mt-1 line-clamp-2 text-xs leading-5 text-pulse-muted">
+        {detail}
+      </p>
+    </div>
+  );
+}
+
+function ReportRiskList({ rows }: { rows: readonly SniffSignalRow[] }) {
+  return (
+    <div className="rounded-lg border border-pulse-border/70 bg-[#070b10] p-4">
+      <PanelHeader icon="R" title="Top Review Items" meta={`${rows.length} shown`} />
+      <div className="mt-3 grid gap-2">
+        {rows.map((row) => (
+          <article
+            key={`${row.label}-${row.value}`}
+            className="rounded-lg border border-pulse-border/60 bg-[#0a1016] px-3 py-2"
+          >
+            <div className="flex items-center justify-between gap-3">
+              <p className="min-w-0 truncate text-sm font-semibold text-pulse-text">
+                {row.label}
+              </p>
+              <SniffValueBadge row={row} />
+            </div>
+            <p className="mt-2 text-xs leading-5 text-pulse-muted">{row.detail}</p>
+          </article>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function EvidenceChecklist({ rows }: { rows: readonly SniffSignalRow[] }) {
+  return (
+    <div className="rounded-lg border border-pulse-border/70 bg-[#070b10] p-4">
+      <PanelHeader icon="E" title="Evidence Checklist" meta="Checked vs pending" />
+      <div className="mt-3 grid gap-2 md:grid-cols-2">
+        {rows.map((row) => (
+          <article
+            key={row.label}
+            className="rounded-lg border border-pulse-border/60 bg-[#0a1016] px-3 py-2"
+          >
+            <div className="flex items-center justify-between gap-3">
+              <p className="min-w-0 truncate text-sm font-semibold text-pulse-text">
+                {row.label}
+              </p>
+              <SniffValueBadge row={row} />
+            </div>
+            <p className="mt-2 text-xs leading-5 text-pulse-muted">{row.detail}</p>
+          </article>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function ReviewBeforeBuying({ rows }: { rows: readonly SniffSignalRow[] }) {
+  return (
+    <div className="mt-4 rounded-lg border border-pulse-border/70 bg-[#070b10] p-4">
+      <PanelHeader icon="B" title="Review Before Buying" meta="Manual checklist" />
+      <div className="mt-3 grid gap-2 md:grid-cols-2 xl:grid-cols-4">
+        {rows.map((row) => (
+          <div
+            key={row.label}
+            className="rounded-lg border border-pulse-border/60 bg-[#0a1016] px-3 py-2"
+          >
+            <div className="flex items-center justify-between gap-2">
+              <p className="min-w-0 truncate text-sm font-semibold text-pulse-text">
+                {row.label}
+              </p>
+              <SniffValueBadge row={row} />
+            </div>
+            <p className="mt-2 text-xs leading-5 text-pulse-muted">{row.detail}</p>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function buildReportRiskRows({
+  response,
+  quickRows,
+  sourceSignalRows,
+  concentrationRows,
+  eventHistoryRows,
+  lpControlSummary,
+  state,
+  requestError,
+}: {
+  response: TokenChairApiResponse | null;
+  quickRows: readonly SniffSignalRow[];
+  sourceSignalRows: readonly TokenChairSourceSignalDetailRow[];
+  concentrationRows: readonly TokenChairConcentrationDetailRow[];
+  eventHistoryRows: readonly TokenChairEventHistoryDetailRow[];
+  lpControlSummary: TokenChairLpControlSummary | null;
+  state: SnifferUiState;
+  requestError: string | null;
+}): SniffSignalRow[] {
+  if (state === "loading") {
+    return [
+      {
+        label: "Scan running",
+        value: "Loading",
+        status: "not-checked",
+        detail:
+          "Token Chair is reading market, contract, explorer, holder, and pair context.",
+      },
+    ];
+  }
+
+  if (state === "error") {
+    return [
+      {
+        label: "Request failed",
+        value: "Unable to verify",
+        status: "unable-to-verify",
+        detail: requestError ?? "The scan request did not complete.",
+      },
+    ];
+  }
+
+  if (!response) {
+    return [
+      {
+        label: "Waiting for token",
+        value: "Not checked yet",
+        status: "not-checked",
+        detail:
+          "Paste a PulseChain token address to build a read-only review report.",
+      },
+    ];
+  }
+
+  const verdictRows = response.verdict.reasons.map((reason) => ({
+    label: reason.label,
+    value:
+      reason.severity === "high"
+        ? "High"
+        : reason.severity === "warning"
+          ? "Warning"
+          : "Info",
+    status:
+      reason.severity === "high"
+        ? "danger"
+        : reason.severity === "warning"
+          ? "warning"
+          : "not-checked",
+    detail: reason.detail,
+  })) satisfies SniffSignalRow[];
+  const supportingRows = [
+    ...quickRows,
+    ...sourceSignalRows,
+    ...concentrationRows,
+    ...eventHistoryRows,
+    ...(lpControlSummary ? [lpControlSummary] : []),
+  ].filter((row) => row.status === "danger" || row.status === "warning");
+  const rows = dedupeReportRows([...verdictRows, ...supportingRows]);
+
+  if (rows.length > 0) return rows.slice(0, 5);
+
+  return [
+    {
+      label: "Read-only limits",
+      value: "Review manually",
+      status: "not-checked",
+      detail:
+        "No major visible warnings were returned, but this is still not a simulation, audit, or guarantee.",
+    },
+  ];
+}
+
+function buildEvidenceRows({
+  response,
+  state,
+  contract,
+  market,
+  lpControlSummary,
+}: {
+  response: TokenChairApiResponse | null;
+  state: SnifferUiState;
+  contract: TokenChairContractData | null;
+  market: TokenChairMarketData | null;
+  lpControlSummary: TokenChairLpControlSummary | null;
+}): SniffSignalRow[] {
+  const loading = state === "loading";
+  const marketStatus = response?.status ?? null;
+  const explorer = contract?.explorer ?? null;
+  const holders = contract?.holders ?? null;
+  const pairContract = response?.pairContract ?? null;
+  const pulsexPairs = response?.pulsexPairs ?? [];
+  const dextools = response?.dextools ?? null;
+
+  return [
+    {
+      label: "DEX Screener market",
+      value: loading ? "Loading" : market ? "Returned" : marketStatus === "no-pair-found" ? "No pair" : "Not checked yet",
+      status: loading ? "not-checked" : market ? "checked" : marketStatus ? "unable-to-verify" : "not-checked",
+      detail: market
+        ? `Selected ${market.dexName} pair by visible liquidity from ${market.pairCount.toLocaleString("en-US")} returned pair${market.pairCount === 1 ? "" : "s"}.`
+        : "Primary market context comes from the read-only DEX Screener token-pairs endpoint.",
+    },
+    {
+      label: "Selected pair contract",
+      value: contractReadValue(pairContract?.status ?? null, loading),
+      status: contractReadStatus(pairContract?.status ?? null, loading),
+      detail:
+        "Reads token0, token1, reserves, and LP supply from the selected pair contract when a pair is available.",
+    },
+    {
+      label: "PulseX pair discovery",
+      value: loading
+        ? "Loading"
+        : pulsexPairs.length > 0
+          ? `${pulsexPairs.length.toLocaleString("en-US")} found`
+          : response
+            ? "No native pair found"
+            : "Not checked yet",
+      status: loading ? "not-checked" : response ? "checked" : "not-checked",
+      detail:
+        "Calls native PulseX V1/V2 factories for common quote-token pair existence and raw reserves.",
+    },
+    {
+      label: "Contract reads",
+      value: contractReadValue(contract?.status ?? null, loading),
+      status: contractReadStatus(contract?.status ?? null, loading),
+      detail:
+        "Reads bytecode, token metadata, owner, proxy slots, public admin getters, tax getters, mechanics, and recent events.",
+    },
+    {
+      label: "PulseScan source/ABI",
+      value: loading
+        ? "Loading"
+        : explorer?.sourceVerified === true
+          ? "Verified source"
+          : explorer?.sourceVerified === false
+            ? "Not verified"
+            : explorer
+              ? "Unable to verify"
+              : "Not checked yet",
+      status: loading
+        ? "not-checked"
+        : explorer?.sourceVerified === true
+          ? "checked"
+          : explorer
+            ? "unable-to-verify"
+            : "not-checked",
+      detail:
+        "Feeds the source-signal rows from returned ABI and source metadata. Missing source limits this part of the report.",
+    },
+    {
+      label: "Holder distribution",
+      value: contractReadValue(holders?.status ?? null, loading),
+      status: contractReadStatus(holders?.status ?? null, loading),
+      detail:
+        "Uses sampled PulseScan holder pages for top-holder and LP-holder concentration buckets.",
+    },
+    {
+      label: "LP lock/control evidence",
+      value: lpControlSummary?.value ?? (loading ? "Loading" : "Not checked yet"),
+      status: lpControlSummary?.status ?? (loading ? "not-checked" : "not-checked"),
+      detail:
+        lpControlSummary?.detail ??
+        "Combines LP-holder classification, burn/dead sample context, and known locker reads when visible.",
+    },
+    {
+      label: "DEXTools enrichment",
+      value: loading
+        ? "Loading"
+        : dextools?.status === "not-configured"
+          ? "Not configured"
+          : dextools
+            ? formatDextoolsStatus(dextools, "settled")
+            : "Not checked yet",
+      status: loading
+        ? "not-checked"
+        : dextools?.status === "success"
+          ? "checked"
+          : dextools?.status === "partial" || dextools?.status === "rate-limited"
+            ? "warning"
+            : "not-checked",
+      detail:
+        "Optional external market/score context. It is hidden when not configured and does not drive a safety claim.",
+    },
+    {
+      label: "Honeypot simulation",
+      value: "Not live",
+      status: "not-checked",
+      detail:
+        "No buy/sell execution or simulation is run in this phase.",
+    },
+    {
+      label: "Wallet actions",
+      value: "Not used",
+      status: "checked",
+      detail:
+        "Token Chair does not connect a wallet, request signatures, or send transactions.",
+    },
+  ];
+}
+
+function buildReviewRows({
+  evidenceRows,
+  reportRisks,
+  tokenAddress,
+  state,
+}: {
+  evidenceRows: readonly SniffSignalRow[];
+  reportRisks: readonly SniffSignalRow[];
+  tokenAddress: Address | null;
+  state: SnifferUiState;
+}): SniffSignalRow[] {
+  const unavailableEvidence = evidenceRows.filter(
+    (row) => row.status === "unable-to-verify" || row.status === "not-checked",
+  ).length;
+  const warningCount = reportRisks.filter(
+    (row) => row.status === "warning" || row.status === "danger",
+  ).length;
+
+  return [
+    {
+      label: "Address",
+      value: tokenAddress ? "Captured" : "Needed",
+      status: tokenAddress ? "checked" : "not-checked",
+      detail: tokenAddress
+        ? "The report URL can be shared for this token address."
+        : "Paste a token address before reviewing risk signals.",
+    },
+    {
+      label: "Warnings",
+      value: warningCount > 0 ? `${warningCount.toLocaleString("en-US")} visible` : state === "settled" ? "None surfaced" : "Pending",
+      status: warningCount > 0 ? "warning" : state === "settled" ? "checked" : "not-checked",
+      detail:
+        "Visible warnings should be reviewed in context before buying or approving.",
+    },
+    {
+      label: "Gaps",
+      value: unavailableEvidence > 0 ? `${unavailableEvidence.toLocaleString("en-US")} pending` : "Reviewed",
+      status: unavailableEvidence > 0 ? "not-checked" : "checked",
+      detail:
+        "Unavailable, not-configured, or not-live checks should be treated as open review gaps.",
+    },
+    {
+      label: "Decision",
+      value: "Manual",
+      status: "not-checked",
+      detail:
+        "Use this report as visible evidence only. It is not a safety verdict, audit, or trading recommendation.",
+    },
+  ];
+}
+
+function contractReadValue(
+  status: TokenChairContractData["status"] | null,
+  loading: boolean,
+): string {
+  if (loading) return "Loading";
+  if (status === "success") return "Returned";
+  if (status === "partial") return "Partial";
+  if (status === "unable-to-verify") return "Unable to verify";
+  return "Not checked yet";
+}
+
+function contractReadStatus(
+  status: TokenChairContractData["status"] | null,
+  loading: boolean,
+): SniffRowStatus {
+  if (loading) return "not-checked";
+  if (status === "success") return "checked";
+  if (status === "partial") return "warning";
+  if (status === "unable-to-verify") return "unable-to-verify";
+  return "not-checked";
+}
+
+function dedupeReportRows(rows: readonly SniffSignalRow[]): SniffSignalRow[] {
+  const seen = new Set<string>();
+  const deduped: SniffSignalRow[] = [];
+
+  for (const row of rows) {
+    const key = `${row.label}:${row.value}:${row.detail}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    deduped.push(row);
+  }
+
+  return deduped.sort((a, b) => riskRank(a.status) - riskRank(b.status));
+}
+
+function riskRank(status: SniffRowStatus): number {
+  if (status === "danger") return 0;
+  if (status === "warning") return 1;
+  if (status === "unable-to-verify") return 2;
+  if (status === "not-checked") return 3;
+  return 4;
 }
 
 function TokenInformationSummary({
