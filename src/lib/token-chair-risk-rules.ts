@@ -31,6 +31,21 @@ export interface TokenChairRiskItem {
   href?: string;
 }
 
+export interface TokenChairRiskCounts {
+  critical: number;
+  warning: number;
+  info: number;
+}
+
+export type TokenChairRiskReadinessTone = "danger" | "warning" | "neutral" | "success";
+
+export interface TokenChairRiskReadiness {
+  label: string;
+  detail: string;
+  tone: TokenChairRiskReadinessTone;
+  coverageGapCount: number;
+}
+
 export interface TokenChairRiskQueueInput {
   response: TokenChairApiResponse | null;
   lpControlSummary?: TokenChairLpControlSummary | null;
@@ -72,6 +87,7 @@ export function buildTokenChairRiskQueue({
   addSourceItems(items, response.contract);
   addHolderItems(items, response.contract);
   addLpControlItems(items, response.contract, lpControlSummary);
+  addAggregateCoverageItems(items, response);
   addHoneypotCoverageItem(items);
 
   if (tokenAddress) {
@@ -93,11 +109,60 @@ export function buildTokenChairRiskQueue({
   return dedupeRiskItems(items).sort(compareRiskItems);
 }
 
-export function getTokenChairRiskCounts(items: readonly TokenChairRiskItem[]) {
+export function getTokenChairRiskCounts(
+  items: readonly TokenChairRiskItem[],
+): TokenChairRiskCounts {
   return {
     critical: items.filter((item) => item.severity === "critical").length,
     warning: items.filter((item) => item.severity === "warning").length,
     info: items.filter((item) => item.severity === "info").length,
+  };
+}
+
+export function getTokenChairRiskReadiness(
+  items: readonly TokenChairRiskItem[],
+): TokenChairRiskReadiness {
+  const counts = getTokenChairRiskCounts(items);
+  const coverageGapCount = items.filter(isCoverageGapItem).length;
+
+  if (items.some((item) => item.id === "scan-not-run")) {
+    return {
+      label: "Run scan",
+      detail:
+        "Paste a PulseChain token address to build the review queue and evidence checklist.",
+      tone: "neutral",
+      coverageGapCount,
+    };
+  }
+
+  if (counts.critical > 0) {
+    return {
+      label: "Critical review first",
+      detail:
+        "Critical queue items need manual review before using the checklist as an acceptance record.",
+      tone: "danger",
+      coverageGapCount,
+    };
+  }
+
+  if (counts.warning > 0) {
+    return {
+      label: coverageGapCount > 0 ? "Warnings and gaps" : "Warnings to review",
+      detail:
+        coverageGapCount > 0
+          ? "The scan returned warning-level items and unresolved coverage gaps. Review both before making a manual decision."
+          : "Warning-level items are present. Review the evidence and record a manual decision.",
+      tone: "warning",
+      coverageGapCount,
+    };
+  }
+
+  return {
+    label: "Ready for manual decision",
+    detail:
+      "No critical or warning queue items are currently prioritized. This is still not a safety verdict.",
+    tone: "success",
+    coverageGapCount,
   };
 }
 
@@ -178,6 +243,37 @@ function addMarketItems(items: TokenChairRiskItem[], response: TokenChairApiResp
         "Multiple pairs can split liquidity and make the selected pair only part of the market picture.",
       manualReview:
         "Review the Pair Candidates section and compare liquidity, quote token, pair age, and volume.",
+      href: market.dexScreenerUrl ?? undefined,
+      sourceLabel: "DEX Screener",
+    });
+  }
+
+  if (response.pairContract?.status === "success" && response.pairContract.containsScannedToken === false) {
+    items.push({
+      id: "pair-contract-mismatch",
+      severity: "critical",
+      category: "market",
+      title: "Selected pair contract mismatch",
+      evidence:
+        "Read-only pair contract checks did not confirm the scanned token in token0 or token1.",
+      whyItMatters:
+        "A market pair that does not contain the scanned token can make liquidity and LP context unreliable.",
+      manualReview:
+        "Open the selected pair contract and verify token0/token1 directly before using market or LP evidence.",
+      href: market.dexScreenerUrl ?? undefined,
+      sourceLabel: "DEX Screener",
+    });
+  } else if (response.pairContract?.status && response.pairContract.status !== "success") {
+    items.push({
+      id: `pair-contract-${response.pairContract.status}`,
+      severity: "warning",
+      category: "coverage",
+      title: "Selected pair contract read incomplete",
+      evidence: `Pair contract read status: ${response.pairContract.status}.`,
+      whyItMatters:
+        "Pair token and reserve checks help confirm the selected market pair matches the scanned token.",
+      manualReview:
+        "Open the selected pair contract and verify token0, token1, reserves, and LP supply manually.",
       href: market.dexScreenerUrl ?? undefined,
       sourceLabel: "DEX Screener",
     });
@@ -580,6 +676,54 @@ function addLpControlItems(
   }
 }
 
+function addAggregateCoverageItems(
+  items: TokenChairRiskItem[],
+  response: TokenChairApiResponse,
+) {
+  const contract = response.contract;
+  const explorerDegraded =
+    contract?.explorer?.status === "unable-to-verify" ||
+    contract?.explorer?.sourceVerified === null ||
+    contract?.explorer?.abiAvailable === null;
+  const holdersDegraded =
+    contract?.holders?.status === "unable-to-verify" ||
+    contract?.holders?.status === "partial";
+  const pairDegraded =
+    response.pairContract?.status === "unable-to-verify" ||
+    response.pairContract?.status === "partial";
+  const warningText = response.warnings.join(" ").toLowerCase();
+  const rateLimited =
+    warningText.includes("rate-limit") ||
+    warningText.includes("rate limited") ||
+    warningText.includes("rate-limited");
+  const degradedCount = [
+    explorerDegraded,
+    holdersDegraded,
+    pairDegraded,
+    rateLimited,
+    response.status !== "success",
+  ].filter(Boolean).length;
+
+  if (degradedCount >= 2) {
+    items.push({
+      id: "multiple-data-sources-degraded",
+      severity: "warning",
+      category: "coverage",
+      title: "Multiple evidence sources degraded",
+      evidence:
+        rateLimited
+          ? "One or more upstream reads appear rate-limited, and additional evidence sources are incomplete."
+          : "Two or more evidence sources did not fully return.",
+      whyItMatters:
+        "When multiple evidence sources degrade together, the queue can miss source, holder, pair, or LP context.",
+      manualReview:
+        "Rerun the scan, then open PulseScan and the selected DEX pair directly for unresolved source, holder, and LP evidence.",
+      href: contract?.explorer?.explorerTokenUrl,
+      sourceLabel: "PulseScan",
+    });
+  }
+}
+
 function addHoneypotCoverageItem(items: TokenChairRiskItem[]) {
   items.push({
     id: "honeypot-not-live",
@@ -592,6 +736,21 @@ function addHoneypotCoverageItem(items: TokenChairRiskItem[]) {
     manualReview:
       "Use separate simulation or controlled test tooling if execution behavior must be verified.",
   });
+}
+
+function isCoverageGapItem(item: TokenChairRiskItem): boolean {
+  if (item.category === "coverage") return true;
+
+  const text = `${item.id} ${item.title}`.toLowerCase();
+  return (
+    text.includes("missing") ||
+    text.includes("incomplete") ||
+    text.includes("unavailable") ||
+    text.includes("unresolved") ||
+    text.includes("not verified") ||
+    text.includes("not configured") ||
+    text.includes("not live")
+  );
 }
 
 function dedupeRiskItems(items: readonly TokenChairRiskItem[]): TokenChairRiskItem[] {

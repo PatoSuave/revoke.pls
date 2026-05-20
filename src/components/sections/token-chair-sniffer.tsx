@@ -9,7 +9,9 @@ import { shortenAddress } from "@/lib/format";
 import {
   buildTokenChairRiskQueue,
   getTokenChairRiskCounts,
+  getTokenChairRiskReadiness,
   type TokenChairRiskItem,
+  type TokenChairRiskReadinessTone,
   type TokenChairRiskSeverity,
 } from "@/lib/token-chair-risk-rules";
 import {
@@ -888,6 +890,7 @@ function EvidenceChecklist({ rows }: { rows: readonly SniffSignalRow[] }) {
 
 function MustReviewQueue({ items }: { items: readonly TokenChairRiskItem[] }) {
   const counts = getTokenChairRiskCounts(items);
+  const readiness = getTokenChairRiskReadiness(items);
   const visibleItems = items.slice(0, 8);
 
   return (
@@ -897,6 +900,17 @@ function MustReviewQueue({ items }: { items: readonly TokenChairRiskItem[] }) {
         title="Must Review Before Touching"
         meta={`${counts.critical} critical / ${counts.warning} warning / ${counts.info} info`}
       />
+      <div className={`mt-3 rounded-lg border px-3 py-3 ${readinessClass(readiness.tone)}`}>
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div className="min-w-0">
+            <p className="text-sm font-semibold">{readiness.label}</p>
+            <p className="mt-1 text-xs leading-5 opacity-85">{readiness.detail}</p>
+          </div>
+          <span className="rounded-full border border-current/35 px-2 py-1 text-xs font-semibold">
+            {readiness.coverageGapCount.toLocaleString("en-US")} gaps
+          </span>
+        </div>
+      </div>
       <div className="mt-3 grid gap-3 lg:grid-cols-2">
         {visibleItems.map((item) => (
           <article
@@ -1677,6 +1691,13 @@ function riskItemBorderClass(severity: TokenChairRiskSeverity): string {
   if (severity === "critical") return "border-rose-400/35";
   if (severity === "warning") return "border-amber-300/30";
   return "border-pulse-border/60";
+}
+
+function readinessClass(tone: TokenChairRiskReadinessTone): string {
+  if (tone === "danger") return "border-rose-400/35 bg-rose-400/10 text-rose-100";
+  if (tone === "warning") return "border-amber-300/35 bg-amber-300/10 text-amber-100";
+  if (tone === "success") return "border-pulse-green/35 bg-pulse-green/10 text-pulse-green";
+  return "border-pulse-border/65 bg-[#0a1016] text-pulse-muted";
 }
 
 function compareMetricToneClass(tone: "muted" | "warning" | "danger"): string {

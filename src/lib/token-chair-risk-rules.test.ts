@@ -4,6 +4,7 @@ import { getAddress } from "viem";
 import {
   buildTokenChairRiskQueue,
   getTokenChairRiskCounts,
+  getTokenChairRiskReadiness,
 } from "@/lib/token-chair-risk-rules";
 import type {
   TokenChairApiResponse,
@@ -313,5 +314,118 @@ describe("Token Chair risk rules", () => {
 
     expect(queue.map((item) => item.id)).toContain("dextools-not-configured");
     expect(queue.map((item) => item.id)).toContain("honeypot-not-live");
+  });
+
+  it("flags selected pair mismatches as critical", () => {
+    const queue = buildTokenChairRiskQueue({
+      response: response({
+        pairContract: {
+          status: "success",
+          pairAddress: PAIR,
+          token0: OWNER,
+          token1: ADMIN,
+          containsScannedToken: false,
+          reserve0Raw: "1",
+          reserve1Raw: "2",
+          scannedTokenReserveRaw: null,
+          quoteTokenReserveRaw: null,
+          totalSupplyRaw: "3",
+          warnings: [],
+          errors: [],
+        },
+      }),
+    });
+
+    expect(queue).toContainEqual(
+      expect.objectContaining({
+        id: "pair-contract-mismatch",
+        severity: "critical",
+      }),
+    );
+    expect(getTokenChairRiskReadiness(queue)).toEqual(
+      expect.objectContaining({
+        label: "Critical review first",
+        tone: "danger",
+      }),
+    );
+  });
+
+  it("summarizes multiple degraded evidence sources for rate-limited scans", () => {
+    const queue = buildTokenChairRiskQueue({
+      response: response({
+        warnings: [
+          "PulseScan rate-limited explorer metadata.",
+          "PulseScan rate-limited holder data.",
+        ],
+        pairContract: {
+          status: "partial",
+          pairAddress: PAIR,
+          token0: TOKEN,
+          token1: null,
+          containsScannedToken: true,
+          reserve0Raw: null,
+          reserve1Raw: null,
+          scannedTokenReserveRaw: null,
+          quoteTokenReserveRaw: null,
+          totalSupplyRaw: null,
+          warnings: ["Reserve read failed."],
+          errors: [],
+        },
+        contract: contract({
+          explorer: {
+            ...contract().explorer!,
+            status: "unable-to-verify",
+            sourceVerified: null,
+            abiAvailable: null,
+            sourceCodeAvailable: null,
+          },
+          holders: {
+            ...contract().holders!,
+            status: "partial",
+          },
+        }),
+      }),
+    });
+    const readiness = getTokenChairRiskReadiness(queue);
+
+    expect(queue.map((item) => item.id)).toContain("multiple-data-sources-degraded");
+    expect(readiness.coverageGapCount).toBeGreaterThan(1);
+    expect(readiness.tone).toBe("warning");
+  });
+
+  it("keeps all risk queue copy away from safe and scam claims", () => {
+    const queue = buildTokenChairRiskQueue({
+      response: response({
+        contract: contract({
+          ownerAddress: OWNER,
+          ownershipRenounced: false,
+          proxy: {
+            detected: true,
+            implementationAddress: null,
+            adminAddress: ADMIN,
+            beaconAddress: null,
+            minimalProxyTarget: null,
+            checks: [],
+          },
+        }),
+      }),
+    });
+    const allCopy = queue
+      .map((item) =>
+        [
+          item.title,
+          item.evidence,
+          item.whyItMatters,
+          item.manualReview,
+          item.sourceLabel ?? "",
+        ].join(" "),
+      )
+      .join(" ")
+      .toLowerCase();
+
+    expect(allCopy).not.toMatch(/\bsafe\b/);
+    expect(allCopy).not.toMatch(/\bscam\b/);
+    expect(allCopy).not.toContain("guarantee");
+    expect(allCopy).not.toContain("certified");
   });
 });

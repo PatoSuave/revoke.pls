@@ -8,9 +8,9 @@ Token Chair Sniffer is a PulseChain-only, read-only token market-intel and risk-
 
 It is intentionally playful, but its security language stays conservative. The feature highlights visible signals before a user buys, approves, or interacts with a token. It does not connect a wallet, request a signature, submit a transaction, or claim that any token is safe.
 
-## Phase 1 Scope
+## Current Preview Scope
 
-Implemented in this MVP:
+Implemented in the current Phase 2 preview:
 
 - App route: `/app/token-chair-sniffer`
 - Shareable token deep links: `/app/token-chair-sniffer?token=0x...`
@@ -55,11 +55,24 @@ Implemented in this MVP:
 - Quick Sniff checklist with live ownership/proxy rows and conservative placeholders for unchecked rows
 - Contract Sniff cards with live owner, source, deployer, holder, LP, and metadata signals
 - Holder Distribution panel explaining sampled token-holder buckets, top-holder rows, and LP-holder concentration address context
-- Unit tests for address validation, parser behavior, API states, verdict copy, and unchecked rows
+- Unit tests for address validation, parser behavior, API states, verdict copy, unchecked rows, risk-rule generation, degraded coverage states, and conservative risk-copy guardrails
+
+## Phase 2 Preview Completion
+
+Phase 2 is considered preview-complete when all of the following remain true on the feature branch and latest Vercel Preview:
+
+- The feature stays read-only and does not connect a wallet, request signatures, or submit transactions.
+- The Must Review Before Touching queue prioritizes critical, warning, and info items without claiming a token is safe, certified, guaranteed, or not a scam.
+- The queue shows a readiness summary that distinguishes critical review, warning/gap review, scan-needed state, and manual-decision-ready state.
+- Degraded PulseScan, DEXTools, holder, selected-pair, and source/ABI states are labeled as review gaps rather than token conclusions.
+- Review Before Buying persists checklist state, notes, and manual decision locally per token.
+- Recent Reviews and Compare Reviews persist locally in the browser and never require a backend account or wallet.
+- Copy review exports top queue items, checklist state, decision, notes, report link, and timestamp.
+- Vercel Preview QA passes for sample tokens, deep links, route smoke, API smoke, visual desktop/mobile layout, and local-review workflows.
 
 ## Market Data Source
 
-Phase 1 market data uses DEX Screener only:
+Current preview market data uses DEX Screener as the primary market source:
 
 ```text
 GET https://api.dexscreener.com/token-pairs/v1/pulsechain/{tokenAddress}
@@ -224,7 +237,7 @@ If PulseScan temporarily rate-limits metadata or holder reads, the UI should say
 
 ## Placeholder Checks
 
-The following rows are visually present but are not live contract-analysis results in Phase 1:
+The following rows are visually present but are not live contract-analysis results in the current preview:
 
 - Quick Sniff honeypot row
 - buy/sell tax rows when no common public tax/fee getter responds
@@ -244,7 +257,7 @@ Valid EVM-style query addresses are checksum-normalized, prefilled, and scanned 
 
 ## Non-Goals
 
-Phase 1 does not add:
+The current preview does not add:
 
 - wallet writes
 - wallet signing
@@ -277,7 +290,7 @@ Allowed internal verdict states:
 - `high-risk`
 - `low-visible-risk`
 
-Phase 1 defaults complete-looking market results to `unable-to-fully-verify` unless visible market, read-only contract, source-signal, event-history, or concentration warnings are present, because bytecode-level hidden-owner review and honeypot checks are not live yet.
+The preview defaults complete-looking market results to `unable-to-fully-verify` unless visible market, read-only contract, source-signal, event-history, or concentration warnings are present, because bytecode-level hidden-owner review and honeypot checks are not live yet.
 
 The UI may show `some-warnings` or `high-risk` for visible warnings such as very low liquidity, new pairs, missing price, missing liquidity, no 24h transactions, a non-zero standard owner, common proxy signals, missing verified source, higher-severity lightweight source-signal matches, high top-holder concentration, or high LP-holder concentration.
 
@@ -310,14 +323,15 @@ Do not include influencer-specific naming in this phase. The page should remain 
 
 Recommended next phase:
 
-**Phase 2: Native PulseChain Contract Sniff**
+**Phase 3: Shared Review And Deeper Simulation**
 
 Possible remaining scope:
 
-- richer owner/admin analysis
-- expanded proxy detection
-- richer ABI/source analysis with severity tiers
-- richer holder concentration with known-contract tagging
+- optional account-backed saved reviews
+- richer token comparison across live rescans, not only local saved review state
+- deeper ABI/source analysis beyond lightweight keyword matching
+- optional execution simulation or honeypot tooling if a safe, clearly separated provider is chosen
+- richer known-contract tagging and locker integrations
 - broader LP concentration with additional locker protocols, deeper unlock-state checks, and visible locker-record tables
 
 Later phases:

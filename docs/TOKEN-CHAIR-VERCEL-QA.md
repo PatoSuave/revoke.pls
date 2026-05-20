@@ -34,6 +34,7 @@ $html = npx.cmd vercel curl "$preview/app/token-chair-sniffer"
 $html -match "Token Chair Sniffer"
 $html -match "Scan Report"
 $html -match "Must Review Before Touching"
+$html -match "Critical review first" -or $html -match "Warnings and gaps" -or $html -match "Ready for manual decision" -or $html -match "Run scan"
 $html -match "Evidence Checklist"
 $html -match "Review Before Buying"
 $html -match "Copy report link"
@@ -106,6 +107,7 @@ In an authenticated browser session, check:
 - Sample-token preset buttons run scans and update the URL.
 - Scan Report appears before raw detail panels.
 - Must Review Before Touching shows prioritized critical/warning/info review items with Evidence, Why, and Review copy.
+- Must Review Before Touching shows a readiness summary and coverage-gap count.
 - Top Review Items are readable and do not overlap on mobile.
 - Evidence Checklist distinguishes returned, partial, unavailable, not-configured, and not-live rows.
 - Review Before Buying supports manual checklist toggles, decision state, notes, and Copy review.
@@ -114,6 +116,14 @@ In an authenticated browser session, check:
 - Compare Reviews lets the reviewer select two to four saved recent reviews and compare decision, verdict, critical/warning counts, checklist progress, timestamp, and notes.
 - Copy review includes top risk queue items, checklist state, decision, notes, report link, and timestamp.
 - Copy report link writes a preview-local deep link.
+
+## Phase 2 Acceptance Checks
+
+- Risk queue copy does not say a token is safe, certified, guaranteed, or not a scam.
+- Rate-limited or missing PulseScan data appears as degraded coverage, not as a token verdict.
+- Selected-pair contract mismatch, proxy/admin surfaces, high source signals, high LP concentration, and high holder concentration remain priority review items.
+- Review state, Recent Reviews, and Compare Reviews remain local browser storage only.
+- Vercel Preview route smoke and API smoke pass before any discussion of `main`.
 
 ## Guardrails
 
