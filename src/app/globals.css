@@ -122,6 +122,24 @@ body {
     pointer-events: none;
   }
 
+  .pulse-mark {
+    overflow: visible;
+    transform-origin: center;
+    animation: pulse-mark-breathe 3.4s ease-in-out infinite;
+  }
+
+  .pulse-mark-frame {
+    transform-origin: center;
+  }
+
+  .pulse-mark-lifeline {
+    stroke-dasharray: 20 80;
+    stroke-dashoffset: 100;
+    opacity: 0;
+    filter: drop-shadow(0 0 4px rgb(var(--pulse-cyan) / 0.8));
+    animation: pulse-mark-lifeline 3.4s ease-in-out infinite;
+  }
+
   .x-profile-pulse-link {
     display: inline-flex;
     height: 2rem;
@@ -172,6 +190,50 @@ body {
   }
 }
 
+@keyframes pulse-mark-breathe {
+  0%,
+  100% {
+    filter: drop-shadow(0 0 0 rgb(var(--pulse-cyan) / 0));
+    transform: scale(1);
+  }
+
+  18% {
+    filter:
+      drop-shadow(0 0 7px rgb(var(--pulse-cyan) / 0.5))
+      drop-shadow(0 0 16px rgb(var(--pulse-pink) / 0.28));
+    transform: scale(1.035);
+  }
+
+  28%,
+  64% {
+    filter: drop-shadow(0 0 4px rgb(var(--pulse-purple) / 0.28));
+    transform: scale(1);
+  }
+}
+
+@keyframes pulse-mark-lifeline {
+  0%,
+  12% {
+    stroke-dashoffset: 100;
+    opacity: 0;
+  }
+
+  18% {
+    opacity: 1;
+  }
+
+  42% {
+    stroke-dashoffset: 0;
+    opacity: 1;
+  }
+
+  54%,
+  100% {
+    stroke-dashoffset: -80;
+    opacity: 0;
+  }
+}
+
 @keyframes x-profile-pulse {
   0%,
   100% {
@@ -188,6 +250,15 @@ body {
 }
 
 @media (prefers-reduced-motion: reduce) {
+  .pulse-mark,
+  .pulse-mark-lifeline {
+    animation: none;
+  }
+
+  .pulse-mark-lifeline {
+    opacity: 0;
+  }
+
   .x-profile-pulse-link {
     animation: none;
   }
