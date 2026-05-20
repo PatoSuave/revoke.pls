@@ -270,7 +270,7 @@ export function TokenChairSniffer({
             requestError={requestError}
           />
 
-          <div className="grid gap-4 xl:grid-cols-[minmax(0,1.15fr)_minmax(360px,0.85fr)]">
+          <div className="grid items-start gap-4 xl:grid-cols-[minmax(0,1.15fr)_minmax(360px,0.85fr)]">
             <QuickSniffRows rows={quickRows} />
             <MarketChairIntel
               state={state}
@@ -726,7 +726,7 @@ function ScanReport({
 
   return (
     <section className="rounded-lg border border-pulse-border/80 bg-[#080d12] p-4">
-      <div className="grid gap-4 xl:grid-cols-[minmax(0,0.95fr)_minmax(420px,1.05fr)]">
+      <div className="grid items-start gap-4 xl:grid-cols-[minmax(0,0.95fr)_minmax(420px,1.05fr)]">
         <div className="min-w-0 rounded-lg border border-pulse-border/70 bg-[#070b10] p-4">
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div className="min-w-0">
@@ -2385,7 +2385,7 @@ function HolderDistributionSummary({
 
   return (
     <div className="mt-4 grid gap-3">
-      <div className="grid gap-3 xl:grid-cols-[minmax(0,1fr)_420px]">
+      <div className="grid items-start gap-3 xl:grid-cols-[minmax(0,1fr)_420px]">
         <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
           {metrics.map((metric) => (
             <HolderDistributionMetric key={metric.label} {...metric} />
@@ -2459,7 +2459,7 @@ function LpControlSummary({
   ];
 
   return (
-    <div className="grid gap-3 rounded-lg border border-pulse-border/65 bg-[#070b10] p-3 xl:grid-cols-[minmax(0,1fr)_420px]">
+    <div className="grid items-start gap-3 rounded-lg border border-pulse-border/65 bg-[#070b10] p-3 xl:grid-cols-[minmax(0,1fr)_420px]">
       <div>
         <div className="mb-3 flex items-center justify-between gap-3">
           <h3 className="text-sm font-semibold text-pulse-text">
