@@ -997,6 +997,8 @@ const REVIEW_DECISION_OPTIONS: readonly {
 ] as const;
 
 const REVIEW_WORKBENCH_STORAGE_KEY = "token-chair-review-workbench";
+const REVIEW_COMPARISON_STORAGE_KEY = "token-chair-review-comparison";
+const REVIEW_COMPARISON_LIMIT = 4;
 
 function ReviewBeforeBuying({
   rows,
@@ -1018,13 +1020,19 @@ function ReviewBeforeBuying({
     [tokenAddress],
   );
   const [draftLoaded, setDraftLoaded] = useState(false);
+  const [comparisonLoaded, setComparisonLoaded] = useState(false);
   const [draft, setDraft] = useState<ReviewDraft>(() => createEmptyReviewDraft());
   const [workbench, setWorkbench] = useState<ReviewWorkbenchEntry[]>([]);
+  const [comparisonTokenAddresses, setComparisonTokenAddresses] = useState<string[]>([]);
   const [copied, setCopied] = useState(false);
   const riskCounts = getTokenChairRiskCounts(riskQueue);
   const checkedCount = rows.filter((row) => draft.checked[reviewRowKey(row)]).length;
   const completionLabel =
     rows.length > 0 ? `${checkedCount.toLocaleString("en-US")}/${rows.length.toLocaleString("en-US")} checked` : "No checklist";
+  const comparisonEntries = useMemo(
+    () => buildComparisonEntries(workbench, comparisonTokenAddresses),
+    [comparisonTokenAddresses, workbench],
+  );
 
   useEffect(() => {
     setCopied(false);
@@ -1044,7 +1052,32 @@ function ReviewBeforeBuying({
   useEffect(() => {
     if (typeof window === "undefined") return;
     setWorkbench(parseReviewWorkbench(window.localStorage.getItem(REVIEW_WORKBENCH_STORAGE_KEY)));
+    setComparisonTokenAddresses(
+      parseComparisonTokenAddresses(window.localStorage.getItem(REVIEW_COMPARISON_STORAGE_KEY)),
+    );
+    setComparisonLoaded(true);
   }, []);
+
+  useEffect(() => {
+    if (!comparisonLoaded || typeof window === "undefined") return;
+
+    const pruned = comparisonTokenAddresses.filter((address) =>
+      workbench.some((entry) => entry.tokenAddress.toLowerCase() === address),
+    );
+
+    if (pruned.length !== comparisonTokenAddresses.length) {
+      setComparisonTokenAddresses(pruned);
+      return;
+    }
+
+    window.localStorage.setItem(
+      REVIEW_COMPARISON_STORAGE_KEY,
+      JSON.stringify({
+        version: 1,
+        tokenAddresses: pruned,
+      }),
+    );
+  }, [comparisonLoaded, comparisonTokenAddresses, workbench]);
 
   useEffect(() => {
     if (!storageKey || !draftLoaded || typeof window === "undefined") return;
@@ -1124,6 +1157,25 @@ function ReviewBeforeBuying({
     }
     setDraft(createEmptyReviewDraft());
     setCopied(false);
+  }
+
+  function toggleComparison(entry: ReviewWorkbenchEntry) {
+    const normalized = entry.tokenAddress.toLowerCase();
+    setComparisonTokenAddresses((current) => {
+      if (current.includes(normalized)) {
+        return current.filter((address) => address !== normalized);
+      }
+
+      if (current.length >= REVIEW_COMPARISON_LIMIT) return current;
+      return [normalized, ...current].slice(0, REVIEW_COMPARISON_LIMIT);
+    });
+  }
+
+  function removeComparison(entry: ReviewWorkbenchEntry) {
+    const normalized = entry.tokenAddress.toLowerCase();
+    setComparisonTokenAddresses((current) =>
+      current.filter((address) => address !== normalized),
+    );
   }
 
   async function copyReviewSummary() {
@@ -1237,9 +1289,18 @@ function ReviewBeforeBuying({
             </div>
           </div>
 
-          <RecentReviewWorkbench entries={workbench} currentTokenAddress={tokenAddress} />
+          <RecentReviewWorkbench
+            entries={workbench}
+            currentTokenAddress={tokenAddress}
+            selectedComparisonTokenAddresses={comparisonTokenAddresses}
+            onToggleComparison={toggleComparison}
+          />
         </div>
       </div>
+      <ReviewComparisonTray
+        entries={comparisonEntries}
+        onRemove={removeComparison}
+      />
     </div>
   );
 }
@@ -1344,11 +1405,16 @@ function formatReviewDecision(decision: ReviewDecision): string {
 function RecentReviewWorkbench({
   entries,
   currentTokenAddress,
+  selectedComparisonTokenAddresses,
+  onToggleComparison,
 }: {
   entries: readonly ReviewWorkbenchEntry[];
   currentTokenAddress: Address | null;
+  selectedComparisonTokenAddresses: readonly string[];
+  onToggleComparison: (entry: ReviewWorkbenchEntry) => void;
 }) {
   const visibleEntries = entries.slice(0, 5);
+  const compareFull = selectedComparisonTokenAddresses.length >= REVIEW_COMPARISON_LIMIT;
 
   return (
     <div className="rounded-lg border border-pulse-border/60 bg-[#0a1016] p-3">
@@ -1360,11 +1426,11 @@ function RecentReviewWorkbench({
         {visibleEntries.length ? (
           visibleEntries.map((entry) => {
             const active = currentTokenAddress?.toLowerCase() === entry.tokenAddress.toLowerCase();
+            const selected = selectedComparisonTokenAddresses.includes(entry.tokenAddress.toLowerCase());
 
             return (
-              <a
+              <article
                 key={entry.tokenAddress}
-                href={entry.reportPath}
                 className={`rounded-lg border px-3 py-2 transition ${
                   active
                     ? "border-pulse-green/45 bg-pulse-green/10"
@@ -1385,7 +1451,27 @@ function RecentReviewWorkbench({
                 <span className="mt-1 block text-xs leading-5 text-pulse-muted">
                   {entry.criticalCount} critical, {entry.warningCount} warning - {formatReviewTime(entry.lastScannedAt)}
                 </span>
-              </a>
+                <span className="mt-2 flex flex-wrap gap-2">
+                  <a
+                    href={entry.reportPath}
+                    className="rounded-lg border border-pulse-border/70 bg-[#070b10] px-2 py-1 text-xs font-semibold text-pulse-muted transition hover:border-pulse-green/35 hover:text-pulse-green"
+                  >
+                    Open
+                  </a>
+                  <button
+                    type="button"
+                    disabled={!selected && compareFull}
+                    onClick={() => onToggleComparison(entry)}
+                    className={`rounded-lg border px-2 py-1 text-xs font-semibold transition disabled:cursor-not-allowed disabled:opacity-50 ${
+                      selected
+                        ? "border-pulse-green/45 bg-pulse-green/10 text-pulse-green"
+                        : "border-pulse-border/70 bg-[#070b10] text-pulse-muted hover:border-pulse-green/35 hover:text-pulse-green"
+                    }`}
+                  >
+                    {selected ? "Comparing" : "Compare"}
+                  </button>
+                </span>
+              </article>
             );
           })
         ) : (
@@ -1394,6 +1480,89 @@ function RecentReviewWorkbench({
           </p>
         )}
       </div>
+    </div>
+  );
+}
+
+function ReviewComparisonTray({
+  entries,
+  onRemove,
+}: {
+  entries: readonly ReviewWorkbenchEntry[];
+  onRemove: (entry: ReviewWorkbenchEntry) => void;
+}) {
+  return (
+    <div className="mt-3 rounded-lg border border-pulse-border/60 bg-[#0a1016] p-3">
+      <div className="flex items-center justify-between gap-3">
+        <p className="text-sm font-semibold text-pulse-text">Compare Reviews</p>
+        <span className="text-xs text-pulse-muted">
+          {entries.length}/{REVIEW_COMPARISON_LIMIT}
+        </span>
+      </div>
+      {entries.length >= 2 ? (
+        <div className="mt-3 grid gap-2 md:grid-cols-2 2xl:grid-cols-4">
+          {entries.map((entry) => (
+            <article
+              key={entry.tokenAddress}
+              className="rounded-lg border border-pulse-border/65 bg-[#070b10] p-3"
+            >
+              <div className="flex items-start justify-between gap-2">
+                <div className="min-w-0">
+                  <p className="truncate text-sm font-semibold text-pulse-text">
+                    {entry.tokenLabel}
+                  </p>
+                  <p className="mt-1 text-xs text-pulse-muted">
+                    {shortenAddress(entry.tokenAddress, 5)}
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => onRemove(entry)}
+                  className="rounded-lg border border-pulse-border/70 px-2 py-1 text-xs font-semibold text-pulse-muted transition hover:border-rose-400/45 hover:text-rose-200"
+                >
+                  Remove
+                </button>
+              </div>
+              <div className="mt-3 grid grid-cols-2 gap-2">
+                <CompareMetric label="Decision" value={formatReviewDecision(entry.decision)} />
+                <CompareMetric label="Verdict" value={entry.verdictLabel} />
+                <CompareMetric label="Critical" value={entry.criticalCount.toLocaleString("en-US")} tone={entry.criticalCount > 0 ? "danger" : "muted"} />
+                <CompareMetric label="Warnings" value={entry.warningCount.toLocaleString("en-US")} tone={entry.warningCount > 0 ? "warning" : "muted"} />
+                <CompareMetric label="Checklist" value={`${entry.checkedCount}/${entry.checklistCount}`} />
+                <CompareMetric label="Updated" value={formatReviewTime(entry.lastScannedAt)} />
+              </div>
+              <p className="mt-3 line-clamp-3 text-xs leading-5 text-pulse-muted">
+                {entry.notes.trim() || "No notes saved for this token."}
+              </p>
+            </article>
+          ))}
+        </div>
+      ) : (
+        <p className="mt-3 rounded-lg border border-pulse-border/65 bg-[#070b10] px-3 py-2 text-xs leading-5 text-pulse-muted">
+          Add at least two recent reviews to compare decisions, risk counts, checklist progress, and notes side by side.
+        </p>
+      )}
+    </div>
+  );
+}
+
+function CompareMetric({
+  label,
+  value,
+  tone = "muted",
+}: {
+  label: string;
+  value: string;
+  tone?: "muted" | "warning" | "danger";
+}) {
+  return (
+    <div className="min-w-0 rounded-lg border border-pulse-border/60 bg-[#0a1016] px-2 py-2">
+      <p className="text-[10px] uppercase tracking-[0.14em] text-pulse-muted/75">
+        {label}
+      </p>
+      <p className={`mt-1 truncate text-xs font-semibold ${compareMetricToneClass(tone)}`}>
+        {value}
+      </p>
     </div>
   );
 }
@@ -1446,6 +1615,36 @@ function upsertReviewWorkbenchEntry(
   ].slice(0, 12);
 }
 
+function parseComparisonTokenAddresses(value: string | null): string[] {
+  if (!value) return [];
+
+  try {
+    const parsed = JSON.parse(value) as { tokenAddresses?: unknown };
+    if (!Array.isArray(parsed.tokenAddresses)) return [];
+
+    const normalized = parsed.tokenAddresses
+      .map((item) => (typeof item === "string" ? normalizeTokenChairAddress(item) : null))
+      .filter((item): item is Address => item !== null)
+      .map((address) => address.toLowerCase());
+
+    return [...new Set(normalized)].slice(0, REVIEW_COMPARISON_LIMIT);
+  } catch {
+    return [];
+  }
+}
+
+function buildComparisonEntries(
+  entries: readonly ReviewWorkbenchEntry[],
+  selectedTokenAddresses: readonly string[],
+): ReviewWorkbenchEntry[] {
+  return selectedTokenAddresses
+    .map((address) =>
+      entries.find((entry) => entry.tokenAddress.toLowerCase() === address),
+    )
+    .filter((entry): entry is ReviewWorkbenchEntry => entry !== undefined)
+    .slice(0, REVIEW_COMPARISON_LIMIT);
+}
+
 function isReviewDecision(value: unknown): value is ReviewDecision {
   return REVIEW_DECISION_OPTIONS.some((option) => option.value === value);
 }
@@ -1478,6 +1677,12 @@ function riskItemBorderClass(severity: TokenChairRiskSeverity): string {
   if (severity === "critical") return "border-rose-400/35";
   if (severity === "warning") return "border-amber-300/30";
   return "border-pulse-border/60";
+}
+
+function compareMetricToneClass(tone: "muted" | "warning" | "danger"): string {
+  if (tone === "danger") return "text-rose-200";
+  if (tone === "warning") return "text-amber-100";
+  return "text-pulse-text";
 }
 
 function buildReportRiskRows({

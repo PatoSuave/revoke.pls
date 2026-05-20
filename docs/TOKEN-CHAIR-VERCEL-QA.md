@@ -39,6 +39,7 @@ $html -match "Review Before Buying"
 $html -match "Copy report link"
 $html -match "Copy review"
 $html -match "Recent Reviews"
+$html -match "Compare Reviews"
 ```
 
 All checks should return `True`.
@@ -110,6 +111,7 @@ In an authenticated browser session, check:
 - Review Before Buying supports manual checklist toggles, decision state, notes, and Copy review.
 - Reloading the same token preserves the local review draft in the browser.
 - Recent Reviews stores the token, verdict, manual decision, checklist progress, risk counts, and timestamp locally.
+- Compare Reviews lets the reviewer select two to four saved recent reviews and compare decision, verdict, critical/warning counts, checklist progress, timestamp, and notes.
 - Copy review includes top risk queue items, checklist state, decision, notes, report link, and timestamp.
 - Copy report link writes a preview-local deep link.
 

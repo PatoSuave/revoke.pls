@@ -20,6 +20,7 @@ Implemented in this MVP:
 - Interactive review workspace with per-token checklist state, decision state, notes, local browser persistence, and copyable review summary
 - Rules-backed Must Review Before Touching queue that prioritizes visible control, liquidity, holder, source, market, and coverage gaps without making safe/scam claims
 - Local Recent Reviews workbench saved in browser storage with token, verdict, decision, checklist progress, risk counts, notes, and last-reviewed timestamp
+- Local Compare Reviews tray for comparing two to four saved review entries by decision, verdict, risk counts, checklist progress, timestamp, and notes
 - Review export that includes top prioritized risk items, checklist state, decision, notes, report link, and timestamp
 - EVM token-address validation and checksum normalization
 - Query-string token normalization with `token` and `address` aliases
