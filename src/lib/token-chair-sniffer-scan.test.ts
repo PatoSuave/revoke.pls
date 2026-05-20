@@ -10,7 +10,6 @@ import {
   type TokenChairPairContractData,
 } from "@/lib/token-chair-sniffer";
 import { fetchTokenChairContractData } from "@/lib/token-chair-sniffer-contract";
-import { fetchDextoolsTokenChairData } from "@/lib/token-chair-sniffer-dextools";
 import { fetchTokenChairExplorerData } from "@/lib/token-chair-sniffer-explorer";
 import { fetchTokenChairHolderData } from "@/lib/token-chair-sniffer-holders";
 import { fetchTokenChairPairContractData } from "@/lib/token-chair-sniffer-pair";
@@ -20,10 +19,6 @@ import { fetchDexScreenerTokenPairs } from "@/lib/token-chair-sniffer-server";
 
 vi.mock("@/lib/token-chair-sniffer-contract", () => ({
   fetchTokenChairContractData: vi.fn(),
-}));
-
-vi.mock("@/lib/token-chair-sniffer-dextools", () => ({
-  fetchDextoolsTokenChairData: vi.fn(),
 }));
 
 vi.mock("@/lib/token-chair-sniffer-explorer", () => ({
@@ -87,11 +82,6 @@ describe("Token Chair scan orchestration", () => {
       events.push("pulsex-start");
       return [];
     });
-    vi.mocked(fetchDextoolsTokenChairData).mockImplementation(async () => {
-      events.push("dextools-start");
-      return dextoolsData();
-    });
-
     const scan = fetchTokenChairScan(TOKEN);
     await new Promise((resolve) => setTimeout(resolve, 0));
 
@@ -99,7 +89,6 @@ describe("Token Chair scan orchestration", () => {
       "contract-start",
       "explorer-start",
       "pulsex-start",
-      "dextools-start",
       "holder-start",
       "pair-start",
     ]);
@@ -113,7 +102,6 @@ describe("Token Chair scan orchestration", () => {
     const response = await scan;
 
     expect(response.status).toBe("success");
-    expect(response.dextools?.status).toBe("success");
     expect(response.pairContract?.containsScannedToken).toBe(true);
     expect(response.contract?.holders?.token.percent).toBe(12.5);
   });
@@ -140,26 +128,6 @@ function marketData(): TokenChairMarketData {
     quoteTokenSymbol: "WPLS",
     quoteTokenName: "Wrapped Pulse",
     pairCount: 1,
-  };
-}
-
-function dextoolsData() {
-  return {
-    status: "success" as const,
-    sourceLabel: "DEXTools" as const,
-    tokenAddress: TOKEN,
-    pairAddress: PAIR,
-    priceUsd: "0.01",
-    liquidityUsd: 10_000,
-    volume24h: 100,
-    dextScore: 75,
-    holderCount: 100,
-    tokenUrl: `https://www.dextools.io/app/en/pulse/pair-explorer/${PAIR}`,
-    pairUrl: `https://www.dextools.io/app/en/pulse/pair-explorer/${PAIR}`,
-    websiteUrl: null,
-    socials: [],
-    warnings: [],
-    errors: [],
   };
 }
 

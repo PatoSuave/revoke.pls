@@ -4,7 +4,6 @@ import {
   buildTokenChairSnifferUrl,
   type TokenChairApiResponse,
   type TokenChairContractData,
-  type TokenChairDextoolsData,
   type TokenChairLpControlSummary,
   type TokenChairSourceSignal,
   type TokenChairTaxGetterSignal,
@@ -83,7 +82,6 @@ export function buildTokenChairRiskQueue({
 
   addResponseCoverageItems(items, response);
   addMarketItems(items, response);
-  addDextoolsItems(items, response.dextools);
   addContractItems(items, response.contract);
   addSourceItems(items, response.contract);
   addHolderItems(items, response.contract);
@@ -277,42 +275,6 @@ function addMarketItems(items: TokenChairRiskItem[], response: TokenChairApiResp
         "Open the selected pair contract and verify token0, token1, reserves, and LP supply manually.",
       href: market.dexScreenerUrl ?? undefined,
       sourceLabel: "DEX Screener",
-    });
-  }
-}
-
-function addDextoolsItems(
-  items: TokenChairRiskItem[],
-  dextools: TokenChairDextoolsData | null,
-) {
-  if (!dextools || dextools.status === "not-configured") {
-    items.push({
-      id: "dextools-not-configured",
-      severity: "info",
-      category: "coverage",
-      title: "DEXTools enrichment not configured",
-      evidence: "Optional DEXTools score/profile enrichment did not run.",
-      whyItMatters:
-        "This does not block Token Chair, but it leaves one external market/profile source out of the review.",
-      manualReview:
-        "If DEXTools context matters for this token, open the pair manually and compare external profile data.",
-    });
-    return;
-  }
-
-  if (dextools.status === "partial" || dextools.status === "rate-limited" || dextools.status === "unable-to-verify") {
-    items.push({
-      id: `dextools-${dextools.status}`,
-      severity: "info",
-      category: "coverage",
-      title: "DEXTools enrichment incomplete",
-      evidence: `DEXTools status: ${dextools.status}.`,
-      whyItMatters:
-        "External score/profile context may be missing or stale when the enrichment is incomplete.",
-      manualReview:
-        "Open the DEXTools token or pair URL directly and compare against Token Chair market data.",
-      href: dextools.pairUrl ?? dextools.tokenUrl ?? undefined,
-      sourceLabel: "DEXTools",
     });
   }
 }

@@ -27,7 +27,6 @@ Implemented in the current Phase 2 preview:
 - Server-side DEX Screener token-pairs fetch for `pulsechain`
 - DEX Screener response normalization and main-pair selection by highest visible USD liquidity
 - Native PulseX V1/V2 factory pair discovery against common PulseChain quote tokens, with read-only raw reserves and LP supply for returned pairs
-- Optional server-side DEXTools enrichment for external market/score context when `DEXTOOLS_API_KEY` is configured
 - Read-only PulseChain RPC contract reads for basic token metadata, standard ownership, and common proxy signals
 - Read-only pending owner/admin getter checks, common public admin/operator/fee-wallet getter checks, common AccessControl role-function checks, and public buy/sell tax getter checks
 - Read-only public mechanics getter checks for pause state, trading state, trading limits, max transaction, and max wallet where common getter names are present
@@ -64,7 +63,7 @@ Phase 2 is considered preview-complete when all of the following remain true on 
 - The feature stays read-only and does not connect a wallet, request signatures, or submit transactions.
 - The Must Review Before Touching queue prioritizes critical, warning, and info items without claiming a token is safe, certified, guaranteed, or not a scam.
 - The queue shows a readiness summary that distinguishes critical review, warning/gap review, scan-needed state, and manual-decision-ready state.
-- Degraded PulseScan, DEXTools, holder, selected-pair, and source/ABI states are labeled as review gaps rather than token conclusions.
+- Degraded PulseScan, holder, selected-pair, and source/ABI states are labeled as review gaps rather than token conclusions.
 - Review Before Buying persists checklist state, notes, and manual decision locally per token.
 - Recent Reviews and Compare Reviews persist locally in the browser and never require a backend account or wallet.
 - Copy review exports top queue items, checklist state, decision, notes, report link, and timestamp.
@@ -97,8 +96,6 @@ Normalized live fields include:
 If DEX Screener returns multiple PulseChain pairs, the UI selects the pair with the highest `liquidity.usd`. If every valid pair is missing liquidity, the first valid pair is used and the response is marked with a weak-selection warning.
 
 The Market Chair Intel panel also shows a compact Pair Candidates list from the already-normalized DEX Screener response. Candidate rows include pair rank, DEX, quote token, liquidity, volume, transaction count, age, and a DEX Screener link when returned. These rows are market context only; labels like `Selected pair`, `Low liquidity`, and `Visible market data` are not contract-risk conclusions.
-
-When configured with a server-only `DEXTOOLS_API_KEY`, Token Chair also attempts optional DEXTools enrichment. Returned fields may include external price, liquidity, volume, DEXTScore, holder count, token profile links, and social links. DEXTools is an enrichment source only: DEX Screener remains the primary pair selector, and DEXTScore is not a Token Chair safety verdict, certification, or audit result. If the key is absent, Token Chair preserves the core scan and keeps DEXTools hidden in Signal Details. If a configured request is rate-limited or DEXTools does not return a field, Token Chair labels that configured source status conservatively.
 
 After DEX Screener selects the primary pair, the API also performs read-only PulseChain RPC checks against that selected pair contract. It verifies whether the pair's `token0()` or `token1()` matches the scanned token address, reads raw `getReserves()` values, and reads raw LP `totalSupply()`. These values are displayed as raw contract integers because token decimals differ by asset. They are useful for confirming the selected pair address is internally consistent, but they are not a swap simulation, LP lock proof, or exhaustive liquidity analysis.
 
@@ -169,7 +166,7 @@ Rows with matches are tiered. Lower-severity findings such as mint, pause, coold
 
 The Source Signal Details panel expands these rows with the exact matched terms returned by the lightweight ABI/source pass. Hidden-owner and obfuscated-address rows are conservative source/ABI keyword checks only; a match means manual review is needed, and no match does not prove those behaviors are absent. If PulseScan does not return verified source or ABI data, those detail rows stay `Unable to verify`. The panel is explanatory only; it does not add bytecode analysis, tax simulation, or honeypot execution.
 
-The Why This Verdict breakdown mirrors the current verdict notes as structured rows. Each row has a severity, label, and detail so a user can see whether the result came from market data, DEXTools cross-check context, pair-contract checks, owner/admin/proxy context, source/ABI signals, event history, holder concentration, or LP concentration. These are still visible-signal explanations, not audit findings.
+The Why This Verdict breakdown mirrors the current verdict notes as structured rows. Each row has a severity, label, and detail so a user can see whether the result came from market data, pair-contract checks, owner/admin/proxy context, source/ABI signals, event history, holder concentration, or LP concentration. These are still visible-signal explanations, not audit findings.
 
 ## PulseScan Holder Concentration
 
@@ -273,7 +270,6 @@ The current preview does not add:
 - swap execution
 - scraping
 - paid API keys
-- mandatory DEXTools access
 - Quick Intel or TokenSniffer integrations
 - transaction or simulation-based honeypot checks
 
@@ -295,8 +291,6 @@ Allowed internal verdict states:
 The preview defaults complete-looking market results to `unable-to-fully-verify` unless visible market, read-only contract, source-signal, event-history, or concentration warnings are present, because bytecode-level hidden-owner review and honeypot checks are not live yet.
 
 The UI may show `some-warnings` or `high-risk` for visible warnings such as very low liquidity, new pairs, missing price, missing liquidity, no 24h transactions, a non-zero standard owner, common proxy signals, missing verified source, higher-severity lightweight source-signal matches, high top-holder concentration, or high LP-holder concentration.
-
-Optional DEXTools enrichment can add warning context when DEXTools and DEX Screener return notably different price/liquidity values or when DEXTools returns a low DEXTScore. Missing or unconfigured DEXTools data does not downgrade the token by itself.
 
 The positive word `safe` must not be used as a verdict or marketing claim. It may appear only in conservative disclaimer language, such as: "does not guarantee that a token is safe."
 

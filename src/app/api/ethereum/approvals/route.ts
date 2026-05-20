@@ -15,6 +15,7 @@ import {
   ETHEREUM_APPROVAL_API_RPC_READ_CONCURRENCY,
   checkEthereumApprovalApiRateLimit,
 } from "@/lib/ethereum-approval-api-controls";
+import { getRequestClientKey } from "@/lib/request-client-key";
 
 export const runtime = "nodejs";
 
@@ -67,7 +68,9 @@ export async function GET(request: Request) {
     );
   }
 
-  const rateLimit = checkEthereumApprovalApiRateLimit(rateLimitKey(request));
+  const rateLimit = checkEthereumApprovalApiRateLimit(
+    getRequestClientKey(request),
+  );
   if (!rateLimit.allowed) {
     const result = createEthereumApprovalApiFailureResponse({
       status: "upstream-failure",
@@ -120,17 +123,6 @@ export async function GET(request: Request) {
         ETHEREUM_APPROVAL_API_LIVE_READ_CANDIDATE_CAP.toString(),
     }),
   });
-}
-
-function rateLimitKey(request: Request): string {
-  const forwardedFor = request.headers.get("x-forwarded-for");
-  const forwardedIp = forwardedFor?.split(",")[0]?.trim();
-  return (
-    request.headers.get("cf-connecting-ip")?.trim() ||
-    request.headers.get("x-real-ip")?.trim() ||
-    forwardedIp ||
-    "unknown-client"
-  );
 }
 
 function rateLimitHeaders(

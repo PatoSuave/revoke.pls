@@ -28,10 +28,69 @@ describe("hardening source invariants", () => {
       join(process.cwd(), "src", "app", "api", "optimism", "approvals", "route.ts"),
       "utf8",
     );
+    const tokenChairRoute = readFileSync(
+      join(
+        process.cwd(),
+        "src",
+        "app",
+        "api",
+        "token-chair-sniffer",
+        "market",
+        "route.ts",
+      ),
+      "utf8",
+    );
 
-    expect(`${ethereumRoute}\n${arbitrumRoute}\n${optimismRoute}`).not.toMatch(
+    expect(
+      `${ethereumRoute}\n${arbitrumRoute}\n${optimismRoute}\n${tokenChairRoute}`,
+    ).not.toMatch(
       /writeContract|sendTransaction|signTransaction|privateKey|mnemonic|seed|relayer/i,
     );
+  });
+
+  it("keeps public API rate-limit keys centralized and bounded", () => {
+    const clientKeyHelper = readFileSync(
+      join(process.cwd(), "src", "lib", "request-client-key.ts"),
+      "utf8",
+    );
+    const ethereumRoute = readFileSync(
+      join(process.cwd(), "src", "app", "api", "ethereum", "approvals", "route.ts"),
+      "utf8",
+    );
+    const arbitrumRoute = readFileSync(
+      join(process.cwd(), "src", "app", "api", "arbitrum", "approvals", "route.ts"),
+      "utf8",
+    );
+    const optimismRoute = readFileSync(
+      join(process.cwd(), "src", "app", "api", "optimism", "approvals", "route.ts"),
+      "utf8",
+    );
+    const tokenChairRoute = readFileSync(
+      join(
+        process.cwd(),
+        "src",
+        "app",
+        "api",
+        "token-chair-sniffer",
+        "market",
+        "route.ts",
+      ),
+      "utf8",
+    );
+    const routes = `${ethereumRoute}\n${arbitrumRoute}\n${optimismRoute}\n${tokenChairRoute}`;
+
+    expect(clientKeyHelper).toContain("isIP");
+    expect(clientKeyHelper).toContain("unknown-client");
+    for (const route of [
+      ethereumRoute,
+      arbitrumRoute,
+      optimismRoute,
+      tokenChairRoute,
+    ]) {
+      expect(route).toContain("getRequestClientKey(request)");
+    }
+    expect(routes).not.toContain('headers.get("x-forwarded-for")');
+    expect(routes).not.toContain("function rateLimitKey");
   });
 
   it("keeps public approval API responses explicitly non-cacheable", () => {

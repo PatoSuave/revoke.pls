@@ -77,36 +77,6 @@ export interface TokenChairMarketData {
   pairCount: number;
 }
 
-export type TokenChairDextoolsStatus =
-  | "not-configured"
-  | "success"
-  | "partial"
-  | "rate-limited"
-  | "unable-to-verify";
-
-export interface TokenChairDextoolsSocialLink {
-  label: string;
-  url: string;
-}
-
-export interface TokenChairDextoolsData {
-  status: TokenChairDextoolsStatus;
-  sourceLabel: "DEXTools";
-  tokenAddress: Address;
-  pairAddress: Address | null;
-  priceUsd: string | null;
-  liquidityUsd: number | null;
-  volume24h: number | null;
-  dextScore: number | null;
-  holderCount: number | null;
-  tokenUrl: string | null;
-  pairUrl: string | null;
-  websiteUrl: string | null;
-  socials: TokenChairDextoolsSocialLink[];
-  warnings: string[];
-  errors: string[];
-}
-
 export type TokenChairContractReadStatus =
   | "success"
   | "partial"
@@ -411,7 +381,6 @@ export interface TokenChairApiResponse {
   chainId: typeof TOKEN_CHAIR_CHAIN_ID;
   tokenAddress: Address | null;
   market: TokenChairMarketData | null;
-  dextools: TokenChairDextoolsData | null;
   pairContract: TokenChairPairContractData | null;
   pulsexPairs: TokenChairPulseXPairData[];
   contract: TokenChairContractData | null;
@@ -437,11 +406,6 @@ export interface SniffSignalRow {
 
 export interface TokenChairSourceSignalDetailRow extends SniffSignalRow {
   matches: string[];
-}
-
-export interface TokenChairDextoolsDetailRow extends SniffSignalRow {
-  sourceLabel: "DEXTools";
-  href?: string;
 }
 
 export interface ContractSniffCard {
@@ -902,7 +866,6 @@ export function createTokenChairApiResponse({
   status,
   tokenAddress,
   contract = null,
-  dextools = null,
   pairContract = null,
   pulsexPairs = [],
   pairs = [],
@@ -912,7 +875,6 @@ export function createTokenChairApiResponse({
   status: TokenChairApiStatus;
   tokenAddress: Address | null;
   contract?: TokenChairContractData | null;
-  dextools?: TokenChairDextoolsData | null;
   pairContract?: TokenChairPairContractData | null;
   pulsexPairs?: TokenChairPulseXPairData[];
   pairs?: TokenChairMarketData[];
@@ -926,7 +888,6 @@ export function createTokenChairApiResponse({
     chainId: TOKEN_CHAIR_CHAIN_ID,
     tokenAddress,
     market,
-    dextools,
     pairContract,
     pulsexPairs,
     contract,
@@ -944,12 +905,9 @@ export function createTokenChairApiResponse({
 export function getTokenChairVerdict({
   status,
   market,
-  dextools,
   pairContract,
   contract,
-}: Pick<TokenChairApiResponse, "status" | "market" | "pairContract" | "contract"> & {
-  dextools?: TokenChairDextoolsData | null;
-}): TokenChairVerdict {
+}: Pick<TokenChairApiResponse, "status" | "market" | "pairContract" | "contract">): TokenChairVerdict {
   if (status !== "success" || !market) {
     return {
       kind: "unable-to-fully-verify",
@@ -972,7 +930,6 @@ export function getTokenChairVerdict({
 
   const visibleWarnings = [
     ...getVisibleMarketWarnings(market),
-    ...getVisibleDextoolsWarnings(market, dextools ?? null),
     ...getVisiblePairContractWarnings(pairContract),
     ...getVisibleContractWarnings(contract),
   ];
@@ -1199,68 +1156,6 @@ export function buildSourceSignalDetailRows(options: {
       matches: [],
     };
   });
-}
-
-export function buildDextoolsDetailRows(options: {
-  dextools?: TokenChairDextoolsData | null;
-} = {}): TokenChairDextoolsDetailRow[] {
-  const dextools = options.dextools;
-  if (!dextools) return [];
-  if (dextools.status === "not-configured") return [];
-
-  const rows: TokenChairDextoolsDetailRow[] = [
-    {
-      sourceLabel: "DEXTools",
-      label: "DEXTScore",
-      value:
-        dextools.dextScore === null
-          ? "Not returned"
-          : `${formatDextScore(dextools.dextScore)}/99`,
-      status:
-        dextools.status === "rate-limited" ||
-        dextools.status === "unable-to-verify"
-          ? "unable-to-verify"
-          : dextools.dextScore !== null && dextools.dextScore < 50
-            ? "warning"
-            : "checked",
-      detail:
-        "External DEXTools score context when returned. It is not a safety verdict, certification, or Token Chair audit result.",
-      href: dextools.tokenUrl ?? dextools.pairUrl ?? undefined,
-    },
-    {
-      sourceLabel: "DEXTools",
-      label: "Holder count",
-      value:
-        dextools.holderCount === null
-          ? "Not returned"
-          : dextools.holderCount.toLocaleString("en-US"),
-      status:
-        dextools.status === "rate-limited" ||
-        dextools.status === "unable-to-verify"
-          ? "unable-to-verify"
-          : "checked",
-      detail:
-        "External holder-count context from DEXTools when available. Holder count should be reviewed with distribution, liquidity, and volume.",
-      href: dextools.tokenUrl ?? undefined,
-    },
-    {
-      sourceLabel: "DEXTools",
-      label: "Market cross-check",
-      value:
-        dextools.priceUsd || dextools.liquidityUsd !== null
-          ? "Returned"
-          : "Not returned",
-      status:
-        dextools.status === "success" || dextools.status === "partial"
-          ? "checked"
-          : "unable-to-verify",
-      detail:
-        `Price ${formatPriceUsd(dextools.priceUsd)}. Liquidity ${formatUsd(dextools.liquidityUsd)}. 24h volume ${formatUsd(dextools.volume24h)}.`,
-      href: dextools.pairUrl ?? dextools.tokenUrl ?? undefined,
-    },
-  ];
-
-  return rows;
 }
 
 export function buildEventHistoryDetailRows(options: {
@@ -1711,21 +1606,6 @@ function formatLockerUnlockDate(value: string | null): string | null {
   }).format(date);
 }
 
-export function withTokenChairDextoolsData(
-  response: TokenChairApiResponse,
-  dextools: TokenChairDextoolsData,
-): TokenChairApiResponse {
-  const withDextools: Omit<TokenChairApiResponse, "verdict"> = {
-    ...response,
-    dextools,
-  };
-
-  return {
-    ...withDextools,
-    verdict: getTokenChairVerdict(withDextools),
-  };
-}
-
 export function withTokenChairExplorerData(
   response: TokenChairApiResponse,
   explorer: TokenChairExplorerData,
@@ -1808,24 +1688,6 @@ export function formatPriceUsd(value: string | null): string {
     currency: "USD",
     maximumFractionDigits: numeric < 1 ? 8 : numeric < 100 ? 4 : 2,
   }).format(numeric);
-}
-
-function formatDextScore(value: number): string {
-  return Number.isInteger(value)
-    ? value.toLocaleString("en-US")
-    : value.toLocaleString("en-US", { maximumFractionDigits: 1 });
-}
-
-function numericPriceUsd(value: string | null): number | null {
-  if (!value) return null;
-  const numeric = Number(value);
-  return Number.isFinite(numeric) && numeric > 0 ? numeric : null;
-}
-
-function relativeDifference(a: number, b: number): number {
-  const larger = Math.max(Math.abs(a), Math.abs(b));
-  if (larger === 0) return 0;
-  return Math.abs(a - b) / larger;
 }
 
 export function formatCompactNumber(value: number | null): string {
@@ -2031,58 +1893,6 @@ function getVisibleMarketWarnings(
       severity: "warning",
       label: "No recent transactions",
       message: "DEX Screener shows no 24h transactions for the selected pair.",
-    });
-  }
-
-  return warnings;
-}
-
-function getVisibleDextoolsWarnings(
-  market: TokenChairMarketData,
-  dextools: TokenChairDextoolsData | null,
-): VisibleMarketWarning[] {
-  if (!dextools || dextools.status === "not-configured") return [];
-  if (dextools.status === "rate-limited" || dextools.status === "unable-to-verify") {
-    return [];
-  }
-
-  const warnings: VisibleMarketWarning[] = [];
-  const marketPrice = numericPriceUsd(market.priceUsd);
-  const dextoolsPrice = numericPriceUsd(dextools.priceUsd);
-  if (
-    marketPrice !== null &&
-    dextoolsPrice !== null &&
-    relativeDifference(marketPrice, dextoolsPrice) >= 0.15
-  ) {
-    warnings.push({
-      severity: "warning",
-      label: "Market source mismatch",
-      message:
-        "DEXTools and DEX Screener returned notably different USD price context. Review both market sources before relying on the quote.",
-    });
-  }
-
-  if (
-    isFiniteNumber(market.liquidityUsd) &&
-    isFiniteNumber(dextools.liquidityUsd) &&
-    market.liquidityUsd > 0 &&
-    dextools.liquidityUsd > 0 &&
-    relativeDifference(market.liquidityUsd, dextools.liquidityUsd) >= 0.5
-  ) {
-    warnings.push({
-      severity: "warning",
-      label: "Liquidity source mismatch",
-      message:
-        "DEXTools and DEX Screener returned notably different visible liquidity context. Treat liquidity-dependent conclusions carefully.",
-    });
-  }
-
-  if (dextools.dextScore !== null && dextools.dextScore < 50) {
-    warnings.push({
-      severity: "warning",
-      label: "Low external score",
-      message:
-        "DEXTools returned a low DEXTScore. This is external context only, not a Token Chair safety verdict.",
     });
   }
 

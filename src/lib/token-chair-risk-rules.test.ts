@@ -9,7 +9,6 @@ import {
 import type {
   TokenChairApiResponse,
   TokenChairContractData,
-  TokenChairDextoolsData,
   TokenChairMarketData,
   TokenChairVerdict,
 } from "@/lib/token-chair-sniffer";
@@ -36,7 +35,6 @@ function response(overrides: Partial<TokenChairApiResponse> = {}): TokenChairApi
     chainId: "pulsechain",
     tokenAddress: TOKEN,
     market: market(),
-    dextools: null,
     pairContract: null,
     pulsexPairs: [],
     contract: contract(),
@@ -69,29 +67,6 @@ function market(overrides: Partial<TokenChairMarketData> = {}): TokenChairMarket
     quoteTokenSymbol: "WPLS",
     quoteTokenName: "Wrapped Pulse",
     pairCount: 1,
-    ...overrides,
-  };
-}
-
-function dextools(
-  overrides: Partial<TokenChairDextoolsData> = {},
-): TokenChairDextoolsData {
-  return {
-    status: "not-configured",
-    sourceLabel: "DEXTools",
-    tokenAddress: TOKEN,
-    pairAddress: PAIR,
-    priceUsd: null,
-    liquidityUsd: null,
-    volume24h: null,
-    dextScore: null,
-    holderCount: null,
-    tokenUrl: null,
-    pairUrl: null,
-    websiteUrl: null,
-    socials: [],
-    warnings: [],
-    errors: [],
     ...overrides,
   };
 }
@@ -305,14 +280,11 @@ describe("Token Chair risk rules", () => {
     expect(text.toLowerCase()).not.toContain("scam");
   });
 
-  it("adds coverage items for optional and not-live checks", () => {
+  it("adds coverage items for not-live checks", () => {
     const queue = buildTokenChairRiskQueue({
-      response: response({
-        dextools: dextools({ status: "not-configured" }),
-      }),
+      response: response(),
     });
 
-    expect(queue.map((item) => item.id)).toContain("dextools-not-configured");
     expect(queue.map((item) => item.id)).toContain("honeypot-not-live");
   });
 

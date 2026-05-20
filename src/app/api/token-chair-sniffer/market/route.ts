@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 
 import { approvalApiNoStoreHeaders } from "@/lib/approval-api-cache";
+import { getRequestClientKey } from "@/lib/request-client-key";
 import {
   TOKEN_CHAIR_CHAIN_ID,
   createTokenChairApiResponse,
@@ -70,7 +71,7 @@ export async function GET(request: Request) {
     );
   }
 
-  const rateLimit = checkTokenChairApiRateLimit(rateLimitKey(request));
+  const rateLimit = checkTokenChairApiRateLimit(getRequestClientKey(request));
   if (!rateLimit.allowed) {
     return tokenChairJson(
       createTokenChairApiResponse({
@@ -112,17 +113,6 @@ function tokenChairJson(
       "X-Token-Chair-Timeout-Ms": TOKEN_CHAIR_API_REQUEST_TIMEOUT_MS.toString(),
     }),
   });
-}
-
-function rateLimitKey(request: Request): string {
-  const forwardedFor = request.headers.get("x-forwarded-for");
-  const forwardedIp = forwardedFor?.split(",")[0]?.trim();
-  return (
-    request.headers.get("cf-connecting-ip")?.trim() ||
-    request.headers.get("x-real-ip")?.trim() ||
-    forwardedIp ||
-    "unknown-client"
-  );
 }
 
 function rateLimitHeaders(
