@@ -17,6 +17,7 @@ Implemented in this MVP:
 - Internal API route: `/api/token-chair-sniffer/market?token=0x...`
 - Lightweight CTA from `/app` to the sniffer route
 - Sample-token presets for fast preview QA against PLSX, WPLS, INC, and HEX
+- Interactive review workspace with per-token checklist state, decision state, notes, local browser persistence, and copyable review summary
 - EVM token-address validation and checksum normalization
 - Query-string token normalization with `token` and `address` aliases
 - Server-side DEX Screener token-pairs fetch for `pulsechain`

@@ -793,7 +793,13 @@ function ScanReport({
         </div>
       </div>
 
-      <ReviewBeforeBuying rows={reviewRows} />
+      <ReviewBeforeBuying
+        rows={reviewRows}
+        tokenAddress={tokenAddress}
+        tokenLabel={tokenLabel}
+        verdict={verdict}
+        sharePath={sharePath}
+      />
     </section>
   );
 }
@@ -870,28 +876,319 @@ function EvidenceChecklist({ rows }: { rows: readonly SniffSignalRow[] }) {
   );
 }
 
-function ReviewBeforeBuying({ rows }: { rows: readonly SniffSignalRow[] }) {
+type ReviewDecision = "reviewing" | "watchlist" | "pass" | "reviewed";
+
+type ReviewDraft = {
+  decision: ReviewDecision;
+  notes: string;
+  checked: Record<string, boolean>;
+};
+
+const REVIEW_DECISION_OPTIONS: readonly {
+  value: ReviewDecision;
+  label: string;
+  detail: string;
+}[] = [
+  {
+    value: "reviewing",
+    label: "Reviewing",
+    detail: "Open",
+  },
+  {
+    value: "watchlist",
+    label: "Watchlist",
+    detail: "Monitor",
+  },
+  {
+    value: "pass",
+    label: "Pass",
+    detail: "Avoid",
+  },
+  {
+    value: "reviewed",
+    label: "Reviewed",
+    detail: "Done",
+  },
+] as const;
+
+function ReviewBeforeBuying({
+  rows,
+  tokenAddress,
+  tokenLabel,
+  verdict,
+  sharePath,
+}: {
+  rows: readonly SniffSignalRow[];
+  tokenAddress: Address | null;
+  tokenLabel: string;
+  verdict: TokenChairVerdict;
+  sharePath: string | null;
+}) {
+  const storageKey = useMemo(
+    () => (tokenAddress ? `token-chair-review:${tokenAddress.toLowerCase()}` : null),
+    [tokenAddress],
+  );
+  const [draftLoaded, setDraftLoaded] = useState(false);
+  const [draft, setDraft] = useState<ReviewDraft>(() => createEmptyReviewDraft());
+  const [copied, setCopied] = useState(false);
+  const checkedCount = rows.filter((row) => draft.checked[reviewRowKey(row)]).length;
+  const completionLabel =
+    rows.length > 0 ? `${checkedCount.toLocaleString("en-US")}/${rows.length.toLocaleString("en-US")} checked` : "No checklist";
+
+  useEffect(() => {
+    setCopied(false);
+    setDraftLoaded(false);
+
+    if (!storageKey || typeof window === "undefined") {
+      setDraft(createEmptyReviewDraft());
+      setDraftLoaded(true);
+      return;
+    }
+
+    const saved = window.localStorage.getItem(storageKey);
+    setDraft(parseReviewDraft(saved));
+    setDraftLoaded(true);
+  }, [storageKey]);
+
+  useEffect(() => {
+    if (!storageKey || !draftLoaded || typeof window === "undefined") return;
+
+    window.localStorage.setItem(
+      storageKey,
+      JSON.stringify({
+        version: 1,
+        updatedAt: new Date().toISOString(),
+        ...draft,
+      }),
+    );
+  }, [draft, draftLoaded, storageKey]);
+
+  function setDecision(decision: ReviewDecision) {
+    setDraft((current) => ({ ...current, decision }));
+  }
+
+  function toggleRow(row: SniffSignalRow) {
+    const key = reviewRowKey(row);
+    setDraft((current) => ({
+      ...current,
+      checked: {
+        ...current.checked,
+        [key]: !current.checked[key],
+      },
+    }));
+  }
+
+  function updateNotes(notes: string) {
+    setDraft((current) => ({ ...current, notes }));
+  }
+
+  function clearDraft() {
+    if (storageKey && typeof window !== "undefined") {
+      window.localStorage.removeItem(storageKey);
+    }
+    setDraft(createEmptyReviewDraft());
+    setCopied(false);
+  }
+
+  async function copyReviewSummary() {
+    if (typeof window === "undefined" || !navigator.clipboard) return;
+
+    await navigator.clipboard.writeText(
+      buildReviewSummaryText({
+        rows,
+        draft,
+        tokenAddress,
+        tokenLabel,
+        verdict,
+        sharePath,
+        origin: window.location.origin,
+      }),
+    );
+    setCopied(true);
+    window.setTimeout(() => setCopied(false), 1600);
+  }
+
   return (
     <div className="mt-4 rounded-lg border border-pulse-border/70 bg-[#070b10] p-4">
-      <PanelHeader icon="B" title="Review Before Buying" meta="Manual checklist" />
-      <div className="mt-3 grid gap-2 md:grid-cols-2 xl:grid-cols-4">
-        {rows.map((row) => (
-          <div
-            key={row.label}
-            className="rounded-lg border border-pulse-border/60 bg-[#0a1016] px-3 py-2"
-          >
-            <div className="flex items-center justify-between gap-2">
-              <p className="min-w-0 truncate text-sm font-semibold text-pulse-text">
-                {row.label}
-              </p>
-              <SniffValueBadge row={row} />
-            </div>
-            <p className="mt-2 text-xs leading-5 text-pulse-muted">{row.detail}</p>
+      <PanelHeader icon="B" title="Review Before Buying" meta={completionLabel} />
+      <div className="mt-3 grid items-start gap-3 xl:grid-cols-[minmax(0,1fr)_340px]">
+        <div className="grid gap-2 md:grid-cols-2">
+          {rows.map((row) => {
+            const key = reviewRowKey(row);
+            const checked = Boolean(draft.checked[key]);
+
+            return (
+              <label
+                key={row.label}
+                className="grid cursor-pointer grid-cols-[auto_minmax(0,1fr)] gap-3 rounded-lg border border-pulse-border/60 bg-[#0a1016] px-3 py-2 transition hover:border-pulse-green/35"
+              >
+                <input
+                  type="checkbox"
+                  checked={checked}
+                  onChange={() => toggleRow(row)}
+                  className="mt-1 h-4 w-4 rounded border-pulse-border bg-[#070b10] accent-pulse-green"
+                />
+                <span className="min-w-0">
+                  <span className="flex items-center justify-between gap-2">
+                    <span className="min-w-0 truncate text-sm font-semibold text-pulse-text">
+                      {row.label}
+                    </span>
+                    <SniffValueBadge row={row} />
+                  </span>
+                  <span className="mt-2 block text-xs leading-5 text-pulse-muted">
+                    {row.detail}
+                  </span>
+                </span>
+              </label>
+            );
+          })}
+        </div>
+
+        <div className="rounded-lg border border-pulse-border/60 bg-[#0a1016] p-3">
+          <div className="grid grid-cols-2 gap-2">
+            {REVIEW_DECISION_OPTIONS.map((option) => {
+              const active = draft.decision === option.value;
+
+              return (
+                <button
+                  key={option.value}
+                  type="button"
+                  aria-pressed={active}
+                  onClick={() => setDecision(option.value)}
+                  className={`rounded-lg border px-3 py-2 text-left transition ${
+                    active
+                      ? "border-pulse-green/45 bg-pulse-green/10 text-pulse-green"
+                      : "border-pulse-border/65 bg-[#070b10] text-pulse-muted hover:border-pulse-green/35 hover:text-pulse-text"
+                  }`}
+                >
+                  <span className="block text-sm font-semibold">{option.label}</span>
+                  <span className="mt-1 block text-xs">{option.detail}</span>
+                </button>
+              );
+            })}
           </div>
-        ))}
+
+          <label className="mt-3 block">
+            <span className="text-xs font-semibold uppercase tracking-[0.14em] text-pulse-muted/80">
+              Notes
+            </span>
+            <textarea
+              value={draft.notes}
+              onChange={(event) => updateNotes(event.target.value)}
+              rows={6}
+              placeholder="Sources checked, follow-up questions, wallet notes."
+              className="mt-2 w-full resize-y rounded-lg border border-pulse-border/65 bg-[#070b10] px-3 py-2 text-sm leading-6 text-pulse-text outline-none transition placeholder:text-pulse-muted/60 focus:border-pulse-green/45"
+            />
+          </label>
+
+          <div className="mt-3 flex flex-wrap gap-2">
+            <button
+              type="button"
+              onClick={() => void copyReviewSummary()}
+              className="rounded-lg border border-pulse-border bg-pulse-panel/55 px-3 py-2 text-xs font-semibold text-pulse-text transition hover:border-pulse-green/35 hover:text-pulse-green"
+            >
+              {copied ? "Copied" : "Copy review"}
+            </button>
+            <button
+              type="button"
+              onClick={clearDraft}
+              className="rounded-lg border border-pulse-border/70 bg-[#070b10] px-3 py-2 text-xs font-semibold text-pulse-muted transition hover:border-rose-400/45 hover:text-rose-200"
+            >
+              Clear draft
+            </button>
+          </div>
+        </div>
       </div>
     </div>
   );
+}
+
+function createEmptyReviewDraft(): ReviewDraft {
+  return {
+    decision: "reviewing",
+    notes: "",
+    checked: {},
+  };
+}
+
+function parseReviewDraft(value: string | null): ReviewDraft {
+  if (!value) return createEmptyReviewDraft();
+
+  try {
+    const parsed = JSON.parse(value) as Partial<ReviewDraft>;
+    const decision: ReviewDecision = REVIEW_DECISION_OPTIONS.some(
+      (option) => option.value === parsed.decision,
+    )
+      ? parsed.decision ?? "reviewing"
+      : "reviewing";
+    const checked =
+      parsed.checked && typeof parsed.checked === "object" && !Array.isArray(parsed.checked)
+        ? Object.fromEntries(
+            Object.entries(parsed.checked).map(([key, checkedValue]) => [
+              key,
+              Boolean(checkedValue),
+            ]),
+          )
+        : {};
+
+    return {
+      decision,
+      notes: typeof parsed.notes === "string" ? parsed.notes : "",
+      checked,
+    };
+  } catch {
+    return createEmptyReviewDraft();
+  }
+}
+
+function reviewRowKey(row: SniffSignalRow): string {
+  return `${row.label}:${row.value}`;
+}
+
+function buildReviewSummaryText({
+  rows,
+  draft,
+  tokenAddress,
+  tokenLabel,
+  verdict,
+  sharePath,
+  origin,
+}: {
+  rows: readonly SniffSignalRow[];
+  draft: ReviewDraft;
+  tokenAddress: Address | null;
+  tokenLabel: string;
+  verdict: TokenChairVerdict;
+  sharePath: string | null;
+  origin: string;
+}): string {
+  const checkedRows = rows
+    .filter((row) => draft.checked[reviewRowKey(row)])
+    .map((row) => `- [x] ${row.label}: ${row.value}`);
+  const openRows = rows
+    .filter((row) => !draft.checked[reviewRowKey(row)])
+    .map((row) => `- [ ] ${row.label}: ${row.value}`);
+  const reportUrl = sharePath ? new URL(sharePath, origin).toString() : "No report URL yet";
+  const notes = draft.notes.trim() || "No notes.";
+
+  return [
+    `Token Chair review: ${tokenLabel}`,
+    `Address: ${tokenAddress ?? "Not captured"}`,
+    `Verdict: ${verdict.displayLabel}`,
+    `Decision: ${formatReviewDecision(draft.decision)}`,
+    `Report: ${reportUrl}`,
+    "",
+    "Checklist:",
+    ...checkedRows,
+    ...openRows,
+    "",
+    "Notes:",
+    notes,
+  ].join("\n");
+}
+
+function formatReviewDecision(decision: ReviewDecision): string {
+  return REVIEW_DECISION_OPTIONS.find((option) => option.value === decision)?.label ?? "Reviewing";
 }
 
 function buildReportRiskRows({

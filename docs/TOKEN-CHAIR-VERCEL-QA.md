@@ -36,9 +36,10 @@ $html -match "Scan Report"
 $html -match "Evidence Checklist"
 $html -match "Review Before Buying"
 $html -match "Copy report link"
+$html -match "Copy review"
 ```
 
-All five checks should return `True`.
+All checks should return `True`.
 
 ## API Matrix
 
@@ -51,7 +52,7 @@ $tokens = @{
 }
 
 foreach ($item in $tokens.GetEnumerator()) {
-  $json = npx.cmd vercel curl "$preview/api/token-chair-sniffer/market?token=$($item.Value)"
+  $json = npx.cmd vercel curl "$preview/api/token-chair-sniffer?token=$($item.Value)"
   [pscustomobject]@{
     Token = $item.Key
     Success = $json -match '"status":"success"'
@@ -103,7 +104,8 @@ In an authenticated browser session, check:
 - Scan Report appears before raw detail panels.
 - Top Review Items are readable and do not overlap on mobile.
 - Evidence Checklist distinguishes returned, partial, unavailable, not-configured, and not-live rows.
-- Review Before Buying keeps the decision manual.
+- Review Before Buying supports manual checklist toggles, decision state, notes, and Copy review.
+- Reloading the same token preserves the local review draft in the browser.
 - Copy report link writes a preview-local deep link.
 
 ## Guardrails
