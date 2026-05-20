@@ -43,6 +43,7 @@ import type { RiskLevel, ScoredApproval } from "@/lib/risk";
 
 export function ApprovalRow({
   approval,
+  tokenLogoUrl,
   ownerAddress,
   onRevoked,
   selected = false,
@@ -54,6 +55,7 @@ export function ApprovalRow({
   debugMode = false,
 }: {
   approval: ScoredApproval;
+  tokenLogoUrl?: string;
   ownerAddress: Address;
   onRevoked?: (hash: `0x${string}`) => void;
   selected?: boolean;
@@ -124,7 +126,7 @@ export function ApprovalRow({
           />
         </div>
         <div className="flex min-w-0 items-center gap-3">
-          <TokenAvatar symbol={approval.tokenSymbol} />
+          <TokenAvatar symbol={approval.tokenSymbol} logoUrl={tokenLogoUrl} />
           <div className="min-w-0">
             <div className="flex min-w-0 flex-wrap items-center gap-2">
               <p className="truncate text-sm font-semibold text-pulse-text">
@@ -1201,14 +1203,36 @@ function TxLink({
   );
 }
 
-function TokenAvatar({ symbol }: { symbol: string }) {
+function TokenAvatar({
+  symbol,
+  logoUrl,
+}: {
+  symbol: string;
+  logoUrl?: string;
+}) {
+  const [failedLogoUrl, setFailedLogoUrl] = useState<string | null>(null);
   const initials = symbol.slice(0, 3).toUpperCase();
+  const showLogo = Boolean(logoUrl && failedLogoUrl !== logoUrl);
+
   return (
     <div
       aria-hidden
-      className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-pulse-gradient text-[10px] font-bold text-pulse-on-gradient"
+      className="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-full bg-pulse-gradient text-[10px] font-bold text-pulse-on-gradient"
     >
-      {initials}
+      {showLogo ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          src={logoUrl}
+          alt=""
+          loading="lazy"
+          decoding="async"
+          referrerPolicy="no-referrer"
+          className="h-full w-full object-cover"
+          onError={() => setFailedLogoUrl(logoUrl ?? null)}
+        />
+      ) : (
+        initials
+      )}
     </div>
   );
 }
