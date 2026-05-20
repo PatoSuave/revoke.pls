@@ -74,6 +74,29 @@ const NAV_ITEMS = [
   { label: "Security", href: "/security", active: false },
 ] as const;
 
+const TOKEN_CHAIR_SAMPLE_TOKENS = [
+  {
+    label: "PLSX",
+    address: "0x95B303987A60C71504D99Aa1b13B4DA07b0790ab" as Address,
+    detail: "Ecosystem token",
+  },
+  {
+    label: "WPLS",
+    address: "0xA1077a294dDE1B09bB078844df40758a5D0f9a27" as Address,
+    detail: "Wrapped native",
+  },
+  {
+    label: "INC",
+    address: "0x2fa878Ab3F87CC1C9737Fc071108F904c0B0C95d" as Address,
+    detail: "Incentive",
+  },
+  {
+    label: "HEX",
+    address: "0x2b591e99afE9f32eAA6214f7B7629768c40Eeb39" as Address,
+    detail: "Ecosystem token",
+  },
+] as const;
+
 export function TokenChairSniffer({
   initialTokenAddress = null,
   initialResponse = null,
@@ -207,6 +230,10 @@ export function TokenChairSniffer({
                 setInputError(null);
               }}
               onInputBlur={() => setInputTouched(true)}
+              onPresetSelect={(tokenAddress) => {
+                setInputTouched(true);
+                void runSniff(tokenAddress, { updateUrl: true });
+              }}
             />
             <VerdictPanel
               verdict={verdict}
@@ -432,6 +459,7 @@ function HeroSearch({
   onSubmit,
   onInputChange,
   onInputBlur,
+  onPresetSelect,
 }: {
   input: string;
   hasInput: boolean;
@@ -440,7 +468,10 @@ function HeroSearch({
   onSubmit: (event: FormEvent<HTMLFormElement>) => void;
   onInputChange: (value: string) => void;
   onInputBlur: () => void;
+  onPresetSelect: (tokenAddress: Address) => void;
 }) {
+  const loading = state === "loading";
+
   return (
     <div className="flex min-w-0 flex-col justify-center">
       <div className="flex flex-wrap items-center gap-2 text-xs font-semibold">
@@ -499,12 +530,30 @@ function HeroSearch({
         </div>
         <button
           type="submit"
-          disabled={state === "loading" || !hasInput}
+          disabled={loading || !hasInput}
           className="inline-flex min-h-14 items-center justify-center rounded-lg border border-amber-300/70 bg-[linear-gradient(135deg,#ffcf4a,#ff9b1a)] px-5 py-3 text-sm font-bold text-[#170d02] shadow-[0_0_30px_rgba(255,157,18,0.25)] transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-55"
         >
-          {state === "loading" ? "Sniffing..." : "Sniff Token"}
+          {loading ? "Sniffing..." : "Sniff Token"}
         </button>
       </form>
+      <div className="mt-4 flex flex-wrap gap-2">
+        {TOKEN_CHAIR_SAMPLE_TOKENS.map((token) => (
+          <button
+            key={token.address}
+            type="button"
+            disabled={loading}
+            onClick={() => onPresetSelect(token.address)}
+            className="rounded-lg border border-pulse-border bg-pulse-panel/50 px-3 py-2 text-left text-xs transition hover:border-pulse-green/35 hover:bg-pulse-green/10 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            <span className="block font-semibold text-pulse-text">
+              {token.label}
+            </span>
+            <span className="mt-0.5 block text-pulse-muted">
+              {token.detail}
+            </span>
+          </button>
+        ))}
+      </div>
     </div>
   );
 }

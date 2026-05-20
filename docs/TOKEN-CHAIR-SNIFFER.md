@@ -16,6 +16,7 @@ Implemented in this MVP:
 - Shareable token deep links: `/app/token-chair-sniffer?token=0x...`
 - Internal API route: `/api/token-chair-sniffer/market?token=0x...`
 - Lightweight CTA from `/app` to the sniffer route
+- Sample-token presets for fast preview QA against PLSX, WPLS, INC, and HEX
 - EVM token-address validation and checksum normalization
 - Query-string token normalization with `token` and `address` aliases
 - Server-side DEX Screener token-pairs fetch for `pulsechain`
@@ -257,6 +258,10 @@ Phase 1 does not add:
 - transaction or simulation-based honeypot checks
 
 Existing approval scanner and revoke behavior are intentionally unchanged.
+
+## Preview QA
+
+Use `docs/TOKEN-CHAIR-VERCEL-QA.md` for the Vercel Preview QA matrix. It covers the sample-token presets, deep-link checks, API checks through `vercel curl`, expected degradation states, and the non-live honeypot/simulation guardrail.
 
 ## Verdict Rules
 
