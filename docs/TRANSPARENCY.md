@@ -12,7 +12,8 @@ with Arbitrum One verified-row revoke and Optimism verified-row revoke.
 - Rechecks live on-chain state before display
 - Shows active approvals only
 - Adds chain-scoped registry labels where known
-- Looks up PulseChain token logos by token contract address for display only
+- Looks up PulseChain and BSC token logos by token contract address for
+  display only
 - Prepares standard approval-clearing transactions when the user chooses to
   revoke
 - Scans Arbitrum One through a server-side read-only API and enables only
@@ -85,8 +86,8 @@ not automatically mean safe.
 
 ## Token Logos
 
-PulseChain token logos are optional display metadata resolved through the
-server-side `/api/token-logos` route. The resolver sends token contract
+PulseChain and BSC token logos are optional display metadata resolved through
+the server-side `/api/token-logos` route. The resolver sends token contract
 addresses only, not wallet owner addresses, spender addresses, allowance
 amounts, or revoke state.
 

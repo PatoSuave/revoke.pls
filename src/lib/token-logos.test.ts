@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { getAddress } from "viem";
 
-import { PULSECHAIN_CHAIN_ID } from "@/lib/chains";
+import { BSC_CHAIN_ID, PULSECHAIN_CHAIN_ID } from "@/lib/chains";
 import {
   TOKEN_LOGO_MAX_ADDRESSES,
   extractTokenLogosFromDexScreenerPairs,
@@ -15,15 +15,18 @@ import {
 
 const WPLS = getAddress("0xA1077a294dDE1B09bB078844df40758a5D0f9a27");
 const PLSX = getAddress("0x95B303987A60C71504D99Aa1b13B4DA07b0790ab");
+const WBNB = getAddress("0xBB4CdB9CBd36B01bD1cBaEBF2De08d9173bc095c");
 
 describe("token logo helpers", () => {
-  it("keeps logo lookup PulseChain-scoped first", () => {
+  it("keeps logo lookup scoped to explicitly enabled chains", () => {
     expect(isTokenLogoSupportedChain(PULSECHAIN_CHAIN_ID)).toBe(true);
     expect(getDexScreenerChainSlugForTokenLogos(PULSECHAIN_CHAIN_ID)).toBe(
       "pulsechain",
     );
-    expect(isTokenLogoSupportedChain(56)).toBe(false);
-    expect(getDexScreenerChainSlugForTokenLogos(56)).toBeNull();
+    expect(isTokenLogoSupportedChain(BSC_CHAIN_ID)).toBe(true);
+    expect(getDexScreenerChainSlugForTokenLogos(BSC_CHAIN_ID)).toBe("bsc");
+    expect(isTokenLogoSupportedChain(8453)).toBe(false);
+    expect(getDexScreenerChainSlugForTokenLogos(8453)).toBeNull();
   });
 
   it("normalizes, dedupes, and caps token addresses", () => {
@@ -87,6 +90,28 @@ describe("token logo helpers", () => {
       tokenAddress: PLSX,
       imageUrl: "https://cdn.dexscreener.com/plsx.png",
       source: "dexscreener",
+    });
+  });
+
+  it("extracts BSC logos from Dex Screener token pairs", () => {
+    const logos = extractTokenLogosFromDexScreenerPairs({
+      chainId: BSC_CHAIN_ID,
+      requestedAddresses: [WBNB],
+      payload: [
+        {
+          url: "https://dexscreener.com/bsc/0xpair1",
+          baseToken: { address: WBNB.toLowerCase() },
+          info: { imageUrl: "https://cdn.dexscreener.com/wbnb.png" },
+        },
+      ],
+    });
+
+    expect(logos[tokenLogoAddressKey(WBNB)]).toMatchObject({
+      chainId: BSC_CHAIN_ID,
+      tokenAddress: WBNB,
+      imageUrl: "https://cdn.dexscreener.com/wbnb.png",
+      source: "dexscreener",
+      sourceUrl: "https://dexscreener.com/bsc/0xpair1",
     });
   });
 });

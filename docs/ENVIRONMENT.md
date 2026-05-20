@@ -31,10 +31,11 @@ plus Optimism ERC-20/NFT verified-row revoke, configure:
 PulseChain has defaults for RPC and explorer API, but hosted production can
 override them for reliability.
 
-PulseChain token logos use Dex Screener's public token lookup endpoint through
-`/api/token-logos`. No API key is required. The app sends token contract
-addresses only, caps each request at `30` addresses, caches successful display
-metadata at the CDN, and falls back to symbol initials when no logo is returned.
+PulseChain and BSC token logos use Dex Screener's public token lookup endpoint
+through `/api/token-logos`. No API key is required. The app sends token
+contract addresses only, caps each request at `30` addresses, caches successful
+display metadata at the CDN, and falls back to symbol initials when no logo is
+returned.
 
 ## Variables
 
@@ -68,8 +69,9 @@ discovery. If unset, the app uses `https://api.scan.pulsechain.com/api`.
 
 ### Token Logo Lookup
 
-No environment variable is required for PulseChain token logos. The server route
-`/api/token-logos?chainId=369&addresses=...` calls Dex Screener for display
+No environment variable is required for PulseChain or BSC token logos. The
+server route `/api/token-logos?chainId=369&addresses=...` or
+`/api/token-logos?chainId=56&addresses=...` calls Dex Screener for display
 metadata and does not receive wallet owner, spender, or allowance data. Treat
 logos as visual convenience only; explorer links and live chain reads remain
 the source of verification.
