@@ -35,6 +35,7 @@ import {
   type TokenChairDextoolsDetailRow,
   type TokenChairEventHistoryDetailRow,
   type TokenChairHolderDistributionRow,
+  type TokenChairLpLockRecord,
   type TokenChairLpControlEvidenceRow,
   type TokenChairLpControlSummary,
   type TokenChairMarketData,
@@ -1733,6 +1734,7 @@ function LpControlSummary({
         {lpControlSummary ? (
           <LpControlInterpretation summary={lpControlSummary} />
         ) : null}
+        <LockerRecordsPanel contract={contract} />
         <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
           {metrics.map((metric) => (
             <HolderDistributionMetric key={metric.label} {...metric} />
@@ -1830,6 +1832,155 @@ function LpEvidenceRows({
           </p>
         </div>
       ))}
+    </div>
+  );
+}
+
+function LockerRecordsPanel({
+  contract,
+}: {
+  contract: TokenChairContractData;
+}) {
+  const locker = contract.lpLocker;
+  if (!locker || locker.status === "not-applicable") return null;
+
+  const rows = [
+    ...locker.activeLocks.map((record) => ({
+      record,
+      statusLabel: "Active",
+      status: "checked" as SniffRowStatus,
+    })),
+    ...locker.withdrawableLocks.map((record) => ({
+      record,
+      statusLabel: "Unlockable",
+      status: "warning" as SniffRowStatus,
+    })),
+    ...locker.matchedLocks
+      .filter(
+        (record) =>
+          !locker.activeLocks.some((active) => active.lockId === record.lockId) &&
+          !locker.withdrawableLocks.some((withdrawable) => withdrawable.lockId === record.lockId),
+      )
+      .map((record) => ({
+        record,
+        statusLabel: record.withdrawn ? "Withdrawn" : "Inactive",
+        status: "unable-to-verify" as SniffRowStatus,
+      })),
+  ];
+  const meta = [
+    locker.totalLocks ? `${locker.totalLocks} total locks` : null,
+    locker.checkedLockCount > 0
+      ? `${locker.checkedLockCount.toLocaleString("en-US")} checked`
+      : null,
+  ].filter(Boolean).join(" / ");
+
+  return (
+    <div className="mb-3 overflow-hidden rounded-lg border border-pulse-border/65 bg-[#0a1016]">
+      <div className="flex flex-wrap items-center justify-between gap-2 border-b border-pulse-border/65 px-3 py-2">
+        <div className="min-w-0">
+          <p className="text-sm font-semibold text-pulse-text">
+            Locker Records
+          </p>
+          <p className="mt-1 truncate text-[11px] text-pulse-muted">
+            {locker.lockerLabel ?? "Matched locker"}{meta ? ` / ${meta}` : ""}
+          </p>
+        </div>
+        {locker.lockerAddress ? (
+          <a
+            href={`https://scan.pulsechain.com/address/${locker.lockerAddress}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="rounded-md border border-pulse-border/70 px-2 py-1 text-[11px] font-semibold text-pulse-green transition hover:border-pulse-green/60 hover:bg-pulse-green/10"
+          >
+            PulseScan
+          </a>
+        ) : null}
+      </div>
+      {rows.length > 0 ? (
+        <div className="min-w-full overflow-x-auto">
+          <div className="grid min-w-[760px] grid-cols-[70px_minmax(130px,1fr)_minmax(120px,0.8fr)_110px_130px_96px] gap-2 border-b border-pulse-border/65 px-3 py-2 text-[11px] uppercase tracking-[0.14em] text-pulse-muted/75">
+            <span>ID</span>
+            <span>Owner</span>
+            <span>Raw amount</span>
+            <span>LP supply</span>
+            <span>Unlock</span>
+            <span>Status</span>
+          </div>
+          <div className="divide-y divide-pulse-border/55">
+            {rows.map((row) => (
+              <LockerRecordRow
+                key={row.record.lockId}
+                record={row.record}
+                statusLabel={row.statusLabel}
+                status={row.status}
+              />
+            ))}
+          </div>
+        </div>
+      ) : (
+        <p className="px-3 py-3 text-xs leading-5 text-pulse-muted">
+          No selected-pair locker records were returned in the bounded locker scan.
+        </p>
+      )}
+      {locker.warnings.length > 0 ? (
+        <div className="space-y-2 border-t border-pulse-border/65 px-3 py-3">
+          {locker.warnings.slice(0, 2).map((warning) => (
+            <p
+              key={warning}
+              className="rounded-lg border border-amber-400/30 bg-amber-400/10 px-3 py-2 text-xs leading-5 text-amber-100"
+            >
+              {warning}
+            </p>
+          ))}
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+function LockerRecordRow({
+  record,
+  statusLabel,
+  status,
+}: {
+  record: TokenChairLpLockRecord;
+  statusLabel: string;
+  status: SniffRowStatus;
+}) {
+  const ownerLabel = shortenAddress(record.ownerAddress);
+  const row = {
+    label: "Locker record",
+    value: statusLabel,
+    status,
+    detail: "",
+  } satisfies SniffSignalRow;
+
+  return (
+    <div className="grid min-w-[760px] grid-cols-[70px_minmax(130px,1fr)_minmax(120px,0.8fr)_110px_130px_96px] items-center gap-2 px-3 py-2 text-xs">
+      <span className="font-mono font-semibold text-pulse-text">
+        #{record.lockId}
+      </span>
+      <a
+        href={`https://scan.pulsechain.com/address/${record.ownerAddress}`}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="min-w-0 truncate font-mono font-semibold text-pulse-green transition hover:text-pulse-green/80"
+        title={record.ownerAddress}
+      >
+        {ownerLabel}
+      </a>
+      <span className="min-w-0 truncate font-mono text-pulse-text" title={record.amountRaw}>
+        {record.amountRaw}
+      </span>
+      <span className="font-semibold text-pulse-text">
+        {formatOptionalPercent(record.lpSupplyPercent)}
+      </span>
+      <span className="text-pulse-text">
+        {formatLockerRecordDate(record.unlockDateIso)}
+      </span>
+      <span className="justify-self-start">
+        <SniffValueBadge row={row} />
+      </span>
     </div>
   );
 }
@@ -2327,6 +2478,18 @@ function formatOptionalPercent(value: number | null): string {
   return `${value.toLocaleString("en-US", {
     maximumFractionDigits: value < 1 ? 2 : 1,
   })}%`;
+}
+
+function formatLockerRecordDate(value: string | null): string {
+  if (!value) return "Not returned";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "Not returned";
+  return new Intl.DateTimeFormat("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+    timeZone: "UTC",
+  }).format(date);
 }
 
 function sampledRowsDetail({
