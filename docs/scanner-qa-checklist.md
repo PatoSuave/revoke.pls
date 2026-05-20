@@ -13,6 +13,21 @@ Keep all testing low-risk and manual.
 - Keep enough native gas token for approval, revoke, and rescan testing.
 - Open scanner diagnostics with `/app?debug=1` during QA.
 
+## Automated Preview Smoke
+
+Before manual wallet QA, run the preview smoke command against the exact Vercel
+Preview URL being tested:
+
+```powershell
+npm run smoke:preview -- https://your-preview.vercel.app
+```
+
+The smoke checks the `/app?debug=1` page markers and the server-backed
+Ethereum, Arbitrum, and Optimism approval APIs with a harmless address. It
+should pass with RPC/explorer diagnostics configured and no missing config.
+This does not replace wallet QA; it only confirms the preview deployment and
+environment wiring are usable.
+
 ## Network Coverage
 
 Run the scanner flow on all supported chains:
