@@ -44,6 +44,7 @@ submission must stay unavailable.
 | NFT revoke | `src/hooks/use-revoke-nft-approval.ts`, `src/lib/nft-approvals.ts` |
 | Batch revoke | `src/hooks/use-batch-revoke.ts` |
 | Registry enrichment | `src/lib/registry/` |
+| PulseChain token logos | `src/app/api/token-logos/route.ts`, `src/lib/token-logos.ts`, `src/hooks/use-token-logos.ts` |
 | Telemetry/privacy | `src/lib/telemetry.ts` |
 | Diagnostics UI | `src/components/sections/scanner-diagnostics.tsx` |
 | Ethereum API controls | `src/app/api/ethereum/approvals/route.ts`, `src/lib/ethereum-approval-api.ts`, `src/lib/ethereum-approval-api-controls.ts` |
@@ -216,6 +217,19 @@ submission must stay unavailable.
 - Are Base labels empty unless manually verified?
 - Are unknown BSC and Base spenders shown as unknown rather than guessed?
 - Is registry data treated only as enrichment, not discovery truth?
+
+## Token Logo Questions
+
+- Is token-logo lookup scoped to PulseChain only until each additional chain is
+  explicitly enabled and reviewed?
+- Does the logo resolver send only token contract addresses, not scanned owner
+  addresses, spender addresses, allowances, or wallet connection state?
+- Does the UI keep text symbol/address data visible when no logo exists or the
+  image fails to load?
+- Are third-party logos treated as display-only metadata, not as trust,
+  verification, registry, or discovery evidence?
+- Does `/api/token-logos` cap requests to `30` token addresses and avoid
+  caching malformed or upstream-failure responses?
 
 ## Telemetry Questions
 
