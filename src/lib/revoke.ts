@@ -1,6 +1,7 @@
 import type { Address } from "viem";
 
 import { erc20Abi } from "@/lib/erc20";
+import { PERMIT2_ADDRESS, permit2RevokeAbi } from "@/lib/permit2";
 
 /**
  * The minimum amount of information needed to revoke a single ERC-20
@@ -14,6 +15,8 @@ export interface RevokeTarget {
   chainId: number;
   tokenAddress: Address;
   spenderAddress: Address;
+  approvalKind?: "erc20" | "permit2";
+  approvalContractAddress?: Address;
 }
 
 export interface WalletRevokeGuardInput {
@@ -50,6 +53,15 @@ export function getWalletRevokeBlockReason({
  * mutate any global state. Feed directly into `writeContract`.
  */
 export function buildRevokeCall(target: RevokeTarget) {
+  if (target.approvalKind === "permit2") {
+    return {
+      address: target.approvalContractAddress ?? PERMIT2_ADDRESS,
+      abi: permit2RevokeAbi,
+      functionName: "approve" as const,
+      args: [target.tokenAddress, target.spenderAddress, 0n, 0n] as const,
+    };
+  }
+
   return {
     address: target.tokenAddress,
     abi: erc20Abi,

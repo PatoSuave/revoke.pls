@@ -6,6 +6,12 @@ import {
   type DiscoverySourceConfig,
   type SupportedChainConfig,
 } from "@/lib/chains";
+import {
+  PERMIT2_ADDRESS,
+  PERMIT2_APPROVAL_TOPIC0,
+  PERMIT2_PERMIT_TOPIC0,
+  type Permit2DiscoveredAllowance,
+} from "@/lib/permit2";
 
 /**
  * ERC-20 `Approval(address indexed owner, address indexed spender, uint256 value)`
@@ -96,6 +102,11 @@ export interface NftDiscoveryResult extends WindowedFetchStats {
   source: DiscoverySourceMeta;
 }
 
+export interface Permit2DiscoveryResult extends WindowedFetchStats {
+  allowances: Permit2DiscoveredAllowance[];
+  source: DiscoverySourceMeta;
+}
+
 export interface DiscoverySource {
   meta: DiscoverySourceMeta;
   discover(
@@ -106,6 +117,10 @@ export interface DiscoverySource {
     owner: Address,
     options?: { signal?: AbortSignal },
   ): Promise<NftDiscoveryResult>;
+  discoverPermit2Allowances?(
+    owner: Address,
+    options?: { signal?: AbortSignal },
+  ): Promise<Permit2DiscoveryResult>;
 }
 
 interface BlockscoutLogEntry {
@@ -262,6 +277,16 @@ function optionalNumber(value: string | undefined): bigint | undefined {
   return parseHexNumber(value) ?? undefined;
 }
 
+function dataWord(value: string | undefined, index: number): bigint | undefined {
+  if (!value || typeof value !== "string" || !value.startsWith("0x")) {
+    return undefined;
+  }
+  const start = 2 + index * 64;
+  const word = value.slice(start, start + 64);
+  if (word.length !== 64) return undefined;
+  return parseHexNumber(`0x${word}`) ?? undefined;
+}
+
 function explorerErrorMessage(message: string | undefined): string {
   const lower = message?.toLowerCase() ?? "";
   if (
@@ -327,6 +352,26 @@ function dedupeNftApprovals(
   return out;
 }
 
+function dedupePermit2Allowances(
+  items: Permit2DiscoveredAllowance[],
+): Permit2DiscoveredAllowance[] {
+  const seen = new Set<string>();
+  const out: Permit2DiscoveredAllowance[] = [];
+  for (const a of items) {
+    const key = [
+      a.chainId,
+      a.approvalType,
+      a.permit2Address.toLowerCase(),
+      a.tokenAddress.toLowerCase(),
+      a.spenderAddress.toLowerCase(),
+    ].join(":");
+    if (seen.has(key)) continue;
+    seen.add(key);
+    out.push(a);
+  }
+  return out;
+}
+
 function buildLogsUrl(
   apiUrl: string,
   apiKey: string | undefined,
@@ -337,6 +382,7 @@ function buildLogsUrl(
   toBlock: string,
   page: number,
   offset: number,
+  contractAddress?: Address,
 ): string {
   const params = new URLSearchParams({
     module: "logs",
@@ -349,6 +395,7 @@ function buildLogsUrl(
     topic1: paddedOwner,
     topic0_1_opr: "and",
   });
+  if (contractAddress) params.set("address", contractAddress);
   if (queryParams) {
     for (const [k, v] of Object.entries(queryParams)) params.set(k, v);
   }
@@ -425,6 +472,7 @@ async function fetchLogsPage(
   retryAttempts: number,
   retryDelayMs: number,
   signal: AbortSignal | undefined,
+  contractAddress?: Address,
 ): Promise<BlockscoutLogEntry[]> {
   for (let attempt = 0; ; attempt += 1) {
     try {
@@ -440,6 +488,7 @@ async function fetchLogsPage(
         offset,
         timeoutMs,
         signal,
+        contractAddress,
       );
     } catch (error) {
       if (
@@ -466,6 +515,7 @@ async function fetchLogsPageOnce(
   offset: number,
   timeoutMs: number,
   signal: AbortSignal | undefined,
+  contractAddress?: Address,
 ): Promise<BlockscoutLogEntry[]> {
   const url = buildLogsUrl(
     apiUrl,
@@ -477,6 +527,7 @@ async function fetchLogsPageOnce(
     toBlock,
     page,
     offset,
+    contractAddress,
   );
   const res = await fetchDiscovery(url, signal, timeoutMs);
   if (!res.ok) {
@@ -606,6 +657,7 @@ async function windowedFetchLogs(
   topic0: string,
   limits: DiscoveryLimits,
   signal: AbortSignal | undefined,
+  contractAddress?: Address,
 ): Promise<{
   logs: BlockscoutLogEntry[];
   stats: WindowedFetchStats;
@@ -628,6 +680,7 @@ async function windowedFetchLogs(
     retryAttempts,
     retryDelayMs,
     signal,
+    contractAddress,
   );
   let requests = 1;
   let windows = 1;
@@ -703,6 +756,7 @@ async function windowedFetchLogs(
       retryAttempts,
       retryDelayMs,
       signal,
+      contractAddress,
     );
     requests += 1;
     windows += 1;
@@ -735,6 +789,7 @@ async function windowedFetchLogs(
           retryAttempts,
           retryDelayMs,
           signal,
+          contractAddress,
         );
         requests += 1;
         if (paged.length === 0) break;
@@ -939,6 +994,40 @@ function extractErc721TokenApprovals(
   return out;
 }
 
+function extractPermit2Allowances(
+  logs: readonly BlockscoutLogEntry[],
+  chainId: number,
+  sourceEvent: "Approval" | "Permit",
+): Permit2DiscoveredAllowance[] {
+  const out: Permit2DiscoveredAllowance[] = [];
+  for (const log of logs) {
+    const topics = normalizeTopics(log.topics);
+    // Permit2 Approval / Permit: sig + owner + token + spender.
+    if (!topics || topics.length !== 4) continue;
+    const ownerAddress = topicToAddress(topics[1]);
+    const tokenAddress = topicToAddress(topics[2]);
+    const spenderAddress = topicToAddress(topics[3]);
+    if (!ownerAddress || !tokenAddress || !spenderAddress) continue;
+
+    out.push({
+      chainId,
+      approvalType: "permit2",
+      permit2Address: PERMIT2_ADDRESS,
+      ownerAddress,
+      tokenAddress,
+      spenderAddress,
+      sourceEvent,
+      rawAmount: dataWord(log.data, 0),
+      expiration: dataWord(log.data, 1),
+      nonce: sourceEvent === "Permit" ? dataWord(log.data, 2) : undefined,
+      blockNumber: optionalNumber(log.blockNumber),
+      transactionHash: safeTransactionHash(log.transactionHash),
+      logIndex: log.logIndex,
+    });
+  }
+  return out;
+}
+
 function mergeStats(
   a: WindowedFetchStats,
   b: WindowedFetchStats,
@@ -1055,6 +1144,44 @@ export function createBlockscoutDiscoverySource({
         approvals: dedupeNftApprovals(candidates),
         source: meta,
         ...mergeStats(forAll.stats, perToken.stats),
+      };
+    },
+
+    async discoverPermit2Allowances(owner, options) {
+      assertReady();
+      const padded = padTopicAddress(owner);
+      const [approvals, permits] = await Promise.all([
+        windowedFetchLogs(
+          apiUrl,
+          apiKey,
+          queryParams,
+          padded,
+          PERMIT2_APPROVAL_TOPIC0,
+          limits,
+          options?.signal,
+          PERMIT2_ADDRESS,
+        ),
+        windowedFetchLogs(
+          apiUrl,
+          apiKey,
+          queryParams,
+          padded,
+          PERMIT2_PERMIT_TOPIC0,
+          limits,
+          options?.signal,
+          PERMIT2_ADDRESS,
+        ),
+      ]);
+
+      const candidates: Permit2DiscoveredAllowance[] = [
+        ...extractPermit2Allowances(approvals.logs, chainId, "Approval"),
+        ...extractPermit2Allowances(permits.logs, chainId, "Permit"),
+      ];
+
+      return {
+        allowances: dedupePermit2Allowances(candidates),
+        source: meta,
+        ...mergeStats(approvals.stats, permits.stats),
       };
     },
   };

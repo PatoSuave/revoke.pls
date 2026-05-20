@@ -1,8 +1,16 @@
 import type { Address } from "viem";
 
 import type { SupportedChainId } from "@/lib/chains";
-import type { DiscoveredPair } from "@/lib/discovery";
+import type { DiscoveredPair, NftDiscoveredApproval } from "@/lib/discovery";
 import { erc20Abi, formatAllowance, isUnlimitedAllowance } from "@/lib/erc20";
+import {
+  PERMIT2_ADDRESS,
+  PERMIT2_SOURCE_LABEL,
+  isPermit2AllowanceActive,
+  parsePermit2AllowanceRead,
+  permit2ReadAbi,
+  type Permit2DiscoveredAllowance,
+} from "@/lib/permit2";
 import {
   getSpenderMetadataEntry,
   getTokenEntry,
@@ -19,8 +27,12 @@ import { shortenAddress } from "@/lib/format";
  * base scan-result model — presentation enrichment (risk classification,
  * etc.) lives in `@/lib/risk`.
  */
+export type ApprovalKind = "erc20" | "permit2";
+
 export interface Approval {
   key: string;
+  /** Normal token approval or nested Permit2 allowance. */
+  approvalKind?: ApprovalKind;
   /** Chain the approval lives on. Needed for explorer links and to route
    *  the revoke write to the correct chain. */
   chainId: number;
@@ -42,6 +54,11 @@ export interface Approval {
    * as the source of any "known / trusted" claim. */
   spenderVerificationMethod?: string;
   spenderProtocolMetadata?: SpenderProtocolMetadata;
+  /** Contract that stores/revokes the approval when it differs from tokenAddress. */
+  approvalContractAddress?: Address;
+  /** Unix timestamp after which a Permit2 nested allowance is no longer valid. */
+  permit2Expiration?: number;
+  permit2Nonce?: number;
   rawAllowance: bigint;
   formattedAllowance: string;
   unlimited: boolean;
@@ -252,6 +269,7 @@ export function parseScanResults(
 
       approvals.push({
         key: `${chainId}-${token.address}-${spender.address}`,
+        approvalKind: "erc20",
         chainId,
         tokenAddress: token.address,
         tokenSymbol: symbol,
@@ -332,6 +350,46 @@ export function buildDiscoveryContracts<TChainId extends number = SupportedChain
   };
 }
 
+function uniquePermit2TokenAddresses(
+  candidates: readonly Permit2DiscoveredAllowance[],
+): Address[] {
+  const seen = new Set<string>();
+  const out: Address[] = [];
+  for (const candidate of candidates) {
+    const key = candidate.tokenAddress.toLowerCase();
+    if (seen.has(key)) continue;
+    seen.add(key);
+    out.push(candidate.tokenAddress);
+  }
+  return out;
+}
+
+export function buildPermit2AllowanceContracts<
+  TChainId extends number = SupportedChainId,
+>(
+  owner: Address,
+  candidates: readonly Permit2DiscoveredAllowance[],
+  chainId: TChainId,
+) {
+  const tokens = uniquePermit2TokenAddresses(candidates);
+  const metadata = tokens.flatMap((address) => [
+    { address, abi: erc20Abi, functionName: "symbol" as const, chainId },
+    { address, abi: erc20Abi, functionName: "decimals" as const, chainId },
+    { address, abi: erc20Abi, functionName: "name" as const, chainId },
+  ]);
+  const allowances = candidates.map((candidate) => ({
+    address: candidate.permit2Address,
+    abi: permit2ReadAbi,
+    functionName: "allowance" as const,
+    args: [owner, candidate.tokenAddress, candidate.spenderAddress] as const,
+    chainId,
+  }));
+  return {
+    contracts: [...metadata, ...allowances],
+    uniqueTokens: tokens,
+  };
+}
+
 export function collectDiscoveryReadFailures(
   results: readonly ReadResult[] | undefined,
   pairs: readonly DiscoveredPair[],
@@ -399,6 +457,79 @@ export function collectDiscoveryReadFailures(
   return diagnostics;
 }
 
+export function collectPermit2ReadFailures(
+  results: readonly ReadResult[] | undefined,
+  candidates: readonly Permit2DiscoveredAllowance[],
+  tokens = uniquePermit2TokenAddresses(candidates),
+): Erc20LiveReadFailureDiagnostics {
+  const diagnostics: {
+    allowance: number;
+    symbol: number;
+    name: number;
+    decimals: number;
+    other: number;
+    allowanceSucceeded: number;
+    allowanceFailed: number;
+    allowanceTotal: number;
+    metadataFailed: number;
+    samples: Erc20LiveReadFailureSample[];
+  } = {
+    ...EMPTY_ERC20_LIVE_READ_FAILURES,
+    samples: [],
+    allowanceTotal: candidates.length,
+  };
+
+  if (!results) return diagnostics;
+
+  tokens.forEach((address, tokenIdx) => {
+    const base = tokenIdx * METADATA_CALLS_PER_TOKEN;
+    const metadataReads: readonly [Erc20LiveReadFailureKind, number][] = [
+      ["symbol", base],
+      ["decimals", base + 1],
+      ["name", base + 2],
+    ];
+
+    metadataReads.forEach(([kind, index]) => {
+      const result = results[index];
+      if (result?.status !== "failure") return;
+
+      incrementFailure(diagnostics, kind);
+      diagnostics.metadataFailed += 1;
+      addFailureSample(diagnostics.samples, {
+        kind,
+        tokenAddress: address,
+        error: failedReadCategory(result),
+      });
+    });
+  });
+
+  const allowanceOffset = tokens.length * METADATA_CALLS_PER_TOKEN;
+  candidates.forEach((candidate, candidateIdx) => {
+    const result = results[allowanceOffset + candidateIdx];
+    if (
+      result?.status === "success" &&
+      parsePermit2AllowanceRead(result.result)
+    ) {
+      diagnostics.allowanceSucceeded += 1;
+      return;
+    }
+
+    diagnostics.allowance += 1;
+    diagnostics.allowanceFailed += 1;
+    addFailureSample(diagnostics.samples, {
+      kind: "allowance",
+      tokenAddress: candidate.tokenAddress,
+      spenderAddress: candidate.spenderAddress,
+      error:
+        result?.status === "success"
+          ? "Unexpected Permit2 allowance read result"
+          : failedReadCategory(result),
+    });
+  });
+
+  return diagnostics;
+}
+
 export interface ParseDiscoveryStats {
   /** Number of `(token, spender)` pairs fed into the pipeline. */
   candidates: number;
@@ -411,6 +542,42 @@ export interface ParseDiscoveryStats {
 export interface ParseDiscoveryOutput {
   approvals: Approval[];
   stats: ParseDiscoveryStats;
+}
+
+export interface ParseDiscoveryOptions {
+  hybridTokenAddresses?: ReadonlySet<string>;
+}
+
+export function buildHybridTokenAddressSet(input: {
+  erc20Pairs?: readonly Pick<DiscoveredPair, "tokenAddress">[];
+  permit2Allowances?: readonly Pick<Permit2DiscoveredAllowance, "tokenAddress">[];
+  nftApprovals?: readonly Pick<NftDiscoveredApproval, "collectionAddress">[];
+}): ReadonlySet<string> {
+  const fungibleAddresses = new Set<string>();
+  input.erc20Pairs?.forEach((pair) => {
+    fungibleAddresses.add(pair.tokenAddress.toLowerCase());
+  });
+  input.permit2Allowances?.forEach((allowance) => {
+    fungibleAddresses.add(allowance.tokenAddress.toLowerCase());
+  });
+
+  const hybridAddresses = new Set<string>();
+  input.nftApprovals?.forEach((approval) => {
+    const address = approval.collectionAddress.toLowerCase();
+    if (fungibleAddresses.has(address)) hybridAddresses.add(address);
+  });
+  return hybridAddresses;
+}
+
+function tokenCategoryFor(
+  address: Address,
+  registry: TokenEntry | undefined,
+  options: ParseDiscoveryOptions,
+): TokenCategory {
+  if (options.hybridTokenAddresses?.has(address.toLowerCase())) {
+    return "hybrid";
+  }
+  return registry?.category ?? "unknown";
 }
 
 /**
@@ -429,6 +596,7 @@ export function parseDiscoveryResults(
   owner: Address,
   chainId: number,
   pairs: readonly DiscoveredPair[],
+  options: ParseDiscoveryOptions = {},
 ): ParseDiscoveryOutput {
   void owner; // reserved for future multi-owner caching
   const tokens = uniqueTokenAddresses(pairs);
@@ -467,7 +635,7 @@ export function parseDiscoveryResults(
     const decimals = onChainDecimals ?? registry?.decimals;
     const symbol = onChainSymbol ?? registry?.symbol ?? shortenAddress(address);
     const name = onChainName ?? registry?.name;
-    const category: TokenCategory = registry?.category ?? "unknown";
+    const category = tokenCategoryFor(address, registry, options);
 
     tokenMeta.set(address.toLowerCase(), { symbol, name, decimals, category });
   });
@@ -491,6 +659,7 @@ export function parseDiscoveryResults(
 
     approvals.push({
       key: `${chainId}-${pair.tokenAddress}-${pair.spenderAddress}`,
+      approvalKind: "erc20",
       chainId,
       tokenAddress: pair.tokenAddress,
       tokenSymbol: meta.symbol,
@@ -524,4 +693,119 @@ export function parseDiscoveryResults(
       registryMatched,
     },
   };
+}
+
+export function parsePermit2AllowanceResults(
+  results: readonly ReadResult[],
+  owner: Address,
+  chainId: number,
+  candidates: readonly Permit2DiscoveredAllowance[],
+  options: ParseDiscoveryOptions & { nowUnix?: number } = {},
+): ParseDiscoveryOutput {
+  void owner;
+  const tokens = uniquePermit2TokenAddresses(candidates);
+  const allowanceOffset = tokens.length * METADATA_CALLS_PER_TOKEN;
+
+  interface TokenMeta {
+    symbol: string;
+    name?: string;
+    decimals: number | undefined;
+    category: TokenCategory;
+  }
+
+  const tokenMeta = new Map<string, TokenMeta>();
+  tokens.forEach((address, i) => {
+    const base = i * METADATA_CALLS_PER_TOKEN;
+    const symbolRes = results[base];
+    const decimalsRes = results[base + 1];
+    const nameRes = results[base + 2];
+    const registry = getTokenEntry(chainId, address);
+
+    const onChainSymbol =
+      symbolRes?.status === "success" && typeof symbolRes.result === "string"
+        ? symbolRes.result
+        : undefined;
+    const onChainName =
+      nameRes?.status === "success" && typeof nameRes.result === "string"
+        ? nameRes.result
+        : undefined;
+    const onChainDecimals =
+      decimalsRes?.status === "success" &&
+      typeof decimalsRes.result === "number"
+        ? decimalsRes.result
+        : undefined;
+
+    const decimals = onChainDecimals ?? registry?.decimals;
+    const symbol = onChainSymbol ?? registry?.symbol ?? shortenAddress(address);
+    const name = onChainName ?? registry?.name;
+    const category = tokenCategoryFor(address, registry, options);
+
+    tokenMeta.set(address.toLowerCase(), { symbol, name, decimals, category });
+  });
+
+  const approvals: Approval[] = [];
+  let registryMatched = 0;
+
+  candidates.forEach((candidate, candidateIdx) => {
+    const allowanceRes = results[allowanceOffset + candidateIdx];
+    if (!allowanceRes || allowanceRes.status !== "success") return;
+
+    const permit2Read = parsePermit2AllowanceRead(allowanceRes.result);
+    if (!permit2Read || !isPermit2AllowanceActive(permit2Read, options)) return;
+
+    const meta = tokenMeta.get(candidate.tokenAddress.toLowerCase());
+    if (!meta) return;
+
+    const unlimited = isUnlimitedAllowance(permit2Read.amount);
+    const spenderEntry = getSpenderMetadataEntry(
+      chainId,
+      candidate.spenderAddress,
+    );
+    if (spenderEntry) registryMatched += 1;
+
+    approvals.push({
+      key: `${chainId}-permit2-${candidate.tokenAddress}-${candidate.spenderAddress}`,
+      approvalKind: "permit2",
+      chainId,
+      tokenAddress: candidate.tokenAddress,
+      tokenSymbol: meta.symbol,
+      tokenName: meta.name,
+      tokenDecimals: meta.decimals ?? null,
+      tokenCategory: meta.category,
+      spenderAddress: candidate.spenderAddress,
+      spenderLabel: spenderEntry?.label ?? "Unknown spender",
+      protocol: spenderEntry?.protocol ?? "Unknown",
+      spenderCategory: spenderEntry?.category ?? "unknown",
+      trusted: spenderEntry?.isTrusted ?? false,
+      spenderUrl: spenderEntry?.url,
+      spenderNotes: spenderEntry?.notes,
+      spenderVerificationMethod: spenderEntry?.verificationMethod,
+      spenderProtocolMetadata: spenderEntry?.protocolMetadata,
+      approvalContractAddress: candidate.permit2Address ?? PERMIT2_ADDRESS,
+      permit2Expiration: Number(permit2Read.expiration),
+      permit2Nonce: Number(permit2Read.nonce),
+      rawAllowance: permit2Read.amount,
+      formattedAllowance: formatValidatedAllowance(
+        permit2Read.amount,
+        meta.decimals,
+        meta.symbol,
+      ),
+      unlimited,
+    });
+  });
+
+  return {
+    approvals,
+    stats: {
+      candidates: candidates.length,
+      active: approvals.length,
+      registryMatched,
+    },
+  };
+}
+
+export function approvalSourceLabel(approval: Pick<Approval, "approvalKind">): string {
+  return approval.approvalKind === "permit2"
+    ? PERMIT2_SOURCE_LABEL
+    : "ERC-20 token allowance";
 }

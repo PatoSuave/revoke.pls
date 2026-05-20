@@ -113,7 +113,9 @@ describe("approval row readability copy", () => {
       "To verify this row, the app must read allowance(owner, spender).",
     );
     expect(erc20Source).toContain("CurrentApprovalStateSummary kind=\"erc20\"");
-    expect(erc20Source).toContain("verificationKind=\"erc20\"");
+    expect(erc20Source).toContain(
+      'verificationKind={approval.approvalKind ?? "erc20"}',
+    );
   });
 
   it("explains unverified NFT per-token and operator current approval state", () => {

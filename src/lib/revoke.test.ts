@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import type { Address } from "viem";
 
 import { buildRevokeCall, getWalletRevokeBlockReason } from "./revoke";
+import { PERMIT2_ADDRESS } from "./permit2";
 
 const OWNER = "0x1111111111111111111111111111111111111111" as Address;
 const OTHER = "0x2222222222222222222222222222222222222222" as Address;
@@ -20,6 +21,21 @@ describe("ERC-20 revoke helpers", () => {
       address: TOKEN,
       functionName: "approve",
       args: [SPENDER, 0n],
+    });
+  });
+
+  it("builds a Permit2 revoke against the Permit2 contract", () => {
+    expect(
+      buildRevokeCall({
+        chainId: 1,
+        tokenAddress: TOKEN,
+        spenderAddress: SPENDER,
+        approvalKind: "permit2",
+      }),
+    ).toMatchObject({
+      address: PERMIT2_ADDRESS,
+      functionName: "approve",
+      args: [TOKEN, SPENDER, 0n, 0n],
     });
   });
 
