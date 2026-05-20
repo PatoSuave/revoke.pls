@@ -41,6 +41,7 @@ import {
   type TokenChairMarketData,
   type TokenChairPairCandidateRow,
   type TokenChairPairContractData,
+  type TokenChairPulseXPairData,
   type TokenChairSourceSignalDetailRow,
   type TokenChairVerdict,
 } from "@/lib/token-chair-sniffer";
@@ -887,6 +888,14 @@ function SignalDetailsPanel({
               {formatHolderDataStatus(response, state)}
             </p>
           </div>
+          <div>
+            <p className="uppercase tracking-[0.14em] text-pulse-muted/75">
+              PulseX
+            </p>
+            <p className="mt-1 font-semibold text-pulse-text">
+              {formatPulseXDiscoveryStatus(response, state)}
+            </p>
+          </div>
           {visibleDextools ? (
             <div>
               <p className="uppercase tracking-[0.14em] text-pulse-muted/75">
@@ -1051,6 +1060,7 @@ function MarketChairIntel({
         : "Not returned";
   const cards = buildMarketCards(market, placeholder);
   const pairRows = buildPairCandidateRows(response?.pairs ?? []);
+  const pulseXRows = response?.pulsexPairs ?? [];
 
   return (
     <section className="rounded-lg border border-pulse-border/80 bg-[#080d12] p-4">
@@ -1065,6 +1075,7 @@ function MarketChairIntel({
         ))}
       </div>
       <PairCandidateRows rows={pairRows} />
+      <PulseXDiscoveryRows rows={pulseXRows} response={response} state={state} />
     </section>
   );
 }
@@ -1274,6 +1285,120 @@ function PairMetric({
         {value}
       </p>
     </div>
+  );
+}
+
+function PulseXDiscoveryRows({
+  rows,
+  response,
+  state,
+}: {
+  rows: readonly TokenChairPulseXPairData[];
+  response: TokenChairApiResponse | null;
+  state: SnifferUiState;
+}) {
+  if (!response && state !== "loading") return null;
+  const loading = state === "loading";
+
+  return (
+    <div className="mt-4 overflow-hidden rounded-lg border border-pulse-border/75 bg-[#070b10]">
+      <div className="grid grid-cols-[minmax(0,1fr)_auto] gap-3 border-b border-pulse-border/70 px-3 py-2">
+        <p className="text-sm font-semibold text-pulse-text">
+          Native PulseX Pairs
+        </p>
+        <p className="text-xs text-pulse-muted">
+          {loading
+            ? "Checking factories"
+            : rows.length
+              ? `${rows.length} found`
+              : "No matches"}
+        </p>
+      </div>
+      {loading ? (
+        <p className="px-3 py-3 text-xs leading-5 text-pulse-muted">
+          Checking PulseX V1/V2 factories for pairs against WPLS, PLSX, INC,
+          HEX, DAI, USDC, and USDT.
+        </p>
+      ) : rows.length === 0 ? (
+        <p className="px-3 py-3 text-xs leading-5 text-pulse-muted">
+          No native PulseX V1/V2 pair was returned for the checked quote tokens.
+          This does not rule out pairs on other DEXs or against unlisted quotes.
+        </p>
+      ) : (
+        <ul className="divide-y divide-pulse-border/60">
+          {rows.map((row) => (
+            <li key={`${row.version}-${row.pairAddress}-${row.quoteTokenAddress}`}>
+              <PulseXDiscoveryRow row={row} />
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+}
+
+function PulseXDiscoveryRow({ row }: { row: TokenChairPulseXPairData }) {
+  const pair = row.pairAddress;
+  const status =
+    row.status === "success"
+      ? "Factory pair"
+      : row.status === "partial"
+        ? "Partial read"
+        : "Unable";
+  const badgeClass =
+    row.status === "success"
+      ? "border-pulse-green/40 bg-pulse-green/10 text-pulse-green"
+      : "border-amber-400/45 bg-amber-400/10 text-amber-200";
+  const content = (
+    <div className="grid gap-3 px-3 py-3 transition hover:bg-pulse-panel/25">
+      <div className="min-w-0">
+        <div className="flex min-w-0 items-center gap-2">
+          <p className="truncate text-sm font-semibold text-pulse-text">
+            {row.label} / {row.quoteTokenSymbol}
+          </p>
+          <span className={`shrink-0 rounded-full border px-2 py-0.5 text-[11px] font-semibold ${badgeClass}`}>
+            {status}
+          </span>
+        </div>
+        <p className="mt-2 truncate font-mono text-xs text-pulse-muted">
+          {pair ? shortenAddress(pair, 6) : "Pair not returned"}
+        </p>
+        <p className="mt-1 text-xs text-pulse-muted">
+          Found by PulseX factory getPair; raw reserves are read-only context,
+          not USD liquidity or a swap simulation.
+        </p>
+      </div>
+      <div className="grid grid-cols-2 gap-2 text-xs sm:grid-cols-4">
+        <PairMetric
+          label="Token"
+          value={formatRawIntegerMagnitude(row.scannedTokenReserveRaw)}
+        />
+        <PairMetric
+          label={row.quoteTokenSymbol}
+          value={formatRawIntegerMagnitude(row.quoteTokenReserveRaw)}
+        />
+        <PairMetric
+          label="LP"
+          value={formatRawIntegerMagnitude(row.totalSupplyRaw)}
+        />
+        <PairMetric
+          label="Check"
+          value={row.containsScannedToken === true ? "Matched" : "Partial"}
+        />
+      </div>
+    </div>
+  );
+
+  if (!pair) return content;
+
+  return (
+    <a
+      href={`https://scan.pulsechain.com/address/${pair}`}
+      target="_blank"
+      rel="noopener noreferrer"
+    >
+      {content}
+    </a>
   );
 }
 
@@ -2379,6 +2504,16 @@ function formatHolderDataStatus(
   }
   if (holders.status === "partial") return "Partial";
   return "Unable to verify";
+}
+
+function formatPulseXDiscoveryStatus(
+  response: TokenChairApiResponse | null,
+  state: SnifferUiState,
+): string {
+  if (state === "loading") return "Loading";
+  if (!response) return "Not checked yet";
+  if (response.pulsexPairs.length === 0) return "No native pair found";
+  return `${response.pulsexPairs.length.toLocaleString("en-US")} found`;
 }
 
 function formatDextoolsStatus(

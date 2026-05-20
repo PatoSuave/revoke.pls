@@ -14,6 +14,7 @@ import { fetchDextoolsTokenChairData } from "@/lib/token-chair-sniffer-dextools"
 import { fetchTokenChairExplorerData } from "@/lib/token-chair-sniffer-explorer";
 import { fetchTokenChairHolderData } from "@/lib/token-chair-sniffer-holders";
 import { fetchTokenChairPairContractData } from "@/lib/token-chair-sniffer-pair";
+import { fetchTokenChairPulseXPairs } from "@/lib/token-chair-sniffer-pulsex";
 import { fetchTokenChairScan } from "@/lib/token-chair-sniffer-scan";
 import { fetchDexScreenerTokenPairs } from "@/lib/token-chair-sniffer-server";
 
@@ -35,6 +36,10 @@ vi.mock("@/lib/token-chair-sniffer-holders", () => ({
 
 vi.mock("@/lib/token-chair-sniffer-pair", () => ({
   fetchTokenChairPairContractData: vi.fn(),
+}));
+
+vi.mock("@/lib/token-chair-sniffer-pulsex", () => ({
+  fetchTokenChairPulseXPairs: vi.fn(),
 }));
 
 vi.mock("@/lib/token-chair-sniffer-server", () => ({
@@ -78,6 +83,10 @@ describe("Token Chair scan orchestration", () => {
       events.push("pair-start");
       return pairContractData();
     });
+    vi.mocked(fetchTokenChairPulseXPairs).mockImplementation(async () => {
+      events.push("pulsex-start");
+      return [];
+    });
     vi.mocked(fetchDextoolsTokenChairData).mockImplementation(async () => {
       events.push("dextools-start");
       return dextoolsData();
@@ -89,6 +98,7 @@ describe("Token Chair scan orchestration", () => {
     expect(events).toEqual([
       "contract-start",
       "explorer-start",
+      "pulsex-start",
       "dextools-start",
       "holder-start",
       "pair-start",

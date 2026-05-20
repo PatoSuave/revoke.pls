@@ -7,6 +7,7 @@ import {
   withTokenChairHolderData,
   withTokenChairLpLockerData,
   withTokenChairPairContractData,
+  withTokenChairPulseXPairData,
   type TokenChairApiResponse,
 } from "@/lib/token-chair-sniffer";
 import { fetchTokenChairContractData } from "@/lib/token-chair-sniffer-contract";
@@ -15,6 +16,7 @@ import { fetchTokenChairExplorerData } from "@/lib/token-chair-sniffer-explorer"
 import { fetchTokenChairHolderData } from "@/lib/token-chair-sniffer-holders";
 import { fetchTokenChairLpLockerData } from "@/lib/token-chair-sniffer-lockers";
 import { fetchTokenChairPairContractData } from "@/lib/token-chair-sniffer-pair";
+import { fetchTokenChairPulseXPairs } from "@/lib/token-chair-sniffer-pulsex";
 import { fetchDexScreenerTokenPairs } from "@/lib/token-chair-sniffer-server";
 
 export const TOKEN_CHAIR_REQUEST_TIMEOUT_MS = 10_000;
@@ -35,6 +37,9 @@ export async function fetchTokenChairScan(
       signal: controller.signal,
     });
     const explorerPromise = fetchTokenChairExplorerData(tokenAddress, {
+      signal: controller.signal,
+    });
+    const pulsexPairsPromise = fetchTokenChairPulseXPairs(tokenAddress, {
       signal: controller.signal,
     });
 
@@ -64,12 +69,14 @@ export async function fetchTokenChairScan(
       holderResult,
       pairContractResult,
       dextoolsResult,
+      pulsexPairsResult,
     ] = await Promise.all([
       contractPromise,
       explorerPromise,
       holderPromise,
       pairContractPromise,
       dextoolsPromise,
+      pulsexPairsPromise,
     ]);
 
     const responseWithMarketContractAndExplorer = withTokenChairExplorerData(
@@ -82,8 +89,12 @@ export async function fetchTokenChairScan(
           pairContractResult,
         )
       : responseWithMarketContractAndExplorer;
-    const responseWithDextools = withTokenChairDextoolsData(
+    const responseWithPulseX = withTokenChairPulseXPairData(
       responseWithPairContract,
+      pulsexPairsResult,
+    );
+    const responseWithDextools = withTokenChairDextoolsData(
+      responseWithPulseX,
       dextoolsResult,
     );
     const responseWithHolders = withTokenChairHolderData(

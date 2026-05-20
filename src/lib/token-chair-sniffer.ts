@@ -127,6 +127,29 @@ export interface TokenChairPairContractData {
   errors: string[];
 }
 
+export type TokenChairPulseXPairVersion = "v1" | "v2";
+
+export interface TokenChairPulseXPairData {
+  status: TokenChairContractReadStatus;
+  version: TokenChairPulseXPairVersion;
+  label: string;
+  factoryAddress: Address;
+  pairAddress: Address | null;
+  quoteTokenAddress: Address;
+  quoteTokenSymbol: string;
+  quoteTokenName: string;
+  token0: Address | null;
+  token1: Address | null;
+  containsScannedToken: boolean | null;
+  reserve0Raw: string | null;
+  reserve1Raw: string | null;
+  scannedTokenReserveRaw: string | null;
+  quoteTokenReserveRaw: string | null;
+  totalSupplyRaw: string | null;
+  warnings: string[];
+  errors: string[];
+}
+
 export type TokenChairSourceSignalKey =
   | "mintable"
   | "transfer-pausable"
@@ -388,6 +411,7 @@ export interface TokenChairApiResponse {
   market: TokenChairMarketData | null;
   dextools: TokenChairDextoolsData | null;
   pairContract: TokenChairPairContractData | null;
+  pulsexPairs: TokenChairPulseXPairData[];
   contract: TokenChairContractData | null;
   pairs: TokenChairMarketData[];
   verdict: TokenChairVerdict;
@@ -878,6 +902,7 @@ export function createTokenChairApiResponse({
   contract = null,
   dextools = null,
   pairContract = null,
+  pulsexPairs = [],
   pairs = [],
   warnings = [],
   errors = [],
@@ -887,6 +912,7 @@ export function createTokenChairApiResponse({
   contract?: TokenChairContractData | null;
   dextools?: TokenChairDextoolsData | null;
   pairContract?: TokenChairPairContractData | null;
+  pulsexPairs?: TokenChairPulseXPairData[];
   pairs?: TokenChairMarketData[];
   warnings?: string[];
   errors?: string[];
@@ -900,6 +926,7 @@ export function createTokenChairApiResponse({
     market,
     dextools,
     pairContract,
+    pulsexPairs,
     contract,
     pairs,
     warnings,
@@ -1473,6 +1500,21 @@ export function withTokenChairPairContractData(
   return {
     ...withPairContract,
     verdict: getTokenChairVerdict(withPairContract),
+  };
+}
+
+export function withTokenChairPulseXPairData(
+  response: TokenChairApiResponse,
+  pulsexPairs: TokenChairPulseXPairData[],
+): TokenChairApiResponse {
+  const withPulseX: Omit<TokenChairApiResponse, "verdict"> = {
+    ...response,
+    pulsexPairs,
+  };
+
+  return {
+    ...withPulseX,
+    verdict: getTokenChairVerdict(withPulseX),
   };
 }
 

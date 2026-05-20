@@ -154,6 +154,10 @@ vi.mock("@/lib/token-chair-sniffer-pair", () => ({
   })),
 }));
 
+vi.mock("@/lib/token-chair-sniffer-pulsex", () => ({
+  fetchTokenChairPulseXPairs: vi.fn(async () => []),
+}));
+
 import { GET } from "./route";
 import { fetchDextoolsTokenChairData } from "@/lib/token-chair-sniffer-dextools";
 import { resetTokenChairApiRateLimitForTests } from "@/lib/token-chair-sniffer-controls";

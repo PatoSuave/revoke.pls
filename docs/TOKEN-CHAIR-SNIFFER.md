@@ -20,6 +20,7 @@ Implemented in this MVP:
 - Query-string token normalization with `token` and `address` aliases
 - Server-side DEX Screener token-pairs fetch for `pulsechain`
 - DEX Screener response normalization and main-pair selection by highest visible USD liquidity
+- Native PulseX V1/V2 factory pair discovery against common PulseChain quote tokens, with read-only raw reserves and LP supply for returned pairs
 - Optional server-side DEXTools enrichment for external market/score context when `DEXTOOLS_API_KEY` is configured
 - Read-only PulseChain RPC contract reads for basic token metadata, standard ownership, and common proxy signals
 - Read-only pending owner/admin getter checks, common public admin/operator/fee-wallet getter checks, common AccessControl role-function checks, and public buy/sell tax getter checks
@@ -43,6 +44,7 @@ Implemented in this MVP:
 - Conservative Chair Verdict mapping
 - Market Chair Intel cards
 - Pair Candidates list showing the top returned DEX Screener pairs by visible liquidity
+- Native PulseX Pairs list showing factory-discovered V1/V2 pairs against checked quote assets
 - Quick Sniff checklist with live ownership/proxy rows and conservative placeholders for unchecked rows
 - Contract Sniff cards with live owner, source, deployer, holder, LP, and metadata signals
 - Holder Distribution panel explaining sampled token-holder buckets, top-holder rows, and LP-holder concentration address context
@@ -80,6 +82,8 @@ When configured with a server-only `DEXTOOLS_API_KEY`, Token Chair also attempts
 
 After DEX Screener selects the primary pair, the API also performs read-only PulseChain RPC checks against that selected pair contract. It verifies whether the pair's `token0()` or `token1()` matches the scanned token address, reads raw `getReserves()` values, and reads raw LP `totalSupply()`. These values are displayed as raw contract integers because token decimals differ by asset. They are useful for confirming the selected pair address is internally consistent, but they are not a swap simulation, LP lock proof, or exhaustive liquidity analysis.
 
+In parallel with DEX Screener, the API also performs a native PulseX discovery pass. It calls `getPair(token, quote)` on the PulseX V2 factory (`0x29eA7545DEf87022BAdc76323F373EA1e707C523`) and PulseX V1 factory (`0x1715a3E4A142d8b698131108995174F37aEBA10D`) for a small checked quote list: WPLS, PLSX, INC, HEX, DAI, USDC, and USDT. When a factory returns a pair, Token Chair reads `token0()`, `token1()`, `getReserves()`, and LP `totalSupply()` from that pair. Native PulseX rows are pair-existence and raw-contract context only; they do not include USD liquidity, price impact, swap simulation, or lock proof.
+
 ## Native Read-Only Contract Checks
 
 The API also performs PulseChain RPC reads without connecting a wallet:
@@ -97,6 +101,7 @@ The API also performs PulseChain RPC reads without connecting a wallet:
 - common public mechanics getters such as `paused()`, `tradingEnabled()`, `limitsInEffect()`, `maxTxAmount()`, and `maxWalletAmount()`
 - bounded recent event-window log reads for `OwnershipTransferred`, `RoleGranted`, `RoleRevoked`, `Paused`, and `Unpaused`
 - selected-pair contract reads for `token0()`, `token1()`, `getReserves()`, and LP `totalSupply()` when a primary pair is available
+- PulseX V1/V2 factory `getPair(token, quote)` reads for common quote assets, followed by raw pair reserve and LP supply reads for discovered pairs
 
 These checks are informational only. `owner()` returning the zero address is labeled `Appears renounced`, not as a guarantee. A missing common proxy signal is labeled `Common proxy signal not found`, not as proof that every proxy pattern is absent.
 
