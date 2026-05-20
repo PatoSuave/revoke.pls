@@ -127,13 +127,10 @@ export const siteConfig = {
     "wallet security",
     "approval revoke tool",
   ] as const,
-  /** Anchor targets for primary nav. */
+  /** Shared app-shell nav. Keep these pointed at real routes/anchors. */
   nav: [
     { href: "/app#scanner", label: "Scanner" },
-    { href: "/app#how-it-works", label: "How it works" },
-    { href: "/app#safety", label: "Safety" },
-    { href: "/security", label: "Security" },
-    { href: "/app#faq", label: "FAQ" },
+    { href: "/security", label: "Security Guide" },
   ] as const,
   /** External / utility links. */
   links: {

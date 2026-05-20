@@ -1,6 +1,11 @@
 import { describe, expect, it } from "vitest";
 
-import { DEFAULT_SITE_URL, normalizeSiteUrl, resolveSiteUrl } from "./site";
+import {
+  DEFAULT_SITE_URL,
+  normalizeSiteUrl,
+  resolveSiteUrl,
+  siteConfig,
+} from "./site";
 
 describe("normalizeSiteUrl", () => {
   it("uses pulserevoke.com as the built-in production fallback", () => {
@@ -52,5 +57,14 @@ describe("normalizeSiteUrl", () => {
       usedFallback: true,
       issue: "invalid",
     });
+  });
+});
+
+describe("siteConfig nav", () => {
+  it("keeps shared app-shell nav pointed at real app routes", () => {
+    expect(siteConfig.nav).toEqual([
+      { href: "/app#scanner", label: "Scanner" },
+      { href: "/security", label: "Security Guide" },
+    ]);
   });
 });
