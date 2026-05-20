@@ -294,6 +294,27 @@ describe("Token Chair Sniffer contract reads", () => {
     });
   });
 
+  it("marks source-driven quick rows unable when source metadata is unavailable after scan", () => {
+    const quickRows = buildQuickSniffRows({
+      contract: successfulContract({
+        explorer: null,
+      }),
+    });
+
+    expect(quickRows.find((row) => row.label === "Hidden owner")).toMatchObject({
+      value: "Unable to verify",
+      status: "unable-to-verify",
+    });
+    expect(quickRows.find((row) => row.label === "Transfer pausable")).toMatchObject({
+      value: "Unable to verify",
+      status: "unable-to-verify",
+    });
+    expect(quickRows.find((row) => row.label === "Mintable")).toMatchObject({
+      value: "Unable to verify",
+      status: "unable-to-verify",
+    });
+  });
+
   it("reads common token mechanics getters without simulating trades", async () => {
     const result = await fetchTokenChairContractData(TOKEN, {
       reader: buildReader({

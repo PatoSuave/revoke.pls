@@ -244,6 +244,8 @@ The following rows are visually present but are not live contract-analysis resul
 
 After a scan, absent public buy/sell tax getters must say `No public getter` and remain visible as review gaps in Quick Sniff, Evidence Checklist, Review Before Buying, and Must Review coverage. The honeypot row must say `Not live` after a scan and remain visible as coverage rather than disappearing behind higher-priority findings. Before a scan, these rows may still say `Not checked yet`. If an upstream or parser failure prevents even the placeholder context from being reliable, rows may say `Unable to verify`.
 
+After a scan, source-driven Quick Sniff rows such as `Hidden owner`, `Obfuscated address`, `Mintable`, `Transfer pausable`, `Blacklist`, `Whitelist`, and `Ownership controls` must not remain at `Not checked yet`. If PulseScan source/ABI metadata is unavailable, rate-limited, or incomplete, those rows should say `Unable to verify` so the completed scan does not look idle.
+
 ## Share Links
 
 The app route accepts a `token` query parameter and an `address` alias:

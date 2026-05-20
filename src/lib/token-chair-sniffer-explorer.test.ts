@@ -241,6 +241,14 @@ describe("Token Chair Sniffer PulseScan explorer integration", () => {
     expect(result.status).toBe("unable-to-verify");
     expect(result.errors.join(" ")).toContain("HTTP 503");
     expect(result.sourceSignals.every((signal) => signal.found === null)).toBe(true);
+
+    const quickRows = buildQuickSniffRows({
+      contract: { ...contractData(), explorer: result },
+    });
+    expect(quickRows.find((row) => row.label === "Mintable")).toMatchObject({
+      value: "Unable to verify",
+      status: "unable-to-verify",
+    });
   });
 
   it("uses clear copy when PulseScan rate-limits explorer metadata", async () => {

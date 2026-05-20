@@ -2560,22 +2560,30 @@ function buildSourceSignalQuickRow(
 ): SniffSignalRow | null {
   const signalKey = quickRowSourceSignalKey(row.label);
   if (!signalKey) return null;
+  if (!contract) return null;
+
   const explorer = contract?.explorer;
   const signal = explorer?.sourceSignals.find((item) => item.key === signalKey);
 
-  if (!explorer || !signal || signal.found === null) {
+  if (!explorer) {
     return {
       ...row,
-      value: explorer?.sourceVerified === false
-        ? "Unable to verify"
-        : row.value,
-      status: explorer?.sourceVerified === false
-        ? "unable-to-verify"
-        : row.status,
+      value: "Unable to verify",
+      status: "unable-to-verify",
       detail:
-        explorer?.sourceVerified === false
+        "PulseScan source/ABI metadata was not returned, so this source-based row cannot be checked.",
+    };
+  }
+
+  if (!signal || signal.found === null) {
+    return {
+      ...row,
+      value: "Unable to verify",
+      status: "unable-to-verify",
+      detail:
+        explorer.sourceVerified === false
           ? "PulseScan did not return verified source, so this source-based row cannot be checked."
-          : row.detail,
+          : "PulseScan source-signal metadata was incomplete for this row.",
     };
   }
 
