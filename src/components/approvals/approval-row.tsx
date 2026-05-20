@@ -11,6 +11,7 @@ import {
   VerificationTechnicalExplainer,
   isCurrentApprovalStateUnverifiedReason,
   protocolMetadataItems,
+  riskSignalItems,
   type ApprovalVerificationKind,
 } from "@/components/approvals/approval-readability";
 import {
@@ -282,6 +283,7 @@ export function ApprovalRow({
               />
             ),
           },
+          ...riskSignalItems(approval.risk.drivers),
           {
             label: "Recommended action",
             value:
