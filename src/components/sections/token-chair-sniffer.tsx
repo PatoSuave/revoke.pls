@@ -713,10 +713,12 @@ function ScanReport({
     contract,
     market,
     lpControlSummary,
+    quickRows,
   });
   const reviewRows = buildReviewRows({
     evidenceRows,
     reportRisks,
+    quickRows,
     tokenAddress,
     state,
   });
@@ -891,7 +893,7 @@ function EvidenceChecklist({ rows }: { rows: readonly SniffSignalRow[] }) {
 function MustReviewQueue({ items }: { items: readonly TokenChairRiskItem[] }) {
   const counts = getTokenChairRiskCounts(items);
   const readiness = getTokenChairRiskReadiness(items);
-  const visibleItems = items.slice(0, 8);
+  const visibleItems = selectVisibleRiskItems(items);
 
   return (
     <div className="mt-4 rounded-lg border border-pulse-border/70 bg-[#070b10] p-4">
@@ -954,10 +956,31 @@ function MustReviewQueue({ items }: { items: readonly TokenChairRiskItem[] }) {
       </div>
       {items.length > visibleItems.length ? (
         <p className="mt-3 text-xs leading-5 text-pulse-muted">
-          Showing the first {visibleItems.length.toLocaleString("en-US")} prioritized review items. More context remains in the detailed panels below.
+          Showing {visibleItems.length.toLocaleString("en-US")} prioritized review items, including tax and honeypot coverage. More context remains in the detailed panels below.
         </p>
       ) : null}
     </div>
+  );
+}
+
+function selectVisibleRiskItems(items: readonly TokenChairRiskItem[]): TokenChairRiskItem[] {
+  const visible = items.slice(0, 8);
+  const seen = new Set(visible.map((item) => item.id));
+
+  for (const item of items) {
+    if (!isPinnedRiskItem(item) || seen.has(item.id)) continue;
+    visible.push(item);
+    seen.add(item.id);
+  }
+
+  return visible;
+}
+
+function isPinnedRiskItem(item: TokenChairRiskItem): boolean {
+  return (
+    item.id.startsWith("buy-tax-getter") ||
+    item.id.startsWith("sell-tax-getter") ||
+    item.id === "honeypot-not-live"
   );
 }
 
@@ -1804,12 +1827,14 @@ function buildEvidenceRows({
   contract,
   market,
   lpControlSummary,
+  quickRows,
 }: {
   response: TokenChairApiResponse | null;
   state: SnifferUiState;
   contract: TokenChairContractData | null;
   market: TokenChairMarketData | null;
   lpControlSummary: TokenChairLpControlSummary | null;
+  quickRows: readonly SniffSignalRow[];
 }): SniffSignalRow[] {
   const loading = state === "loading";
   const marketStatus = response?.status ?? null;
@@ -1818,6 +1843,9 @@ function buildEvidenceRows({
   const pairContract = response?.pairContract ?? null;
   const pulsexPairs = response?.pulsexPairs ?? [];
   const dextools = response?.dextools ?? null;
+  const buyTaxRow = quickRows.find((row) => row.label === "Buy tax");
+  const sellTaxRow = quickRows.find((row) => row.label === "Sell tax");
+  const honeypotRow = quickRows.find((row) => row.label === "Honeypot");
 
   return [
     {
@@ -1854,6 +1882,22 @@ function buildEvidenceRows({
       status: contractReadStatus(contract?.status ?? null, loading),
       detail:
         "Reads bytecode, token metadata, owner, proxy slots, public admin getters, tax getters, mechanics, and recent events.",
+    },
+    {
+      label: "Buy tax",
+      value: buyTaxRow?.value ?? (loading ? "Loading" : "Not checked yet"),
+      status: buyTaxRow?.status ?? (loading ? "not-checked" : "not-checked"),
+      detail:
+        buyTaxRow?.detail ??
+        "Common public buy tax/fee getters appear here when a scan has contract-read coverage.",
+    },
+    {
+      label: "Sell tax",
+      value: sellTaxRow?.value ?? (loading ? "Loading" : "Not checked yet"),
+      status: sellTaxRow?.status ?? (loading ? "not-checked" : "not-checked"),
+      detail:
+        sellTaxRow?.detail ??
+        "Common public sell tax/fee getters appear here when a scan has contract-read coverage.",
     },
     {
       label: "PulseScan source/ABI",
@@ -1912,9 +1956,10 @@ function buildEvidenceRows({
     },
     {
       label: "Honeypot simulation",
-      value: "Not live",
-      status: "not-checked",
+      value: honeypotRow?.value === "Not checked yet" ? "Not live" : honeypotRow?.value ?? "Not live",
+      status: honeypotRow?.status === "not-checked" && response ? "unable-to-verify" : honeypotRow?.status ?? "not-checked",
       detail:
+        honeypotRow?.detail ??
         "No buy/sell execution or simulation is run in this phase.",
     },
     {
@@ -1930,11 +1975,13 @@ function buildEvidenceRows({
 function buildReviewRows({
   evidenceRows,
   reportRisks,
+  quickRows,
   tokenAddress,
   state,
 }: {
   evidenceRows: readonly SniffSignalRow[];
   reportRisks: readonly SniffSignalRow[];
+  quickRows: readonly SniffSignalRow[];
   tokenAddress: Address | null;
   state: SnifferUiState;
 }): SniffSignalRow[] {
@@ -1944,6 +1991,9 @@ function buildReviewRows({
   const warningCount = reportRisks.filter(
     (row) => row.status === "warning" || row.status === "danger",
   ).length;
+  const buyTaxRow = quickRows.find((row) => row.label === "Buy tax");
+  const sellTaxRow = quickRows.find((row) => row.label === "Sell tax");
+  const honeypotRow = evidenceRows.find((row) => row.label === "Honeypot simulation");
 
   return [
     {
@@ -1954,6 +2004,9 @@ function buildReviewRows({
         ? "The report URL can be shared for this token address."
         : "Paste a token address before reviewing risk signals.",
     },
+    ...[buyTaxRow, sellTaxRow, honeypotRow].filter(
+      (row): row is SniffSignalRow => Boolean(row),
+    ),
     {
       label: "Warnings",
       value: warningCount > 0 ? `${warningCount.toLocaleString("en-US")} visible` : state === "settled" ? "None surfaced" : "Pending",

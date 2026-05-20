@@ -121,6 +121,7 @@ In an authenticated browser session, check:
 
 - Risk queue copy does not say a token is safe, certified, guaranteed, or not a scam.
 - Rate-limited or missing PulseScan data appears as degraded coverage, not as a token verdict.
+- Buy tax, sell tax, and honeypot coverage remain visible after a scan even when tax getters are absent or honeypot simulation is not live.
 - Selected-pair contract mismatch, proxy/admin surfaces, high source signals, high LP concentration, and high holder concentration remain priority review items.
 - Review state, Recent Reviews, and Compare Reviews remain local browser storage only.
 - Vercel Preview route smoke and API smoke pass before any discussion of `main`.

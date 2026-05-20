@@ -316,6 +316,46 @@ describe("Token Chair risk rules", () => {
     expect(queue.map((item) => item.id)).toContain("honeypot-not-live");
   });
 
+  it("keeps buy tax, sell tax, and honeypot as explicit review items", () => {
+    const queue = buildTokenChairRiskQueue({
+      response: response({
+        contract: contract({
+          taxes: {
+            buy: {
+              status: "not-found",
+              valueRaw: null,
+              functionName: null,
+              checkedFunctions: ["buyTax", "buyFee"],
+            },
+            sell: {
+              status: "found",
+              valueRaw: "0",
+              functionName: "sellTax",
+              checkedFunctions: ["sellTax", "sellFee"],
+            },
+          },
+        }),
+      }),
+    });
+
+    expect(queue).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          id: "buy-tax-getter-not-found",
+          title: "No public buy tax getter responded",
+        }),
+        expect.objectContaining({
+          id: "sell-tax-getter-zero",
+          title: "Public sell tax getter returned zero",
+        }),
+        expect.objectContaining({
+          id: "honeypot-not-live",
+          title: "Honeypot simulation is not live",
+        }),
+      ]),
+    );
+  });
+
   it("flags selected pair mismatches as critical", () => {
     const queue = buildTokenChairRiskQueue({
       response: response({

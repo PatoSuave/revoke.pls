@@ -1042,6 +1042,16 @@ export function buildQuickSniffRows(options: {
       return buildTaxGetterQuickRow(row, options.contract?.taxes?.sell ?? null, "sell");
     }
 
+    if (row.label === "Honeypot" && options.contract) {
+      return {
+        ...row,
+        value: "Not live",
+        status: "unable-to-verify",
+        detail:
+          "Honeypot buy/sell execution or simulation is not live in this phase. Treat this as an open review gap.",
+      };
+    }
+
     if (row.label === "Ownership renounced") {
       return buildOwnershipQuickRow(row, options.contract ?? null);
     }
@@ -2382,8 +2392,8 @@ function buildTaxGetterQuickRow(
 
   return {
     ...row,
-    value: "Not checked yet",
-    status: "not-checked",
+    value: "No public getter",
+    status: "unable-to-verify",
     detail:
       `No common public ${kind} tax/fee getter responded. Trade simulation and bytecode tax analysis are not live yet.`,
   };

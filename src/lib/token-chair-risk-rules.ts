@@ -7,6 +7,7 @@ import {
   type TokenChairDextoolsData,
   type TokenChairLpControlSummary,
   type TokenChairSourceSignal,
+  type TokenChairTaxGetterSignal,
 } from "@/lib/token-chair-sniffer";
 
 export type TokenChairRiskSeverity = "critical" | "warning" | "info";
@@ -436,27 +437,82 @@ function addContractItems(
     });
   }
 
+  addTaxGetterItems(items, contract);
+}
+
+function addTaxGetterItems(
+  items: TokenChairRiskItem[],
+  contract: TokenChairContractData,
+) {
   for (const tax of [
     ["buy", contract.taxes?.buy] as const,
     ["sell", contract.taxes?.sell] as const,
   ]) {
     const [kind, signal] = tax;
-    if (signal?.status === "found" && signal.valueRaw && signal.valueRaw !== "0") {
-      items.push({
-        id: `${kind}-tax-getter`,
-        severity: "warning",
-        category: "control",
-        title: `Public ${kind} tax getter returned a value`,
-        evidence: `${signal.functionName ?? `${kind} tax getter`} returned raw ${signal.valueRaw}.`,
-        whyItMatters:
-          "A public getter is not a trade simulation, but non-zero fee settings deserve source review.",
-        manualReview:
-          "Check whether taxes are bounded, changeable, excluded by address, or enforced dynamically.",
-        href: contract.explorer?.explorerTokenUrl,
-        sourceLabel: "PulseScan source",
-      });
-    }
+    items.push(buildTaxGetterRiskItem(kind, signal, contract));
   }
+}
+
+function buildTaxGetterRiskItem(
+  kind: "buy" | "sell",
+  signal: TokenChairTaxGetterSignal | undefined,
+  contract: TokenChairContractData,
+): TokenChairRiskItem {
+  const href = contract.explorer?.explorerTokenUrl;
+  const sourceLabel = "PulseScan source";
+
+  if (!signal || signal.status === "unable-to-verify") {
+    return {
+      id: `${kind}-tax-getter-unverified`,
+      severity: "warning",
+      category: "coverage",
+      title: `Public ${kind} tax getter unresolved`,
+      evidence: "Common public tax/fee getter reads could not be completed.",
+      whyItMatters:
+        "Without a completed getter read or trade simulation, fee behavior remains an open review gap.",
+      manualReview:
+        "Inspect verified source and use separate simulation or controlled test tooling if fee behavior matters.",
+      href,
+      sourceLabel,
+    };
+  }
+
+  if (signal.status === "not-found") {
+    return {
+      id: `${kind}-tax-getter-not-found`,
+      severity: "info",
+      category: "coverage",
+      title: `No public ${kind} tax getter responded`,
+      evidence: `Checked common names: ${formatCheckedFunctions(signal.checkedFunctions)}.`,
+      whyItMatters:
+        "A missing common getter does not prove there is no tax; dynamic fees can live in transfer logic.",
+      manualReview:
+        "Review source transfer paths or use separate simulation tooling before relying on buy/sell tax behavior.",
+      href,
+      sourceLabel,
+    };
+  }
+
+  const valueRaw = signal.valueRaw ?? "unknown";
+  const nonZero = isNonZeroRawValue(signal.valueRaw);
+
+  return {
+    id: nonZero ? `${kind}-tax-getter` : `${kind}-tax-getter-zero`,
+    severity: nonZero ? "warning" : "info",
+    category: nonZero ? "control" : "coverage",
+    title: nonZero
+      ? `Public ${kind} tax getter returned a value`
+      : `Public ${kind} tax getter returned zero`,
+    evidence: `${signal.functionName ?? `${kind} tax getter`} returned raw ${valueRaw}.`,
+    whyItMatters: nonZero
+      ? "A public getter is not a trade simulation, but non-zero fee settings deserve source review."
+      : "A zero getter is useful context, but it does not prove dynamic transfer fees cannot change elsewhere.",
+    manualReview: nonZero
+      ? "Check whether taxes are bounded, changeable, excluded by address, or enforced dynamically."
+      : "Confirm the getter maps to live transfer logic and review whether privileged roles can change it.",
+    href,
+    sourceLabel,
+  };
 }
 
 function addSourceItems(
@@ -845,6 +901,26 @@ function formatRiskUsd(value: number): string {
     currency: "USD",
     maximumFractionDigits: value >= 1 ? 0 : 6,
   });
+}
+
+function formatCheckedFunctions(functions: readonly string[]): string {
+  if (functions.length === 0) return "common buy/sell tax getters";
+  const visible = functions.slice(0, 5);
+  const suffix =
+    functions.length > visible.length
+      ? `, plus ${(functions.length - visible.length).toLocaleString("en-US")} more`
+      : "";
+  return `${visible.join(", ")}${suffix}`;
+}
+
+function isNonZeroRawValue(value: string | null): boolean {
+  if (!value) return false;
+
+  try {
+    return BigInt(value) !== 0n;
+  } catch {
+    return value !== "0";
+  }
 }
 
 function shortRiskAddress(address: Address): string {

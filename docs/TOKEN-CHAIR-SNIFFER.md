@@ -242,7 +242,7 @@ The following rows are visually present but are not live contract-analysis resul
 - Quick Sniff honeypot row
 - buy/sell tax rows when no common public tax/fee getter responds
 
-Unchecked rows must say `Not checked yet`. If an upstream or parser failure prevents even the placeholder context from being reliable, rows may say `Unable to verify`.
+After a scan, absent public buy/sell tax getters must say `No public getter` and remain visible as review gaps in Quick Sniff, Evidence Checklist, Review Before Buying, and Must Review coverage. The honeypot row must say `Not live` after a scan and remain visible as coverage rather than disappearing behind higher-priority findings. Before a scan, these rows may still say `Not checked yet`. If an upstream or parser failure prevents even the placeholder context from being reliable, rows may say `Unable to verify`.
 
 ## Share Links
 

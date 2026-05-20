@@ -281,12 +281,16 @@ describe("Token Chair Sniffer contract reads", () => {
     expect(result.taxes?.buy.status).toBe("not-found");
     expect(result.taxes?.sell.status).toBe("not-found");
     expect(quickRows.find((row) => row.label === "Buy tax")).toMatchObject({
-      value: "Not checked yet",
-      status: "not-checked",
+      value: "No public getter",
+      status: "unable-to-verify",
     });
     expect(quickRows.find((row) => row.label === "Sell tax")).toMatchObject({
-      value: "Not checked yet",
-      status: "not-checked",
+      value: "No public getter",
+      status: "unable-to-verify",
+    });
+    expect(quickRows.find((row) => row.label === "Honeypot")).toMatchObject({
+      value: "Not live",
+      status: "unable-to-verify",
     });
   });
 
