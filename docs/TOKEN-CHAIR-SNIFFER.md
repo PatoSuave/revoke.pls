@@ -27,6 +27,7 @@ Implemented in this MVP:
 - Read-only public mechanics getter checks for pause state, trading state, trading limits, max transaction, and max wallet where common getter names are present
 - PulseScan/Blockscout verified-source metadata for source status, ABI availability, deployer, and creation transaction
 - Lightweight ABI/source keyword signals for mint, pause, cooldown, blacklist, whitelist, and suspicious-function rows
+- Lightweight ABI/source keyword signals for hidden-owner and obfuscated-address rows
 - PulseScan holder endpoint concentration reads for top token holder and LP holder data when available
 - Bounded multi-page sampled holder-distribution buckets for top 1, top 5, top 10, selected pair balance, and zero/dead-address balances when PulseScan returns enough holder rows
 - LP-token holder-control buckets for the selected pair when PulseScan indexes that pair contract as a token
@@ -141,11 +142,13 @@ If verified ABI or source is available, Token Chair Sniffer runs a lightweight k
 - fee controls
 - rescue functions
 - ownership controls
+- hidden-owner or alternate authorization terms
+- obfuscated-address or low-level call/address-masking terms
 - suspicious functions
 
 Rows with matches are tiered. Lower-severity findings such as mint, pause, cooldown, or whitelist terms say `Source signal found`. Higher-severity findings such as blacklist/bot controls or suspicious admin/trading functions say `High source signal`. Rows without matches say `Not flagged by source scan`, which means only that the lightweight keyword pass did not match obvious terms in returned ABI/source. It is not a full audit and does not prove the behavior is absent.
 
-The Source Signal Details panel expands these rows with the exact matched terms returned by the lightweight ABI/source pass. If PulseScan does not return verified source or ABI data, those detail rows stay `Unable to verify`. The panel is explanatory only; it does not add bytecode analysis, tax simulation, or honeypot execution.
+The Source Signal Details panel expands these rows with the exact matched terms returned by the lightweight ABI/source pass. Hidden-owner and obfuscated-address rows are conservative source/ABI keyword checks only; a match means manual review is needed, and no match does not prove those behaviors are absent. If PulseScan does not return verified source or ABI data, those detail rows stay `Unable to verify`. The panel is explanatory only; it does not add bytecode analysis, tax simulation, or honeypot execution.
 
 The Why This Verdict breakdown mirrors the current verdict notes as structured rows. Each row has a severity, label, and detail so a user can see whether the result came from market data, DEXTools cross-check context, pair-contract checks, owner/admin/proxy context, source/ABI signals, event history, holder concentration, or LP concentration. These are still visible-signal explanations, not audit findings.
 
@@ -215,9 +218,9 @@ If PulseScan temporarily rate-limits metadata or holder reads, the UI should say
 
 ## Placeholder Checks
 
-The following sections are visually present but not live contract-analysis results in Phase 1:
+The following rows are visually present but are not live contract-analysis results in Phase 1:
 
-- Quick Sniff hidden-owner, obfuscation, and honeypot rows
+- Quick Sniff honeypot row
 - buy/sell tax rows when no common public tax/fee getter responds
 
 Unchecked rows must say `Not checked yet`. If an upstream or parser failure prevents even the placeholder context from being reliable, rows may say `Unable to verify`.
@@ -264,7 +267,7 @@ Allowed internal verdict states:
 - `high-risk`
 - `low-visible-risk`
 
-Phase 1 defaults complete-looking market results to `unable-to-fully-verify` unless visible market, read-only contract, source-signal, event-history, or concentration warnings are present, because hidden-owner, bytecode, and honeypot checks are not live yet.
+Phase 1 defaults complete-looking market results to `unable-to-fully-verify` unless visible market, read-only contract, source-signal, event-history, or concentration warnings are present, because bytecode-level hidden-owner review and honeypot checks are not live yet.
 
 The UI may show `some-warnings` or `high-risk` for visible warnings such as very low liquidity, new pairs, missing price, missing liquidity, no 24h transactions, a non-zero standard owner, common proxy signals, missing verified source, higher-severity lightweight source-signal matches, high top-holder concentration, or high LP-holder concentration.
 

@@ -1439,7 +1439,7 @@ function QuickSniffRows({ rows }: { rows: readonly SniffSignalRow[] }) {
         ))}
       </div>
       <p className="mt-4 text-xs text-pulse-muted">
-        Honeypot, hidden-owner, obfuscation, and full bytecode checks are not live yet.
+        Honeypot simulation and full bytecode checks are not live yet. Source/ABI rows are lightweight signal checks.
         Source rows use lightweight PulseScan ABI/source keyword signals only.
       </p>
     </section>
@@ -2804,7 +2804,7 @@ function buildSignalDetails(
 
   if (uniqueMessages.length === 0) {
     return [
-      "Visible market data returned, but hidden-owner, bytecode, and honeypot checks are still not live in this pass.",
+      "Visible market data returned, but bytecode-level hidden-owner review and honeypot checks are still not live in this pass.",
     ];
   }
 

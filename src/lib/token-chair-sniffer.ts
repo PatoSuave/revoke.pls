@@ -160,6 +160,8 @@ export type TokenChairSourceSignalKey =
   | "fee-controls"
   | "rescue-functions"
   | "ownership-controls"
+  | "hidden-owner"
+  | "obfuscated-address"
   | "suspicious-functions";
 
 export type TokenChairSourceSignalSeverity = "warning" | "high";
@@ -579,8 +581,8 @@ const QUICK_SNIFF_DETAILS: Record<string, string> = {
   "Buy tax": "Needs a verified tax source or trade simulation. This MVP does not check it.",
   "Sell tax": "Needs a verified tax source or trade simulation. This MVP does not check it.",
   "Ownership renounced": "Reads standard owner() or getOwner() when available. Hidden/admin controls are not ruled out.",
-  "Hidden owner": "Needs source and bytecode review.",
-  "Obfuscated address": "Needs bytecode and source review.",
+  "Hidden owner": "Checks verified source/ABI for common alternate-owner and authorization terms when available.",
+  "Obfuscated address": "Checks verified source/ABI for common low-level call or address-masking terms when available.",
   "Suspicious functions": "Needs source and bytecode review.",
   Honeypot: "Honeypot execution is not run in this MVP.",
   "Proxy contract": "Checks common proxy storage slots and minimal-proxy bytecode patterns only.",
@@ -1002,14 +1004,14 @@ export function getTokenChairVerdict({
     displayLabel: "Chair Verdict: Nose Blocked, Could Not Verify",
     tone: "neutral",
     notes: [
-      "No major DEX Screener market warnings were found, but hidden-owner, bytecode, and honeypot checks are still not live yet.",
+      "No major DEX Screener market warnings were found, but bytecode-level hidden-owner review and honeypot checks are still not live yet.",
     ],
     reasons: [
       {
         severity: "info",
         label: "Read-only limits",
         detail:
-          "No major DEX Screener market warnings were found, but hidden-owner, bytecode, and honeypot checks are still not live yet.",
+          "No major DEX Screener market warnings were found, but bytecode-level hidden-owner review and honeypot checks are still not live yet.",
       },
     ],
   };
@@ -1090,7 +1092,7 @@ function buildHiddenOwnerQuickRow(
     };
   }
 
-  return row;
+  return buildSourceSignalQuickRow(row, contract) ?? row;
 }
 
 function verdictReasonFromVisibleWarning(
@@ -3296,6 +3298,8 @@ function quickRowSourceSignalKey(
   if (label === "Fee controls") return "fee-controls";
   if (label === "Rescue functions") return "rescue-functions";
   if (label === "Ownership controls") return "ownership-controls";
+  if (label === "Hidden owner") return "hidden-owner";
+  if (label === "Obfuscated address") return "obfuscated-address";
   if (label === "Suspicious functions") return "suspicious-functions";
   return null;
 }

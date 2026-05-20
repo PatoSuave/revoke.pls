@@ -102,9 +102,10 @@ describe("Token Chair Sniffer PulseScan explorer integration", () => {
           { type: "function", name: "pauseTrading" },
           { type: "function", name: "enableTrading" },
           { type: "function", name: "rescueTokens" },
+          { type: "function", name: "setAuthorized" },
           { type: "function", name: "transfer" },
         ],
-        source_code: "contract ChairToken { function setBlacklist(address user) external {} function setTax(uint256 fee) external {} }",
+        source_code: "contract ChairToken { function setBlacklist(address user) external {} function setTax(uint256 fee) external {} function route(address user) external { assembly {} } }",
       },
     });
 
@@ -140,6 +141,16 @@ describe("Token Chair Sniffer PulseScan explorer integration", () => {
       severity: "warning",
       matches: ["rescueTokens"],
     });
+    expect(result.sourceSignals.find((signal) => signal.key === "hidden-owner")).toMatchObject({
+      found: true,
+      severity: "high",
+      matches: ["authorized", "setAuthorized"],
+    });
+    expect(result.sourceSignals.find((signal) => signal.key === "obfuscated-address")).toMatchObject({
+      found: true,
+      severity: "warning",
+      matches: ["assembly"],
+    });
 
     const details = buildSourceSignalDetailRows({
       contract: { ...contractData(), explorer: result },
@@ -153,6 +164,27 @@ describe("Token Chair Sniffer PulseScan explorer integration", () => {
       value: "High source signal",
       status: "danger",
       matches: ["blacklist"],
+    });
+    expect(details.find((row) => row.label === "Hidden owner")).toMatchObject({
+      value: "High source signal",
+      status: "danger",
+      matches: ["authorized", "setAuthorized"],
+    });
+    expect(details.find((row) => row.label === "Obfuscated address")).toMatchObject({
+      value: "Source signal found",
+      status: "warning",
+      matches: ["assembly"],
+    });
+    const quickRows = buildQuickSniffRows({
+      contract: { ...contractData(), explorer: result },
+    });
+    expect(quickRows.find((row) => row.label === "Hidden owner")).toMatchObject({
+      value: "High source signal",
+      status: "danger",
+    });
+    expect(quickRows.find((row) => row.label === "Obfuscated address")).toMatchObject({
+      value: "Source signal found",
+      status: "warning",
     });
     expect(
       details.find((row) => row.label === "Trading cooldown"),
@@ -186,7 +218,7 @@ describe("Token Chair Sniffer PulseScan explorer integration", () => {
       value: "Unable to verify",
       status: "unable-to-verify",
     });
-    expect(detailRows).toHaveLength(10);
+    expect(detailRows).toHaveLength(12);
     expect(detailRows.every((row) => row.value === "Unable to verify")).toBe(
       true,
     );
