@@ -19,6 +19,7 @@ import { ScannerDiagnosticsPanel } from "@/components/sections/scanner-diagnosti
 import { useApprovalDiscovery } from "@/hooks/use-approval-discovery";
 import { useBatchRevoke } from "@/hooks/use-batch-revoke";
 import { useNftApprovalDiscovery } from "@/hooks/use-nft-approval-discovery";
+import { useTokenLogos } from "@/hooks/use-token-logos";
 import { resolveActiveChain, scannerSessionKey } from "@/lib/active-chain";
 import {
   addressOnlyScanOptions,
@@ -69,6 +70,7 @@ import {
   type ScanMode,
   type ScanTarget,
 } from "@/lib/scan-target";
+import { tokenLogoAddressKey } from "@/lib/token-logos";
 
 /**
  * Connected-wallet approval scanner for the shared PulseChain/BSC/Base lane.
@@ -1456,6 +1458,14 @@ function ScanContent({
   revokeDisabledReason: string | null;
   debugMode: boolean;
 }) {
+  const tokenLogoAddresses = useMemo(
+    () => visibleApprovals.map((approval) => approval.tokenAddress),
+    [visibleApprovals],
+  );
+  const tokenLogos = useTokenLogos({
+    chainId: chainConfig.chainId,
+    tokenAddresses: tokenLogoAddresses,
+  });
   const batchActive = batch.state === "running" || batch.state === "stopping";
   const batchInteracting = batch.state !== "idle";
   const failedLiveReads = scan.diagnostics.liveReadFailureCount;
@@ -1606,6 +1616,10 @@ function ScanContent({
               <ApprovalRow
                 key={approval.key}
                 approval={approval}
+                tokenLogoUrl={
+                  tokenLogos.logos[tokenLogoAddressKey(approval.tokenAddress)]
+                    ?.imageUrl
+                }
                 ownerAddress={owner}
                 onRevoked={scan.refetch}
                 selected={selected.has(approval.key)}

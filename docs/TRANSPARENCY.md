@@ -12,6 +12,7 @@ with Arbitrum One verified-row revoke and Optimism verified-row revoke.
 - Rechecks live on-chain state before display
 - Shows active approvals only
 - Adds chain-scoped registry labels where known
+- Looks up PulseChain token logos by token contract address for display only
 - Prepares standard approval-clearing transactions when the user chooses to
   revoke
 - Scans Arbitrum One through a server-side read-only API and enables only
@@ -31,6 +32,8 @@ with Arbitrum One verified-row revoke and Optimism verified-row revoke.
 - Does not guarantee complete discovery when explorer APIs are capped,
   rate-limited, unavailable, or malformed
 - Does not claim that known registry labels make a spender safe
+- Does not treat third-party token logos as verification, safety evidence, or
+  a trusted registry label
 
 ## How Users Can Verify Behavior
 
@@ -79,6 +82,17 @@ of safety.
 An "unknown spender" means the address was not found in the app's verified
 registry for that chain. It does not automatically mean malicious, and it does
 not automatically mean safe.
+
+## Token Logos
+
+PulseChain token logos are optional display metadata resolved through the
+server-side `/api/token-logos` route. The resolver sends token contract
+addresses only, not wallet owner addresses, spender addresses, allowance
+amounts, or revoke state.
+
+Missing or failed logos fall back to token initials. Logos are not registry
+evidence and must not change discovery, risk scoring, verification, or revoke
+eligibility.
 
 ## Known Limitations
 
