@@ -230,24 +230,28 @@ export function classifyNftRisk(input: {
         level: "medium" as RiskLevel,
         reason:
           "Identified operator with collection-wide approval. Review periodically if the position is no longer active.",
+        drivers: ["Known operator", "Collection-wide approval"],
       };
     }
     return {
       level: "high" as RiskLevel,
       reason:
         "Unknown operator with collection-wide approval. Every NFT in this collection is exposed — verify the operator before leaving it in place.",
+      drivers: ["Unknown operator", "Collection-wide approval"],
     };
   }
   if (input.trusted) {
     return {
       level: "low" as RiskLevel,
       reason: "Identified operator approved for a single NFT.",
+      drivers: ["Known operator", "Single-token approval"],
     };
   }
   return {
     level: "medium" as RiskLevel,
     reason:
       "Unknown operator approved for a single NFT. Verify the operator before trusting.",
+    drivers: ["Unknown operator", "Single-token approval"],
   };
 }
 

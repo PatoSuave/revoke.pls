@@ -11,6 +11,7 @@ import {
   VerificationTechnicalExplainer,
   isCurrentApprovalStateUnverifiedReason,
   protocolMetadataItems,
+  riskSignalItems,
   type ApprovalVerificationKind,
 } from "@/components/approvals/approval-readability";
 import {
@@ -81,6 +82,8 @@ export function ApprovalRow({
       chainId: approval.chainId,
       tokenAddress: approval.tokenAddress,
       spenderAddress: approval.spenderAddress,
+      approvalKind: approval.approvalKind,
+      approvalContractAddress: approval.approvalContractAddress,
     },
     ownerAddress,
     tokenSymbol: approval.tokenSymbol,
@@ -213,7 +216,7 @@ export function ApprovalRow({
                 void refreshPreflight();
               }}
               revokeDisabledReason={revokeDisabledReason}
-              verificationKind="erc20"
+              verificationKind={approval.approvalKind ?? "erc20"}
             />
           )}
         </div>
@@ -280,6 +283,7 @@ export function ApprovalRow({
               />
             ),
           },
+          ...riskSignalItems(approval.risk.drivers),
           {
             label: "Recommended action",
             value:
@@ -364,16 +368,19 @@ function ApprovalProofDetails({
         <VerificationTechnicalExplainer />
         <dl className="mt-2 grid gap-1 font-mono">
           <ProofRow label="Chain" value={chainName} />
-          <ProofRow label="Type" value={`${standardLabel} approve allowance`} />
+          <ProofRow label="Type" value={approvalTypeLabel(approval, standardLabel)} />
           <ProofRow label="Token" value={approval.tokenAddress} />
           <ProofRow label="Owner" value={ownerAddress} />
           <ProofRow label="Spender" value={approval.spenderAddress} />
+          {approval.approvalKind === "permit2" && approval.approvalContractAddress ? (
+            <ProofRow label="Approval contract" value={approval.approvalContractAddress} />
+          ) : null}
           <ProofRow
             label="Current live allowance"
             value={approval.unlimited ? "Unlimited" : approval.formattedAllowance}
           />
-          <ProofRow label="Live verification" value="allowance(owner, spender) > 0" />
-          <ProofRow label="Candidate source" value="Historical Approval events" />
+          <ProofRow label="Live verification" value={liveVerificationLabel(approval)} />
+          <ProofRow label="Candidate source" value={candidateSourceLabel(approval)} />
         </dl>
       </div>
     </details>
@@ -390,11 +397,47 @@ function ProofRow({ label, value }: { label: string; value: string }) {
 }
 
 function erc20PermissionCopy(approval: ScoredApproval): string {
+  if (approval.approvalKind === "permit2") {
+    const expiry =
+      approval.permit2Expiration !== undefined
+        ? ` until ${new Date(approval.permit2Expiration * 1000).toLocaleString()}`
+        : "";
+    if (approval.unlimited) {
+      return `This spender can use an unlimited amount of this token through Permit2${expiry}.`;
+    }
+    return `This spender can use up to ${approval.formattedAllowance} through Permit2${expiry}.`;
+  }
+
   if (approval.unlimited) {
     return "This spender can use an unlimited amount of this token from your wallet.";
   }
 
   return `This spender can use up to ${approval.formattedAllowance} of this token from your wallet.`;
+}
+
+function approvalTypeLabel(
+  approval: Pick<ScoredApproval, "approvalKind">,
+  standardLabel: string,
+): string {
+  return approval.approvalKind === "permit2"
+    ? "Permit2 nested token allowance"
+    : `${standardLabel} approve allowance`;
+}
+
+function liveVerificationLabel(
+  approval: Pick<ScoredApproval, "approvalKind">,
+): string {
+  return approval.approvalKind === "permit2"
+    ? "Permit2 allowance(owner, token, spender) > 0 and not expired"
+    : "allowance(owner, spender) > 0";
+}
+
+function candidateSourceLabel(
+  approval: Pick<ScoredApproval, "approvalKind">,
+): string {
+  return approval.approvalKind === "permit2"
+    ? "Historical Permit2 Approval/Permit events"
+    : "Historical Approval events";
 }
 
 function riskLevelLabel(level: RiskLevel): string {
@@ -404,6 +447,15 @@ function riskLevelLabel(level: RiskLevel): string {
 function displayOrFallback(value: string | undefined, fallback: string): string {
   const cleaned = value?.trim();
   return cleaned || fallback;
+}
+
+function revokeCallPreview(approval: ScoredApproval): string {
+  if (approval.approvalKind === "permit2") {
+    return `Permit2.approve(${shortenAddress(approval.tokenAddress)}, ${shortenAddress(
+      approval.spenderAddress,
+    )}, 0, 0)`;
+  }
+  return `approve(${shortenAddress(approval.spenderAddress)}, 0)`;
 }
 
 const RISK_STYLES: Record<
@@ -711,7 +763,7 @@ function ConfirmPanel({
             This requests one wallet transaction that sets the allowance to
             zero:{" "}
             <span className="font-mono text-pulse-text">
-              approve({shortenAddress(approval.spenderAddress)}, 0)
+              {revokeCallPreview(approval)}
             </span>{" "}
             on {chainName}
             {nativeSymbol ? `. Paid in ${nativeSymbol} gas.` : ". Gas fees apply."}

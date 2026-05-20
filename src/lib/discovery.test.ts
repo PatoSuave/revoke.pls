@@ -18,6 +18,11 @@ import {
   ERC20_APPROVAL_TOPIC0,
   ERC_APPROVAL_FOR_ALL_TOPIC0,
 } from "./discovery";
+import {
+  PERMIT2_ADDRESS,
+  PERMIT2_APPROVAL_TOPIC0,
+  PERMIT2_PERMIT_TOPIC0,
+} from "./permit2";
 
 const OWNER = "0xcae394005c9c4c309621c53d53db9ceb701fc8d8" as Address;
 const CHECKSUM_OWNER = getAddress(OWNER);
@@ -27,6 +32,10 @@ const COLLECTION = "0x95B303987A60C71504D99Aa1b13B4DA07b0790ab" as Address;
 
 function pad(address: Address): string {
   return `0x${address.slice(2).toLowerCase().padStart(64, "0")}`;
+}
+
+function word(value: bigint): string {
+  return value.toString(16).padStart(64, "0");
 }
 
 function jsonResponse(body: unknown): Response {
@@ -164,6 +173,77 @@ describe("createBlockscoutDiscoverySource", () => {
         operatorAddress: SPENDER,
       }),
     ]);
+  });
+
+  it("discovers Permit2 nested allowances from Approval and Permit events", async () => {
+    const fetch = vi.fn(async (input: RequestInfo | URL) => {
+      const url = new URL(String(input));
+      expect(url.searchParams.get("address")).toBe(PERMIT2_ADDRESS);
+      const topic0 = url.searchParams.get("topic0");
+
+      if (topic0 === PERMIT2_APPROVAL_TOPIC0) {
+        return jsonResponse({
+          status: "1",
+          message: "OK",
+          result: [
+            {
+              address: PERMIT2_ADDRESS,
+              data: `0x${word(123n)}${word(2_000n)}`,
+              blockNumber: "0x1",
+              transactionHash: "0x3",
+              logIndex: "0x0",
+              topics: [
+                PERMIT2_APPROVAL_TOPIC0,
+                pad(OWNER),
+                pad(TOKEN),
+                pad(SPENDER),
+              ],
+            },
+          ],
+        });
+      }
+
+      if (topic0 === PERMIT2_PERMIT_TOPIC0) {
+        return jsonResponse({
+          status: "1",
+          message: "OK",
+          result: [
+            {
+              address: PERMIT2_ADDRESS,
+              data: `0x${word(456n)}${word(3_000n)}${word(9n)}`,
+              blockNumber: "0x2",
+              transactionHash: "0x4",
+              logIndex: "0x1",
+              topics: [
+                PERMIT2_PERMIT_TOPIC0,
+                pad(OWNER),
+                pad(TOKEN),
+                pad(SPENDER),
+              ],
+            },
+          ],
+        });
+      }
+
+      return jsonResponse({ status: "1", message: "OK", result: [] });
+    });
+    vi.stubGlobal("fetch", fetch);
+
+    const result = await source().discoverPermit2Allowances?.(OWNER);
+
+    expect(fetch).toHaveBeenCalledTimes(2);
+    expect(result?.allowances).toHaveLength(1);
+    expect(result?.allowances[0]).toMatchObject({
+      chainId: 369,
+      approvalType: "permit2",
+      permit2Address: PERMIT2_ADDRESS,
+      ownerAddress: CHECKSUM_OWNER,
+      tokenAddress: TOKEN,
+      spenderAddress: SPENDER,
+      sourceEvent: "Approval",
+      rawAmount: 123n,
+      expiration: 2000n,
+    });
   });
 
   it("marks duplicate ignored pages as truncated instead of counting duplicates", async () => {

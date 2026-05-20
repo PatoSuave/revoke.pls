@@ -1158,6 +1158,10 @@ function ArbitrumDiagnosticsPanel({
       diagnostics?.decodedErc20ApprovalCount.toString() ?? "Not returned",
     ],
     [
+      "Decoded Permit2 approvals",
+      diagnostics?.decodedPermit2ApprovalCount?.toString() ?? "Not returned",
+    ],
+    [
       "Decoded NFT approvals",
       diagnostics?.decodedNftApprovalCount.toString() ?? "Not returned",
     ],

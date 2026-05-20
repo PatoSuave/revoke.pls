@@ -2,13 +2,18 @@ import { describe, expect, it } from "vitest";
 import type { Address } from "viem";
 
 import {
+  buildHybridTokenAddressSet,
+  buildPermit2AllowanceContracts,
   collectDiscoveryReadFailures,
+  collectPermit2ReadFailures,
   parseDiscoveryResults,
+  parsePermit2AllowanceResults,
   type ReadResult,
 } from "./approvals";
 import { BSC_CHAIN_ID } from "./chains";
 import { FUNGIBLE_APPROVAL_SHAPE_COPY } from "./diagnostic-copy";
-import type { DiscoveredPair } from "./discovery";
+import type { DiscoveredPair, NftDiscoveredApproval } from "./discovery";
+import { PERMIT2_ADDRESS, type Permit2DiscoveredAllowance } from "./permit2";
 
 const OWNER = "0xcae394005c9c4c309621c53d53db9ceb701fc8d8" as Address;
 const TOKEN = "0x1111111111111111111111111111111111111111" as Address;
@@ -30,6 +35,32 @@ function pair(
     tokenAddress,
     ownerAddress: OWNER,
     spenderAddress,
+  };
+}
+
+function permit2Candidate(
+  tokenAddress: Address,
+  spenderAddress: Address,
+  chainId = CHAIN_ID,
+): Permit2DiscoveredAllowance {
+  return {
+    chainId,
+    approvalType: "permit2",
+    permit2Address: PERMIT2_ADDRESS,
+    tokenAddress,
+    ownerAddress: OWNER,
+    spenderAddress,
+    sourceEvent: "Permit",
+  };
+}
+
+function nftApproval(collectionAddress: Address): NftDiscoveredApproval {
+  return {
+    chainId: CHAIN_ID,
+    kind: "approvalForAll",
+    collectionAddress,
+    ownerAddress: OWNER,
+    operatorAddress: SPENDER,
   };
 }
 
@@ -131,6 +162,27 @@ describe("ERC-20 discovery live-read diagnostics", () => {
     });
   });
 
+  it("marks discovered fungible approvals as hybrid when NFT approvals share the contract", () => {
+    const pairs: DiscoveredPair[] = [pair(TOKEN, SPENDER)];
+    const hybridTokenAddresses = buildHybridTokenAddressSet({
+      erc20Pairs: pairs,
+      nftApprovals: [nftApproval(TOKEN)],
+    });
+
+    const parsed = parseDiscoveryResults(
+      [success("TOK"), success(18), success("Token"), success(1n)],
+      OWNER,
+      CHAIN_ID,
+      pairs,
+      { hybridTokenAddresses },
+    );
+
+    expect(parsed.approvals[0]).toMatchObject({
+      tokenAddress: TOKEN,
+      tokenCategory: "hybrid",
+    });
+  });
+
   it("does not treat failed allowance reads as confirmed zero allowances", () => {
     const pairs: DiscoveredPair[] = [
       pair(TOKEN, SPENDER),
@@ -156,5 +208,88 @@ describe("ERC-20 discovery live-read diagnostics", () => {
     expect(FUNGIBLE_APPROVAL_SHAPE_COPY).toContain("Fungible token approvals");
     expect(FUNGIBLE_APPROVAL_SHAPE_COPY).not.toContain("PulseChain");
     expect(FUNGIBLE_APPROVAL_SHAPE_COPY).not.toContain("Ethereum");
+  });
+});
+
+describe("Permit2 nested allowance parsing", () => {
+  it("builds Permit2 allowance reads against owner, token, and spender", () => {
+    const candidates = [permit2Candidate(TOKEN, SPENDER)];
+
+    const built = buildPermit2AllowanceContracts(OWNER, candidates, CHAIN_ID);
+
+    expect(built.uniqueTokens).toEqual([TOKEN]);
+    expect(built.contracts.at(-1)).toMatchObject({
+      address: PERMIT2_ADDRESS,
+      functionName: "allowance",
+      args: [OWNER, TOKEN, SPENDER],
+      chainId: CHAIN_ID,
+    });
+  });
+
+  it("keeps active non-expired Permit2 allowances as Permit2 rows", () => {
+    const candidates = [permit2Candidate(TOKEN, SPENDER)];
+    const hybridTokenAddresses = buildHybridTokenAddressSet({
+      permit2Allowances: candidates,
+      nftApprovals: [nftApproval(TOKEN)],
+    });
+    const parsed = parsePermit2AllowanceResults(
+      [
+        success("TOK"),
+        success(18),
+        success("Token"),
+        success([123n, 2_000n, 7n]),
+      ],
+      OWNER,
+      CHAIN_ID,
+      candidates,
+      { nowUnix: 1_000, hybridTokenAddresses },
+    );
+
+    expect(parsed.stats.active).toBe(1);
+    expect(parsed.approvals[0]).toMatchObject({
+      approvalKind: "permit2",
+      approvalContractAddress: PERMIT2_ADDRESS,
+      tokenAddress: TOKEN,
+      tokenCategory: "hybrid",
+      spenderAddress: SPENDER,
+      formattedAllowance: "~0 TOK",
+      permit2Expiration: 2000,
+      permit2Nonce: 7,
+    });
+  });
+
+  it("drops expired Permit2 allowances even when the amount is nonzero", () => {
+    const candidates = [permit2Candidate(TOKEN, SPENDER)];
+    const parsed = parsePermit2AllowanceResults(
+      [
+        success("TOK"),
+        success(18),
+        success("Token"),
+        success([123n, 999n, 7n]),
+      ],
+      OWNER,
+      CHAIN_ID,
+      candidates,
+      { nowUnix: 1_000 },
+    );
+
+    expect(parsed.stats.active).toBe(0);
+    expect(parsed.approvals).toHaveLength(0);
+  });
+
+  it("counts malformed Permit2 allowance reads as live-read failures", () => {
+    const candidates = [permit2Candidate(TOKEN, SPENDER)];
+    const diagnostics = collectPermit2ReadFailures(
+      [success("TOK"), success(18), success("Token"), success("bad")],
+      candidates,
+    );
+
+    expect(diagnostics.allowanceFailed).toBe(1);
+    expect(diagnostics.samples[0]).toMatchObject({
+      kind: "allowance",
+      tokenAddress: TOKEN,
+      spenderAddress: SPENDER,
+      error: "Unexpected Permit2 allowance read result",
+    });
   });
 });

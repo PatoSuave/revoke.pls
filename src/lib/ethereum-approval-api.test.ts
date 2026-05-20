@@ -20,6 +20,7 @@ import {
   normalizeEthereumOwner,
   scanEthereumApprovals,
 } from "@/lib/ethereum-approval-api";
+import { PERMIT2_ADDRESS } from "@/lib/permit2";
 
 const OWNER = "0xcae394005c9c4c309621c53d53db9ceb701fc8d8" as Address;
 const TOKEN = "0xA1077a294dDE1B09bB078844df40758a5D0f9a27" as Address;
@@ -71,6 +72,7 @@ function emptyErc20Parse(rawLogs = 0) {
 
 function fakeSource(options?: {
   allowancePair?: boolean;
+  permit2Allowance?: boolean;
   nftApproval?: boolean;
 }): DiscoverySource {
   const source = {
@@ -121,6 +123,29 @@ function fakeSource(options?: {
         source,
         approvals,
         rawCount: approvals.length,
+        truncated: false,
+        windows: 1,
+        requests: 1,
+      };
+    },
+    async discoverPermit2Allowances() {
+      const allowances = options?.permit2Allowance
+        ? [
+            {
+              chainId: ETHEREUM_MAINNET_CHAIN_ID,
+              approvalType: "permit2" as const,
+              permit2Address: PERMIT2_ADDRESS,
+              ownerAddress: getAddress(OWNER),
+              tokenAddress: TOKEN,
+              spenderAddress: SPENDER,
+              sourceEvent: "Approval" as const,
+            },
+          ]
+        : [];
+      return {
+        source,
+        allowances,
+        rawCount: allowances.length,
         truncated: false,
         windows: 1,
         requests: 1,
@@ -360,6 +385,47 @@ describe("Ethereum approval API foundation", () => {
     });
     expect(result.diagnostics.liveReadFailureCount).toBe(0);
     expect(() => JSON.stringify(result)).not.toThrow();
+  });
+
+  it("returns active Ethereum Permit2 approvals only after nested live validation", async () => {
+    const expiration = Math.floor(Date.now() / 1000) + 3600;
+    const reader = {
+      readContract: vi.fn(
+        async (call: { address?: Address; functionName?: string }) => {
+          if (call.functionName === "symbol") return "TOK";
+          if (call.functionName === "decimals") return 18;
+          if (call.functionName === "name") return "Token";
+          if (
+            call.functionName === "allowance" &&
+            call.address === PERMIT2_ADDRESS
+          ) {
+            return [7n, BigInt(expiration), 3n];
+          }
+          throw new Error(`Unexpected call ${call.functionName}`);
+        },
+      ),
+    };
+
+    const result = await scanEthereumApprovals(OWNER, {
+      env: env(),
+      discoverySource: fakeSource({ permit2Allowance: true }),
+      reader,
+    });
+
+    expect(result.status).toBe("active-approvals-found");
+    expect(result.approvals.erc20).toHaveLength(1);
+    expect(result.approvals.erc20[0]).toMatchObject({
+      approvalKind: "permit2",
+      approvalContractAddress: PERMIT2_ADDRESS,
+      chainId: ETHEREUM_MAINNET_CHAIN_ID,
+      tokenSymbol: "TOK",
+      rawAllowance: "7",
+      permit2Expiration: expiration,
+      permit2Nonce: 3,
+    });
+    expect(result.diagnostics.decodedPermit2ApprovalCount).toBe(1);
+    expect(result.diagnostics.liveReadSuccessCount).toBe(1);
+    expect(result.diagnostics.liveReadFailureCount).toBe(0);
   });
 
   it("treats live read failures as incomplete verification, not clear", async () => {

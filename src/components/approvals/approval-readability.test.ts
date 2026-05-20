@@ -94,14 +94,18 @@ describe("approval row readability copy", () => {
     expect(helperSource).toContain("Legacy contract");
     expect(helperSource).toContain("Documented asset");
     expect(helperSource).toContain("Source");
+    expect(helperSource).toContain("Risk signals");
+    expect(helperSource).toContain("riskSignalItems");
     expect(helperSource).toContain("metadata.protocolName");
     expect(helperSource).toContain("metadata.sourceLabel");
     expect(erc20Source).toContain(
       "protocolMetadataItems(approval.spenderProtocolMetadata)",
     );
+    expect(erc20Source).toContain("riskSignalItems(approval.risk.drivers)");
     expect(nftSource).toContain(
       "protocolMetadataItems(approval.operatorProtocolMetadata)",
     );
+    expect(nftSource).toContain("riskSignalItems(approval.risk.drivers)");
   });
 
   it("explains unverified ERC-20 current approval state", () => {
@@ -113,7 +117,9 @@ describe("approval row readability copy", () => {
       "To verify this row, the app must read allowance(owner, spender).",
     );
     expect(erc20Source).toContain("CurrentApprovalStateSummary kind=\"erc20\"");
-    expect(erc20Source).toContain("verificationKind=\"erc20\"");
+    expect(erc20Source).toContain(
+      'verificationKind={approval.approvalKind ?? "erc20"}',
+    );
   });
 
   it("explains unverified NFT per-token and operator current approval state", () => {

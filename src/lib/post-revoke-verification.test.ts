@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import type { NftApproval } from "@/lib/nft-approvals";
 import { ZERO_ADDRESS } from "@/lib/nft-approvals";
+import { PERMIT2_ADDRESS } from "@/lib/permit2";
 import type { RevokeTarget } from "@/lib/revoke";
 
 import {
@@ -81,6 +82,36 @@ describe("post-revoke live verification", () => {
       functionName: "allowance",
       args: [OWNER, SPENDER],
     });
+  });
+
+  it("confirms Permit2 revoke only when nested allowance is cleared", async () => {
+    const reads: unknown[] = [];
+    const result = await verifyErc20PostRevokeCleared({
+      client: mockReadClient(async (parameters) => {
+        reads.push(parameters);
+        return [0n, 0n, 7n];
+      }),
+      ownerAddress: OWNER,
+      target: permit2Target(),
+    });
+
+    expect(result.state).toBe("confirmed-cleared");
+    expect(reads[0]).toMatchObject({
+      address: PERMIT2_ADDRESS,
+      functionName: "allowance",
+      args: [OWNER, TOKEN, SPENDER],
+    });
+  });
+
+  it("does not confirm Permit2 cleared when nested allowance remains active", async () => {
+    const activeExpiration = BigInt(Math.floor(Date.now() / 1000) + 3600);
+    const result = await verifyErc20PostRevokeCleared({
+      client: mockReadClient(async () => [1n, activeExpiration, 7n]),
+      ownerAddress: OWNER,
+      target: permit2Target(),
+    });
+
+    expect(result.state).toBe("mismatch");
   });
 
   it("confirms NFT operator revoke only when isApprovedForAll returns false", async () => {
@@ -165,6 +196,14 @@ function erc20Target(): RevokeTarget {
     chainId: 369,
     tokenAddress: TOKEN,
     spenderAddress: SPENDER,
+  };
+}
+
+function permit2Target(): RevokeTarget {
+  return {
+    ...erc20Target(),
+    approvalKind: "permit2",
+    approvalContractAddress: PERMIT2_ADDRESS,
   };
 }
 

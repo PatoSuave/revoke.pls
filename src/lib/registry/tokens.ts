@@ -18,6 +18,7 @@ import {
  *   stablecoin    — native or bridged stablecoin
  *   bridged       — an asset bridged from another chain
  *   governance    — a token used primarily for governance
+ *   hybrid        — contract emits both fungible and NFT approval signals
  *   unknown       — no claim made
  */
 export type TokenCategory =
@@ -26,6 +27,7 @@ export type TokenCategory =
   | "stablecoin"
   | "bridged"
   | "governance"
+  | "hybrid"
   | "unknown";
 
 /**

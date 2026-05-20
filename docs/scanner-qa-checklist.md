@@ -13,6 +13,21 @@ Keep all testing low-risk and manual.
 - Keep enough native gas token for approval, revoke, and rescan testing.
 - Open scanner diagnostics with `/app?debug=1` during QA.
 
+## Automated Preview Smoke
+
+Before manual wallet QA, run the preview smoke command against the exact Vercel
+Preview URL being tested:
+
+```powershell
+npm run smoke:preview -- https://your-preview.vercel.app
+```
+
+The smoke checks the `/app?debug=1` page markers and the server-backed
+Ethereum, Arbitrum, and Optimism approval APIs with a harmless address. It
+should pass with RPC/explorer diagnostics configured and no missing config.
+This does not replace wallet QA; it only confirms the preview deployment and
+environment wiring are usable.
+
 ## Network Coverage
 
 Run the scanner flow on all supported chains:
@@ -42,6 +57,33 @@ For each chain, confirm diagnostics show:
 - Fungible token and NFT scan status.
 - Explorer request/window counts.
 - Any truncation, explorer/API error, or RPC/live-read error.
+
+## Permit2 And Hybrid Checks
+
+- Confirm Permit2 candidates are discovered from historical Permit2 `Approval`
+  or `Permit` events, then shown only after
+  `allowance(owner, token, spender)` returns a nonzero, unexpired delegated
+  allowance.
+- Confirm expired or zero Permit2 delegated allowances do not appear as active
+  approval rows.
+- Confirm malformed, timed-out, or failed Permit2 live reads show incomplete or
+  unverified diagnostics rather than a clear wallet state.
+- Expand a Permit2 row and confirm the permission text says the spender can use
+  the token through Permit2.
+- Confirm Permit2 revoke review and wallet prompt target the Permit2 contract
+  with `approve(token, spender, 0, 0)`, not the token contract.
+- Confirm standard ERC-20 rows still use token-contract
+  `approve(spender, 0)`.
+- Confirm the Permit2 filter shows only Permit2 delegated allowance rows and
+  does not alter discovery, verification, or revoke eligibility.
+- Confirm hybrid rows are marked only when the same contract has fungible and
+  NFT approval surfaces in the current scan results.
+- Confirm the Hybrid filter shows only hybrid token rows and does not unlock a
+  revoke action that was otherwise blocked by owner, chain, preflight, or live
+  verification.
+- Expand Permit2 and hybrid rows and confirm `Risk signals` list the concrete
+  drivers, such as Permit2 delegated allowance, hybrid token contract, known or
+  unknown spender, and unlimited or limited approval.
 
 ## BSC Discovery Checks
 
@@ -121,14 +163,18 @@ For each chain, confirm diagnostics show:
 7. Confirm live allowance validation returns a nonzero allowance on the same
    chain.
 8. Confirm the approval appears in normal scanner results.
-9. On Arbitrum, confirm only the verified ERC-20 row can open the revoke review
+9. If the row is Permit2-based, confirm Permit2 live validation reads
+   `allowance(owner, token, spender)` and the row explains delegated access.
+10. If the row is hybrid, confirm the Hybrid filter finds it and the row still
+    follows the normal ERC-20 verification and revoke gates.
+11. On Arbitrum, confirm only the verified ERC-20 row can open the revoke review
    panel when the matching wallet is connected on Arbitrum One.
-10. On Optimism, confirm only the verified ERC-20 row can open the revoke
+12. On Optimism, confirm only the verified ERC-20 row can open the revoke
     review panel when the matching wallet is connected on OP Mainnet.
-11. On revoke-enabled chains, revoke the approval from the app.
-12. Rescan after the transaction confirms.
-13. Confirm the approval disappears or diagnostics show no nonzero allowance.
-14. Verify directly on PulseScan, BscScan, BaseScan, Etherscan, Arbiscan, or
+13. On revoke-enabled chains, revoke the approval from the app.
+14. Rescan after the transaction confirms.
+15. Confirm the approval disappears or diagnostics show no nonzero allowance.
+16. Verify directly on PulseScan, BscScan, BaseScan, Etherscan, Arbiscan, or
     Optimistic Etherscan if results disagree.
 
 ## NFT Approval Test
@@ -170,6 +216,8 @@ For per-token approvals:
 - Single PulseChain revoke confirm panel says PulseChain and PLS.
 - Single BSC revoke confirm panel says BSC or BNB Smart Chain and BNB.
 - Single Base revoke confirm panel says Base and ETH.
+- Permit2 revoke confirm panel clearly identifies a Permit2 delegated allowance
+  and clears it through the Permit2 contract.
 - Arbitrum One shows a revoke confirm panel only for live-verified ERC-20 and
   NFT rows.
 - Arbitrum One never shows batch revoke controls.

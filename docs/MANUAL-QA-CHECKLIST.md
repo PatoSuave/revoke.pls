@@ -16,12 +16,13 @@ npx.cmd vitest run
 npm.cmd run lint
 npm.cmd audit --omit=dev
 git diff --check
-git diff -- src/hooks src/app/api src/lib/wagmi.ts src/lib/preflight.ts
+git diff -- src/hooks src/app/api src/lib/wagmi.ts src/lib/preflight.ts src/lib/permit2.ts src/lib/risk.ts
 ```
 
 Expected sensitive-path result: no diff output for `src/hooks`,
-`src/app/api`, `src/lib/wagmi.ts`, or `src/lib/preflight.ts` unless the change
-explicitly intends to modify execution behavior.
+`src/app/api`, `src/lib/wagmi.ts`, `src/lib/preflight.ts`,
+`src/lib/permit2.ts`, or `src/lib/risk.ts` unless the change explicitly
+intends to modify execution behavior or scanner prioritization.
 
 For Arbitrum verified-row revoke work, expected sensitive-path output may
 include the Arbitrum scanner UI, hook/client, and existing controlled ERC-20/NFT
@@ -121,6 +122,33 @@ exposure.
 - [ ] Expand `What this approval means` and confirm NFT permission, risk,
       recommended action, current-state, zero-address, and metadata copy remain
       available.
+
+## 5A. Permit2 And Hybrid Scanner Rows
+
+- [ ] Discover or simulate a Permit2 delegated allowance row.
+- [ ] Confirm the Permit2 row appears only after
+      `allowance(owner, token, spender)` returns a nonzero, unexpired delegated
+      allowance.
+- [ ] Confirm expired, zero, malformed, timed-out, or failed Permit2 live reads
+      do not produce a false clear wallet state.
+- [ ] Confirm the row copy says the spender can use the token through Permit2.
+- [ ] Confirm the Permit2 filter shows Permit2 rows and hides normal ERC-20
+      rows.
+- [ ] Confirm search terms such as `Permit2` and `delegated` find Permit2 rows.
+- [ ] Open the revoke review for a live-verified Permit2 row and confirm the
+      wallet prompt targets the Permit2 contract with
+      `approve(token, spender, 0, 0)`.
+- [ ] Confirm post-revoke verification reads the Permit2 nested allowance again
+      and reports cleared only when the delegated allowance is zero or expired.
+- [ ] Discover or simulate a hybrid token row where the same contract has
+      fungible and NFT approval surfaces.
+- [ ] Confirm the Hybrid filter shows hybrid rows and hides non-hybrid rows.
+- [ ] Confirm hybrid rows keep their normal ERC-20 or NFT verification and
+      revoke gates; the hybrid label must not make an unverified row revokable.
+- [ ] Expand `What this approval means` and confirm `Risk signals` list
+      concrete drivers such as Permit2 delegated allowance, hybrid token
+      contract, known or unknown spender/operator, and unlimited or limited
+      approval.
 
 ## 6. Revoke Flow
 

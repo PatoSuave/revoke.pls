@@ -96,6 +96,9 @@ describe("NFT revoke builders", () => {
       operatorLabel: "LibertySwap USDC",
       protocol: "LibertySwap",
       trusted: true,
+      risk: {
+        drivers: ["Known operator", "Collection-wide approval"],
+      },
       operatorProtocolMetadata: {
         protocolName: "LibertySwap",
         contractStatus: "current",

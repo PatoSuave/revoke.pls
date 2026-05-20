@@ -325,6 +325,7 @@ export function ScannerDiagnosticsPanel({
                 ["Other skipped logs", erc20DecodeFailures],
                 ["Decoded token/spender pairs", erc20Parse?.decodedPairs ?? 0],
                 ["Unique token/spender pairs", erc20.stats.candidates],
+                ["Permit2 candidates", erc20.stats.permit2Candidates],
                 ["Unique tokens", erc20.stats.uniqueTokens],
                 ["Live allowances checked", erc20.stats.candidates],
                 [
@@ -332,6 +333,7 @@ export function ScannerDiagnosticsPanel({
                   formatAllowanceValidation(erc20.diagnostics.liveReadFailures),
                 ],
                 ["Nonzero allowances returned", erc20.stats.active],
+                ["Active Permit2 allowances", erc20.stats.permit2Active],
                 [
                   "Sample decoded pairs",
                   <SamplePairs

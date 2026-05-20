@@ -948,6 +948,10 @@ function OptimismDiagnostics({
       diagnostics?.decodedErc20ApprovalCount?.toString() ?? "0",
     ],
     [
+      "Decoded Permit2 approvals",
+      diagnostics?.decodedPermit2ApprovalCount?.toString() ?? "0",
+    ],
+    [
       "Decoded NFT approvals",
       diagnostics?.decodedNftApprovalCount?.toString() ?? "0",
     ],
