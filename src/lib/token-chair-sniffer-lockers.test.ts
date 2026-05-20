@@ -12,16 +12,18 @@ function reader({
   totalLocks = 3n,
   locks = {},
   code = "0x1234" as Hex,
+  logs = [],
 }: {
   totalLocks?: bigint;
   locks?: Record<string, unknown[]>;
   code?: Hex;
+  logs?: unknown[];
 } = {}) {
   return {
     getCode: vi.fn(async () => code),
     getStorageAt: vi.fn(),
-    getBlockNumber: vi.fn(),
-    getLogs: vi.fn(),
+    getBlockNumber: vi.fn(async () => 20_000_000n),
+    getLogs: vi.fn(async () => logs),
     readContract: vi.fn(async ({ functionName, args }) => {
       if (functionName === "totalLocks") return totalLocks;
       if (functionName === "getLockInfo") {
@@ -58,6 +60,42 @@ describe("Token Chair LP locker reads", () => {
     expect(result.nextUnlockTime).toBe("1900000000");
     expect(result.ownerAddresses).toEqual([OWNER]);
     expect(result.warnings).toEqual([]);
+  });
+
+  it("uses LockCreated events to read older matching lock IDs outside the recent sample", async () => {
+    const fakeReader = reader({
+      totalLocks: 100n,
+      locks: {
+        "5": [PAIR, OWNER, 300n, 1_900_000_000n, false, true],
+        "98": [OTHER, OWNER, 100n, 1_900_000_000n, false, true],
+        "99": [OTHER, OWNER, 100n, 2_000_000_000n, false, true],
+      },
+      logs: [
+        { args: { lockId: 5n, owner: OWNER, token: PAIR } },
+        { args: { lockId: 9n, owner: OWNER, token: OTHER } },
+      ],
+    });
+
+    const result = await fetchTokenChairLpLockerData(PAIR, LOCKER, "1000", {
+      reader: fakeReader,
+      maxLocks: 2,
+    });
+
+    expect(result.checkedLockCount).toBe(3);
+    expect(result.activeLocks).toHaveLength(1);
+    expect(result.lockedAmountRaw).toBe("300");
+    expect(result.lockedPercent).toBe(30);
+    expect(result.warnings.join(" ")).not.toContain("most recent");
+    expect(fakeReader.readContract).toHaveBeenCalledWith(
+      expect.objectContaining({ functionName: "getLockInfo", args: [5n] }),
+    );
+    expect(fakeReader.getLogs).toHaveBeenCalledWith(
+      expect.objectContaining({
+        address: LOCKER,
+        fromBlock: 0n,
+        toBlock: 20_000_000n,
+      }),
+    );
   });
 
   it("caps locker scans to the most recent records", async () => {

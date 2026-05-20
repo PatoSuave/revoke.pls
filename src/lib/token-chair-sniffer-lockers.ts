@@ -1,4 +1,10 @@
-import { getAddress, isAddress, type Address, type Hex } from "viem";
+import {
+  getAddress,
+  isAddress,
+  parseAbiItem,
+  type Address,
+  type Hex,
+} from "viem";
 
 import { PULSECHAIN_CHAIN_ID } from "@/lib/chains";
 import { getSpenderMetadataEntry } from "@/lib/registry";
@@ -15,6 +21,7 @@ export interface FetchTokenChairLpLockerOptions {
   reader?: TokenChairContractReader;
   signal?: AbortSignal;
   maxLocks?: number;
+  maxEventLockIds?: number;
 }
 
 interface ReadAttempt<T> {
@@ -34,8 +41,12 @@ interface LockerInfo {
 }
 
 const DEFAULT_LOCKER_MAX_LOCKS = 50;
+const DEFAULT_LOCKER_MAX_EVENT_LOCK_IDS = 100;
 const PULSELAUNCH_LOCKER_ADDRESS = getAddress(
   "0xD6C5765295ac081cD513fF9C71586B59e83E0aA7",
+);
+const lockCreatedEvent = parseAbiItem(
+  "event LockCreated(uint256 indexed lockId, address indexed owner, address token, uint256 amount, uint256 unlockTime)",
 );
 
 const totalLocksAbi = [
@@ -142,7 +153,21 @@ export async function fetchTokenChairLpLockerData(
   const maxLocks = Math.max(1, options.maxLocks ?? DEFAULT_LOCKER_MAX_LOCKS);
   const readCount = Number(totalLocks > BigInt(maxLocks) ? BigInt(maxLocks) : totalLocks);
   const firstLockId = totalLocks - BigInt(readCount);
-  const lockIds = Array.from({ length: readCount }, (_, index) => firstLockId + BigInt(index));
+  const recentLockIds = Array.from(
+    { length: readCount },
+    (_, index) => firstLockId + BigInt(index),
+  );
+  const eventRead = await readLockCreatedLockIds(
+    reader,
+    lockerAddress,
+    normalizedPair,
+    options.maxEventLockIds ?? DEFAULT_LOCKER_MAX_EVENT_LOCK_IDS,
+    options.signal,
+  );
+  const lockIds = uniqueBigints([
+    ...(eventRead.value?.lockIds ?? []),
+    ...recentLockIds,
+  ]).filter((lockId) => lockId < totalLocks);
   const reads = await Promise.all(
     lockIds.map(async (lockId) => ({
       lockId,
@@ -182,8 +207,15 @@ export async function fetchTokenChairLpLockerData(
     .sort((a, b) => (a < b ? -1 : a > b ? 1 : 0))[0] ?? null;
   const ownerAddresses = uniqueAddresses(activeLocks.map((lock) => lock.ownerAddress));
   const maxLocksReached = totalLocks > BigInt(readCount);
+  const eventLockIds = eventRead.value?.lockIds ?? [];
   const warnings = [
-    maxLocksReached
+    eventRead.ok
+      ? null
+      : `PulseLaunch locker LockCreated event scan failed: ${eventRead.error ?? "unknown error"}.`,
+    eventRead.value?.maxEventLockIdsReached
+      ? `PulseLaunch locker event scan was capped at ${eventLockIds.length.toLocaleString("en-US")} matching lock IDs.`
+      : null,
+    maxLocksReached && eventLockIds.length === 0
       ? `Locker scan was capped at the most recent ${readCount.toLocaleString("en-US")} of ${totalLocks.toString()} total locks.`
       : null,
     failedReads > 0
@@ -205,7 +237,7 @@ export async function fetchTokenChairLpLockerData(
     lockerAddress,
     lockerLabel,
     pairAddress: normalizedPair,
-    checkedLockCount: readCount,
+    checkedLockCount: lockIds.length,
     totalLocks: totalLocks.toString(),
     maxLocksReached,
     matchedLocks,
@@ -281,6 +313,71 @@ async function readLockInfo(
   };
 }
 
+async function readLockCreatedLockIds(
+  reader: TokenChairContractReader,
+  lockerAddress: Address,
+  pairAddress: Address,
+  maxEventLockIds: number,
+  signal: AbortSignal | undefined,
+): Promise<ReadAttempt<{ lockIds: bigint[]; maxEventLockIdsReached: boolean }>> {
+  const blockRead = await readWithAbort(
+    () => reader.getBlockNumber(),
+    signal,
+  );
+  if (!blockRead.ok || blockRead.value === null) {
+    return {
+      ok: false,
+      value: null,
+      error: blockRead.error ?? "PulseChain latest block could not be read for locker event discovery.",
+    };
+  }
+
+  const logsRead = await readWithAbort(
+    () =>
+      reader.getLogs({
+        address: lockerAddress,
+        event: lockCreatedEvent,
+        fromBlock: 0n,
+        toBlock: blockRead.value!,
+      }),
+    signal,
+  );
+  if (!logsRead.ok || !logsRead.value) {
+    return {
+      ok: false,
+      value: null,
+      error: logsRead.error ?? "PulseLaunch locker LockCreated logs could not be read.",
+    };
+  }
+
+  const maxIds = Math.max(1, maxEventLockIds);
+  const lockIds: bigint[] = [];
+  for (const log of logsRead.value) {
+    const lockId = normalizeLockCreatedLockId(log, pairAddress);
+    if (lockId === null) continue;
+    lockIds.push(lockId);
+    if (lockIds.length >= maxIds) {
+      return {
+        ok: true,
+        value: {
+          lockIds: uniqueBigints(lockIds),
+          maxEventLockIdsReached: true,
+        },
+        error: null,
+      };
+    }
+  }
+
+  return {
+    ok: true,
+    value: {
+      lockIds: uniqueBigints(lockIds),
+      maxEventLockIdsReached: false,
+    },
+    error: null,
+  };
+}
+
 async function readUint(
   reader: TokenChairContractReader,
   address: Address,
@@ -299,6 +396,16 @@ async function readUint(
     value,
     error: result.ok ? null : result.error,
   };
+}
+
+function normalizeLockCreatedLockId(
+  log: unknown,
+  pairAddress: Address,
+): bigint | null {
+  const args = asRecord(asRecord(log)?.args);
+  const token = normalizeAddress(args?.token);
+  if (!addressesMatch(token, pairAddress)) return null;
+  return normalizeBigInt(args?.lockId);
 }
 
 async function readWithAbort<T>(
@@ -422,6 +529,18 @@ function uniqueAddresses(addresses: readonly Address[]): Address[] {
   return unique;
 }
 
+function uniqueBigints(values: readonly bigint[]): bigint[] {
+  const seen = new Set<string>();
+  const unique: bigint[] = [];
+  for (const value of values) {
+    const key = value.toString();
+    if (seen.has(key)) continue;
+    seen.add(key);
+    unique.push(value);
+  }
+  return unique;
+}
+
 function unixSecondsToIso(value: bigint): string | null {
   const maxSeconds = BigInt(Math.floor(Number.MAX_SAFE_INTEGER / 1000));
   if (value > maxSeconds) return null;
@@ -439,4 +558,11 @@ function addressesMatch(
 
 function hasContractCode(code: Hex | null | undefined): boolean {
   return Boolean(code && code !== "0x");
+}
+
+function asRecord(value: unknown): Record<string, unknown> | null {
+  if (typeof value !== "object" || value === null || Array.isArray(value)) {
+    return null;
+  }
+  return value as Record<string, unknown>;
 }

@@ -249,7 +249,8 @@ export interface TokenChairContractReader {
   getBlockNumber(): Promise<bigint>;
   getLogs(args: {
     address: Address;
-    eventName: TokenChairEventHistoryLogName;
+    eventName?: TokenChairEventHistoryLogName;
+    event?: unknown;
     fromBlock: bigint;
     toBlock: bigint;
   }): Promise<readonly unknown[]>;
@@ -393,10 +394,10 @@ export function createPulseChainContractReader(): TokenChairContractReader {
     getCode: (args) => client.getCode(args),
     getStorageAt: (args) => client.getStorageAt(args),
     getBlockNumber: () => client.getBlockNumber(),
-    getLogs: ({ address, eventName, fromBlock, toBlock }) =>
+    getLogs: ({ address, eventName, event, fromBlock, toBlock }) =>
       client.getLogs({
         address,
-        event: TOKEN_CHAIR_EVENT_HISTORY_EVENTS[eventName],
+        event: eventName ? TOKEN_CHAIR_EVENT_HISTORY_EVENTS[eventName] : event,
         fromBlock,
         toBlock,
       } as never),
