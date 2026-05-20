@@ -18,6 +18,9 @@ Implemented in this MVP:
 - Lightweight CTA from `/app` to the sniffer route
 - Sample-token presets for fast preview QA against PLSX, WPLS, INC, and HEX
 - Interactive review workspace with per-token checklist state, decision state, notes, local browser persistence, and copyable review summary
+- Rules-backed Must Review Before Touching queue that prioritizes visible control, liquidity, holder, source, market, and coverage gaps without making safe/scam claims
+- Local Recent Reviews workbench saved in browser storage with token, verdict, decision, checklist progress, risk counts, notes, and last-reviewed timestamp
+- Review export that includes top prioritized risk items, checklist state, decision, notes, report link, and timestamp
 - EVM token-address validation and checksum normalization
 - Query-string token normalization with `token` and `address` aliases
 - Server-side DEX Screener token-pairs fetch for `pulsechain`

@@ -7,6 +7,12 @@ import type { Address } from "viem";
 
 import { shortenAddress } from "@/lib/format";
 import {
+  buildTokenChairRiskQueue,
+  getTokenChairRiskCounts,
+  type TokenChairRiskItem,
+  type TokenChairRiskSeverity,
+} from "@/lib/token-chair-risk-rules";
+import {
   TOKEN_CHAIR_API_ROUTE,
   TOKEN_CHAIR_CHAIN_LABEL,
   TOKEN_CHAIR_DISCLAIMER,
@@ -713,6 +719,7 @@ function ScanReport({
     state,
   });
   const sharePath = tokenAddress ? buildTokenChairSnifferUrl(tokenAddress) : null;
+  const riskQueue = buildTokenChairRiskQueue({ response, lpControlSummary });
 
   async function copyReportLink() {
     if (!sharePath || typeof window === "undefined" || !navigator.clipboard) {
@@ -793,8 +800,11 @@ function ScanReport({
         </div>
       </div>
 
+      <MustReviewQueue items={riskQueue} />
+
       <ReviewBeforeBuying
         rows={reviewRows}
+        riskQueue={riskQueue}
         tokenAddress={tokenAddress}
         tokenLabel={tokenLabel}
         verdict={verdict}
@@ -876,12 +886,87 @@ function EvidenceChecklist({ rows }: { rows: readonly SniffSignalRow[] }) {
   );
 }
 
+function MustReviewQueue({ items }: { items: readonly TokenChairRiskItem[] }) {
+  const counts = getTokenChairRiskCounts(items);
+  const visibleItems = items.slice(0, 8);
+
+  return (
+    <div className="mt-4 rounded-lg border border-pulse-border/70 bg-[#070b10] p-4">
+      <PanelHeader
+        icon="M"
+        title="Must Review Before Touching"
+        meta={`${counts.critical} critical / ${counts.warning} warning / ${counts.info} info`}
+      />
+      <div className="mt-3 grid gap-3 lg:grid-cols-2">
+        {visibleItems.map((item) => (
+          <article
+            key={item.id}
+            className={`rounded-lg border bg-[#0a1016] p-3 ${riskItemBorderClass(item.severity)}`}
+          >
+            <div className="flex flex-wrap items-start justify-between gap-2">
+              <div className="min-w-0">
+                <p className="text-sm font-semibold text-pulse-text">{item.title}</p>
+                <p className="mt-1 text-[11px] uppercase tracking-[0.14em] text-pulse-muted/75">
+                  {item.category}
+                </p>
+              </div>
+              <span className={`rounded-full border px-2 py-1 text-xs font-semibold ${riskSeverityBadgeClass(item.severity)}`}>
+                {riskSeverityLabel(item.severity)}
+              </span>
+            </div>
+            <div className="mt-3 grid gap-2 text-xs leading-5 text-pulse-muted">
+              <p>
+                <span className="font-semibold text-pulse-text">Evidence:</span> {item.evidence}
+              </p>
+              <p>
+                <span className="font-semibold text-pulse-text">Why:</span> {item.whyItMatters}
+              </p>
+              <p>
+                <span className="font-semibold text-pulse-text">Review:</span> {item.manualReview}
+              </p>
+            </div>
+            {item.href ? (
+              <a
+                href={item.href}
+                target="_blank"
+                rel="noreferrer"
+                className="mt-3 inline-flex rounded-lg border border-pulse-border bg-pulse-panel/55 px-3 py-2 text-xs font-semibold text-pulse-text transition hover:border-pulse-green/35 hover:text-pulse-green"
+              >
+                {item.sourceLabel ?? "Open source"}
+              </a>
+            ) : null}
+          </article>
+        ))}
+      </div>
+      {items.length > visibleItems.length ? (
+        <p className="mt-3 text-xs leading-5 text-pulse-muted">
+          Showing the first {visibleItems.length.toLocaleString("en-US")} prioritized review items. More context remains in the detailed panels below.
+        </p>
+      ) : null}
+    </div>
+  );
+}
+
 type ReviewDecision = "reviewing" | "watchlist" | "pass" | "reviewed";
 
 type ReviewDraft = {
   decision: ReviewDecision;
   notes: string;
   checked: Record<string, boolean>;
+};
+
+type ReviewWorkbenchEntry = {
+  tokenAddress: Address;
+  tokenLabel: string;
+  verdictLabel: string;
+  decision: ReviewDecision;
+  notes: string;
+  checkedCount: number;
+  checklistCount: number;
+  criticalCount: number;
+  warningCount: number;
+  lastScannedAt: string;
+  reportPath: string;
 };
 
 const REVIEW_DECISION_OPTIONS: readonly {
@@ -911,14 +996,18 @@ const REVIEW_DECISION_OPTIONS: readonly {
   },
 ] as const;
 
+const REVIEW_WORKBENCH_STORAGE_KEY = "token-chair-review-workbench";
+
 function ReviewBeforeBuying({
   rows,
+  riskQueue,
   tokenAddress,
   tokenLabel,
   verdict,
   sharePath,
 }: {
   rows: readonly SniffSignalRow[];
+  riskQueue: readonly TokenChairRiskItem[];
   tokenAddress: Address | null;
   tokenLabel: string;
   verdict: TokenChairVerdict;
@@ -930,7 +1019,9 @@ function ReviewBeforeBuying({
   );
   const [draftLoaded, setDraftLoaded] = useState(false);
   const [draft, setDraft] = useState<ReviewDraft>(() => createEmptyReviewDraft());
+  const [workbench, setWorkbench] = useState<ReviewWorkbenchEntry[]>([]);
   const [copied, setCopied] = useState(false);
+  const riskCounts = getTokenChairRiskCounts(riskQueue);
   const checkedCount = rows.filter((row) => draft.checked[reviewRowKey(row)]).length;
   const completionLabel =
     rows.length > 0 ? `${checkedCount.toLocaleString("en-US")}/${rows.length.toLocaleString("en-US")} checked` : "No checklist";
@@ -951,6 +1042,11 @@ function ReviewBeforeBuying({
   }, [storageKey]);
 
   useEffect(() => {
+    if (typeof window === "undefined") return;
+    setWorkbench(parseReviewWorkbench(window.localStorage.getItem(REVIEW_WORKBENCH_STORAGE_KEY)));
+  }, []);
+
+  useEffect(() => {
     if (!storageKey || !draftLoaded || typeof window === "undefined") return;
 
     window.localStorage.setItem(
@@ -961,7 +1057,47 @@ function ReviewBeforeBuying({
         ...draft,
       }),
     );
-  }, [draft, draftLoaded, storageKey]);
+
+    if (!tokenAddress || !sharePath) return;
+
+    const entry: ReviewWorkbenchEntry = {
+      tokenAddress,
+      tokenLabel,
+      verdictLabel: verdict.label,
+      decision: draft.decision,
+      notes: draft.notes,
+      checkedCount,
+      checklistCount: rows.length,
+      criticalCount: riskCounts.critical,
+      warningCount: riskCounts.warning,
+      lastScannedAt: new Date().toISOString(),
+      reportPath: sharePath,
+    };
+    const nextWorkbench = upsertReviewWorkbenchEntry(
+      parseReviewWorkbench(window.localStorage.getItem(REVIEW_WORKBENCH_STORAGE_KEY)),
+      entry,
+    );
+    window.localStorage.setItem(
+      REVIEW_WORKBENCH_STORAGE_KEY,
+      JSON.stringify({
+        version: 1,
+        entries: nextWorkbench,
+      }),
+    );
+    setWorkbench(nextWorkbench);
+  }, [
+    checkedCount,
+    draft,
+    draftLoaded,
+    riskCounts.critical,
+    riskCounts.warning,
+    rows.length,
+    sharePath,
+    storageKey,
+    tokenAddress,
+    tokenLabel,
+    verdict.label,
+  ]);
 
   function setDecision(decision: ReviewDecision) {
     setDraft((current) => ({ ...current, decision }));
@@ -996,6 +1132,7 @@ function ReviewBeforeBuying({
     await navigator.clipboard.writeText(
       buildReviewSummaryText({
         rows,
+        riskQueue,
         draft,
         tokenAddress,
         tokenLabel,
@@ -1044,59 +1181,63 @@ function ReviewBeforeBuying({
           })}
         </div>
 
-        <div className="rounded-lg border border-pulse-border/60 bg-[#0a1016] p-3">
-          <div className="grid grid-cols-2 gap-2">
-            {REVIEW_DECISION_OPTIONS.map((option) => {
-              const active = draft.decision === option.value;
+        <div className="grid gap-3">
+          <div className="rounded-lg border border-pulse-border/60 bg-[#0a1016] p-3">
+            <div className="grid grid-cols-2 gap-2">
+              {REVIEW_DECISION_OPTIONS.map((option) => {
+                const active = draft.decision === option.value;
 
-              return (
-                <button
-                  key={option.value}
-                  type="button"
-                  aria-pressed={active}
-                  onClick={() => setDecision(option.value)}
-                  className={`rounded-lg border px-3 py-2 text-left transition ${
-                    active
-                      ? "border-pulse-green/45 bg-pulse-green/10 text-pulse-green"
-                      : "border-pulse-border/65 bg-[#070b10] text-pulse-muted hover:border-pulse-green/35 hover:text-pulse-text"
-                  }`}
-                >
-                  <span className="block text-sm font-semibold">{option.label}</span>
-                  <span className="mt-1 block text-xs">{option.detail}</span>
-                </button>
-              );
-            })}
+                return (
+                  <button
+                    key={option.value}
+                    type="button"
+                    aria-pressed={active}
+                    onClick={() => setDecision(option.value)}
+                    className={`rounded-lg border px-3 py-2 text-left transition ${
+                      active
+                        ? "border-pulse-green/45 bg-pulse-green/10 text-pulse-green"
+                        : "border-pulse-border/65 bg-[#070b10] text-pulse-muted hover:border-pulse-green/35 hover:text-pulse-text"
+                    }`}
+                  >
+                    <span className="block text-sm font-semibold">{option.label}</span>
+                    <span className="mt-1 block text-xs">{option.detail}</span>
+                  </button>
+                );
+              })}
+            </div>
+
+            <label className="mt-3 block">
+              <span className="text-xs font-semibold uppercase tracking-[0.14em] text-pulse-muted/80">
+                Notes
+              </span>
+              <textarea
+                value={draft.notes}
+                onChange={(event) => updateNotes(event.target.value)}
+                rows={6}
+                placeholder="Sources checked, follow-up questions, wallet notes."
+                className="mt-2 w-full resize-y rounded-lg border border-pulse-border/65 bg-[#070b10] px-3 py-2 text-sm leading-6 text-pulse-text outline-none transition placeholder:text-pulse-muted/60 focus:border-pulse-green/45"
+              />
+            </label>
+
+            <div className="mt-3 flex flex-wrap gap-2">
+              <button
+                type="button"
+                onClick={() => void copyReviewSummary()}
+                className="rounded-lg border border-pulse-border bg-pulse-panel/55 px-3 py-2 text-xs font-semibold text-pulse-text transition hover:border-pulse-green/35 hover:text-pulse-green"
+              >
+                {copied ? "Copied" : "Copy review"}
+              </button>
+              <button
+                type="button"
+                onClick={clearDraft}
+                className="rounded-lg border border-pulse-border/70 bg-[#070b10] px-3 py-2 text-xs font-semibold text-pulse-muted transition hover:border-rose-400/45 hover:text-rose-200"
+              >
+                Clear draft
+              </button>
+            </div>
           </div>
 
-          <label className="mt-3 block">
-            <span className="text-xs font-semibold uppercase tracking-[0.14em] text-pulse-muted/80">
-              Notes
-            </span>
-            <textarea
-              value={draft.notes}
-              onChange={(event) => updateNotes(event.target.value)}
-              rows={6}
-              placeholder="Sources checked, follow-up questions, wallet notes."
-              className="mt-2 w-full resize-y rounded-lg border border-pulse-border/65 bg-[#070b10] px-3 py-2 text-sm leading-6 text-pulse-text outline-none transition placeholder:text-pulse-muted/60 focus:border-pulse-green/45"
-            />
-          </label>
-
-          <div className="mt-3 flex flex-wrap gap-2">
-            <button
-              type="button"
-              onClick={() => void copyReviewSummary()}
-              className="rounded-lg border border-pulse-border bg-pulse-panel/55 px-3 py-2 text-xs font-semibold text-pulse-text transition hover:border-pulse-green/35 hover:text-pulse-green"
-            >
-              {copied ? "Copied" : "Copy review"}
-            </button>
-            <button
-              type="button"
-              onClick={clearDraft}
-              className="rounded-lg border border-pulse-border/70 bg-[#070b10] px-3 py-2 text-xs font-semibold text-pulse-muted transition hover:border-rose-400/45 hover:text-rose-200"
-            >
-              Clear draft
-            </button>
-          </div>
+          <RecentReviewWorkbench entries={workbench} currentTokenAddress={tokenAddress} />
         </div>
       </div>
     </div>
@@ -1147,6 +1288,7 @@ function reviewRowKey(row: SniffSignalRow): string {
 
 function buildReviewSummaryText({
   rows,
+  riskQueue,
   draft,
   tokenAddress,
   tokenLabel,
@@ -1155,6 +1297,7 @@ function buildReviewSummaryText({
   origin,
 }: {
   rows: readonly SniffSignalRow[];
+  riskQueue: readonly TokenChairRiskItem[];
   draft: ReviewDraft;
   tokenAddress: Address | null;
   tokenLabel: string;
@@ -1170,6 +1313,9 @@ function buildReviewSummaryText({
     .map((row) => `- [ ] ${row.label}: ${row.value}`);
   const reportUrl = sharePath ? new URL(sharePath, origin).toString() : "No report URL yet";
   const notes = draft.notes.trim() || "No notes.";
+  const topRisks = riskQueue.slice(0, 6).map((item) => {
+    return `- ${riskSeverityLabel(item.severity)}: ${item.title} | ${item.evidence} | Review: ${item.manualReview}`;
+  });
 
   return [
     `Token Chair review: ${tokenLabel}`,
@@ -1177,6 +1323,10 @@ function buildReviewSummaryText({
     `Verdict: ${verdict.displayLabel}`,
     `Decision: ${formatReviewDecision(draft.decision)}`,
     `Report: ${reportUrl}`,
+    `Exported: ${new Date().toISOString()}`,
+    "",
+    "Top review queue:",
+    ...(topRisks.length ? topRisks : ["- No risk queue items returned."]),
     "",
     "Checklist:",
     ...checkedRows,
@@ -1189,6 +1339,145 @@ function buildReviewSummaryText({
 
 function formatReviewDecision(decision: ReviewDecision): string {
   return REVIEW_DECISION_OPTIONS.find((option) => option.value === decision)?.label ?? "Reviewing";
+}
+
+function RecentReviewWorkbench({
+  entries,
+  currentTokenAddress,
+}: {
+  entries: readonly ReviewWorkbenchEntry[];
+  currentTokenAddress: Address | null;
+}) {
+  const visibleEntries = entries.slice(0, 5);
+
+  return (
+    <div className="rounded-lg border border-pulse-border/60 bg-[#0a1016] p-3">
+      <div className="flex items-center justify-between gap-3">
+        <p className="text-sm font-semibold text-pulse-text">Recent Reviews</p>
+        <span className="text-xs text-pulse-muted">{entries.length.toLocaleString("en-US")} saved</span>
+      </div>
+      <div className="mt-3 grid gap-2">
+        {visibleEntries.length ? (
+          visibleEntries.map((entry) => {
+            const active = currentTokenAddress?.toLowerCase() === entry.tokenAddress.toLowerCase();
+
+            return (
+              <a
+                key={entry.tokenAddress}
+                href={entry.reportPath}
+                className={`rounded-lg border px-3 py-2 transition ${
+                  active
+                    ? "border-pulse-green/45 bg-pulse-green/10"
+                    : "border-pulse-border/65 bg-[#070b10] hover:border-pulse-green/35"
+                }`}
+              >
+                <span className="flex items-center justify-between gap-3">
+                  <span className="min-w-0 truncate text-sm font-semibold text-pulse-text">
+                    {entry.tokenLabel}
+                  </span>
+                  <span className="rounded-full border border-pulse-border/70 px-2 py-1 text-xs text-pulse-muted">
+                    {formatReviewDecision(entry.decision)}
+                  </span>
+                </span>
+                <span className="mt-2 block text-xs leading-5 text-pulse-muted">
+                  {shortenAddress(entry.tokenAddress, 5)} - {entry.verdictLabel} - {entry.checkedCount}/{entry.checklistCount} checked
+                </span>
+                <span className="mt-1 block text-xs leading-5 text-pulse-muted">
+                  {entry.criticalCount} critical, {entry.warningCount} warning - {formatReviewTime(entry.lastScannedAt)}
+                </span>
+              </a>
+            );
+          })
+        ) : (
+          <p className="rounded-lg border border-pulse-border/65 bg-[#070b10] px-3 py-2 text-xs leading-5 text-pulse-muted">
+            Reviewed tokens will appear here after a scan creates a local draft.
+          </p>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function parseReviewWorkbench(value: string | null): ReviewWorkbenchEntry[] {
+  if (!value) return [];
+
+  try {
+    const parsed = JSON.parse(value) as { entries?: unknown };
+    if (!Array.isArray(parsed.entries)) return [];
+
+    return parsed.entries
+      .map((entry) => parseReviewWorkbenchEntry(entry))
+      .filter((entry): entry is ReviewWorkbenchEntry => entry !== null)
+      .slice(0, 12);
+  } catch {
+    return [];
+  }
+}
+
+function parseReviewWorkbenchEntry(value: unknown): ReviewWorkbenchEntry | null {
+  if (!value || typeof value !== "object") return null;
+  const entry = value as Partial<ReviewWorkbenchEntry>;
+  const tokenAddress = normalizeTokenChairAddress(entry.tokenAddress);
+  if (!tokenAddress) return null;
+
+  return {
+    tokenAddress,
+    tokenLabel: typeof entry.tokenLabel === "string" ? entry.tokenLabel : shortenAddress(tokenAddress, 5),
+    verdictLabel: typeof entry.verdictLabel === "string" ? entry.verdictLabel : "Not reviewed",
+    decision: isReviewDecision(entry.decision) ? entry.decision : "reviewing",
+    notes: typeof entry.notes === "string" ? entry.notes : "",
+    checkedCount: Number.isFinite(entry.checkedCount) ? Number(entry.checkedCount) : 0,
+    checklistCount: Number.isFinite(entry.checklistCount) ? Number(entry.checklistCount) : 0,
+    criticalCount: Number.isFinite(entry.criticalCount) ? Number(entry.criticalCount) : 0,
+    warningCount: Number.isFinite(entry.warningCount) ? Number(entry.warningCount) : 0,
+    lastScannedAt: typeof entry.lastScannedAt === "string" ? entry.lastScannedAt : new Date(0).toISOString(),
+    reportPath: typeof entry.reportPath === "string" ? entry.reportPath : buildTokenChairSnifferUrl(tokenAddress),
+  };
+}
+
+function upsertReviewWorkbenchEntry(
+  entries: readonly ReviewWorkbenchEntry[],
+  entry: ReviewWorkbenchEntry,
+): ReviewWorkbenchEntry[] {
+  const normalized = entry.tokenAddress.toLowerCase();
+  return [
+    entry,
+    ...entries.filter((item) => item.tokenAddress.toLowerCase() !== normalized),
+  ].slice(0, 12);
+}
+
+function isReviewDecision(value: unknown): value is ReviewDecision {
+  return REVIEW_DECISION_OPTIONS.some((option) => option.value === value);
+}
+
+function formatReviewTime(value: string): string {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "time unknown";
+
+  return date.toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+  });
+}
+
+function riskSeverityLabel(severity: TokenChairRiskSeverity): string {
+  if (severity === "critical") return "Critical";
+  if (severity === "warning") return "Warning";
+  return "Info";
+}
+
+function riskSeverityBadgeClass(severity: TokenChairRiskSeverity): string {
+  if (severity === "critical") return "border-rose-400/45 bg-rose-400/10 text-rose-200";
+  if (severity === "warning") return "border-amber-300/45 bg-amber-300/10 text-amber-100";
+  return "border-pulse-cyan/35 bg-pulse-cyan/10 text-pulse-cyan";
+}
+
+function riskItemBorderClass(severity: TokenChairRiskSeverity): string {
+  if (severity === "critical") return "border-rose-400/35";
+  if (severity === "warning") return "border-amber-300/30";
+  return "border-pulse-border/60";
 }
 
 function buildReportRiskRows({

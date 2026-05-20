@@ -33,10 +33,12 @@ These match the in-app sample presets:
 $html = npx.cmd vercel curl "$preview/app/token-chair-sniffer"
 $html -match "Token Chair Sniffer"
 $html -match "Scan Report"
+$html -match "Must Review Before Touching"
 $html -match "Evidence Checklist"
 $html -match "Review Before Buying"
 $html -match "Copy report link"
 $html -match "Copy review"
+$html -match "Recent Reviews"
 ```
 
 All checks should return `True`.
@@ -102,10 +104,13 @@ In an authenticated browser session, check:
 
 - Sample-token preset buttons run scans and update the URL.
 - Scan Report appears before raw detail panels.
+- Must Review Before Touching shows prioritized critical/warning/info review items with Evidence, Why, and Review copy.
 - Top Review Items are readable and do not overlap on mobile.
 - Evidence Checklist distinguishes returned, partial, unavailable, not-configured, and not-live rows.
 - Review Before Buying supports manual checklist toggles, decision state, notes, and Copy review.
 - Reloading the same token preserves the local review draft in the browser.
+- Recent Reviews stores the token, verdict, manual decision, checklist progress, risk counts, and timestamp locally.
+- Copy review includes top risk queue items, checklist state, decision, notes, report link, and timestamp.
 - Copy report link writes a preview-local deep link.
 
 ## Guardrails
@@ -113,5 +118,6 @@ In an authenticated browser session, check:
 - Do not merge this feature to `main` from QA alone.
 - Do not promote a preview to production.
 - Do not add language that says a token is safe, certified, guaranteed, or not a scam.
+- Do not make the risk queue a trading recommendation; it is a prioritized manual-review queue only.
 - Do not claim honeypot simulation or full bytecode review is live.
 - Keep Token Chair read-only: no wallet connection, signatures, writes, relayers, or server wallets.
