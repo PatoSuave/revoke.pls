@@ -7,10 +7,10 @@ merge to `main`.
 ## Branch And Preview
 
 - Branch: `feature/permit2-hybrid-scanner-hardening`
-- Code checkpoint under test: `c1e1d9a Add scanner risk signal filters`
+- Code checkpoint under test: `d86bce1 Document Permit2 hybrid QA gates`
 - Preview alias: `https://revoke-pls-squikyus-8256-squikyus-8256s-projects.vercel.app`
-- Unique Vercel preview URL: record from the final session closeout after the
-  docs checkpoint deploys.
+- Unique Vercel preview URL:
+  `https://revoke-cztag2i01-squikyus-8256s-projects.vercel.app`
 - Production URL: not used for this branch QA pass.
 - Main merge status: not merged.
 
@@ -82,9 +82,19 @@ the automated preview smoke:
       the allowance or NFT approval is gone.
 - [ ] Arbitrum and Optimism batch/global revoke remain unavailable.
 
+## Burner Wallet Confirmation
+
+- Status: user-confirmed burner-wallet test passed on the Vercel preview.
+- Confirmation date: 2026-05-20.
+- Evidence level: manual smoke confirmation from a low-risk wallet.
+- Remaining detail gap: the exact chain, token standard, rejection path,
+  wrong-chain path, and post-revoke explorer transaction were not separately
+  recorded in this file.
+
 ## Known Gaps Before Main
 
-- Manual wallet QA is still required after the Vercel preview is deployed.
+- Burner-wallet smoke passed, but detailed chain-by-chain wallet QA evidence is
+  still recommended before production merge.
 - This file records branch QA only; it does not claim an external security
   audit.
 - Do not merge or promote to production until the unchecked wallet-side items
