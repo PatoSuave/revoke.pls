@@ -27,6 +27,7 @@ const TOKEN = getAddress("0xcae394005c9c4c309621c53d53db9ceb701fc8d8");
 const QUOTE = getAddress("0xA1077a294dDE1B09bB078844df40758a5D0f9a27");
 const PAIR = getAddress("0x165C3410fC91EF562C50559f7d2289fEbed552d9");
 const PULSEX_ROUTER_V1 = getAddress("0x98bf93ebf5c380C0e6Ae8e192A7e2AE08edAcc02");
+const PULSELAUNCH_LOCKER = getAddress("0xD6C5765295ac081cD513fF9C71586B59e83E0aA7");
 const DEPLOYER = getAddress("0x4444444444444444444444444444444444444444");
 const CREATED_AT = 1_700_000_000_000;
 
@@ -81,6 +82,7 @@ function contractWithLpHolder(overrides: {
   lpPercent?: number | null;
   lpIsContract?: boolean | null;
   burnDeadPercent?: number | null;
+  lpLocker?: TokenChairContractData["lpLocker"];
 } = {}): TokenChairContractData {
   const lpAddress = overrides.lpAddress ?? DEPLOYER;
   const lpPercent = overrides.lpPercent ?? 100;
@@ -120,6 +122,7 @@ function contractWithLpHolder(overrides: {
       warnings: [],
       errors: [],
     },
+    lpLocker: overrides.lpLocker,
     holders: {
       status: "success",
       token: {
@@ -246,6 +249,11 @@ describe("Token Chair Sniffer helpers", () => {
     expect(knownSpender?.detail).toContain("not a risk rating");
     expect(knownSpender?.sourceLabel).toBe("Pulse Revoke registry");
     expect(knownSpender?.registryCategory).toBe("router");
+    const knownLocker = classifyTokenChairAddress(PULSELAUNCH_LOCKER);
+    expect(knownLocker?.kind).toBe("known-spender");
+    expect(knownLocker?.label).toBe("PulseLaunch Pro LP Locker");
+    expect(knownLocker?.registryCategory).toBe("locker");
+    expect(knownLocker?.detail).toContain("not a risk rating");
     const knownToken = classifyTokenChairAddress(QUOTE);
     expect(knownToken?.kind).toBe("known-token");
     expect(knownToken?.label).toBe("WPLS token");
@@ -660,6 +668,106 @@ describe("Token Chair Sniffer helpers", () => {
     expect(summary?.detail).toContain("known router contract");
     expect(summary?.detail).toContain("not proof of locked liquidity");
     expect(summary?.detail.toLowerCase()).not.toMatch(/\bsafe\b|guaranteed|certified/);
+  });
+
+  it("treats known locker LP holders as visible lock context without unlock-date claims", () => {
+    const summary = buildLpControlSummary({
+      contract: contractWithLpHolder({
+        lpAddress: PULSELAUNCH_LOCKER,
+        lpPercent: 88,
+        lpIsContract: true,
+      }),
+    });
+
+    expect(summary).toMatchObject({
+      value: "Known locker holds visible LP",
+      status: "checked",
+      holderLabel: "PulseLaunch Pro LP Locker",
+      holderAddressLabel: "0xD6C5...0aA7",
+      holderPercentLabel: "88%",
+      holderSourceLabel: "Pulse Revoke registry",
+    });
+    expect(summary?.evidenceRows).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          key: "largest-holder",
+          value: "88%",
+          status: "checked",
+        }),
+        expect.objectContaining({
+          key: "holder-context",
+          value: "PulseLaunch Pro LP Locker",
+          status: "checked",
+        }),
+        expect.objectContaining({
+          key: "formal-lock",
+          value: "Known locker holder",
+          status: "checked",
+        }),
+      ]),
+    );
+    expect(summary?.detail).toContain("known locker registry label");
+    expect(summary?.detail).toContain("has not read the lock position");
+    expect(summary?.detail.toLowerCase()).not.toMatch(/\bsafe\b|guaranteed|certified/);
+  });
+
+  it("summarizes readable active locker records when native locker reads return", () => {
+    const summary = buildLpControlSummary({
+      contract: contractWithLpHolder({
+        lpAddress: PULSELAUNCH_LOCKER,
+        lpPercent: 88,
+        lpIsContract: true,
+        lpLocker: {
+          status: "success",
+          lockerAddress: PULSELAUNCH_LOCKER,
+          lockerLabel: "PulseLaunch Pro LP Locker",
+          pairAddress: PAIR,
+          checkedLockCount: 3,
+          totalLocks: "3",
+          maxLocksReached: false,
+          matchedLocks: [],
+          activeLocks: [
+            {
+              lockId: "2",
+              tokenAddress: PAIR,
+              ownerAddress: DEPLOYER,
+              amountRaw: "88000",
+              unlockTime: "1900000000",
+              unlockDateIso: "2030-03-17T17:46:40.000Z",
+              withdrawn: false,
+              isLocked: true,
+              lpSupplyPercent: 88,
+            },
+          ],
+          withdrawableLocks: [],
+          lockedAmountRaw: "88000",
+          lockedPercent: 88,
+          nextUnlockTime: "1900000000",
+          nextUnlockDateIso: "2030-03-17T17:46:40.000Z",
+          ownerAddresses: [DEPLOYER],
+          warnings: [],
+          errors: [],
+        },
+      }),
+    });
+
+    expect(summary).toMatchObject({
+      value: "Readable LP lock found",
+      status: "checked",
+      lockerStatusLabel: "Active lock found",
+      lockerUnlockLabel: "Mar 17, 2030",
+    });
+    expect(summary?.evidenceRows).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          key: "formal-lock",
+          value: "Lock record found",
+          status: "checked",
+        }),
+      ]),
+    );
+    expect(summary?.detail).toContain("88% of LP supply");
+    expect(summary?.detail).toContain("Next unlock: Mar 17, 2030");
   });
 
   it("shows non-dominant LP holders without escalating to warnings", () => {

@@ -212,6 +212,44 @@ export interface TokenChairHolderData {
   errors: string[];
 }
 
+export type TokenChairLpLockerStatus =
+  | "not-applicable"
+  | "success"
+  | "partial"
+  | "unable-to-verify";
+
+export interface TokenChairLpLockRecord {
+  lockId: string;
+  tokenAddress: Address;
+  ownerAddress: Address;
+  amountRaw: string;
+  unlockTime: string;
+  unlockDateIso: string | null;
+  withdrawn: boolean;
+  isLocked: boolean;
+  lpSupplyPercent: number | null;
+}
+
+export interface TokenChairLpLockerData {
+  status: TokenChairLpLockerStatus;
+  lockerAddress: Address | null;
+  lockerLabel: string | null;
+  pairAddress: Address | null;
+  checkedLockCount: number;
+  totalLocks: string | null;
+  maxLocksReached: boolean;
+  matchedLocks: TokenChairLpLockRecord[];
+  activeLocks: TokenChairLpLockRecord[];
+  withdrawableLocks: TokenChairLpLockRecord[];
+  lockedAmountRaw: string | null;
+  lockedPercent: number | null;
+  nextUnlockTime: string | null;
+  nextUnlockDateIso: string | null;
+  ownerAddresses: Address[];
+  warnings: string[];
+  errors: string[];
+}
+
 export interface TokenChairProxySignal {
   detected: boolean | null;
   implementationAddress: Address | null;
@@ -337,6 +375,7 @@ export interface TokenChairContractData {
   eventHistory?: TokenChairEventHistorySignal;
   explorer: TokenChairExplorerData | null;
   holders: TokenChairHolderData | null;
+  lpLocker?: TokenChairLpLockerData | null;
   warnings: string[];
   errors: string[];
 }
@@ -409,6 +448,8 @@ export interface TokenChairLpControlSummary extends SniffSignalRow {
   burnDeadPercentLabel: string;
   sampledRowsLabel: string;
   holderSourceLabel: string;
+  lockerStatusLabel: string;
+  lockerUnlockLabel: string;
   evidenceRows: TokenChairLpControlEvidenceRow[];
 }
 
@@ -692,11 +733,15 @@ export function classifyTokenChairAddress(
 
   const knownSpender = getSpenderMetadataEntry(PULSECHAIN_CHAIN_ID, normalized);
   if (knownSpender) {
+    const categoryLabel =
+      knownSpender.category === "locker"
+        ? "locker"
+        : `${knownSpender.protocol} ${knownSpender.category}`;
     return {
       ...base,
       kind: "known-spender",
       label: knownSpender.label,
-      detail: `Known ${knownSpender.protocol} ${knownSpender.category} entry in the Pulse Revoke registry. This label is context only, not a risk rating.`,
+      detail: `Known ${categoryLabel} entry in the Pulse Revoke registry. This label is context only, not a risk rating.`,
       sourceLabel: "Pulse Revoke registry",
       registryProtocol: knownSpender.protocol,
       registryCategory: knownSpender.category,
@@ -1280,12 +1325,16 @@ export function buildLpControlSummary(options: {
     ? shortenSignalAddress(lp.address)
     : "Not returned";
   const holderSourceLabel = classificationSourceLabel(classification);
+  const lpLocker = contract.lpLocker ?? null;
+  const lockerStatusLabel = lpLockerStatusLabel(lpLocker);
+  const lockerUnlockLabel = lpLockerUnlockLabel(lpLocker);
   const evidenceRows = buildLpControlEvidenceRows({
     classification,
     distribution,
     holderLabel,
     holderPercentLabel,
     lp,
+    lpLocker,
   });
   const base = {
     address: lp.address,
@@ -1296,6 +1345,8 @@ export function buildLpControlSummary(options: {
     burnDeadPercentLabel,
     sampledRowsLabel,
     holderSourceLabel,
+    lockerStatusLabel,
+    lockerUnlockLabel,
     evidenceRows,
   };
 
@@ -1318,6 +1369,41 @@ export function buildLpControlSummary(options: {
       status: "checked",
       detail:
         `Largest visible LP-token holder is ${holderPercentLabel} at ${warningHolderLabel(classification)}. This is useful context, but it is not proof of a formal liquidity lock.`,
+    };
+  }
+
+  if (isKnownLockerClassification(classification)) {
+    if (lpLocker?.activeLocks.length) {
+      return {
+        ...base,
+        label: "LP control",
+        value: "Readable LP lock found",
+        status: "checked",
+        detail: lpLockerSummaryDetail(lpLocker),
+      };
+    }
+
+    if (lpLocker?.withdrawableLocks.length) {
+      return {
+        ...base,
+        label: "LP control",
+        value: "Locker position withdrawable",
+        status: "warning",
+        detail: lpLockerSummaryDetail(lpLocker),
+      };
+    }
+
+    return {
+      ...base,
+      label: "LP control",
+      value: "Known locker holds visible LP",
+      status: lpLocker?.status === "unable-to-verify" ? "unable-to-verify" : "checked",
+      detail:
+        !lpLocker
+          ? `Largest visible LP-token holder is ${holderPercentLabel} at ${classification.label}. Token Chair matched the holder to a known locker registry label, but it has not read the lock position, owner, or unlock date yet.`
+          : lpLocker.status === "unable-to-verify"
+          ? `Largest visible LP-token holder is ${holderPercentLabel} at ${classification.label}. Token Chair matched a known locker label, but the locker position read did not return usable data.`
+          : `Largest visible LP-token holder is ${holderPercentLabel} at ${classification.label}. Token Chair matched the holder to a known locker registry label, but no active readable lock record was found in the bounded scan.`,
     };
   }
 
@@ -1396,12 +1482,14 @@ function buildLpControlEvidenceRows({
   holderLabel,
   holderPercentLabel,
   lp,
+  lpLocker,
 }: {
   classification: TokenChairAddressClassification | null;
   distribution: TokenChairHolderDistribution | null;
   holderLabel: string;
   holderPercentLabel: string;
   lp: TokenChairHolderData["lp"];
+  lpLocker: TokenChairLpLockerData | null;
 }): TokenChairLpControlEvidenceRow[] {
   const dominant = lp.percent !== null && lp.percent >= 50;
   const burnLike = isBurnLikeClassification(classification);
@@ -1416,7 +1504,7 @@ function buildLpControlEvidenceRows({
       status:
         lp.percent === null
           ? "unable-to-verify"
-          : dominant && !burnLike
+          : dominant && !burnLike && !isKnownLockerClassification(classification)
             ? "warning"
             : "checked",
       detail:
@@ -1457,11 +1545,10 @@ function buildLpControlEvidenceRows({
     },
     {
       key: "formal-lock",
-      label: "Formal lock proof",
-      value: "Not verified",
-      status: "unable-to-verify",
-      detail:
-        "Token Chair does not yet read locker contracts, unlock dates, or vesting positions. Treat LP-holder and burn/dead rows as visible context only.",
+      label: "Locker evidence",
+      value: lpLockerEvidenceValue(lpLocker, classification),
+      status: lpLockerEvidenceStatus(lpLocker, classification),
+      detail: lpLockerEvidenceDetail(lpLocker, classification, holderLabel),
     },
   ];
 }
@@ -1472,8 +1559,102 @@ function lpHolderContextStatus(
 ): SniffRowStatus {
   if (!classification) return "unable-to-verify";
   if (isBurnLikeClassification(classification)) return "checked";
+  if (isKnownLockerClassification(classification)) return "checked";
   if (!dominant) return "checked";
   return "warning";
+}
+
+function lpLockerStatusLabel(lpLocker: TokenChairLpLockerData | null): string {
+  if (!lpLocker || lpLocker.status === "not-applicable") return "Not checked";
+  if (lpLocker.activeLocks.length) return "Active lock found";
+  if (lpLocker.withdrawableLocks.length) return "Unlockable";
+  if (lpLocker.matchedLocks.length) return "No active lock";
+  if (lpLocker.status === "unable-to-verify") return "Unable to verify";
+  return "No readable lock";
+}
+
+function lpLockerUnlockLabel(lpLocker: TokenChairLpLockerData | null): string {
+  if (!lpLocker || lpLocker.status === "not-applicable") return "Not checked";
+  return formatLockerUnlockDate(lpLocker.nextUnlockDateIso) ?? "Not returned";
+}
+
+function lpLockerEvidenceValue(
+  lpLocker: TokenChairLpLockerData | null,
+  classification: TokenChairAddressClassification | null,
+): string {
+  if (lpLocker?.activeLocks.length) return "Lock record found";
+  if (lpLocker?.withdrawableLocks.length) return "Unlockable record";
+  if (lpLocker?.matchedLocks.length) return "No active lock";
+  if (lpLocker?.status === "unable-to-verify") return "Unable to verify";
+  if (isKnownLockerClassification(classification)) return "Known locker holder";
+  return "Not verified";
+}
+
+function lpLockerEvidenceStatus(
+  lpLocker: TokenChairLpLockerData | null,
+  classification: TokenChairAddressClassification | null,
+): SniffRowStatus {
+  if (lpLocker?.activeLocks.length) return "checked";
+  if (lpLocker?.withdrawableLocks.length) return "warning";
+  if (lpLocker?.matchedLocks.length) return "warning";
+  if (lpLocker?.status === "unable-to-verify") return "unable-to-verify";
+  if (isKnownLockerClassification(classification)) return "checked";
+  return "unable-to-verify";
+}
+
+function lpLockerEvidenceDetail(
+  lpLocker: TokenChairLpLockerData | null,
+  classification: TokenChairAddressClassification | null,
+  holderLabel: string,
+): string {
+  if (lpLocker?.activeLocks.length) return lpLockerSummaryDetail(lpLocker);
+  if (lpLocker?.withdrawableLocks.length) return lpLockerSummaryDetail(lpLocker);
+  if (lpLocker?.matchedLocks.length) {
+    return `${holderLabel} has readable lock records for the selected pair, but none are currently active. Review withdrawn and unlockable records before treating the LP as locked.`;
+  }
+  if (lpLocker?.status === "unable-to-verify") {
+    return lpLocker.errors[0] ??
+      "Token Chair matched a known locker holder, but the locker position read failed.";
+  }
+  if (isKnownLockerClassification(classification)) {
+    return `${holderLabel} is a known locker label from the Pulse Revoke registry. Token Chair has not found a readable active lock record yet.`;
+  }
+  return "Token Chair has not matched a known locker holder or read locker contracts, unlock dates, or vesting positions. Treat LP-holder and burn/dead rows as visible context only.";
+}
+
+function lpLockerSummaryDetail(lpLocker: TokenChairLpLockerData): string {
+  const percent = lpLocker.lockedPercent === null
+    ? "an unknown share"
+    : formatSignalPercent(lpLocker.lockedPercent);
+  const amount = lpLocker.lockedAmountRaw ?? "an unknown raw amount";
+  const unlock = formatLockerUnlockDate(lpLocker.nextUnlockDateIso);
+  const ownerCount = lpLocker.ownerAddresses.length;
+  const ownerCopy = ownerCount === 1
+    ? `owner ${shortenSignalAddress(lpLocker.ownerAddresses[0]!)}`
+    : `${ownerCount.toLocaleString("en-US")} owners`;
+
+  if (lpLocker.activeLocks.length) {
+    const unlockCopy = unlock ? ` Next unlock: ${unlock}.` : "";
+    return `Token Chair read ${lpLocker.activeLocks.length.toLocaleString("en-US")} active lock record${lpLocker.activeLocks.length === 1 ? "" : "s"} for the selected pair at ${lpLocker.lockerLabel ?? "the matched locker"}, totaling ${percent} of LP supply (${amount} raw LP tokens) across ${ownerCopy}.${unlockCopy}`;
+  }
+
+  if (lpLocker.withdrawableLocks.length) {
+    return `Token Chair found readable lock records for the selected pair at ${lpLocker.lockerLabel ?? "the matched locker"}, but the visible records are unlockable or expired rather than actively locked.`;
+  }
+
+  return `Token Chair checked ${lpLocker.checkedLockCount.toLocaleString("en-US")} locker record${lpLocker.checkedLockCount === 1 ? "" : "s"} and did not find an active readable lock for the selected pair.`;
+}
+
+function formatLockerUnlockDate(value: string | null): string | null {
+  if (!value) return null;
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return null;
+  return new Intl.DateTimeFormat("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+    timeZone: "UTC",
+  }).format(date);
 }
 
 export function withTokenChairDextoolsData(
@@ -1528,6 +1709,26 @@ export function withTokenChairHolderData(
   return {
     ...withHolders,
     verdict: getTokenChairVerdict(withHolders),
+  };
+}
+
+export function withTokenChairLpLockerData(
+  response: TokenChairApiResponse,
+  lpLocker: TokenChairLpLockerData,
+): TokenChairApiResponse {
+  const contract = response.contract
+    ? { ...response.contract, lpLocker }
+    : null;
+  const withLpLocker: Omit<TokenChairApiResponse, "verdict"> = {
+    ...response,
+    contract,
+    warnings: [...response.warnings, ...lpLocker.warnings],
+    errors: [...response.errors, ...lpLocker.errors],
+  };
+
+  return {
+    ...withLpLocker,
+    verdict: getTokenChairVerdict(withLpLocker),
   };
 }
 
@@ -2075,6 +2276,32 @@ function getVisibleContractWarnings(
       label: "LP holder unavailable",
       message:
         "PulseScan did not return LP holder concentration for the selected pair.",
+    });
+  }
+
+  if (contract.lpLocker?.withdrawableLocks.length) {
+    warnings.push({
+      severity: "warning",
+      label: "Locker unlockable",
+      message:
+        "A known locker returned readable records for the selected pair, but at least one visible record is unlockable or expired.",
+    });
+  } else if (
+    contract.lpLocker?.status === "partial" &&
+    contract.lpLocker.matchedLocks.length === 0
+  ) {
+    warnings.push({
+      severity: "warning",
+      label: "Locker position incomplete",
+      message:
+        "A known locker holder was matched, but no selected-pair lock record was found in the bounded locker scan.",
+    });
+  } else if (contract.lpLocker?.status === "unable-to-verify") {
+    warnings.push({
+      severity: "warning",
+      label: "Locker read incomplete",
+      message:
+        "A known locker holder was matched, but the native locker position read could not be completed.",
     });
   }
 
@@ -2638,6 +2865,9 @@ function buildConcentrationWarningMessage(
 
   if (classification?.kind === "known-spender") {
     const category = classification.registryCategory ?? "protocol";
+    if (category === "locker") {
+      return `PulseScan shows high visible LP-token holder concentration${percentCopy} at a known locker contract from the Pulse Revoke registry. Token Chair has not read the lock position, owner, or unlock date yet.`;
+    }
     return `PulseScan shows high visible LP-token holder concentration${percentCopy} at a known ${category} contract from the Pulse Revoke registry. Review that holder before treating the LP as locked.`;
   }
 
@@ -2658,6 +2888,9 @@ function lpControlWarningValue(
   if (classification?.kind === "owner") return "Owner controls visible LP";
   if (classification?.kind === "deployer") return "Deployer controls visible LP";
   if (classification?.kind === "known-spender") {
+    if (classification.registryCategory === "locker") {
+      return "Known locker holds visible LP";
+    }
     return "Known protocol holds visible LP";
   }
   if (classification?.kind === "known-token") {
@@ -2694,6 +2927,9 @@ function lpControlWarningDetail(
     const protocol = classification.registryProtocol
       ? ` for ${classification.registryProtocol}`
       : "";
+    if (category === "locker") {
+      return `PulseScan shows a known locker contract${protocol}${address} holding ${percent} of visible LP tokens. This is visible locker context, but Token Chair has not read the lock position, owner, or unlock date yet.`;
+    }
     return `PulseScan shows a known ${category} contract${protocol}${address} holding ${percent} of visible LP tokens. The Pulse Revoke registry label can explain the holder, but it is not proof of locked liquidity. Review the holder contract and position before interacting.`;
   }
 
@@ -2731,6 +2967,9 @@ function concentrationValue(
       ? "Burn/dead LP holder"
       : "Burn/dead token holder";
   }
+  if (kind === "lp-holder" && isKnownLockerClassification(classification)) {
+    return "Known locker LP holder";
+  }
   if (signal.percent >= (kind === "top-holder" ? 20 : 50)) {
     return "High visible concentration";
   }
@@ -2760,6 +2999,9 @@ function concentrationDetail(
 
   if (kind === "lp-holder" && classification?.kind === "known-spender") {
     const category = classification.registryCategory ?? "protocol";
+    if (category === "locker") {
+      return `${prefix} is ${percent} at ${classification.label}, a known locker from the Pulse Revoke registry. This is visible locker context; Token Chair has not read the lock position, owner, or unlock date yet.`;
+    }
     return `${prefix} is ${percent} at ${classification.label}, a known ${category} contract from the Pulse Revoke registry. This explains the holder context but is not proof of locked liquidity.`;
   }
 
@@ -2778,7 +3020,9 @@ function isConcentrationWarning(
   if (signal.percent === null) return false;
   const threshold = kind === "top-holder" ? 20 : 50;
   if (signal.percent < threshold) return false;
-  return !isBurnLikeClassification(classifyConcentrationSignal(signal, contract));
+  const classification = classifyConcentrationSignal(signal, contract);
+  return !isBurnLikeClassification(classification) &&
+    !isKnownLockerClassification(classification);
 }
 
 function getMechanicsWarnings(
@@ -2868,6 +3112,7 @@ function warningHolderLabel(
   if (classification.kind === "known-token") return "a known token contract";
   if (classification.kind === "known-spender") {
     const category = classification.registryCategory ?? "protocol";
+    if (category === "locker") return "a known locker contract";
     return `a known ${category} contract`;
   }
   if (classification.kind === "contract") return "a contract address";
@@ -2883,6 +3128,18 @@ function isBurnLikeClassification(
   return (
     classification?.kind === "zero-address" ||
     classification?.kind === "burn-address"
+  );
+}
+
+function isKnownLockerClassification(
+  classification: TokenChairAddressClassification | null,
+): classification is TokenChairAddressClassification & {
+  kind: "known-spender";
+  registryCategory: "locker";
+} {
+  return (
+    classification?.kind === "known-spender" &&
+    classification.registryCategory === "locker"
   );
 }
 

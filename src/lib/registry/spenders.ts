@@ -22,6 +22,8 @@ export const LIBERTYSWAP_LEGACY_NOTE =
  * on a bridge deserve extra caution"). Keep this union small and factual —
  * if you are not sure, use `"unknown"`.
  *
+ *   locker    - LP/token locking contract
+ *
  *   router    — DEX router / swap aggregator entry contract
  *   dex       — DEX pair, LBP, or order-book contract
  *   bridge    — cross-chain bridge contract
@@ -36,6 +38,7 @@ export type SpenderCategory =
   | "bridge"
   | "staking"
   | "farm"
+  | "locker"
   | "permit2"
   | "unknown";
 
@@ -436,6 +439,25 @@ export const LIBERTYSWAP_SPENDER_METADATA_REGISTRY: readonly SpenderEntry[] = [
   ...LIBERTYSWAP_ETHEREUM_SPENDER_METADATA_REGISTRY,
 ] as const;
 
+const PULSELAUNCH_SOURCE_URL = "https://pulselaunch.pro/";
+const PULSELAUNCH_PULSECHAIN_SPENDER_METADATA_REGISTRY: readonly SpenderEntry[] = [
+  {
+    chainId: PULSECHAIN_CHAIN_ID,
+    address: "0xD6C5765295ac081cD513fF9C71586B59e83E0aA7",
+    label: "PulseLaunch Pro LP Locker",
+    protocol: "PulseLaunch Pro",
+    protocolSlug: "pulselaunch-pro",
+    category: "locker",
+    isTrusted: false,
+    url: PULSELAUNCH_SOURCE_URL,
+    notes:
+      "Metadata-only LP locker label from the PulseLaunch Pro app. This does not prove a specific token's LP position or unlock date.",
+    verificationMethod:
+      "Matched the LP Locker address published in the PulseLaunch Pro app FAQ/settings.",
+    source: PULSELAUNCH_SOURCE_URL,
+  },
+] as const;
+
 /**
  * Label/enrichment registry. Metadata-only entries here do not expand the
  * registry-constrained scanner target list returned by `getSpendersForChain`.
@@ -443,6 +465,7 @@ export const LIBERTYSWAP_SPENDER_METADATA_REGISTRY: readonly SpenderEntry[] = [
 export const SPENDER_METADATA_REGISTRY: readonly SpenderEntry[] = [
   ...SPENDER_REGISTRY,
   ...LIBERTYSWAP_SPENDER_METADATA_REGISTRY,
+  ...PULSELAUNCH_PULSECHAIN_SPENDER_METADATA_REGISTRY,
 ] as const;
 
 // Dev-time sanity checks. Scoped per chain so that the same address appearing
@@ -470,6 +493,10 @@ validateAddresses(
 validateAddresses(
   LIBERTYSWAP_ETHEREUM_SPENDER_METADATA_REGISTRY,
   "LIBERTYSWAP_SPENDER_METADATA_REGISTRY[ethereum]",
+);
+validateAddresses(
+  PULSELAUNCH_PULSECHAIN_SPENDER_METADATA_REGISTRY,
+  "PULSELAUNCH_SPENDER_METADATA_REGISTRY[pulsechain]",
 );
 for (const s of SPENDER_METADATA_REGISTRY) {
   validateRequiredStrings(

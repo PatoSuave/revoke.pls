@@ -30,6 +30,8 @@ Implemented in this MVP:
 - Bounded multi-page sampled holder-distribution buckets for top 1, top 5, top 10, selected pair balance, and zero/dead-address balances when PulseScan returns enough holder rows
 - LP-token holder-control buckets for the selected pair when PulseScan indexes that pair contract as a token
 - Conservative LP-control interpretation for dominant deployer, owner, wallet, unknown contract, known registry protocol contract, burn/dead, or non-dominant visible LP holders
+- Metadata-only known-locker context for dominant LP holders that match a curated PulseChain locker label
+- Bounded native PulseLaunch Pro locker reads for matched LP holders, including selected-pair lock records, raw locked amount, lock owner address, active/unlockable status, and next unlock date when readable
 - Vercel-oriented scan scheduling that starts holder and selected-pair reads as soon as market pair selection is available, while contract and explorer reads continue in parallel
 - Native selected-pair contract reads for `token0()`, `token1()`, `getReserves()`, and LP `totalSupply()`
 - Address context labels for zero/burn addresses, token contract, selected pair, owner, deployer, proxy admin, proxy implementation, public admin-getter addresses, known registry tokens/spenders, contracts, and wallets where visible metadata supports it
@@ -175,7 +177,11 @@ When PulseScan does index the selected pair as a token, the Holder Distribution 
 
 This is useful for spotting whether removable liquidity appears concentrated in one wallet, owner, deployer, contract, or burn/dead address. Burn/dead LP-token balances are still context only; they are not proof of a formal liquidity lock.
 
-The LP Token Control panel also summarizes the largest visible LP holder, context source, sampled burn/dead LP percentage, and an LP evidence checklist. The checklist separates largest-holder concentration, holder classification, burn/dead sample context, and formal-lock status so the UI can show what is visible without overstating what is proved. Dominant owner, deployer, wallet, unknown contract, token-contract, pair-contract, or unknown LP holders are warning context. Dominant known registry protocol contracts, such as routers, bridges, farms, or staking contracts, get distinct known-protocol wording so users can understand what type of contract appears to hold the LP tokens. They still remain warning context unless separate burn/dead or formal lock evidence exists. Dominant zero/dead LP holders and major sampled burn/dead balances are presented as burn/dead context, not as a formal lock certificate.
+The LP Token Control panel also summarizes the largest visible LP holder, context source, sampled burn/dead LP percentage, locker status, next unlock date, and an LP evidence checklist. The checklist separates largest-holder concentration, holder classification, burn/dead sample context, and locker evidence so the UI can show what is visible without overstating what is proved. Dominant owner, deployer, wallet, unknown contract, token-contract, pair-contract, or unknown LP holders are warning context. Dominant known registry protocol contracts, such as routers, bridges, farms, or staking contracts, get distinct known-protocol wording so users can understand what type of contract appears to hold the LP tokens. They still remain warning context unless separate burn/dead or known-locker evidence exists. Dominant known locker contracts from the metadata registry are presented as visible locker context.
+
+For the PulseLaunch Pro LP Locker, Token Chair runs a bounded native read against the verified locker contract when that locker is the visible LP holder. It reads `totalLocks()` and then samples the most recent lock IDs through `getLockInfo(lockId)` to find records whose token address matches the selected pair. Returned fields include raw locked LP amount, lock owner, unlock time, withdrawn state, active lock state, locked percentage when LP total supply is available, and next unlock date. The scan is capped for response time; if the lock is outside the sampled window, the UI says the locker scan was capped rather than guessing. This is readable locker evidence only, not a certificate that liquidity cannot move through every possible mechanism.
+
+Dominant zero/dead LP holders and major sampled burn/dead balances are presented as burn/dead context, not as a formal lock certificate.
 
 These are visible holder signals only. They can be affected by explorer indexing, wrapped-token mechanics, staking contracts, bridges, protocol contracts, or holder data that changes after the scan.
 
@@ -191,7 +197,7 @@ Holder and LP cards classify the returned top address when possible:
 - proxy implementation
 - public admin getter address
 - known PulseChain registry token
-- known protocol spender/router/bridge/farm contract
+- known protocol spender/router/bridge/farm/locker contract
 - PulseScan contract
 - wallet
 - unknown address
@@ -294,7 +300,7 @@ Possible remaining scope:
 - expanded proxy detection
 - richer ABI/source analysis with severity tiers
 - richer holder concentration with known-contract tagging
-- richer LP concentration with native locker/unlock-date detection
+- broader LP concentration with additional locker protocols, event-assisted locker discovery, and deeper unlock-state checks
 
 Later phases:
 

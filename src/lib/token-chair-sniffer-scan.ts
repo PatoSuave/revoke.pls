@@ -5,6 +5,7 @@ import {
   withTokenChairDextoolsData,
   withTokenChairExplorerData,
   withTokenChairHolderData,
+  withTokenChairLpLockerData,
   withTokenChairPairContractData,
   type TokenChairApiResponse,
 } from "@/lib/token-chair-sniffer";
@@ -12,6 +13,7 @@ import { fetchTokenChairContractData } from "@/lib/token-chair-sniffer-contract"
 import { fetchDextoolsTokenChairData } from "@/lib/token-chair-sniffer-dextools";
 import { fetchTokenChairExplorerData } from "@/lib/token-chair-sniffer-explorer";
 import { fetchTokenChairHolderData } from "@/lib/token-chair-sniffer-holders";
+import { fetchTokenChairLpLockerData } from "@/lib/token-chair-sniffer-lockers";
 import { fetchTokenChairPairContractData } from "@/lib/token-chair-sniffer-pair";
 import { fetchDexScreenerTokenPairs } from "@/lib/token-chair-sniffer-server";
 
@@ -84,11 +86,22 @@ export async function fetchTokenChairScan(
       responseWithPairContract,
       dextoolsResult,
     );
-
-    return withTokenChairHolderData(
+    const responseWithHolders = withTokenChairHolderData(
       responseWithDextools,
       holderResult,
     );
+    const lpLockerResult = await fetchTokenChairLpLockerData(
+      holderResult.lp.pairAddress,
+      holderResult.lp.address,
+      pairContractResult?.totalSupplyRaw ?? holderResult.lp.totalSupplyRaw,
+      {
+        signal: controller.signal,
+      },
+    );
+
+    return lpLockerResult.status === "not-applicable"
+      ? responseWithHolders
+      : withTokenChairLpLockerData(responseWithHolders, lpLockerResult);
   } finally {
     clearTimeout(timeout);
   }

@@ -1771,13 +1771,15 @@ function LpControlInterpretation({
         </div>
         <SniffValueBadge row={summary} />
       </div>
-      <div className="mt-3 grid gap-2 sm:grid-cols-2 xl:grid-cols-6">
+      <div className="mt-3 grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
         <HolderMetric label="Top LP holder" value={summary.holderPercentLabel} />
         <HolderMetric label="Holder address" value={summary.holderAddressLabel} />
         <HolderMetric label="Holder type" value={summary.holderLabel} />
         <HolderMetric label="Context source" value={summary.holderSourceLabel} />
         <HolderMetric label="Burn/dead LP" value={summary.burnDeadPercentLabel} />
         <HolderMetric label="Sample" value={summary.sampledRowsLabel} />
+        <HolderMetric label="Locker status" value={summary.lockerStatusLabel} />
+        <HolderMetric label="Next unlock" value={summary.lockerUnlockLabel} />
       </div>
       <LpEvidenceRows rows={summary.evidenceRows} />
     </>
