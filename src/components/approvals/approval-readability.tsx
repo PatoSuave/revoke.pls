@@ -170,7 +170,7 @@ export function VerificationTechnicalExplainer() {
         </div>
       </dl>
       <p className="mt-2">
-        If these reads fail, Revoke.PLS keeps revoke disabled instead of
+        If these reads fail, Pulse Revoke keeps revoke disabled instead of
         guessing.
       </p>
     </div>

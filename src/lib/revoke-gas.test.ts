@@ -165,7 +165,7 @@ describe("revoke gas safety policy", () => {
 
   it("keeps the Ethereum gas warning and wallet-safety copy explicit", () => {
     expect(ETHEREUM_GAS_PAID_TO_NETWORK_COPY).toBe(
-      "Gas is paid to the Ethereum network, not to Revoke.PLS or the approved protocol.",
+      "Gas is paid to the Ethereum network, not to Pulse Revoke or the approved protocol.",
     );
     expect(WALLET_HIGHER_FEE_CANCEL_COPY).toBe(
       "If your wallet shows a much higher fee than this app estimates, cancel and try again later.",

@@ -1,10 +1,10 @@
 export const OFFICIAL_DOMAIN = "pulserevoke.com";
 
 export const ANTI_PHISHING_COPY =
-  "Official site: pulserevoke.com. Revoke.PLS will never ask for your seed phrase or private key. Avoid wallet links from DMs, Telegram, Discord, ads, or misspelled domains.";
+  "Official site: pulserevoke.com. Pulse Revoke will never ask for your seed phrase or private key. Avoid wallet links from DMs, Telegram, Discord, ads, or misspelled domains.";
 
 export const DATA_MINIMIZATION_COPY =
-  "Revoke.PLS does not maintain an app-level database of scanned wallets or approval history. Scans use public chain data and configured RPC, explorer, API, wallet, browser, hosting, and network providers may still process normal request metadata.";
+  "Pulse Revoke does not maintain an app-level database of scanned wallets or approval history. Scans use public chain data and configured RPC, explorer, API, wallet, browser, hosting, and network providers may still process normal request metadata.";
 
 export const SECURITY_CAN_DO = [
   "Scan public approval history for the supported EVM networks currently wired into the app.",

@@ -3,7 +3,7 @@
 Use this checklist before production releases and when testing real wallet
 states. Keep testing low-risk: use burner wallets, low-value assets, and small
 allowances wherever possible. Never enter a seed phrase or private key into
-Revoke.PLS or any linked page.
+Pulse Revoke or any linked page.
 
 ## Before Every Production Push
 
@@ -45,7 +45,7 @@ exposure.
 - [ ] Mobile viewport around `390px` wide has no horizontal overflow.
 - [ ] Header, footer, wallet button, and route navigation remain usable on
       desktop and mobile.
-- [ ] App copy still identifies Revoke.PLS / Pulse Revoke consistently and does
+- [ ] App copy still identifies Pulse Revoke consistently and does
       not show stale deployment or build artifacts.
 
 ## 2. Wallet Connection

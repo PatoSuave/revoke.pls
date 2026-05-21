@@ -89,7 +89,7 @@ describe("ERC-20 scanner result state", () => {
     ).toEqual({
       title:
         "Verification incomplete - current approval state could not be fully confirmed.",
-      body: "Revoke.PLS found approval history, but some live contract reads failed. Those rows stay disabled because the app could not confirm whether the approval is active right now. Try rescanning; if the message remains, the token or NFT contract may be nonstandard, temporarily unavailable, or failing live approval reads.",
+      body: "Pulse Revoke found approval history, but some live contract reads failed. Those rows stay disabled because the app could not confirm whether the approval is active right now. Try rescanning; if the message remains, the token or NFT contract may be nonstandard, temporarily unavailable, or failing live approval reads.",
       detail:
         "2 live reads failed - revoke unavailable until verification completes.",
     });
@@ -103,7 +103,7 @@ describe("ERC-20 scanner result state", () => {
     ).toEqual({
       title:
         "Verification incomplete - current approval state could not be fully confirmed.",
-      body: "Revoke.PLS found approval history, but discovery ended before every current approval state could be confirmed. Affected rows stay disabled because the app could not confirm whether the approval is active right now. Try rescanning; if the message remains, the explorer response may be capped or temporarily unavailable.",
+      body: "Pulse Revoke found approval history, but discovery ended before every current approval state could be confirmed. Affected rows stay disabled because the app could not confirm whether the approval is active right now. Try rescanning; if the message remains, the explorer response may be capped or temporarily unavailable.",
       detail:
         "ERC-20 discovery was truncated - revoke unavailable until verification completes.",
     });

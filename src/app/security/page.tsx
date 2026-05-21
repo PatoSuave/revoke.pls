@@ -18,7 +18,7 @@ import { absoluteUrl, siteConfig } from "@/lib/site";
 
 const title = "Security & Trust";
 const description =
-  "Official Revoke.PLS safety guidance, supported-chain status, wallet connection limits, revoke transaction expectations, and anti-phishing reminders.";
+  "Official Pulse Revoke safety guidance, supported-chain status, wallet connection limits, revoke transaction expectations, and anti-phishing reminders.";
 
 export const metadata: Metadata = {
   title,
@@ -75,7 +75,7 @@ function SecurityHero() {
             Verify the site, then verify every transaction.
           </h1>
           <p className="mt-5 text-base leading-7 text-pulse-muted sm:text-lg">
-            Revoke.PLS is intentionally narrow: it helps you review wallet
+            Pulse Revoke is intentionally narrow: it helps you review wallet
             approvals, understand what can still spend assets, and prepare
             revoke transactions that you must confirm in your own wallet.
           </p>
@@ -103,8 +103,8 @@ function CorePromises() {
   return (
     <section className="border-b border-pulse-border/60 bg-pulse-bg py-16 sm:py-20">
       <div className="mx-auto grid max-w-6xl gap-6 px-4 sm:px-6 lg:grid-cols-2">
-        <CopyPanel title="What Revoke.PLS can do" items={SECURITY_CAN_DO} />
-        <CopyPanel title="What Revoke.PLS cannot do" items={SECURITY_CANNOT_DO} />
+        <CopyPanel title="What Pulse Revoke can do" items={SECURITY_CAN_DO} />
+        <CopyPanel title="What Pulse Revoke cannot do" items={SECURITY_CANNOT_DO} />
       </div>
     </section>
   );
@@ -119,14 +119,14 @@ function ConnectionAndRevoke() {
             The official site is{" "}
             <span className="font-mono text-pulse-text">{OFFICIAL_DOMAIN}</span>.
             Bookmark it and be careful with links from DMs, Telegram, Discord,
-            fake ads, search ads, and misspelled domains. Revoke.PLS will never
+            fake ads, search ads, and misspelled domains. Pulse Revoke will never
             ask for a seed phrase or private key.
           </p>
         </InfoBlock>
         <InfoBlock title="What connect wallet means">
           <p>
             Connecting lets the app see your public address and current chain
-            through your wallet provider. It does not give Revoke.PLS custody
+            through your wallet provider. It does not give Pulse Revoke custody
             of funds, private keys, or permission to move assets. A write
             request appears only after you choose a revoke action.
           </p>
@@ -160,12 +160,12 @@ function VerificationSection() {
             Your wallet prompt is the final checkpoint.
           </h2>
           <p className="mt-4 text-sm leading-7 text-pulse-muted">
-            Revoke.PLS prepares a transaction, but your wallet decides what you
+            Pulse Revoke prepares a transaction, but your wallet decides what you
             actually sign. Cancel if the prompt shows a transfer, swap, bridge,
             unknown approval, unexpected function, or unreasonable fee.
           </p>
           <p className="mt-4 text-sm leading-7 text-pulse-muted">
-            Revoke.PLS does not add an app-level fee. Your wallet should show
+            Pulse Revoke does not add an app-level fee. Your wallet should show
             the network gas cost before confirmation, and you can reject the
             transaction if the cost or call data looks wrong.
           </p>
@@ -248,7 +248,7 @@ function AddressOnlySection() {
         </div>
         <div className="rounded-2xl border border-pulse-border bg-pulse-panel/65 p-6 text-sm leading-7 text-pulse-muted">
           <p>
-            Approval state is public blockchain data, so Revoke.PLS can scan a
+            Approval state is public blockchain data, so Pulse Revoke can scan a
             pasted EVM address without a wallet connection. That mode is useful
             for review, triage, and comparing chains before you expose a wallet
             connection to any site.
