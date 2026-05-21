@@ -1723,7 +1723,7 @@ function NftVerificationIncompleteState({
         Current NFT approval state could not be fully confirmed.
       </p>
       <p className="mt-2 max-w-2xl leading-6 text-pulse-muted">
-        Revoke.PLS found approval history, but some live contract reads failed
+        Pulse Revoke found approval history, but some live contract reads failed
         or discovery did not finish. NFT revoke actions stay disabled because
         the app could not confirm whether the approval is active right now.
       </p>
@@ -1776,7 +1776,7 @@ function VerificationIncompleteState({
       <p className="mt-2 max-w-2xl leading-6 text-pulse-muted">
         {discoveryTruncated
           ? "Discovery hit a per-wallet fetch cap before every current approval state could be confirmed."
-          : "Revoke.PLS found approval history, but some live contract reads failed."}{" "}
+          : "Pulse Revoke found approval history, but some live contract reads failed."}{" "}
         Revoke stays disabled because the app could not confirm whether the
         approval is active right now.
       </p>

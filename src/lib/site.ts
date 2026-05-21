@@ -139,7 +139,7 @@ export const siteConfig = {
     basescan: "https://basescan.org",
     pulsex: "https://pulsex.com",
     walletConnect: "https://cloud.reown.com",
-    github: "https://github.com/PatoSuave/revoke.pls",
+    github: "https://github.com/PatoSuave",
     x: "https://x.com/pulserevoke",
   },
   /** Short attribution line shown in the footer. */

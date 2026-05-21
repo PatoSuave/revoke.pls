@@ -153,7 +153,7 @@ describe("approval row readability copy", () => {
     expect(helperSource).toContain("getApproved(tokenId)");
     expect(helperSource).toContain("isApprovedForAll(owner, operator)");
     expect(helperSource).toContain(
-      "Revoke.PLS keeps revoke disabled instead of",
+      "Pulse Revoke keeps revoke disabled instead of",
     );
     expect(erc20Source).toContain("VerificationTechnicalExplainer");
     expect(nftSource).toContain("VerificationTechnicalExplainer");
