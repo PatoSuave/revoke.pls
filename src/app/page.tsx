@@ -21,6 +21,7 @@ import {
   LIVE_SUPPORTED_CHAIN_ROWS,
   VERIFIED_ROW_SUPPORT_NOTE,
 } from "@/lib/supported-chain-copy";
+import { TOKEN_CHAIR_SNIFFER_ROUTE } from "@/lib/token-chair-sniffer";
 
 const productName = "Pulse Revoke";
 const launcherTitle = `${productName} - ${LIVE_SUPPORTED_CHAIN_COMPACT_LIST} approval safety`;
@@ -177,6 +178,12 @@ function SiteHeader({ desktopReady }: { desktopReady: boolean }) {
           <Link href="/security" className="transition hover:text-pulse-text">
             Security
           </Link>
+          <Link
+            href={TOKEN_CHAIR_SNIFFER_ROUTE}
+            className="transition hover:text-pulse-text"
+          >
+            Token Chair
+          </Link>
           <a href="#faq" className="transition hover:text-pulse-text">
             FAQ
           </a>
@@ -202,6 +209,12 @@ function SiteHeader({ desktopReady }: { desktopReady: boolean }) {
           >
             <span className="sm:hidden">Launch</span>
             <span className="hidden sm:inline">Launch Scanner</span>
+          </Link>
+          <Link
+            href={TOKEN_CHAIR_SNIFFER_ROUTE}
+            className="inline-flex items-center justify-center whitespace-nowrap rounded-xl border border-pulse-cyan/35 bg-pulse-cyan/10 px-3 py-2 text-xs font-semibold text-pulse-cyan transition hover:bg-pulse-cyan/15"
+          >
+            Token Chair
           </Link>
         </div>
       </div>

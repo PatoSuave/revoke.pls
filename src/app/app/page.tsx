@@ -1,14 +1,18 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 
+import { ConnectWalletButton } from "@/components/connect-wallet-button";
 import { AntiPhishingBanner } from "@/components/sections/anti-phishing-banner";
 import { ApprovalScanner } from "@/components/sections/approval-scanner";
 import { PulseChainResourceLinks } from "@/components/sections/pulsechain-resource-links";
 import { SiteFooter } from "@/components/sections/site-footer";
 import { SiteHeader } from "@/components/sections/site-header";
+import { WalletProviders } from "@/components/wallet-providers";
 import { absoluteUrl, siteConfig } from "@/lib/site";
 import {
   LIVE_SUPPORTED_CHAIN_ROWS,
 } from "@/lib/supported-chain-copy";
+import { TOKEN_CHAIR_SNIFFER_ROUTE } from "@/lib/token-chair-sniffer";
 
 export const metadata: Metadata = {
   title: "Revoke Scanner",
@@ -31,8 +35,12 @@ export const metadata: Metadata = {
 
 export default function AppPage() {
   return (
-    <>
-      <SiteHeader />
+    <WalletProviders>
+      <SiteHeader
+        action={
+          <ConnectWalletButton className="max-w-full justify-start lg:justify-end" />
+        }
+      />
       <main className="bg-pulse-bg">
         <AppWorkspaceIntro />
         <AntiPhishingBanner />
@@ -40,7 +48,7 @@ export default function AppPage() {
         <PulseChainResourceLinks compact />
       </main>
       <SiteFooter />
-    </>
+    </WalletProviders>
   );
 }
 
@@ -77,6 +85,12 @@ function AppWorkspaceIntro() {
                 </span>
               ))}
             </div>
+            <Link
+              href={TOKEN_CHAIR_SNIFFER_ROUTE}
+              className="mt-2 inline-flex max-w-full items-center justify-center rounded-xl border border-pulse-cyan/35 bg-pulse-cyan/10 px-3 py-2 text-xs font-semibold text-pulse-cyan transition hover:bg-pulse-cyan/15"
+            >
+              Token Chair Sniffer
+            </Link>
           </div>
         </div>
       </div>
