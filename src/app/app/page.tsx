@@ -1,11 +1,13 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 
+import { ConnectWalletButton } from "@/components/connect-wallet-button";
 import { AntiPhishingBanner } from "@/components/sections/anti-phishing-banner";
 import { ApprovalScanner } from "@/components/sections/approval-scanner";
 import { PulseChainResourceLinks } from "@/components/sections/pulsechain-resource-links";
 import { SiteFooter } from "@/components/sections/site-footer";
 import { SiteHeader } from "@/components/sections/site-header";
+import { WalletProviders } from "@/components/wallet-providers";
 import { absoluteUrl, siteConfig } from "@/lib/site";
 import {
   LIVE_SUPPORTED_CHAIN_ROWS,
@@ -33,8 +35,12 @@ export const metadata: Metadata = {
 
 export default function AppPage() {
   return (
-    <>
-      <SiteHeader />
+    <WalletProviders>
+      <SiteHeader
+        action={
+          <ConnectWalletButton className="max-w-full justify-start lg:justify-end" />
+        }
+      />
       <main className="bg-pulse-bg">
         <AppWorkspaceIntro />
         <AntiPhishingBanner />
@@ -42,7 +48,7 @@ export default function AppPage() {
         <PulseChainResourceLinks compact />
       </main>
       <SiteFooter />
-    </>
+    </WalletProviders>
   );
 }
 
