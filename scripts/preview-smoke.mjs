@@ -20,9 +20,11 @@ const retired_feature_PAGE_MARKERS = [
   "retired-feature",
   "No wallet connection",
   "Read-only",
+  "Sample scans",
   "Consumer Summary",
   "Completion",
   "Evidence Checklist",
+  "Review queue",
   "Sniff Token",
 ];
 const retired_feature_BAD_REQUEST_CASES = [
