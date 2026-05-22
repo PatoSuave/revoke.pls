@@ -32,7 +32,9 @@ These match the in-app sample presets:
 ```powershell
 $html = npx.cmd vercel curl "$preview/app/token-chair-sniffer"
 $html -match "Token Chair Sniffer"
+$html -match "Sample scans"
 $html -match "Scan Report"
+$html -match "Consumer Summary"
 $html -match "Must Review Before Touching"
 $html -match "Critical review first" -or $html -match "Warnings and gaps" -or $html -match "Ready for manual decision" -or $html -match "Run scan"
 $html -match "Evidence Checklist"
@@ -109,6 +111,8 @@ Expected:
 In an authenticated browser session, check:
 
 - Sample-token preset buttons run scans and update the URL.
+- Sample-token cards expose launch QA labels without pushing users into wallet actions.
+- Consumer Summary jump links move to Review Queue, Evidence, and Notes sections.
 - Scan Report appears before raw detail panels.
 - Must Review Before Touching shows prioritized critical/warning/info review items with Evidence, Why, and Review copy.
 - Must Review Before Touching shows a readiness summary and coverage-gap count.

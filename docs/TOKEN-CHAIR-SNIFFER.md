@@ -23,6 +23,8 @@ Implemented in the current Phase 2 preview:
 - Local Compare Reviews tray for comparing two to four saved review entries by decision, verdict, risk counts, checklist progress, timestamp, and notes
 - Review export that includes top prioritized risk items, checklist state, decision, notes, report link, and timestamp
 - Consumer Summary band that shows the verdict, evidence completion, top visible risks, top open unknowns, and quick market context before the detailed panels
+- First-run sample scan cards with launch QA labels and compact coverage/decision/storage cues
+- Summary jump links into the review queue, evidence checklist, and local review notes so users can move through the report without hunting through every panel
 - Evidence completion indicator that measures checked public-data coverage, not token quality
 - Source-quality chips for DEX Screener, PulseChain RPC, PulseScan source metadata, PulseScan holder data, PulseX native discovery, and wallet surface state
 - Local watchlist/change flags that mark saved reviews when a later scan changes the local verdict/risk signature
@@ -68,6 +70,7 @@ Phase 2 is considered preview-complete when all of the following remain true on 
 - The Must Review Before Touching queue prioritizes critical, warning, and info items without claiming a token is safe, certified, guaranteed, or not a scam.
 - The queue shows a readiness summary that distinguishes critical review, warning/gap review, scan-needed state, and manual-decision-ready state.
 - The Consumer Summary stays compact and shows top risks and unknowns before full raw detail.
+- First-run controls keep sample scans, report navigation, and local-review cues visible without adding wallet prompts or trading recommendations.
 - Evidence completion and source-quality chips are presented as data-coverage status, not token-quality status.
 - Degraded PulseScan, holder, selected-pair, and source/ABI states are labeled as review gaps rather than token conclusions.
 - Review Before Buying persists checklist state, notes, and manual decision locally per token.

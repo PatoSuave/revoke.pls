@@ -20,9 +20,11 @@ const TOKEN_CHAIR_PAGE_MARKERS = [
   "Token Chair Sniffer",
   "No wallet connection",
   "Read-only",
+  "Sample scans",
   "Consumer Summary",
   "Completion",
   "Evidence Checklist",
+  "Review queue",
   "Sniff Token",
 ];
 const TOKEN_CHAIR_BAD_REQUEST_CASES = [

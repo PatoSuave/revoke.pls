@@ -84,21 +84,25 @@ const TOKEN_CHAIR_SAMPLE_TOKENS = [
     label: "PLSX",
     address: "0x95B303987A60C71504D99Aa1b13B4DA07b0790ab" as Address,
     detail: "Ecosystem token",
+    badge: "Best first scan",
   },
   {
     label: "WPLS",
     address: "0xA1077a294dDE1B09bB078844df40758a5D0f9a27" as Address,
     detail: "Wrapped native",
+    badge: "Route check",
   },
   {
     label: "INC",
     address: "0x2fa878Ab3F87CC1C9737Fc071108F904c0B0C95d" as Address,
     detail: "Incentive",
+    badge: "Pair context",
   },
   {
     label: "HEX",
     address: "0x2b591e99afE9f32eAA6214f7B7629768c40Eeb39" as Address,
     detail: "Ecosystem token",
+    badge: "Holder profile",
   },
 ] as const;
 
@@ -555,17 +559,31 @@ function HeroSearch({
           {loading ? "Sniffing..." : "Sniff Token"}
         </button>
       </form>
-      <div className="mt-4 flex flex-wrap gap-2">
+      <div className="mt-4">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <p className="text-xs font-semibold uppercase tracking-[0.14em] text-pulse-muted/80">
+            Sample scans
+          </p>
+          <p className="text-xs text-pulse-muted">
+            Preview-ready PulseChain tokens
+          </p>
+        </div>
+      </div>
+      <div className="mt-2 grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
         {TOKEN_CHAIR_SAMPLE_TOKENS.map((token) => (
           <button
             key={token.address}
             type="button"
+            aria-label={`Scan ${token.label}`}
             disabled={loading}
             onClick={() => onPresetSelect(token.address)}
             className="rounded-lg border border-pulse-border bg-pulse-panel/50 px-3 py-2 text-left text-xs transition hover:border-pulse-green/35 hover:bg-pulse-green/10 disabled:cursor-not-allowed disabled:opacity-50"
           >
-            <span className="block font-semibold text-pulse-text">
-              {token.label}
+            <span className="flex items-center justify-between gap-2">
+              <span className="font-semibold text-pulse-text">{token.label}</span>
+              <span className="rounded-full border border-pulse-border/70 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.08em] text-pulse-muted">
+                {token.badge}
+              </span>
             </span>
             <span className="mt-0.5 block text-pulse-muted">
               {token.detail}
@@ -573,6 +591,22 @@ function HeroSearch({
           </button>
         ))}
       </div>
+      <div className="mt-4 grid gap-2 sm:grid-cols-3">
+        <HeroCue label="Coverage" value="Market, source, holders, LP" />
+        <HeroCue label="Decision" value="Review, watchlist, avoid" />
+        <HeroCue label="Storage" value="Local notes only" />
+      </div>
+    </div>
+  );
+}
+
+function HeroCue({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded-lg border border-pulse-border/60 bg-[#070b10] px-3 py-2">
+      <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-pulse-muted/75">
+        {label}
+      </p>
+      <p className="mt-1 text-xs font-semibold text-pulse-text">{value}</p>
     </div>
   );
 }
@@ -758,6 +792,11 @@ function ConsumerSummary({
           <p className="mt-3 max-w-4xl text-sm leading-6 text-pulse-muted">
             {summaryCopy}
           </p>
+          <div className="mt-4 flex flex-wrap gap-2">
+            <SummaryJumpLink href="#token-chair-review-queue" label="Review queue" />
+            <SummaryJumpLink href="#token-chair-evidence" label="Evidence" />
+            <SummaryJumpLink href="#token-chair-workbench" label="Notes" />
+          </div>
 
           <div className="mt-4 grid gap-3 lg:grid-cols-3">
             <ConsumerSummaryColumn
@@ -829,6 +868,17 @@ function ConsumerSummary({
         </div>
       </div>
     </section>
+  );
+}
+
+function SummaryJumpLink({ href, label }: { href: string; label: string }) {
+  return (
+    <a
+      href={href}
+      className="rounded-lg border border-pulse-border bg-pulse-panel/55 px-3 py-2 text-xs font-semibold text-pulse-text transition hover:border-pulse-green/35 hover:text-pulse-green"
+    >
+      {label}
+    </a>
   );
 }
 
@@ -1099,7 +1149,7 @@ function EvidenceChecklist({ rows }: { rows: readonly SniffSignalRow[] }) {
   const coverage = getEvidenceCoverage(rows);
 
   return (
-    <div className="rounded-lg border border-pulse-border/70 bg-[#070b10] p-4">
+    <div id="token-chair-evidence" className="rounded-lg border border-pulse-border/70 bg-[#070b10] p-4">
       <PanelHeader
         icon="E"
         title="Evidence Checklist"
@@ -1137,7 +1187,7 @@ function MustReviewQueue({ items }: { items: readonly TokenChairRiskItem[] }) {
   const visibleItems = selectVisibleRiskItems(items);
 
   return (
-    <div className="mt-4 rounded-lg border border-pulse-border/70 bg-[#070b10] p-4">
+    <div id="token-chair-review-queue" className="mt-4 rounded-lg border border-pulse-border/70 bg-[#070b10] p-4">
       <PanelHeader
         icon="M"
         title="Must Review Before Touching"
@@ -1512,7 +1562,7 @@ function ReviewBeforeBuying({
   }
 
   return (
-    <div className="mt-4 rounded-lg border border-pulse-border/70 bg-[#070b10] p-4">
+    <div id="token-chair-workbench" className="mt-4 rounded-lg border border-pulse-border/70 bg-[#070b10] p-4">
       <PanelHeader icon="B" title="Review Before Buying" meta={completionLabel} />
       <div className="mt-3 grid items-start gap-3 xl:grid-cols-[minmax(0,1fr)_340px]">
         <div className="grid gap-2 md:grid-cols-2">
