@@ -1,10 +1,8 @@
 #!/usr/bin/env node
 
 import { spawn } from "node:child_process";
-import { dirname, join } from "node:path";
 
 const DEFAULT_OWNER = "0x1111111111111111111111111111111111111111";
-const retired_feature_SAMPLE_TOKEN = "0x95B303987A60C71504D99Aa1b13B4DA07b0790ab";
 const API_ENDPOINTS = ["ethereum", "arbitrum", "optimism"];
 const PAGE_MARKERS = [
   "Review active approvals",
@@ -15,44 +13,6 @@ const PAGE_MARKERS = [
   "Ethereum Mainnet",
   "Arbitrum One",
   "Optimism",
-];
-const retired_feature_PAGE_MARKERS = [
-  "retired-feature",
-  "No wallet connection",
-  "Read-only",
-  "Sample scans",
-  "Consumer Summary",
-  "Completion",
-  "Evidence Checklist",
-  "Review queue",
-  "Sniff Token",
-];
-const retired_feature_BAD_REQUEST_CASES = [
-  {
-    label: "invalid token",
-    path: "/api/retired-feature/market?token=not-an-address",
-    error: "Provide a valid EVM token address",
-  },
-  {
-    label: "zero address",
-    path: "/api/retired-feature/market?chainId=pulsechain&token=0x0000000000000000000000000000000000000000",
-    error: "zero and burn addresses cannot be scanned",
-  },
-  {
-    label: "unsupported range",
-    path: `/api/retired-feature/market?token=${retired_feature_SAMPLE_TOKEN}&page=2`,
-    error: "Unsupported query param: page",
-  },
-  {
-    label: "unsupported callback",
-    path: `/api/retired-feature/market?token=${retired_feature_SAMPLE_TOKEN}&callback=alert`,
-    error: "Unsupported query param: callback",
-  },
-  {
-    label: "conflicting aliases",
-    path: `/api/retired-feature/market?token=${retired_feature_SAMPLE_TOKEN}&address=0xA1077a294dDE1B09bB078844df40758a5D0f9a27`,
-    error: "Provide either ?token=0x... or ?address=0x...",
-  },
 ];
 
 function usage() {
@@ -82,29 +42,22 @@ function parseOwner(value) {
   return value;
 }
 
-function vercelCurl(path, deploymentUrl) {
+function vercelCurl(url) {
   return new Promise((resolve, reject) => {
-    const vercelArgs = ["vercel", "curl", path, "--deployment", deploymentUrl];
     const args =
       process.platform === "win32"
-        ? [
-            "/d",
-            "/s",
-            "/c",
-            `"${quoteCmdArgs([join(dirname(process.execPath), "npx.cmd"), ...vercelArgs])}"`,
-          ]
-        : vercelArgs;
+        ? ["/d", "/c", "npx.cmd", "vercel", "curl", url]
+        : ["vercel", "curl", url];
     const command = process.platform === "win32" ? "cmd.exe" : "npx";
     const child = spawn(command, args, {
       stdio: ["ignore", "pipe", "pipe"],
-      windowsVerbatimArguments: process.platform === "win32",
       windowsHide: true,
     });
     let stdout = "";
     let stderr = "";
     const timeout = setTimeout(() => {
       child.kill();
-      reject(new Error(`Timed out fetching ${path}`));
+      reject(new Error(`Timed out fetching ${url}`));
     }, 60_000);
 
     child.stdout.on("data", (chunk) => {
@@ -122,7 +75,7 @@ function vercelCurl(path, deploymentUrl) {
       if (code !== 0) {
         reject(
           new Error(
-            `vercel curl failed for ${path} with code ${code}: ${stderr.trim()}`,
+            `vercel curl failed for ${url} with code ${code}: ${stderr.trim()}`,
           ),
         );
         return;
@@ -130,10 +83,6 @@ function vercelCurl(path, deploymentUrl) {
       resolve(stdout);
     });
   });
-}
-
-function quoteCmdArgs(args) {
-  return args.map((arg) => `"${arg.replaceAll('"', '""')}"`).join(" ");
 }
 
 function firstJsonObject(output) {
@@ -175,43 +124,6 @@ function expectConfiguredApi(endpoint, body) {
   }
 }
 
-function pathWithSearch(pathname, params) {
-  const url = new URL(pathname, "https://preview.local");
-  for (const [key, value] of Object.entries(params)) {
-    url.searchParams.set(key, value);
-  }
-  return `${url.pathname}${url.search}`;
-}
-
-function expectretired_featureBadRequest(label, body, expectedError) {
-  if (body?.ok !== false || body.status !== "bad-request") {
-    throw new Error(
-      `retired-feature ${label} guardrail returned status=${body?.status} ok=${body?.ok}.`,
-    );
-  }
-  const errors = Array.isArray(body.errors) ? body.errors.join(" ") : "";
-  if (!errors.includes(expectedError)) {
-    throw new Error(
-      `retired-feature ${label} guardrail missing expected error: ${expectedError}`,
-    );
-  }
-}
-
-function expectretired_featureSuccess(body) {
-  if (body?.ok !== true || body.status !== "success") {
-    throw new Error(`retired-feature sample returned status=${body?.status}.`);
-  }
-  if (body.tokenAddress !== retired_feature_SAMPLE_TOKEN) {
-    throw new Error("retired-feature sample returned the wrong token address.");
-  }
-  if (body.market?.tokenSymbol !== "PLSX") {
-    throw new Error("retired-feature sample did not return PLSX market data.");
-  }
-  if (!body.verdict?.label) {
-    throw new Error("retired-feature sample did not return a verdict label.");
-  }
-}
-
 async function main() {
   const [, , previewArg, ownerArg = DEFAULT_OWNER] = process.argv;
   if (!previewArg) {
@@ -221,53 +133,25 @@ async function main() {
   }
 
   const baseUrl = parseBaseUrl(previewArg);
-  const deploymentUrl = baseUrl.origin;
   const owner = parseOwner(ownerArg);
+  const appUrl = new URL("/app?debug=1", baseUrl);
 
-  console.log(`Preview smoke: ${deploymentUrl}`);
-  const page = await vercelCurl("/app?debug=1", deploymentUrl);
+  console.log(`Preview smoke: ${baseUrl.origin}`);
+  const page = await vercelCurl(appUrl.toString());
   for (const marker of PAGE_MARKERS) {
     expectMarker(page, marker);
     console.log(`page: ${marker} ok`);
   }
 
-  const retired_featurePage = await vercelCurl(
-    "/app/retired-feature",
-    deploymentUrl,
-  );
-  for (const marker of retired_feature_PAGE_MARKERS) {
-    expectMarker(retired_featurePage, marker);
-    console.log(`retired-feature page: ${marker} ok`);
-  }
-  if (retired_featurePage.includes("Connect Wallet")) {
-    throw new Error("retired-feature page rendered wallet connect copy.");
-  }
-
   for (const endpoint of API_ENDPOINTS) {
-    const apiPath = pathWithSearch(`/api/${endpoint}/approvals`, { owner });
-    const body = firstJsonObject(await vercelCurl(apiPath, deploymentUrl));
+    const apiUrl = new URL(`/api/${endpoint}/approvals`, baseUrl);
+    apiUrl.searchParams.set("owner", owner);
+    const body = firstJsonObject(await vercelCurl(apiUrl.toString()));
     expectConfiguredApi(endpoint, body);
     console.log(
       `api: ${endpoint} ok status=${body.status} rpc=${body.diagnostics.rpcConfigured} explorer=${body.diagnostics.explorerConfigured}`,
     );
   }
-
-  for (const guardrail of retired_feature_BAD_REQUEST_CASES) {
-    const body = firstJsonObject(await vercelCurl(guardrail.path, deploymentUrl));
-    expectretired_featureBadRequest(guardrail.label, body, guardrail.error);
-    console.log(`retired-feature api: ${guardrail.label} guardrail ok`);
-  }
-
-  const sample = firstJsonObject(
-    await vercelCurl(
-      `/api/retired-feature/market?token=${retired_feature_SAMPLE_TOKEN}`,
-      deploymentUrl,
-    ),
-  );
-  expectretired_featureSuccess(sample);
-  console.log(
-    `retired-feature api: sample ok status=${sample.status} verdict=${sample.verdict.label}`,
-  );
 
   console.log("Preview smoke passed.");
 }

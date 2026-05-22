@@ -130,7 +130,6 @@ export const siteConfig = {
   /** Shared app-shell nav. Keep these pointed at real routes/anchors. */
   nav: [
     { href: "/app#scanner", label: "Scanner" },
-    { href: "/app/retired-feature", label: "retired-feature" },
     { href: "/security", label: "Security Guide" },
   ] as const,
   /** External / utility links. */
