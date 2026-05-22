@@ -44,7 +44,7 @@ export const ETHEREUM_REVOKE_GAS_THRESHOLDS: Record<
 };
 
 export const ETHEREUM_GAS_PAID_TO_NETWORK_COPY =
-  "Gas is paid to the Ethereum network, not to Revoke.PLS or the approved protocol.";
+  "Gas is paid to the Ethereum network, not to Pulse Revoke or the approved protocol.";
 export const WALLET_HIGHER_FEE_CANCEL_COPY =
   "If your wallet shows a much higher fee than this app estimates, cancel and try again later.";
 export const WALLET_PROMPT_SAFETY_COPY =

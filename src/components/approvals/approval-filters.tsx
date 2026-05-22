@@ -13,6 +13,8 @@ const FILTER_OPTIONS: Array<{ value: ApprovalFilter; label: string }> = [
   { value: "high", label: "High risk" },
   { value: "unlimited", label: "Unlimited" },
   { value: "trusted", label: "Known" },
+  { value: "permit2", label: "Permit2" },
+  { value: "hybrid", label: "Hybrid" },
 ];
 
 export function ApprovalFilters({

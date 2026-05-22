@@ -9,6 +9,7 @@
     "build:desktop": "node scripts/build-desktop.mjs",
     "start": "next start",
     "lint": "next lint",
+    "smoke:preview": "node scripts/preview-smoke.mjs",
     "typecheck": "tsc --noEmit",
     "tauri": "tauri"
   },

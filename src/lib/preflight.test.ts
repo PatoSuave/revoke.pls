@@ -12,6 +12,7 @@ import {
   applyGasEstimateToPreflight,
   blockedErc20Preflight,
   blockedNftPreflight,
+  buildErc20PreflightRead,
   evaluateErc20AllowancePreflight,
   evaluateNftApprovalPreflight,
   failedErc20Preflight,
@@ -21,10 +22,13 @@ import {
   summarizeBatchPreflight,
   type Erc20PreflightResult,
 } from "./preflight";
+import { PERMIT2_ADDRESS } from "./permit2";
 
+const OWNER = "0x1111111111111111111111111111111111111111" as Address;
 const SPENDER = "0x2222222222222222222222222222222222222222" as Address;
 const OTHER_SPENDER =
   "0x3333333333333333333333333333333333333333" as Address;
+const TOKEN = "0x4444444444444444444444444444444444444444" as Address;
 
 describe("approval revoke preflight", () => {
   it("marks a zero ERC-20 allowance as already cleared", () => {
@@ -52,6 +56,49 @@ describe("approval revoke preflight", () => {
       status: "active",
       currentAllowance: 123000000000000000000n,
       currentLabel: "123 TOK",
+    });
+  });
+
+  it("builds and evaluates an active Permit2 preflight read", () => {
+    expect(
+      buildErc20PreflightRead(OWNER, {
+        tokenAddress: TOKEN,
+        spenderAddress: SPENDER,
+        approvalKind: "permit2",
+      }),
+    ).toMatchObject({
+      address: PERMIT2_ADDRESS,
+      functionName: "allowance",
+      args: [OWNER, TOKEN, SPENDER],
+    });
+
+    const result = evaluateErc20AllowancePreflight([123n, 2_000n, 7n], {
+      tokenSymbol: "TOK",
+      tokenDecimals: 18,
+      approvalKind: "permit2",
+      nowUnix: 1_000,
+    });
+
+    expect(result).toMatchObject({
+      kind: "erc20",
+      status: "active",
+      currentAllowance: 123n,
+      currentLabel: "~0 TOK",
+    });
+  });
+
+  it("treats expired Permit2 allowances as cleared", () => {
+    const result = evaluateErc20AllowancePreflight([123n, 999n, 7n], {
+      tokenSymbol: "TOK",
+      tokenDecimals: 18,
+      approvalKind: "permit2",
+      nowUnix: 1_000,
+    });
+
+    expect(result).toMatchObject({
+      kind: "erc20",
+      status: "cleared",
+      currentAllowance: 123n,
     });
   });
 

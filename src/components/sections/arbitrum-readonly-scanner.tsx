@@ -260,7 +260,7 @@ function ArbitrumStatusPanel({
       <StateCard
         tone="warning"
         title="Verification incomplete"
-        body="Revoke.PLS found Arbitrum approval history or diagnostics that could not be fully verified. The app cannot call this wallet clear."
+        body="Pulse Revoke found Arbitrum approval history or diagnostics that could not be fully verified. The app cannot call this wallet clear."
         details={[
           scan.mapped.incompleteReason ??
             "Arbitrum live validation or explorer discovery was incomplete.",
@@ -1156,6 +1156,10 @@ function ArbitrumDiagnosticsPanel({
     [
       "Decoded ERC-20 approvals",
       diagnostics?.decodedErc20ApprovalCount.toString() ?? "Not returned",
+    ],
+    [
+      "Decoded Permit2 approvals",
+      diagnostics?.decodedPermit2ApprovalCount?.toString() ?? "Not returned",
     ],
     [
       "Decoded NFT approvals",

@@ -5,16 +5,21 @@ import {
   BSC_CHAIN_ID,
   PULSECHAIN_CHAIN_ID,
 } from "@/lib/chains";
+import { PERMIT2_ADDRESS } from "@/lib/permit2";
 
 import { validateAddresses, validateRequiredStrings } from "./validate";
 
 export const ETHEREUM_MAINNET_CHAIN_ID = 1;
+export const OPTIMISM_CHAIN_ID = 10;
 export const ARBITRUM_ONE_CHAIN_ID = 42161;
 export const LIBERTYSWAP_SOURCE_LABEL = "Official LibertySwap docs";
 export const LIBERTYSWAP_SOURCE_URL =
   "https://docs.libertyswap.finance/liberty-swap-2.0/cross-chain-swaps";
 export const LIBERTYSWAP_LEGACY_NOTE =
   "This appears in LibertySwap's old-address list. Review whether this approval is still needed.";
+export const UNISWAP_DEPLOYMENTS_SOURCE_URL =
+  "https://developers.uniswap.org/docs/protocols/v4/deployments";
+const PERMIT2_DOCS_URL = "https://docs.uniswap.org/contracts/permit2/overview";
 
 /**
  * Functional classification for a spender contract. Drives optional UI
@@ -141,6 +146,32 @@ function libertySwapEntry({
       "Matched chain-scoped address against LibertySwap's official cross-chain swaps docs.",
     source: LIBERTYSWAP_SOURCE_URL,
     protocolMetadata: libertySwapMetadata(contractStatus, assetLabel),
+  };
+}
+
+function permit2MetadataEntry({
+  chainId,
+  officialDeployment,
+}: {
+  chainId: number;
+  officialDeployment: boolean;
+}): SpenderEntry {
+  return {
+    chainId,
+    address: PERMIT2_ADDRESS,
+    label: "Permit2",
+    protocol: officialDeployment ? "Uniswap" : "Permit2-compatible",
+    protocolSlug: "permit2",
+    category: "permit2",
+    isTrusted: officialDeployment,
+    url: PERMIT2_DOCS_URL,
+    notes: officialDeployment
+      ? "Canonical Permit2 contract listed in Uniswap deployment docs. A Permit2 token approval can delegate signed sub-approvals, so review it periodically."
+      : "Permit2-compatible contract present at the forked canonical address on PulseChain. PulseChain is not listed in Uniswap official deployments, so verify before trusting it.",
+    verificationMethod: officialDeployment
+      ? "Matched chain-scoped address against Uniswap deployment docs and live runtime bytecode."
+      : "Verified runtime bytecode exists at the canonical Permit2 address on PulseChain; Uniswap official deployments do not list PulseChain.",
+    ...(officialDeployment ? { source: UNISWAP_DEPLOYMENTS_SOURCE_URL } : {}),
   };
 }
 
@@ -393,18 +424,18 @@ export const MAINNET_SPENDER_REGISTRY: readonly SpenderEntry[] = [
   },
   {
     chainId: ETHEREUM_MAINNET_CHAIN_ID,
-    address: "0x000000000022D473030F116dDEE9F6B43aC78BA3",
+    address: PERMIT2_ADDRESS,
     label: "Permit2",
     protocol: "Uniswap",
     protocolSlug: "permit2",
     category: "permit2",
     isTrusted: true,
-    url: "https://docs.uniswap.org/contracts/permit2/overview",
+    url: PERMIT2_DOCS_URL,
     notes:
-      "Canonical Permit2 contract. An unlimited Permit2 approval delegates signed sub-approvals, which carry their own risk surface — review periodically.",
+      "Canonical Permit2 contract listed in Uniswap deployment docs. A Permit2 token approval can delegate signed sub-approvals, so review it periodically.",
     verificationMethod:
-      "Manual Etherscan cross-check against Uniswap permit2 repo deployments.",
-    source: "https://docs.uniswap.org",
+      "Matched chain-scoped address against Uniswap deployment docs and live runtime bytecode.",
+    source: UNISWAP_DEPLOYMENTS_SOURCE_URL,
   },
   {
     chainId: ETHEREUM_MAINNET_CHAIN_ID,
@@ -458,6 +489,29 @@ const PULSELAUNCH_PULSECHAIN_SPENDER_METADATA_REGISTRY: readonly SpenderEntry[] 
   },
 ] as const;
 
+export const PERMIT2_SPENDER_METADATA_REGISTRY: readonly SpenderEntry[] = [
+  permit2MetadataEntry({
+    chainId: PULSECHAIN_CHAIN_ID,
+    officialDeployment: false,
+  }),
+  permit2MetadataEntry({
+    chainId: BSC_CHAIN_ID,
+    officialDeployment: true,
+  }),
+  permit2MetadataEntry({
+    chainId: BASE_CHAIN_ID,
+    officialDeployment: true,
+  }),
+  permit2MetadataEntry({
+    chainId: ARBITRUM_ONE_CHAIN_ID,
+    officialDeployment: true,
+  }),
+  permit2MetadataEntry({
+    chainId: OPTIMISM_CHAIN_ID,
+    officialDeployment: true,
+  }),
+] as const;
+
 /**
  * Label/enrichment registry. Metadata-only entries here do not expand the
  * registry-constrained scanner target list returned by `getSpendersForChain`.
@@ -466,6 +520,7 @@ export const SPENDER_METADATA_REGISTRY: readonly SpenderEntry[] = [
   ...SPENDER_REGISTRY,
   ...LIBERTYSWAP_SPENDER_METADATA_REGISTRY,
   ...PULSELAUNCH_PULSECHAIN_SPENDER_METADATA_REGISTRY,
+  ...PERMIT2_SPENDER_METADATA_REGISTRY,
 ] as const;
 
 // Dev-time sanity checks. Scoped per chain so that the same address appearing
@@ -498,6 +553,18 @@ validateAddresses(
   PULSELAUNCH_PULSECHAIN_SPENDER_METADATA_REGISTRY,
   "PULSELAUNCH_SPENDER_METADATA_REGISTRY[pulsechain]",
 );
+for (const [chainId, label] of [
+  [PULSECHAIN_CHAIN_ID, "pulsechain"],
+  [BSC_CHAIN_ID, "bsc"],
+  [BASE_CHAIN_ID, "base"],
+  [ARBITRUM_ONE_CHAIN_ID, "arbitrum"],
+  [OPTIMISM_CHAIN_ID, "optimism"],
+] as const) {
+  validateAddresses(
+    PERMIT2_SPENDER_METADATA_REGISTRY.filter((entry) => entry.chainId === chainId),
+    `PERMIT2_SPENDER_METADATA_REGISTRY[${label}]`,
+  );
+}
 for (const s of SPENDER_METADATA_REGISTRY) {
   validateRequiredStrings(
     s as unknown as Record<string, unknown>,

@@ -127,14 +127,11 @@ export const siteConfig = {
     "wallet security",
     "approval revoke tool",
   ] as const,
-  /** Anchor targets for primary nav. */
+  /** Shared app-shell nav. Keep these pointed at real routes/anchors. */
   nav: [
     { href: "/app#scanner", label: "Scanner" },
     { href: "/app/token-chair-sniffer", label: "Token Chair" },
-    { href: "/app#how-it-works", label: "How it works" },
-    { href: "/app#safety", label: "Safety" },
-    { href: "/security", label: "Security" },
-    { href: "/app#faq", label: "FAQ" },
+    { href: "/security", label: "Security Guide" },
   ] as const,
   /** External / utility links. */
   links: {
@@ -143,7 +140,7 @@ export const siteConfig = {
     basescan: "https://basescan.org",
     pulsex: "https://pulsex.com",
     walletConnect: "https://cloud.reown.com",
-    github: "https://github.com/PatoSuave/revoke.pls",
+    github: "https://github.com/PatoSuave",
     x: "https://x.com/pulserevoke",
   },
   /** Short attribution line shown in the footer. */

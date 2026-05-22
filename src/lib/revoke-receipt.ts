@@ -16,7 +16,7 @@ export interface RevokeReceiptCopy {
 }
 
 export const TRANSACTION_SUBMITTED_INCOMPLETE_COPY =
-  "Revoke.PLS submitted the transaction, but live verification could not be completed. View the transaction on the explorer and rescan this wallet.";
+  "Pulse Revoke submitted the transaction, but live verification could not be completed. View the transaction on the explorer and rescan this wallet.";
 
 export const LIVE_VERIFICATION_INCOMPLETE_COPY =
   "Live verification incomplete. Rescan this wallet to verify the approval cleared.";

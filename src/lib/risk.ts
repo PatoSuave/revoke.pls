@@ -18,6 +18,8 @@ export interface RiskAssessment {
   level: RiskLevel;
   /** Short, neutral sentence explaining the classification. */
   reason: string;
+  /** Concrete signals that contributed to the prioritization. */
+  drivers?: readonly string[];
 }
 
 export interface ScoredApproval extends Approval {
@@ -34,33 +36,64 @@ export interface ScoredApproval extends Approval {
 export function classifyApprovalRisk(input: {
   trusted: boolean;
   unlimited: boolean;
+  approvalKind?: Approval["approvalKind"];
+  tokenCategory?: Approval["tokenCategory"];
 }): RiskAssessment {
+  const permit2 = input.approvalKind === "permit2";
+  const hybrid = input.tokenCategory === "hybrid";
+  const drivers = [
+    input.trusted ? "Known spender" : "Unknown spender",
+    input.unlimited ? "Unlimited approval" : "Limited approval",
+    permit2 ? "Permit2 delegated allowance" : null,
+    hybrid ? "Hybrid token contract" : null,
+  ].filter((driver): driver is string => Boolean(driver));
+  const withContext = (reason: string): RiskAssessment => ({
+    level: input.trusted
+      ? input.unlimited
+        ? "medium"
+        : "low"
+      : input.unlimited
+        ? "high"
+        : "medium",
+    reason: [
+      reason,
+      hybrid
+        ? "Hybrid token detected; review token and NFT-style approval surfaces together."
+        : null,
+    ]
+      .filter(Boolean)
+      .join(" "),
+    drivers,
+  });
+
   if (input.trusted) {
     if (input.unlimited) {
-      return {
-        level: "medium",
-        reason:
-          "Identified spender, but the allowance is unlimited. Review whether this approval is still needed.",
-      };
+      return withContext(
+        permit2
+          ? "Identified spender, but the Permit2 delegated allowance is unlimited. Review whether this approval is still needed."
+          : "Identified spender, but the allowance is unlimited. Review whether this approval is still needed.",
+      );
     }
-    return {
-      level: "low",
-      reason: "Identified spender with a bounded allowance.",
-    };
+    return withContext(
+      permit2
+        ? "Identified spender with a bounded Permit2 delegated allowance."
+        : "Identified spender with a bounded allowance.",
+    );
   }
 
   if (input.unlimited) {
-    return {
-      level: "high",
-      reason:
-        "Unknown spender with an unlimited allowance. Verify the address before leaving it in place.",
-    };
+    return withContext(
+      permit2
+        ? "Unknown spender with an unlimited Permit2 delegated allowance. Verify the spender before leaving delegated token access in place."
+        : "Unknown spender with an unlimited allowance. Verify the address before leaving it in place.",
+    );
   }
 
-  return {
-    level: "medium",
-    reason: "Unknown spender with a bounded allowance. Verify before trusting.",
-  };
+  return withContext(
+    permit2
+      ? "Unknown spender with a bounded Permit2 delegated allowance. Verify before trusting."
+      : "Unknown spender with a bounded allowance. Verify before trusting.",
+  );
 }
 
 export function scoreApprovals(
@@ -71,6 +104,8 @@ export function scoreApprovals(
     risk: classifyApprovalRisk({
       trusted: approval.trusted,
       unlimited: approval.unlimited,
+      approvalKind: approval.approvalKind,
+      tokenCategory: approval.tokenCategory,
     }),
   }));
 }
@@ -82,7 +117,13 @@ function riskRank(level: RiskLevel): number {
 }
 
 export type ApprovalSort = "risk" | "token" | "spender";
-export type ApprovalFilter = "all" | "high" | "unlimited" | "trusted";
+export type ApprovalFilter =
+  | "all"
+  | "high"
+  | "unlimited"
+  | "trusted"
+  | "permit2"
+  | "hybrid";
 
 export interface ApprovalFilterControls {
   query: string;
@@ -101,6 +142,10 @@ function matchesFilter(
       return approval.unlimited;
     case "trusted":
       return approval.trusted;
+    case "permit2":
+      return approval.approvalKind === "permit2";
+    case "hybrid":
+      return approval.tokenCategory === "hybrid";
     case "all":
     default:
       return true;
@@ -114,8 +159,11 @@ function matchesQuery(approval: ScoredApproval, needle: string): boolean {
     approval.tokenName ?? "",
     approval.spenderLabel,
     approval.protocol,
+    approval.approvalKind ?? "",
+    approval.tokenCategory,
     approval.tokenAddress,
     approval.spenderAddress,
+    ...(approval.risk.drivers ?? []),
   ]
     .join(" ")
     .toLowerCase();

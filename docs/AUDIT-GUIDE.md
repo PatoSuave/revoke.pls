@@ -37,12 +37,14 @@ submission must stay unavailable.
 | Active chains | `src/lib/chains.ts`, `src/lib/wagmi.ts` |
 | Explorer links/API helpers | `src/lib/explorer.ts`, `src/lib/discovery.ts` |
 | Fungible approval parsing/validation | `src/lib/discovery.ts`, `src/lib/approvals.ts`, `src/hooks/use-approval-discovery.ts` |
+| Permit2 and hybrid approval handling | `src/lib/permit2.ts`, `src/lib/approvals.ts`, `src/lib/risk.ts`, `src/components/approvals/approval-filters.tsx` |
 | NFT approval parsing/validation | `src/lib/discovery.ts`, `src/lib/nft-approvals.ts`, `src/hooks/use-nft-approval-discovery.ts` |
 | Preflight and gas safety | `src/lib/preflight.ts` |
 | Single fungible revoke | `src/hooks/use-revoke-approval.ts`, `src/lib/revoke.ts` |
 | NFT revoke | `src/hooks/use-revoke-nft-approval.ts`, `src/lib/nft-approvals.ts` |
 | Batch revoke | `src/hooks/use-batch-revoke.ts` |
 | Registry enrichment | `src/lib/registry/` |
+| Token logos | `src/app/api/token-logos/route.ts`, `src/lib/token-logos.ts`, `src/hooks/use-token-logos.ts` |
 | Telemetry/privacy | `src/lib/telemetry.ts` |
 | Diagnostics UI | `src/components/sections/scanner-diagnostics.tsx` |
 | Ethereum API controls | `src/app/api/ethereum/approvals/route.ts`, `src/lib/ethereum-approval-api.ts`, `src/lib/ethereum-approval-api-controls.ts` |
@@ -118,6 +120,31 @@ submission must stay unavailable.
 - Do Optimism batch, global, server signing, arbitrary `writeContract`, and
   `sendTransaction` paths remain unavailable?
 
+## Permit2 And Hybrid Discovery Questions
+
+- Does Permit2 discovery decode historical `Approval` and `Permit` events only
+  as nested allowance candidates, not as proof of active delegated access?
+- Are Permit2 candidates rechecked with
+  `allowance(owner, token, spender)` on the Permit2 contract before they render
+  as active rows?
+- Does a Permit2 row require a nonzero amount and an expiration later than the
+  current scan time?
+- Do expired, zero, malformed, timed-out, or failed Permit2 live reads produce
+  dropped, incomplete, or unverified states instead of a false clear?
+- Do Permit2 rows explain that the spender can use the token through Permit2,
+  rather than through a direct token-contract allowance?
+- Does Permit2 revoke build `Permit2.approve(token, spender, 0, 0)` against the
+  Permit2 contract while preserving owner, chain, preflight, gas, and
+  post-revoke verification gates?
+- Do standard ERC-20 revokes still build `approve(spender, 0)` against the
+  token contract?
+- Are hybrid token contracts marked only when the same contract has fungible
+  and NFT approval surfaces in the current discovery context?
+- Do hybrid rows retain the normal token or NFT verification and revoke
+  semantics while adding risk/search/filter context?
+- Do the Permit2 and Hybrid filters only narrow visible results and never
+  change discovery coverage, live verification, or revoke eligibility?
+
 ## BSC Discovery Questions
 
 - Do BSC historical log requests use Etherscan API V2 at
@@ -144,6 +171,8 @@ submission must stay unavailable.
 
 - Are discovered fungible token candidates rechecked with `allowance(owner,
   spender)` on the same chain?
+- Are Permit2 delegated allowances rechecked with `allowance(owner, token,
+  spender)` on the Permit2 contract for the same chain?
 - Are NFT operator approvals rechecked with `isApprovedForAll(owner, operator)`
   on the same chain?
 - Are NFT per-token approvals rechecked with `getApproved(tokenId)` where the
@@ -154,6 +183,8 @@ submission must stay unavailable.
 ## Revoke Questions
 
 - Do fungible token revokes use `approve(spender, 0)`?
+- Do Permit2 delegated allowance revokes use
+  `Permit2.approve(token, spender, 0, 0)`?
 - Do NFT operator revokes use `setApprovalForAll(operator, false)`?
 - Do NFT per-token revokes use `approve(address(0), tokenId)`?
 - Do transaction requests include the approval's `chainId`?
@@ -186,6 +217,19 @@ submission must stay unavailable.
 - Are Base labels empty unless manually verified?
 - Are unknown BSC and Base spenders shown as unknown rather than guessed?
 - Is registry data treated only as enrichment, not discovery truth?
+
+## Token Logo Questions
+
+- Is token-logo lookup scoped to PulseChain and BSC only until each additional
+  chain is explicitly enabled and reviewed?
+- Does the logo resolver send only token contract addresses, not scanned owner
+  addresses, spender addresses, allowances, or wallet connection state?
+- Does the UI keep text symbol/address data visible when no logo exists or the
+  image fails to load?
+- Are third-party logos treated as display-only metadata, not as trust,
+  verification, registry, or discovery evidence?
+- Does `/api/token-logos` cap requests to `30` token addresses and avoid
+  caching malformed or upstream-failure responses?
 
 ## Telemetry Questions
 
@@ -228,6 +272,12 @@ npm.cmd run build
 - Load `/app` on Optimism / OP Mainnet and confirm only live-verified ERC-20
   and NFT rows can open the revoke review panel; batch and global revoke remain
   unavailable.
+- Use the Permit2 filter and confirm it only narrows visible rows to delegated
+  Permit2 allowances that survived live-read validation.
+- Use the Hybrid filter and confirm it only narrows visible rows to contracts
+  with both fungible and NFT approval surfaces.
+- Expand Permit2 and hybrid rows and confirm risk signals explain concrete
+  drivers without describing a spender or token as safe.
 - Test a low-gas BSC revoke and confirm the wallet receives `gas` below the
   hard cap.
 - Test or simulate a high-gas BSC revoke and confirm the in-app warning appears

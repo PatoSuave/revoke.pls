@@ -1,9 +1,11 @@
+const lifelinePath = "M10 22 L16 22 L19 14 L23 28 L26 22 L30 22";
+
 export function PulseMark({ className = "h-8 w-8" }: { className?: string }) {
   return (
     <svg
       viewBox="0 0 40 40"
       aria-hidden
-      className={className}
+      className={`pulse-mark ${className}`}
       xmlns="http://www.w3.org/2000/svg"
     >
       <defs>
@@ -19,13 +21,24 @@ export function PulseMark({ className = "h-8 w-8" }: { className?: string }) {
         width="36"
         height="36"
         rx="10"
+        className="pulse-mark-frame"
         fill="url(#pulseMarkFill)"
       />
       <path
-        d="M10 22 L16 22 L19 14 L23 28 L26 22 L30 22"
+        d={lifelinePath}
         fill="none"
         stroke="rgb(var(--pulse-mark-stroke))"
         strokeWidth="2.6"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <path
+        d={lifelinePath}
+        className="pulse-mark-lifeline"
+        fill="none"
+        pathLength="100"
+        stroke="rgb(var(--pulse-cyan))"
+        strokeWidth="2.2"
         strokeLinecap="round"
         strokeLinejoin="round"
       />

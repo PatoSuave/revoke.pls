@@ -16,7 +16,7 @@ export function AntiPhishingBanner() {
               <span className="font-semibold text-pulse-text">
                 Official site: {OFFICIAL_DOMAIN}.
               </span>{" "}
-              Revoke.PLS will never ask for your seed phrase or private key.
+              Pulse Revoke will never ask for your seed phrase or private key.
               Avoid wallet links from DMs, Telegram, Discord, ads, or
               misspelled domains.
             </p>

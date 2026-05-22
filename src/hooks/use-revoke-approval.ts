@@ -213,6 +213,8 @@ export function useRevokeApproval({
           chainId: target.chainId,
           tokenAddress: target.tokenAddress,
           spenderAddress: target.spenderAddress,
+          approvalKind: target.approvalKind,
+          approvalContractAddress: target.approvalContractAddress,
         },
       });
       setIfCurrent(result.state);
@@ -223,6 +225,8 @@ export function useRevokeApproval({
     config,
     ownerAddress,
     status,
+    target.approvalContractAddress,
+    target.approvalKind,
     target.chainId,
     target.spenderAddress,
     target.tokenAddress,
@@ -235,17 +239,23 @@ export function useRevokeApproval({
     if (prev === status) return;
     lastStatusRef.current = status;
     if (status === "success") {
-      trackEvent("revoke_confirmed", { kind: "erc20", chainId: target.chainId });
+      trackEvent("revoke_confirmed", {
+        kind: target.approvalKind ?? "erc20",
+        chainId: target.chainId,
+      });
     } else if (status === "error") {
       trackEvent(
         "revoke_failed",
-        { kind: "erc20", chainId: target.chainId },
+        { kind: target.approvalKind ?? "erc20", chainId: target.chainId },
         "warn",
       );
     } else if (status === "rejected") {
-      trackEvent("revoke_rejected", { kind: "erc20", chainId: target.chainId });
+      trackEvent("revoke_rejected", {
+        kind: target.approvalKind ?? "erc20",
+        chainId: target.chainId,
+      });
     }
-  }, [status, target.chainId]);
+  }, [status, target.approvalKind, target.chainId]);
 
   const refreshPreflight = useCallback(async () => {
     setIsRefreshingApproval(true);
@@ -267,6 +277,7 @@ export function useRevokeApproval({
       const allowancePreflight = evaluateErc20AllowancePreflight(raw, {
         tokenSymbol,
         tokenDecimals,
+        approvalKind: target.approvalKind,
       });
       if (allowancePreflight.status !== "active") {
         setPreflight(allowancePreflight);
@@ -355,7 +366,10 @@ export function useRevokeApproval({
       setPreflight(blockedErc20Preflight(blockReason));
       return;
     }
-    trackEvent("revoke_submitted", { kind: "erc20", chainId: target.chainId });
+    trackEvent("revoke_submitted", {
+      kind: target.approvalKind ?? "erc20",
+      chainId: target.chainId,
+    });
     write.writeContract({
       ...buildRevokeCall(target),
       chainId: target.chainId as WalletWriteChainId,

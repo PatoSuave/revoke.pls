@@ -56,6 +56,7 @@ export interface OptimismApprovalApiDiagnostics {
   explorerConfigured: boolean;
   rawApprovalLogCount: number;
   decodedErc20ApprovalCount: number;
+  decodedPermit2ApprovalCount?: number;
   decodedNftApprovalCount: number;
   liveReadSuccessCount: number;
   liveReadFailureCount: number;
@@ -135,6 +136,7 @@ const EMPTY_DIAGNOSTICS: OptimismApprovalApiDiagnostics = {
   explorerConfigured: false,
   rawApprovalLogCount: 0,
   decodedErc20ApprovalCount: 0,
+  decodedPermit2ApprovalCount: 0,
   decodedNftApprovalCount: 0,
   liveReadSuccessCount: 0,
   liveReadFailureCount: 0,
