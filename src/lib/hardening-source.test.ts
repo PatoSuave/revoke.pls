@@ -214,6 +214,9 @@ describe("hardening source invariants", () => {
     expect(auditGuide).toContain("Arbitrum One, chain ID `42161`");
     expect(auditGuide).toContain("Optimism / OP Mainnet, chain ID `10`");
     expect(auditGuide).toContain("CSP report-only");
+    expect(auditGuide).toContain("Permit2 And Hybrid Discovery Questions");
+    expect(auditGuide).toContain("Permit2.approve(token, spender, 0, 0)");
+    expect(auditGuide).toContain("Hybrid filter");
     expect(`${security}\n${auditGuide}`).not.toContain(
       "Ethereum Mainnet should remain inactive",
     );

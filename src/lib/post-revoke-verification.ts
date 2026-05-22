@@ -6,6 +6,10 @@ import {
   buildErc20PreflightRead,
   buildNftPreflightRead,
 } from "@/lib/preflight";
+import {
+  isPermit2AllowanceActive,
+  parsePermit2AllowanceRead,
+} from "@/lib/permit2";
 import type { RevokeTarget } from "@/lib/revoke";
 
 export type PostRevokeVerificationState =
@@ -41,6 +45,22 @@ export async function verifyErc20PostRevokeCleared({
       client.readContract(buildErc20PreflightRead(ownerAddress, target)),
       timeoutMs,
     );
+
+    if (target.approvalKind === "permit2") {
+      const permit2Read = parsePermit2AllowanceRead(result);
+      if (!permit2Read) {
+        return {
+          state: "incomplete",
+          error: "Unexpected Permit2 allowance read result",
+        };
+      }
+
+      return {
+        state: isPermit2AllowanceActive(permit2Read)
+          ? "mismatch"
+          : "confirmed-cleared",
+      };
+    }
 
     if (typeof result !== "bigint") {
       return {

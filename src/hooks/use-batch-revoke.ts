@@ -355,6 +355,8 @@ export function useBatchRevoke({
             chainId: item.chainId,
             tokenAddress: item.tokenAddress,
             spenderAddress: item.spenderAddress,
+            approvalKind: item.approvalKind,
+            approvalContractAddress: item.approvalContractAddress,
           }),
           chainId: item.chainId as SupportedChainId,
           ...(safeGas.gas !== undefined ? { gas: safeGas.gas } : {}),
@@ -516,6 +518,8 @@ async function refreshErc20PreflightForItem(
         chainId: item.chainId,
         tokenAddress: item.tokenAddress,
         spenderAddress: item.spenderAddress,
+        approvalKind: item.approvalKind,
+        approvalContractAddress: item.approvalContractAddress,
       }),
       account: ownerAddress,
     });

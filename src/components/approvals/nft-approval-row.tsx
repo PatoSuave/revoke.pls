@@ -13,6 +13,7 @@ import {
   ZeroAddressSummary,
   isCurrentApprovalStateUnverifiedReason,
   protocolMetadataItems,
+  riskSignalItems,
   type ApprovalVerificationKind,
 } from "@/components/approvals/approval-readability";
 import {
@@ -240,6 +241,7 @@ export function NftApprovalRow({
               />
             ),
           },
+          ...riskSignalItems(approval.risk.drivers),
           {
             label: "Recommended action",
             value:

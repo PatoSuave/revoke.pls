@@ -301,7 +301,7 @@ function EthereumScanContent({
         tone="warning"
         eyebrow="Verification incomplete"
         title="Current approval state could not be fully confirmed"
-        body="Revoke.PLS found approval history, but some live contract reads failed or discovery did not finish. The app could not confirm whether those approvals are active right now, so revoke stays disabled. Try rescanning; if the message remains, the contract or RPC may be temporarily unavailable or failing live approval reads."
+        body="Pulse Revoke found approval history, but some live contract reads failed or discovery did not finish. The app could not confirm whether those approvals are active right now, so revoke stays disabled. Try rescanning; if the message remains, the contract or RPC may be temporarily unavailable or failing live approval reads."
       >
         <DetailList
           title="Technical detail"
@@ -334,7 +334,7 @@ function EthereumScanContent({
             Verification incomplete - current approval state could not be fully confirmed.
           </p>
           <p className="mt-1 leading-6 text-pulse-muted">
-            Revoke.PLS found approval history, but some live contract reads
+            Pulse Revoke found approval history, but some live contract reads
             failed or discovery did not finish. Rows that were individually
             confirmed by a live read can still be revoked one at a time; rows
             whose current approval state could not be confirmed remain
@@ -1417,6 +1417,10 @@ function EthereumDiagnostics({
       diagnostics?.decodedErc20ApprovalCount.toString() ?? "Not returned",
     ],
     [
+      "Decoded Permit2 approvals",
+      diagnostics?.decodedPermit2ApprovalCount?.toString() ?? "Not returned",
+    ],
+    [
       "Decoded NFT approvals",
       diagnostics?.decodedNftApprovalCount.toString() ?? "Not returned",
     ],
@@ -1432,6 +1436,12 @@ function EthereumDiagnostics({
       "ERC-20 live read failures",
       diagnostics
         ? (skippedReasons["erc20-live-read-failure"] ?? 0).toString()
+        : "Not returned",
+    ],
+    [
+      "Permit2 live read failures",
+      diagnostics
+        ? (skippedReasons["permit2-live-read-failure"] ?? 0).toString()
         : "Not returned",
     ],
     [

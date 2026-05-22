@@ -170,7 +170,7 @@ export function VerificationTechnicalExplainer() {
         </div>
       </dl>
       <p className="mt-2">
-        If these reads fail, Revoke.PLS keeps revoke disabled instead of
+        If these reads fail, Pulse Revoke keeps revoke disabled instead of
         guessing.
       </p>
     </div>
@@ -242,6 +242,25 @@ export function protocolMetadataItems(
   }
 
   return items;
+}
+
+export function riskSignalItems(
+  drivers: readonly string[] | undefined,
+): ApprovalMeaningItem[] {
+  if (!drivers?.length) return [];
+
+  return [
+    {
+      label: "Risk signals",
+      value: (
+        <ul className="grid gap-1">
+          {drivers.map((driver) => (
+            <li key={driver}>{driver}</li>
+          ))}
+        </ul>
+      ),
+    },
+  ];
 }
 
 function contractStatusLabel(

@@ -1,18 +1,24 @@
-export type ApprovalVerificationKind = "erc20" | "nft-token" | "nft-operator";
+export type ApprovalVerificationKind =
+  | "erc20"
+  | "permit2"
+  | "nft-token"
+  | "nft-operator";
 
 export const CURRENT_APPROVAL_STATE_UNVERIFIED_TITLE =
   "Current state not verified";
 
 export const CURRENT_APPROVAL_STATE_UNVERIFIED_BODY =
-  "Revoke.PLS could not confirm this approval directly from the contract. The revoke button stays disabled until a live read confirms the approval is active.";
+  "Pulse Revoke could not confirm this approval directly from the contract. The revoke button stays disabled until a live read confirms the approval is active.";
 
 export const ZERO_ADDRESS_EXPLANATION_TITLE = "Zero address shown";
 
 export const ZERO_ADDRESS_EXPLANATION_BODY =
-  'The zero address usually represents "no approved address" when confirmed by a live contract read. This row is still marked unverified because Revoke.PLS could not complete the required live read.';
+  'The zero address usually represents "no approved address" when confirmed by a live contract read. This row is still marked unverified because Pulse Revoke could not complete the required live read.';
 
 const VERIFICATION_METHOD_COPY: Record<ApprovalVerificationKind, string> = {
   erc20: "To verify this row, the app must read allowance(owner, spender).",
+  permit2:
+    "To verify this row, the app must read Permit2 allowance(owner, token, spender).",
   "nft-token":
     "To verify this row, the app must read getApproved(tokenId).",
   "nft-operator":

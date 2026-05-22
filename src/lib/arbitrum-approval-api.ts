@@ -9,8 +9,12 @@ import {
 
 import {
   buildDiscoveryContracts,
+  buildHybridTokenAddressSet,
+  buildPermit2AllowanceContracts,
   collectDiscoveryReadFailures,
+  collectPermit2ReadFailures,
   parseDiscoveryResults,
+  parsePermit2AllowanceResults,
   type Approval,
   type ReadResult,
 } from "@/lib/approvals";
@@ -21,6 +25,7 @@ import {
   type DiscoveryResult,
   type DiscoverySource,
   type NftDiscoveryResult,
+  type Permit2DiscoveryResult,
 } from "@/lib/discovery";
 import {
   ARBITRUM_APPROVAL_API_DISCOVERY_LIMITS,
@@ -58,6 +63,7 @@ export interface ArbitrumApprovalApiDiagnostics {
   explorerConfigured: boolean;
   rawApprovalLogCount: number;
   decodedErc20ApprovalCount: number;
+  decodedPermit2ApprovalCount: number;
   decodedNftApprovalCount: number;
   liveReadSuccessCount: number;
   liveReadFailureCount: number;
@@ -327,6 +333,7 @@ function emptyDiagnostics(
     explorerConfigured: Boolean(config.apiUrl && config.apiKey),
     rawApprovalLogCount: 0,
     decodedErc20ApprovalCount: 0,
+    decodedPermit2ApprovalCount: 0,
     decodedNftApprovalCount: 0,
     liveReadSuccessCount: 0,
     liveReadFailureCount: 0,
@@ -409,6 +416,19 @@ function countNftLiveReads(
   return { success, failure };
 }
 
+function emptyPermit2Discovery(
+  source: DiscoverySource["meta"],
+): Permit2DiscoveryResult {
+  return {
+    source,
+    allowances: [],
+    rawCount: 0,
+    truncated: false,
+    windows: 0,
+    requests: 0,
+  };
+}
+
 function classifyStatus(input: {
   activeCount: number;
   liveReadFailureCount: number;
@@ -480,6 +500,7 @@ function buildIncompleteReasons(input: {
   candidateCapHit: boolean;
   requestTimedOut: boolean;
   erc20LiveReadFailures: number;
+  permit2LiveReadFailures: number;
   nftLiveReadFailures: number;
   liveReadCandidatesTotal: number;
   liveReadCandidatesProcessed: number;
@@ -494,6 +515,9 @@ function buildIncompleteReasons(input: {
   if (input.requestTimedOut) reasons.push("request timed out");
   if (input.erc20LiveReadFailures > 0) {
     reasons.push(`${input.erc20LiveReadFailures} ERC-20 live reads failed`);
+  }
+  if (input.permit2LiveReadFailures > 0) {
+    reasons.push(`${input.permit2LiveReadFailures} Permit2 live reads failed`);
   }
   if (input.nftLiveReadFailures > 0) {
     reasons.push(`${input.nftLiveReadFailures} NFT live reads failed`);
@@ -541,10 +565,13 @@ export async function scanArbitrumApprovals(
 
   let erc20Discovery: DiscoveryResult;
   let nftDiscovery: NftDiscoveryResult;
+  let permit2Discovery: Permit2DiscoveryResult;
   try {
-    [erc20Discovery, nftDiscovery] = await Promise.all([
+    [erc20Discovery, nftDiscovery, permit2Discovery] = await Promise.all([
       source.discover(owner, { signal: options.signal }),
       source.discoverNftApprovals(owner, { signal: options.signal }),
+      source.discoverPermit2Allowances?.(owner, { signal: options.signal }) ??
+        emptyPermit2Discovery(source.meta),
     ]);
   } catch (error) {
     const rateLimited = isUpstreamRateLimit(error);
@@ -578,14 +605,26 @@ export async function scanArbitrumApprovals(
   }
 
   const liveReadCandidatesTotal =
-    erc20Discovery.pairs.length + nftDiscovery.approvals.length;
+    erc20Discovery.pairs.length +
+    permit2Discovery.allowances.length +
+    nftDiscovery.approvals.length;
   const normalizedCandidateCap = Math.max(0, Math.floor(liveReadCandidateCap));
   const erc20PairsForRead = erc20Discovery.pairs.slice(
     0,
     normalizedCandidateCap,
   );
-  const nftCandidateAllowance = Math.max(
+  const permit2CandidateAllowance = Math.max(
     normalizedCandidateCap - erc20PairsForRead.length,
+    0,
+  );
+  const permit2AllowancesForRead = permit2Discovery.allowances.slice(
+    0,
+    permit2CandidateAllowance,
+  );
+  const nftCandidateAllowance = Math.max(
+    normalizedCandidateCap -
+      erc20PairsForRead.length -
+      permit2AllowancesForRead.length,
     0,
   );
   const nftApprovalsForRead = nftDiscovery.approvals.slice(
@@ -593,13 +632,20 @@ export async function scanArbitrumApprovals(
     nftCandidateAllowance,
   );
   const liveReadCandidatesProcessed =
-    erc20PairsForRead.length + nftApprovalsForRead.length;
+    erc20PairsForRead.length +
+    permit2AllowancesForRead.length +
+    nftApprovalsForRead.length;
   const candidateCapHit =
     liveReadCandidatesTotal > liveReadCandidatesProcessed;
 
-  const { contracts: erc20Contracts, uniqueTokens } = buildDiscoveryContracts(
+  const { contracts: erc20Contracts, uniqueTokens: erc20UniqueTokens } =
+    buildDiscoveryContracts(owner, erc20PairsForRead, ARBITRUM_ONE_CHAIN_ID);
+  const {
+    contracts: permit2Contracts,
+    uniqueTokens: permit2UniqueTokens,
+  } = buildPermit2AllowanceContracts(
     owner,
-    erc20PairsForRead,
+    permit2AllowancesForRead,
     ARBITRUM_ONE_CHAIN_ID,
   );
   const { contracts: nftContracts, uniqueCollections } =
@@ -609,8 +655,13 @@ export async function scanArbitrumApprovals(
       ARBITRUM_ONE_CHAIN_ID,
     );
 
-  const [erc20ReadOutput, nftReadOutput] = await Promise.all([
+  const [erc20ReadOutput, permit2ReadOutput, nftReadOutput] =
+    await Promise.all([
     readContracts(reader, erc20Contracts, {
+      concurrency: rpcReadConcurrency,
+      signal: options.signal,
+    }),
+    readContracts(reader, permit2Contracts, {
       concurrency: rpcReadConcurrency,
       signal: options.signal,
     }),
@@ -620,28 +671,48 @@ export async function scanArbitrumApprovals(
     }),
   ]);
   const erc20Reads = erc20ReadOutput.results;
+  const permit2Reads = permit2ReadOutput.results;
   const nftReads = nftReadOutput.results;
   const requestTimedOut =
     erc20ReadOutput.requestTimedOut ||
+    permit2ReadOutput.requestTimedOut ||
     nftReadOutput.requestTimedOut ||
     Boolean(options.signal?.aborted);
 
   const erc20ReadFailures = collectDiscoveryReadFailures(
     erc20Reads,
     erc20PairsForRead,
-    uniqueTokens,
+    erc20UniqueTokens,
+  );
+  const permit2ReadFailures = collectPermit2ReadFailures(
+    permit2Reads,
+    permit2AllowancesForRead,
+    permit2UniqueTokens,
   );
   const nftLiveReads = countNftLiveReads(
     nftReads,
     nftApprovalsForRead.length,
     uniqueCollections.length,
   );
+  const hybridTokenAddresses = buildHybridTokenAddressSet({
+    erc20Pairs: erc20Discovery.pairs,
+    permit2Allowances: permit2Discovery.allowances,
+    nftApprovals: nftDiscovery.approvals,
+  });
 
   const erc20Parsed = parseDiscoveryResults(
     erc20Reads,
     owner,
     ARBITRUM_ONE_CHAIN_ID,
     erc20PairsForRead,
+    { hybridTokenAddresses },
+  );
+  const permit2Parsed = parsePermit2AllowanceResults(
+    permit2Reads,
+    owner,
+    ARBITRUM_ONE_CHAIN_ID,
+    permit2AllowancesForRead,
+    { hybridTokenAddresses },
   );
   const nftParsed = parseNftValidationResults(
     nftReads,
@@ -651,17 +722,29 @@ export async function scanArbitrumApprovals(
   );
 
   const activeCount =
-    erc20Parsed.approvals.length + nftParsed.approvals.length;
+    erc20Parsed.approvals.length +
+    permit2Parsed.approvals.length +
+    nftParsed.approvals.length;
   const decodedCount =
-    erc20Discovery.pairs.length + nftDiscovery.approvals.length;
+    erc20Discovery.pairs.length +
+    permit2Discovery.allowances.length +
+    nftDiscovery.approvals.length;
   const processedDecodedCount =
-    erc20PairsForRead.length + nftApprovalsForRead.length;
+    erc20PairsForRead.length +
+    permit2AllowancesForRead.length +
+    nftApprovalsForRead.length;
   const liveReadSuccessCount =
-    erc20ReadFailures.allowanceSucceeded + nftLiveReads.success;
+    erc20ReadFailures.allowanceSucceeded +
+    permit2ReadFailures.allowanceSucceeded +
+    nftLiveReads.success;
   const liveReadFailureCount =
-    erc20ReadFailures.allowanceFailed + nftLiveReads.failure;
+    erc20ReadFailures.allowanceFailed +
+    permit2ReadFailures.allowanceFailed +
+    nftLiveReads.failure;
   const discoveryTruncated =
-    erc20Discovery.truncated || nftDiscovery.truncated;
+    erc20Discovery.truncated ||
+    permit2Discovery.truncated ||
+    nftDiscovery.truncated;
   const skippedReasons: Record<string, number> = {};
   const inactiveOrRevoked = Math.max(
     processedDecodedCount - activeCount - liveReadFailureCount,
@@ -673,8 +756,17 @@ export async function scanArbitrumApprovals(
     "erc20-live-read-failure",
     erc20ReadFailures.allowanceFailed,
   );
+  addReason(
+    skippedReasons,
+    "permit2-live-read-failure",
+    permit2ReadFailures.allowanceFailed,
+  );
   addReason(skippedReasons, "nft-live-read-failure", nftLiveReads.failure);
-  addReason(skippedReasons, "metadata-read-failure", erc20ReadFailures.metadataFailed);
+  addReason(
+    skippedReasons,
+    "metadata-read-failure",
+    erc20ReadFailures.metadataFailed + permit2ReadFailures.metadataFailed,
+  );
   addReason(skippedReasons, "discovery-truncated", discoveryTruncated ? 1 : 0);
   addReason(
     skippedReasons,
@@ -703,6 +795,13 @@ export async function scanArbitrumApprovals(
       warnings.push(
         `Arbitrum ERC-20 allowance live reads failed for ${formatApprovalCandidateCount(
           erc20ReadFailures.allowanceFailed,
+        )}.`,
+      );
+    }
+    if (permit2ReadFailures.allowanceFailed > 0) {
+      warnings.push(
+        `Arbitrum Permit2 allowance live reads failed for ${formatApprovalCandidateCount(
+          permit2ReadFailures.allowanceFailed,
         )}.`,
       );
     }
@@ -738,6 +837,7 @@ export async function scanArbitrumApprovals(
     candidateCapHit,
     requestTimedOut,
     erc20LiveReadFailures: erc20ReadFailures.allowanceFailed,
+    permit2LiveReadFailures: permit2ReadFailures.allowanceFailed,
     nftLiveReadFailures: nftLiveReads.failure,
     liveReadCandidatesTotal,
     liveReadCandidatesProcessed,
@@ -746,8 +846,12 @@ export async function scanArbitrumApprovals(
     chainId: ARBITRUM_ONE_CHAIN_ID,
     rpcConfigured: true,
     explorerConfigured: true,
-    rawApprovalLogCount: erc20Discovery.rawCount + nftDiscovery.rawCount,
+    rawApprovalLogCount:
+      erc20Discovery.rawCount +
+      permit2Discovery.rawCount +
+      nftDiscovery.rawCount,
     decodedErc20ApprovalCount: erc20Discovery.pairs.length,
+    decodedPermit2ApprovalCount: permit2Discovery.allowances.length,
     decodedNftApprovalCount: nftDiscovery.approvals.length,
     liveReadSuccessCount,
     liveReadFailureCount,
@@ -777,7 +881,9 @@ export async function scanArbitrumApprovals(
     status,
     chainId: ARBITRUM_ONE_CHAIN_ID,
     approvals: {
-      erc20: erc20Parsed.approvals.map(serializeErc20Approval),
+      erc20: [...erc20Parsed.approvals, ...permit2Parsed.approvals].map(
+        serializeErc20Approval,
+      ),
       nft: nftParsed.approvals.map(serializeNftApproval),
     },
     diagnostics,

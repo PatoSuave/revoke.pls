@@ -69,7 +69,13 @@ The scanner uses a discovery-first pipeline:
    approval candidates.
 4. Every candidate is re-checked live on-chain via `allowance`,
    `isApprovedForAll`, or `getApproved`.
-5. The curated registry enriches known tokens and spenders. It is not a
+5. Permit2 `Approval` and `Permit` events are treated as delegated allowance
+   candidates, then rechecked with `allowance(owner, token, spender)` on the
+   Permit2 contract before they render as active rows.
+6. Contracts with both fungible and NFT approval surfaces in the current scan
+   are marked as hybrid for display, filtering, search, and risk explanation.
+   The hybrid label does not change live verification or revoke eligibility.
+7. The curated registry enriches known tokens and spenders. It is not a
    discovery source.
 
 BSC historical discovery uses Etherscan API V2 `module=logs&action=getLogs`
@@ -185,6 +191,12 @@ User-facing Optimism copy uses:
 - `Verified-row revoke` for ERC-20 and NFT row state
 - `Batch revoke disabled` for Optimism batch/global actions
 
+Permit2 rows are shown as delegated token allowances. The row still carries the
+underlying token address and spender address, but live reads and revoke calls go
+through the Permit2 contract. Hybrid rows are display/risk annotations for token
+contracts with both fungible and NFT approval signals; the normal ERC-20 or NFT
+verification path remains the source of truth.
+
 ## Transaction Flow
 
 Fungible token revoke:
@@ -195,6 +207,15 @@ Fungible token revoke:
 4. Wallet signs and submits on the approval's `chainId`.
 5. UI links the transaction to PulseScan, BscScan, BaseScan, Etherscan, or
    Arbiscan and rescans after success.
+
+Permit2 delegated allowance revoke:
+
+1. User reviews a live-verified Permit2 delegated allowance.
+2. App refreshes `allowance(owner, token, spender)` on the Permit2 contract.
+3. App prepares `Permit2.approve(token, spender, 0, 0)`.
+4. Wallet signs and submits on the approval's `chainId`.
+5. Post-revoke verification reads the Permit2 nested allowance again before
+   reporting cleared.
 
 NFT revoke:
 
