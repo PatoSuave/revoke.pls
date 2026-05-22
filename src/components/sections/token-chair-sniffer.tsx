@@ -249,6 +249,19 @@ export function TokenChairSniffer({
           </section>
 
           <StatusStrip response={response} state={state} contract={contract} />
+          <ConsumerSummary
+            response={response}
+            state={state}
+            requestError={requestError}
+            market={market}
+            contract={contract}
+            verdict={verdict}
+            quickRows={quickRows}
+            sourceSignalRows={sourceSignalRows}
+            concentrationRows={concentrationRows}
+            eventHistoryRows={eventHistoryRows}
+            lpControlSummary={lpControlSummary}
+          />
           <ScanReport
             response={response}
             state={state}
@@ -273,6 +286,7 @@ export function TokenChairSniffer({
             response={response}
             state={state}
             requestError={requestError}
+            contract={contract}
           />
 
           <div className="grid items-start gap-4 xl:grid-cols-[minmax(0,1.15fr)_minmax(360px,0.85fr)]">
@@ -664,6 +678,200 @@ function StatusStrip({
   );
 }
 
+function ConsumerSummary({
+  response,
+  state,
+  requestError,
+  market,
+  contract,
+  verdict,
+  quickRows,
+  sourceSignalRows,
+  concentrationRows,
+  eventHistoryRows,
+  lpControlSummary,
+}: {
+  response: TokenChairApiResponse | null;
+  state: SnifferUiState;
+  requestError: string | null;
+  market: TokenChairMarketData | null;
+  contract: TokenChairContractData | null;
+  verdict: TokenChairVerdict;
+  quickRows: readonly SniffSignalRow[];
+  sourceSignalRows: readonly TokenChairSourceSignalDetailRow[];
+  concentrationRows: readonly TokenChairConcentrationDetailRow[];
+  eventHistoryRows: readonly TokenChairEventHistoryDetailRow[];
+  lpControlSummary: TokenChairLpControlSummary | null;
+}) {
+  const riskRows = buildReportRiskRows({
+    response,
+    quickRows,
+    sourceSignalRows,
+    concentrationRows,
+    eventHistoryRows,
+    lpControlSummary,
+    state,
+    requestError,
+  });
+  const evidenceRows = buildEvidenceRows({
+    response,
+    state,
+    contract,
+    market,
+    lpControlSummary,
+    quickRows,
+  });
+  const riskQueue = buildTokenChairRiskQueue({ response, lpControlSummary });
+  const coverage = getEvidenceCoverage(evidenceRows);
+  const topRisks = riskQueue
+    .filter((item) => item.severity !== "info")
+    .slice(0, 3);
+  const topUnknowns = evidenceRows
+    .filter((row) => row.status === "unable-to-verify" || row.status === "not-checked")
+    .slice(0, 3);
+  const summaryCopy =
+    state === "loading"
+      ? "Reading visible public data now."
+      : state === "error"
+        ? requestError ?? "The scan did not complete."
+        : response
+          ? response.verdict.notes[0] ?? "Visible public data returned."
+          : "Paste a PulseChain token address to build a consumer-friendly review summary.";
+
+  return (
+    <section className="rounded-lg border border-pulse-border/80 bg-[#080d12] p-4">
+      <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_360px]">
+        <div className="min-w-0">
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div className="min-w-0">
+              <p className="text-xs font-semibold uppercase tracking-[0.16em] text-pulse-cyan">
+                Consumer Summary
+              </p>
+              <h2 className="mt-2 break-words text-2xl font-semibold text-pulse-text">
+                {verdict.displayLabel}
+              </h2>
+            </div>
+            <span className={`rounded-full border px-3 py-1 text-sm ${verdictToneText(verdict)}`}>
+              {coverage.label}
+            </span>
+          </div>
+          <p className="mt-3 max-w-4xl text-sm leading-6 text-pulse-muted">
+            {summaryCopy}
+          </p>
+
+          <div className="mt-4 grid gap-3 lg:grid-cols-3">
+            <ConsumerSummaryColumn
+              title="Top Risks"
+              empty="No critical or warning item is prioritized yet."
+              rows={topRisks.map((item) => ({
+                label: item.title,
+                value: riskSeverityLabel(item.severity),
+                status: item.severity === "critical" ? "danger" : "warning",
+                detail: item.evidence,
+              }))}
+            />
+            <ConsumerSummaryColumn
+              title="Open Unknowns"
+              empty="No major evidence gaps are surfaced yet."
+              rows={topUnknowns}
+            />
+            <ConsumerSummaryColumn
+              title="Quick Data"
+              empty="Scan a token to populate market context."
+              rows={[
+                {
+                  label: "Market",
+                  value: market
+                    ? `${formatUsd(market.liquidityUsd)} liquidity`
+                    : formatStatus(state, response),
+                  status: market ? "checked" : state === "loading" ? "not-checked" : "unable-to-verify",
+                  detail: market
+                    ? `${formatTxns24h(market.txns24h)} in 24h on ${market.dexName}.`
+                    : "Market data has not returned yet.",
+                },
+                {
+                  label: "Verdict basis",
+                  value: `${riskRows.length.toLocaleString("en-US")} item${riskRows.length === 1 ? "" : "s"}`,
+                  status: riskRows.some((row) => row.status === "danger")
+                    ? "danger"
+                    : riskRows.some((row) => row.status === "warning")
+                      ? "warning"
+                      : "checked",
+                  detail:
+                    "The summary is built from visible public signals and open review gaps.",
+                },
+              ]}
+            />
+          </div>
+        </div>
+
+        <div className="rounded-lg border border-pulse-border/65 bg-[#070b10] p-4">
+          <PanelHeader
+            icon="C"
+            title="Completion"
+            meta={`${coverage.checked}/${coverage.total}`}
+          />
+          <div className="mt-4 h-3 overflow-hidden rounded-full bg-pulse-border/70">
+            <div
+              className="h-full rounded-full bg-pulse-green"
+              style={{ width: `${coverage.percent}%` }}
+            />
+          </div>
+          <div className="mt-4 grid grid-cols-2 gap-2">
+            <CompareMetric label="Checked" value={coverage.checked.toLocaleString("en-US")} />
+            <CompareMetric label="Gaps" value={coverage.gaps.toLocaleString("en-US")} tone={coverage.gaps > 0 ? "warning" : "muted"} />
+            <CompareMetric label="Critical" value={getTokenChairRiskCounts(riskQueue).critical.toLocaleString("en-US")} tone={getTokenChairRiskCounts(riskQueue).critical > 0 ? "danger" : "muted"} />
+            <CompareMetric label="Warnings" value={getTokenChairRiskCounts(riskQueue).warning.toLocaleString("en-US")} tone={getTokenChairRiskCounts(riskQueue).warning > 0 ? "warning" : "muted"} />
+          </div>
+          <p className="mt-3 text-xs leading-5 text-pulse-muted">
+            Completion means evidence coverage, not token quality. Open gaps are kept visible for manual review.
+          </p>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function ConsumerSummaryColumn({
+  title,
+  rows,
+  empty,
+}: {
+  title: string;
+  rows: readonly SniffSignalRow[];
+  empty: string;
+}) {
+  return (
+    <div className="rounded-lg border border-pulse-border/65 bg-[#070b10] p-3">
+      <p className="text-sm font-semibold text-pulse-text">{title}</p>
+      <div className="mt-3 grid gap-2">
+        {rows.length ? (
+          rows.map((row) => (
+            <article
+              key={`${title}-${row.label}-${row.value}`}
+              className="rounded-lg border border-pulse-border/60 bg-[#0a1016] px-3 py-2"
+            >
+              <div className="flex items-center justify-between gap-2">
+                <p className="min-w-0 truncate text-sm font-semibold text-pulse-text">
+                  {row.label}
+                </p>
+                <SniffValueBadge row={row} />
+              </div>
+              <p className="mt-2 line-clamp-3 text-xs leading-5 text-pulse-muted">
+                {row.detail}
+              </p>
+            </article>
+          ))
+        ) : (
+          <p className="rounded-lg border border-pulse-border/60 bg-[#0a1016] px-3 py-2 text-xs leading-5 text-pulse-muted">
+            {empty}
+          </p>
+        )}
+      </div>
+    </div>
+  );
+}
+
 function ScanReport({
   response,
   state,
@@ -694,33 +902,57 @@ function ScanReport({
     response?.tokenAddress ?? market?.tokenAddress ?? contract?.tokenAddress ?? null;
   const tokenLabel =
     market?.tokenSymbol ?? contract?.tokenSymbol ?? (state === "loading" ? "Loading" : "Waiting");
-  const reportRisks = buildReportRiskRows({
-    response,
-    quickRows,
-    sourceSignalRows,
-    concentrationRows,
-    eventHistoryRows,
-    lpControlSummary,
-    state,
-    requestError,
-  });
-  const evidenceRows = buildEvidenceRows({
-    response,
-    state,
-    contract,
-    market,
-    lpControlSummary,
-    quickRows,
-  });
-  const reviewRows = buildReviewRows({
-    evidenceRows,
-    reportRisks,
-    quickRows,
-    tokenAddress,
-    state,
-  });
+  const reportRisks = useMemo(
+    () =>
+      buildReportRiskRows({
+        response,
+        quickRows,
+        sourceSignalRows,
+        concentrationRows,
+        eventHistoryRows,
+        lpControlSummary,
+        state,
+        requestError,
+      }),
+    [
+      concentrationRows,
+      eventHistoryRows,
+      lpControlSummary,
+      quickRows,
+      requestError,
+      response,
+      sourceSignalRows,
+      state,
+    ],
+  );
+  const evidenceRows = useMemo(
+    () =>
+      buildEvidenceRows({
+        response,
+        state,
+        contract,
+        market,
+        lpControlSummary,
+        quickRows,
+      }),
+    [contract, lpControlSummary, market, quickRows, response, state],
+  );
+  const reviewRows = useMemo(
+    () =>
+      buildReviewRows({
+        evidenceRows,
+        reportRisks,
+        quickRows,
+        tokenAddress,
+        state,
+      }),
+    [evidenceRows, quickRows, reportRisks, state, tokenAddress],
+  );
   const sharePath = tokenAddress ? buildTokenChairSnifferUrl(tokenAddress) : null;
-  const riskQueue = buildTokenChairRiskQueue({ response, lpControlSummary });
+  const riskQueue = useMemo(
+    () => buildTokenChairRiskQueue({ response, lpControlSummary }),
+    [lpControlSummary, response],
+  );
 
   async function copyReportLink() {
     if (!sharePath || typeof window === "undefined" || !navigator.clipboard) {
@@ -864,9 +1096,21 @@ function ReportRiskList({ rows }: { rows: readonly SniffSignalRow[] }) {
 }
 
 function EvidenceChecklist({ rows }: { rows: readonly SniffSignalRow[] }) {
+  const coverage = getEvidenceCoverage(rows);
+
   return (
     <div className="rounded-lg border border-pulse-border/70 bg-[#070b10] p-4">
-      <PanelHeader icon="E" title="Evidence Checklist" meta="Checked vs pending" />
+      <PanelHeader
+        icon="E"
+        title="Evidence Checklist"
+        meta={`${coverage.checked}/${coverage.total} checked`}
+      />
+      <div className="mt-3 h-2 overflow-hidden rounded-full bg-pulse-border/70">
+        <div
+          className="h-full rounded-full bg-pulse-green"
+          style={{ width: `${coverage.percent}%` }}
+        />
+      </div>
       <div className="mt-3 grid gap-2 md:grid-cols-2">
         {rows.map((row) => (
           <article
@@ -927,17 +1171,20 @@ function MustReviewQueue({ items }: { items: readonly TokenChairRiskItem[] }) {
                 {riskSeverityLabel(item.severity)}
               </span>
             </div>
-            <div className="mt-3 grid gap-2 text-xs leading-5 text-pulse-muted">
-              <p>
-                <span className="font-semibold text-pulse-text">Evidence:</span> {item.evidence}
-              </p>
-              <p>
-                <span className="font-semibold text-pulse-text">Why:</span> {item.whyItMatters}
-              </p>
-              <p>
-                <span className="font-semibold text-pulse-text">Review:</span> {item.manualReview}
-              </p>
-            </div>
+            <p className="mt-3 text-xs leading-5 text-pulse-muted">
+              <span className="font-semibold text-pulse-text">Evidence:</span> {item.evidence}
+            </p>
+            <details className="mt-3 rounded-lg border border-pulse-border/60 bg-[#070b10] px-3 py-2 text-xs leading-5 text-pulse-muted">
+              <summary className="cursor-pointer font-semibold text-pulse-text">
+                Why this matters
+              </summary>
+              <div className="mt-2 grid gap-2">
+                <p>{item.whyItMatters}</p>
+                <p>
+                  <span className="font-semibold text-pulse-text">Review:</span> {item.manualReview}
+                </p>
+              </div>
+            </details>
             {item.href ? (
               <a
                 href={item.href}
@@ -999,6 +1246,9 @@ type ReviewWorkbenchEntry = {
   checklistCount: number;
   criticalCount: number;
   warningCount: number;
+  scanSignature: string;
+  changedSinceLastReview: boolean;
+  changeSummary: string | null;
   lastScannedAt: string;
   reportPath: string;
 };
@@ -1060,6 +1310,9 @@ function ReviewBeforeBuying({
   const [comparisonTokenAddresses, setComparisonTokenAddresses] = useState<string[]>([]);
   const [copied, setCopied] = useState(false);
   const riskCounts = getTokenChairRiskCounts(riskQueue);
+  const verdictLabel = verdict.label;
+  const criticalCount = riskCounts.critical;
+  const warningCount = riskCounts.warning;
   const checkedCount = rows.filter((row) => draft.checked[reviewRowKey(row)]).length;
   const completionLabel =
     rows.length > 0 ? `${checkedCount.toLocaleString("en-US")}/${rows.length.toLocaleString("en-US")} checked` : "No checklist";
@@ -1127,23 +1380,48 @@ function ReviewBeforeBuying({
 
     if (!tokenAddress || !sharePath) return;
 
+    const currentWorkbench = parseReviewWorkbench(
+      window.localStorage.getItem(REVIEW_WORKBENCH_STORAGE_KEY),
+    );
+    const previousEntry = currentWorkbench.find(
+      (item) => item.tokenAddress.toLowerCase() === tokenAddress.toLowerCase(),
+    );
+    const scanSignature = buildReviewScanSignature({
+      verdictLabel,
+      riskQueue,
+      criticalCount,
+      warningCount,
+      rows,
+    });
+    const changeSummary =
+      previousEntry && previousEntry.scanSignature !== scanSignature
+        ? describeReviewChange(previousEntry, {
+            verdictLabel,
+            criticalCount,
+            warningCount,
+            checkedCount,
+            checklistCount: rows.length,
+          })
+        : previousEntry?.changeSummary ?? null;
     const entry: ReviewWorkbenchEntry = {
       tokenAddress,
       tokenLabel,
-      verdictLabel: verdict.label,
+      verdictLabel,
       decision: draft.decision,
       notes: draft.notes,
       checkedCount,
       checklistCount: rows.length,
-      criticalCount: riskCounts.critical,
-      warningCount: riskCounts.warning,
+      criticalCount,
+      warningCount,
+      scanSignature,
+      changedSinceLastReview:
+        Boolean(previousEntry?.changedSinceLastReview) ||
+        Boolean(previousEntry && previousEntry.scanSignature !== scanSignature),
+      changeSummary,
       lastScannedAt: new Date().toISOString(),
       reportPath: sharePath,
     };
-    const nextWorkbench = upsertReviewWorkbenchEntry(
-      parseReviewWorkbench(window.localStorage.getItem(REVIEW_WORKBENCH_STORAGE_KEY)),
-      entry,
-    );
+    const nextWorkbench = upsertReviewWorkbenchEntry(currentWorkbench, entry);
     window.localStorage.setItem(
       REVIEW_WORKBENCH_STORAGE_KEY,
       JSON.stringify({
@@ -1154,16 +1432,18 @@ function ReviewBeforeBuying({
     setWorkbench(nextWorkbench);
   }, [
     checkedCount,
+    criticalCount,
     draft,
     draftLoaded,
-    riskCounts.critical,
-    riskCounts.warning,
+    riskQueue,
     rows.length,
+    rows,
     sharePath,
     storageKey,
     tokenAddress,
     tokenLabel,
-    verdict.label,
+    verdictLabel,
+    warningCount,
   ]);
 
   function setDecision(decision: ReviewDecision) {
@@ -1485,6 +1765,11 @@ function RecentReviewWorkbench({
                 <span className="mt-1 block text-xs leading-5 text-pulse-muted">
                   {entry.criticalCount} critical, {entry.warningCount} warning - {formatReviewTime(entry.lastScannedAt)}
                 </span>
+                {entry.changedSinceLastReview ? (
+                  <span className="mt-2 block rounded-lg border border-amber-300/35 bg-amber-300/10 px-2 py-1 text-xs leading-5 text-amber-100">
+                    Changed: {entry.changeSummary ?? "review signature changed"}
+                  </span>
+                ) : null}
                 <span className="mt-2 flex flex-wrap gap-2">
                   <a
                     href={entry.reportPath}
@@ -1504,6 +1789,11 @@ function RecentReviewWorkbench({
                   >
                     {selected ? "Comparing" : "Compare"}
                   </button>
+                  {entry.decision === "watchlist" ? (
+                    <span className="rounded-lg border border-pulse-cyan/35 bg-pulse-cyan/10 px-2 py-1 text-xs font-semibold text-pulse-cyan">
+                      Watchlist
+                    </span>
+                  ) : null}
                 </span>
               </article>
             );
@@ -1563,6 +1853,7 @@ function ReviewComparisonTray({
                 <CompareMetric label="Critical" value={entry.criticalCount.toLocaleString("en-US")} tone={entry.criticalCount > 0 ? "danger" : "muted"} />
                 <CompareMetric label="Warnings" value={entry.warningCount.toLocaleString("en-US")} tone={entry.warningCount > 0 ? "warning" : "muted"} />
                 <CompareMetric label="Checklist" value={`${entry.checkedCount}/${entry.checklistCount}`} />
+                <CompareMetric label="Changed" value={entry.changedSinceLastReview ? "Yes" : "No"} tone={entry.changedSinceLastReview ? "warning" : "muted"} />
                 <CompareMetric label="Updated" value={formatReviewTime(entry.lastScannedAt)} />
               </div>
               <p className="mt-3 line-clamp-3 text-xs leading-5 text-pulse-muted">
@@ -1633,6 +1924,11 @@ function parseReviewWorkbenchEntry(value: unknown): ReviewWorkbenchEntry | null 
     checklistCount: Number.isFinite(entry.checklistCount) ? Number(entry.checklistCount) : 0,
     criticalCount: Number.isFinite(entry.criticalCount) ? Number(entry.criticalCount) : 0,
     warningCount: Number.isFinite(entry.warningCount) ? Number(entry.warningCount) : 0,
+    scanSignature:
+      typeof entry.scanSignature === "string" ? entry.scanSignature : "legacy",
+    changedSinceLastReview: Boolean(entry.changedSinceLastReview),
+    changeSummary:
+      typeof entry.changeSummary === "string" ? entry.changeSummary : null,
     lastScannedAt: typeof entry.lastScannedAt === "string" ? entry.lastScannedAt : new Date(0).toISOString(),
     reportPath: typeof entry.reportPath === "string" ? entry.reportPath : buildTokenChairSnifferUrl(tokenAddress),
   };
@@ -1677,6 +1973,64 @@ function buildComparisonEntries(
     )
     .filter((entry): entry is ReviewWorkbenchEntry => entry !== undefined)
     .slice(0, REVIEW_COMPARISON_LIMIT);
+}
+
+function buildReviewScanSignature({
+  verdictLabel,
+  riskQueue,
+  criticalCount,
+  warningCount,
+  rows,
+}: {
+  verdictLabel: string;
+  riskQueue: readonly TokenChairRiskItem[];
+  criticalCount: number;
+  warningCount: number;
+  rows: readonly SniffSignalRow[];
+}): string {
+  const openRows = rows
+    .filter((row) => row.status === "warning" || row.status === "danger" || row.status === "unable-to-verify")
+    .map((row) => `${row.label}:${row.value}`)
+    .slice(0, 8)
+    .join("|");
+  const topRiskIds = riskQueue
+    .slice(0, 8)
+    .map((item) => item.id)
+    .join("|");
+
+  return [
+    verdictLabel,
+    criticalCount,
+    warningCount,
+    openRows,
+    topRiskIds,
+  ].join("::");
+}
+
+function describeReviewChange(
+  previous: ReviewWorkbenchEntry,
+  current: Pick<
+    ReviewWorkbenchEntry,
+    "verdictLabel" | "criticalCount" | "warningCount" | "checkedCount" | "checklistCount"
+  >,
+): string {
+  const changes = [
+    previous.verdictLabel !== current.verdictLabel
+      ? `verdict ${previous.verdictLabel} to ${current.verdictLabel}`
+      : null,
+    previous.criticalCount !== current.criticalCount
+      ? `critical ${previous.criticalCount} to ${current.criticalCount}`
+      : null,
+    previous.warningCount !== current.warningCount
+      ? `warning ${previous.warningCount} to ${current.warningCount}`
+      : null,
+    previous.checklistCount !== current.checklistCount ||
+    previous.checkedCount !== current.checkedCount
+      ? `checklist ${previous.checkedCount}/${previous.checklistCount} to ${current.checkedCount}/${current.checklistCount}`
+      : null,
+  ].filter((change): change is string => change !== null);
+
+  return changes.slice(0, 2).join("; ") || "visible review signature changed";
 }
 
 function isReviewDecision(value: unknown): value is ReviewDecision {
@@ -1724,6 +2078,19 @@ function compareMetricToneClass(tone: "muted" | "warning" | "danger"): string {
   if (tone === "danger") return "text-rose-200";
   if (tone === "warning") return "text-amber-100";
   return "text-pulse-text";
+}
+
+function sourceQualityToneClass(tone: SourceQualityTone): string {
+  if (tone === "fresh") {
+    return "border-pulse-green/35 bg-pulse-green/10 text-pulse-green";
+  }
+  if (tone === "partial") {
+    return "border-amber-300/35 bg-amber-300/10 text-amber-100";
+  }
+  if (tone === "gap") {
+    return "border-rose-400/35 bg-rose-400/10 text-rose-100";
+  }
+  return "border-pulse-border/65 bg-[#070b10] text-pulse-muted";
 }
 
 function buildReportRiskRows({
@@ -2008,6 +2375,105 @@ function buildReviewRows({
   ];
 }
 
+function getEvidenceCoverage(rows: readonly SniffSignalRow[]): {
+  checked: number;
+  gaps: number;
+  total: number;
+  percent: number;
+  label: string;
+} {
+  const total = rows.length;
+  const checked = rows.filter((row) => row.status === "checked").length;
+  const gaps = rows.filter(
+    (row) => row.status === "unable-to-verify" || row.status === "not-checked",
+  ).length;
+  const percent = total > 0 ? Math.round((checked / total) * 100) : 0;
+  const label =
+    total === 0
+      ? "No evidence yet"
+      : gaps > 0
+        ? `${percent}% coverage`
+        : "Coverage complete";
+
+  return { checked, gaps, total, percent, label };
+}
+
+function buildSourceQualityRows(
+  response: TokenChairApiResponse | null,
+  state: SnifferUiState,
+  contract: TokenChairContractData | null,
+): SourceQualityRow[] {
+  const loading = state === "loading";
+  const explorer = contract?.explorer ?? null;
+  const holders = contract?.holders ?? null;
+  const pairContract = response?.pairContract ?? null;
+  const pairStatus = pairContract?.status ?? null;
+
+  return [
+    {
+      label: "DEX Screener",
+      value: loading ? "Loading" : response?.market ? "Fresh" : response ? "Unavailable" : "Idle",
+      tone: loading || !response ? "idle" : response.market ? "fresh" : "gap",
+      detail: response?.market
+        ? "Selected pair and pair candidates returned from the public token-pairs feed."
+        : "Market context appears after a token scan returns pair data.",
+    },
+    {
+      label: "PulseChain RPC",
+      value: loading
+        ? "Loading"
+        : pairStatus === "success" || contract?.status === "success"
+          ? "Fresh"
+          : response
+            ? "Partial"
+            : "Idle",
+      tone: loading || !response ? "idle" : pairStatus === "success" || contract?.status === "success" ? "fresh" : "partial",
+      detail:
+        "Read-only contract calls cover pair tokens, reserves, owner, proxy slots, getters, and event windows.",
+    },
+    {
+      label: "PulseScan Source",
+      value: formatExplorerDataStatus(response, state),
+      tone: loading || !response
+        ? "idle"
+        : explorer?.status === "success"
+          ? "fresh"
+          : explorer?.status === "partial"
+            ? "partial"
+            : "gap",
+      detail:
+        "Source and ABI metadata power keyword signal rows when PulseScan returns them.",
+    },
+    {
+      label: "PulseScan Holders",
+      value: formatHolderDataStatus(response, state),
+      tone: loading || !response
+        ? "idle"
+        : holders?.status === "success"
+          ? "fresh"
+          : holders?.status === "partial"
+            ? "partial"
+            : "gap",
+      detail:
+        "Holder and LP distribution use bounded sampled pages, so capped or rate-limited reads stay visible.",
+    },
+    {
+      label: "PulseX Native",
+      value: formatPulseXDiscoveryStatus(response, state),
+      tone: loading || !response ? "idle" : response.pulsexPairs.length > 0 ? "fresh" : "partial",
+      detail:
+        "Native factory checks add pair-existence and raw-reserve context for common quote tokens.",
+    },
+    {
+      label: "Wallet Surface",
+      value: "Not used",
+      tone: "fresh",
+      detail:
+        "Token Chair remains read-only and outside wallet providers.",
+    },
+  ];
+}
+
 function contractReadValue(
   status: TokenChairContractData["status"] | null,
   loading: boolean,
@@ -2282,16 +2748,41 @@ function TokenInfoMiniMetric({
   );
 }
 
+type SourceQualityTone = "fresh" | "partial" | "gap" | "idle";
+
+interface SourceQualityRow {
+  label: string;
+  value: string;
+  detail: string;
+  tone: SourceQualityTone;
+}
+
+function SourceQualityChip({ row }: { row: SourceQualityRow }) {
+  return (
+    <div className={`rounded-lg border px-3 py-2 ${sourceQualityToneClass(row.tone)}`}>
+      <div className="flex items-center justify-between gap-2">
+        <p className="min-w-0 truncate font-semibold">{row.label}</p>
+        <span className="h-2 w-2 shrink-0 rounded-full bg-current" aria-hidden />
+      </div>
+      <p className="mt-1 font-semibold text-pulse-text">{row.value}</p>
+      <p className="mt-1 leading-5 opacity-85">{row.detail}</p>
+    </div>
+  );
+}
+
 function SignalDetailsPanel({
   response,
   state,
   requestError,
+  contract,
 }: {
   response: TokenChairApiResponse | null;
   state: SnifferUiState;
   requestError: string | null;
+  contract: TokenChairContractData | null;
 }) {
   const details = buildSignalDetails(response, state, requestError);
+  const sourceQualityRows = buildSourceQualityRows(response, state, contract);
 
   return (
     <section className="rounded-lg border border-pulse-border/75 bg-[#070b10] p-4">
@@ -2312,46 +2803,9 @@ function SignalDetailsPanel({
           ))}
         </ul>
         <div className="grid gap-2 rounded-lg border border-pulse-border/60 bg-[#0a1016] p-3 text-xs text-pulse-muted">
-          <div>
-            <p className="uppercase tracking-[0.14em] text-pulse-muted/75">
-              Market
-            </p>
-            <p className="mt-1 font-semibold text-pulse-text">
-              {response?.status ?? (state === "loading" ? "Loading" : "Not checked yet")}
-            </p>
-          </div>
-          <div>
-            <p className="uppercase tracking-[0.14em] text-pulse-muted/75">
-              Explorer
-            </p>
-            <p className="mt-1 font-semibold text-pulse-text">
-              {formatExplorerDataStatus(response, state)}
-            </p>
-          </div>
-          <div>
-            <p className="uppercase tracking-[0.14em] text-pulse-muted/75">
-              Holders
-            </p>
-            <p className="mt-1 font-semibold text-pulse-text">
-              {formatHolderDataStatus(response, state)}
-            </p>
-          </div>
-          <div>
-            <p className="uppercase tracking-[0.14em] text-pulse-muted/75">
-              PulseX
-            </p>
-            <p className="mt-1 font-semibold text-pulse-text">
-              {formatPulseXDiscoveryStatus(response, state)}
-            </p>
-          </div>
-          <div>
-            <p className="uppercase tracking-[0.14em] text-pulse-muted/75">
-              Mode
-            </p>
-            <p className="mt-1 font-semibold text-pulse-text">
-              Read-only, no wallet
-            </p>
-          </div>
+          {sourceQualityRows.map((row) => (
+            <SourceQualityChip key={row.label} row={row} />
+          ))}
         </div>
       </div>
       {response?.verdict.reasons.length ? (

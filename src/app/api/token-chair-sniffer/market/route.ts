@@ -7,12 +7,17 @@ import {
   createTokenChairApiResponse,
   normalizeTokenChairAddress,
 } from "@/lib/token-chair-sniffer";
+import {
+  getCachedTokenChairResponse,
+  setCachedTokenChairResponse,
+} from "@/lib/token-chair-sniffer-cache";
 import { fetchTokenChairScan } from "@/lib/token-chair-sniffer-scan";
 import {
   TOKEN_CHAIR_API_RATE_LIMIT,
   TOKEN_CHAIR_API_MAX_QUERY_VALUE_LENGTH,
   TOKEN_CHAIR_API_REQUEST_TIMEOUT_MS,
   checkTokenChairApiRateLimit,
+  tokenChairApiCacheHeaders,
   type TokenChairRateLimitResult,
 } from "@/lib/token-chair-sniffer-controls";
 
@@ -135,14 +140,28 @@ export async function GET(request: Request) {
         ],
       }),
       429,
-      rateLimitHeaders(rateLimit, { includeRetryAfter: true }),
+      { headers: rateLimitHeaders(rateLimit, { includeRetryAfter: true }) },
     );
+  }
+
+  const cachedResult = getCachedTokenChairResponse(tokenAddress);
+  if (cachedResult) {
+    return tokenChairJson(cachedResult, 200, {
+      headers: {
+        ...rateLimitHeaders(rateLimit),
+        "X-Token-Chair-Cache": "hit",
+      },
+      cacheable: true,
+    });
   }
 
   const result = await fetchTokenChairScan(
     tokenAddress,
     TOKEN_CHAIR_API_REQUEST_TIMEOUT_MS,
   );
+  if (result.status === "success" || result.status === "no-pair-found") {
+    setCachedTokenChairResponse(tokenAddress, result);
+  }
 
   const httpStatus =
     result.status === "upstream-unavailable" ||
@@ -150,7 +169,13 @@ export async function GET(request: Request) {
       ? 502
       : 200;
 
-  return tokenChairJson(result, httpStatus, rateLimitHeaders(rateLimit));
+  return tokenChairJson(result, httpStatus, {
+    headers: {
+      ...rateLimitHeaders(rateLimit),
+      "X-Token-Chair-Cache": "miss",
+    },
+    cacheable: result.status === "success" || result.status === "no-pair-found",
+  });
 }
 
 function validateTokenChairQuery(searchParams: URLSearchParams): string | null {
@@ -206,11 +231,17 @@ function conflictingTokenChairAliases(
 function tokenChairJson(
   body: unknown,
   status: number,
-  headers: HeadersInit = {},
+  options: { headers?: HeadersInit; cacheable?: boolean } = {},
 ) {
+  const headers = options.headers ?? {};
+  const cacheable = Boolean(options.cacheable);
+  const cacheHeaders = cacheable
+    ? tokenChairApiCacheHeaders
+    : approvalApiNoStoreHeaders;
+
   return NextResponse.json(body, {
     status,
-    headers: approvalApiNoStoreHeaders({
+    headers: cacheHeaders({
       ...headers,
       "X-Token-Chair-Chain": TOKEN_CHAIR_CHAIN_ID,
       "X-Token-Chair-Timeout-Ms": TOKEN_CHAIR_API_REQUEST_TIMEOUT_MS.toString(),

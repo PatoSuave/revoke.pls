@@ -22,6 +22,10 @@ Implemented in the current Phase 2 preview:
 - Local Recent Reviews workbench saved in browser storage with token, verdict, decision, checklist progress, risk counts, notes, and last-reviewed timestamp
 - Local Compare Reviews tray for comparing two to four saved review entries by decision, verdict, risk counts, checklist progress, timestamp, and notes
 - Review export that includes top prioritized risk items, checklist state, decision, notes, report link, and timestamp
+- Consumer Summary band that shows the verdict, evidence completion, top visible risks, top open unknowns, and quick market context before the detailed panels
+- Evidence completion indicator that measures checked public-data coverage, not token quality
+- Source-quality chips for DEX Screener, PulseChain RPC, PulseScan source metadata, PulseScan holder data, PulseX native discovery, and wallet surface state
+- Local watchlist/change flags that mark saved reviews when a later scan changes the local verdict/risk signature
 - EVM token-address validation and checksum normalization
 - Query-string token normalization with `token` and `address` aliases
 - Server-side DEX Screener token-pairs fetch for `pulsechain`
@@ -63,9 +67,11 @@ Phase 2 is considered preview-complete when all of the following remain true on 
 - The feature stays read-only and does not connect a wallet, request signatures, or submit transactions.
 - The Must Review Before Touching queue prioritizes critical, warning, and info items without claiming a token is safe, certified, guaranteed, or not a scam.
 - The queue shows a readiness summary that distinguishes critical review, warning/gap review, scan-needed state, and manual-decision-ready state.
+- The Consumer Summary stays compact and shows top risks and unknowns before full raw detail.
+- Evidence completion and source-quality chips are presented as data-coverage status, not token-quality status.
 - Degraded PulseScan, holder, selected-pair, and source/ABI states are labeled as review gaps rather than token conclusions.
 - Review Before Buying persists checklist state, notes, and manual decision locally per token.
-- Recent Reviews and Compare Reviews persist locally in the browser and never require a backend account or wallet.
+- Recent Reviews, Watchlist, change flags, and Compare Reviews persist locally in the browser and never require a backend account or wallet.
 - Copy review exports top queue items, checklist state, decision, notes, report link, and timestamp.
 - Vercel Preview QA passes for sample tokens, deep links, route smoke, API smoke, visual desktop/mobile layout, and local-review workflows.
 
@@ -96,6 +102,8 @@ Normalized live fields include:
 If DEX Screener returns multiple PulseChain pairs, the UI selects the pair with the highest `liquidity.usd`. If every valid pair is missing liquidity, the first valid pair is used and the response is marked with a weak-selection warning.
 
 The Market Chair Intel panel also shows a compact Pair Candidates list from the already-normalized DEX Screener response. Candidate rows include pair rank, DEX, quote token, liquidity, volume, transaction count, age, and a DEX Screener link when returned. These rows are market context only; labels like `Selected pair`, `Low liquidity`, and `Visible market data` are not contract-risk conclusions.
+
+Successful and no-pair Token Chair API responses use a short public cache window so repeated public token-market reads do not immediately repeat the same upstream work. Bad requests, rate-limit responses, malformed upstream responses, and upstream failures remain non-cacheable. Approval/revoke scanner APIs remain no-store because they are wallet/address-specific.
 
 After DEX Screener selects the primary pair, the API also performs read-only PulseChain RPC checks against that selected pair contract. It verifies whether the pair's `token0()` or `token1()` matches the scanned token address, reads raw `getReserves()` values, and reads raw LP `totalSupply()`. These values are displayed as raw contract integers because token decimals differ by asset. They are useful for confirming the selected pair address is internally consistent, but they are not a swap simulation, LP lock proof, or exhaustive liquidity analysis.
 
@@ -284,6 +292,8 @@ on `/app/token-chair-sniffer`.
 ## Preview QA
 
 Use `docs/TOKEN-CHAIR-VERCEL-QA.md` for the Vercel Preview QA matrix. It covers the sample-token presets, deep-link checks, API checks through `vercel curl`, expected degradation states, and the non-live honeypot/simulation guardrail.
+
+The repo also includes a manual GitHub Actions workflow, `.github/workflows/token-chair-preview-smoke.yml`, that runs `npm run smoke:preview` against a supplied Vercel Preview URL. The workflow expects Vercel CLI access through `VERCEL_TOKEN` and is intended as a release-readiness gate before merging this branch.
 
 ## Verdict Rules
 

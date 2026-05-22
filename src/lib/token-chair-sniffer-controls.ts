@@ -1,5 +1,7 @@
 export const TOKEN_CHAIR_API_REQUEST_TIMEOUT_MS = 10_000;
 export const TOKEN_CHAIR_API_MAX_QUERY_VALUE_LENGTH = 96;
+export const TOKEN_CHAIR_API_CACHE_TTL_MS = 30_000;
+export const TOKEN_CHAIR_API_CACHE_STALE_WHILE_REVALIDATE_SECONDS = 60;
 export const TOKEN_CHAIR_DEX_SCREENER_MAX_RESPONSE_BYTES = 1_000_000;
 export const TOKEN_CHAIR_EXPLORER_MAX_RESPONSE_BYTES = 2_000_000;
 export const TOKEN_CHAIR_HOLDER_PAGE_MAX_RESPONSE_BYTES = 1_000_000;
@@ -64,6 +66,23 @@ export function checkTokenChairApiRateLimit(
 
 export function resetTokenChairApiRateLimitForTests() {
   rateLimitBuckets.clear();
+}
+
+export function tokenChairApiCacheHeaders(
+  headers: HeadersInit = {},
+): HeadersInit {
+  return {
+    "Cache-Control": `public, max-age=0, s-maxage=${Math.floor(
+      TOKEN_CHAIR_API_CACHE_TTL_MS / 1000,
+    )}, stale-while-revalidate=${TOKEN_CHAIR_API_CACHE_STALE_WHILE_REVALIDATE_SECONDS}`,
+    "CDN-Cache-Control": `public, s-maxage=${Math.floor(
+      TOKEN_CHAIR_API_CACHE_TTL_MS / 1000,
+    )}`,
+    "Vercel-CDN-Cache-Control": `public, s-maxage=${Math.floor(
+      TOKEN_CHAIR_API_CACHE_TTL_MS / 1000,
+    )}, stale-while-revalidate=${TOKEN_CHAIR_API_CACHE_STALE_WHILE_REVALIDATE_SECONDS}`,
+    ...headers,
+  };
 }
 
 function pruneExpiredRateLimitBuckets(now: number) {

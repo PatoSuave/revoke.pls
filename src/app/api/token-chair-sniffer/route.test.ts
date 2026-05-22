@@ -139,6 +139,7 @@ vi.mock("@/lib/token-chair-sniffer-pulsex", () => ({
 }));
 
 import { GET } from "./route";
+import { resetTokenChairResponseCacheForTests } from "@/lib/token-chair-sniffer-cache";
 import { resetTokenChairApiRateLimitForTests } from "@/lib/token-chair-sniffer-controls";
 
 const TOKEN = getAddress("0xcae394005c9c4c309621c53d53db9ceb701fc8d8");
@@ -147,10 +148,23 @@ const PAIR = getAddress("0x165C3410fC91EF562C50559f7d2289fEbed552d9");
 
 afterEach(() => {
   resetTokenChairApiRateLimitForTests();
+  resetTokenChairResponseCacheForTests();
   vi.unstubAllGlobals();
 });
 
-function expectNoStore(response: Response) {
+function expectTokenChairCacheHeaders(response: Response) {
+  expect(response.headers.get("Cache-Control")).toBe(
+    "public, max-age=0, s-maxage=30, stale-while-revalidate=60",
+  );
+  expect(response.headers.get("CDN-Cache-Control")).toBe(
+    "public, s-maxage=30",
+  );
+  expect(response.headers.get("Vercel-CDN-Cache-Control")).toBe(
+    "public, s-maxage=30, stale-while-revalidate=60",
+  );
+}
+
+function expectTokenChairNoStoreHeaders(response: Response) {
   expect(response.headers.get("Cache-Control")).toBe(
     "private, no-store, max-age=0, must-revalidate",
   );
@@ -177,7 +191,7 @@ describe("Token Chair Sniffer API route", () => {
     const body = await response.json();
 
     expect(response.status).toBe(400);
-    expectNoStore(response);
+    expectTokenChairNoStoreHeaders(response);
     expect(body.status).toBe("bad-request");
     expect(fetchSpy).not.toHaveBeenCalled();
   });
@@ -194,7 +208,7 @@ describe("Token Chair Sniffer API route", () => {
     const body = await response.json();
 
     expect(response.status).toBe(400);
-    expectNoStore(response);
+    expectTokenChairNoStoreHeaders(response);
     expect(body.status).toBe("bad-request");
     expect(body.errors.join(" ")).toContain("Unsupported query param: callback");
     expect(fetchSpy).not.toHaveBeenCalled();
@@ -212,7 +226,7 @@ describe("Token Chair Sniffer API route", () => {
     const body = await response.json();
 
     expect(response.status).toBe(400);
-    expectNoStore(response);
+    expectTokenChairNoStoreHeaders(response);
     expect(body.status).toBe("bad-request");
     expect(body.errors.join(" ")).toContain("Duplicate query param: token");
     expect(fetchSpy).not.toHaveBeenCalled();
@@ -230,7 +244,7 @@ describe("Token Chair Sniffer API route", () => {
     const body = await response.json();
 
     expect(response.status).toBe(400);
-    expectNoStore(response);
+    expectTokenChairNoStoreHeaders(response);
     expect(body.status).toBe("bad-request");
     expect(body.errors.join(" ")).toContain("Provide either ?token=0x...");
     expect(fetchSpy).not.toHaveBeenCalled();
@@ -252,7 +266,7 @@ describe("Token Chair Sniffer API route", () => {
       const body = await response.json();
 
       expect(response.status).toBe(400);
-      expectNoStore(response);
+      expectTokenChairNoStoreHeaders(response);
       expect(body.status).toBe("bad-request");
       expect(body.errors.join(" ")).toContain("zero and burn addresses");
     }
@@ -285,7 +299,7 @@ describe("Token Chair Sniffer API route", () => {
     const body = await response.json();
 
     expect(response.status).toBe(400);
-    expectNoStore(response);
+    expectTokenChairNoStoreHeaders(response);
     expect(body.status).toBe("bad-request");
     expect(body.errors.join(" ")).toContain("server-bounded read windows");
     expect(fetchSpy).not.toHaveBeenCalled();
@@ -305,7 +319,7 @@ describe("Token Chair Sniffer API route", () => {
     const body = await response.json();
 
     expect(response.status).toBe(200);
-    expectNoStore(response);
+    expectTokenChairCacheHeaders(response);
     expect(response.headers.get("X-Token-Chair-Timeout-Ms")).toBe("10000");
     expect(response.headers.get("X-RateLimit-Limit")).toBe("20");
     expect(body.status).toBe("no-pair-found");
@@ -320,16 +334,17 @@ describe("Token Chair Sniffer API route", () => {
 
     let response: Response | null = null;
     for (let i = 0; i < 21; i += 1) {
+      const token = getAddress(`0x${(i + 1).toString(16).padStart(40, "0")}`);
       response = await GET(
         new Request(
-          `https://pulserevoke.test/api/token-chair-sniffer?token=${TOKEN}`,
+          `https://pulserevoke.test/api/token-chair-sniffer?token=${token}`,
           { headers: { "x-forwarded-for": "203.0.113.22" } },
         ),
       );
     }
 
     expect(response?.status).toBe(429);
-    expectNoStore(response!);
+    expectTokenChairNoStoreHeaders(response!);
     expect(response?.headers.get("Retry-After")).toBeTruthy();
     expect(response?.headers.get("X-RateLimit-Limit")).toBe("20");
     const body = await response!.json();
@@ -346,9 +361,10 @@ describe("Token Chair Sniffer API route", () => {
 
     let response: Response | null = null;
     for (let i = 0; i < 21; i += 1) {
+      const token = getAddress(`0x${(i + 101).toString(16).padStart(40, "0")}`);
       response = await GET(
         new Request(
-          `https://pulserevoke.test/api/token-chair-sniffer?token=${TOKEN}`,
+          `https://pulserevoke.test/api/token-chair-sniffer?token=${token}`,
           {
             headers: {
               "x-forwarded-for": `not-an-ip-${i}-${"x".repeat(2_000)}`,
@@ -359,6 +375,7 @@ describe("Token Chair Sniffer API route", () => {
     }
 
     expect(response?.status).toBe(429);
+    expectTokenChairNoStoreHeaders(response!);
     expect(response?.headers.get("Retry-After")).toBeTruthy();
     const body = await response!.json();
     expect(body.status).toBe("upstream-unavailable");
@@ -404,6 +421,7 @@ describe("Token Chair Sniffer API route", () => {
     const body = await response.json();
 
     expect(response.status).toBe(200);
+    expectTokenChairCacheHeaders(response);
     expect(body.status).toBe("success");
     expect(body).not.toHaveProperty("dextools");
     expect(body.market.tokenSymbol).toBe("CHAIR");
@@ -423,6 +441,54 @@ describe("Token Chair Sniffer API route", () => {
     expect(body.pairContract.totalSupplyRaw).toBe("3000000000000000000000");
   });
 
+  it("serves repeated successful Token Chair scans from the short cache", async () => {
+    const fetchSpy = vi.fn(async () =>
+      jsonResponse([
+        {
+          chainId: "pulsechain",
+          dexId: "pulsex",
+          url: `https://dexscreener.com/pulsechain/${PAIR}`,
+          pairAddress: PAIR,
+          baseToken: {
+            address: TOKEN,
+            name: "Chair Token",
+            symbol: "CHAIR",
+          },
+          quoteToken: {
+            address: QUOTE,
+            name: "Wrapped Pulse",
+            symbol: "WPLS",
+          },
+          priceUsd: "0.01",
+          txns: { h24: { buys: 1, sells: 2 } },
+          volume: { h24: 99 },
+          liquidity: { usd: 10000 },
+          fdv: 100000,
+          marketCap: 90000,
+          pairCreatedAt: 1700000000000,
+        },
+      ]),
+    );
+    vi.stubGlobal("fetch", fetchSpy);
+
+    const first = await GET(
+      new Request(
+        `https://pulserevoke.test/api/token-chair-sniffer?token=${TOKEN}`,
+      ),
+    );
+    const second = await GET(
+      new Request(
+        `https://pulserevoke.test/api/token-chair-sniffer?token=${TOKEN}`,
+      ),
+    );
+    const secondBody = await second.json();
+
+    expect(first.headers.get("X-Token-Chair-Cache")).toBe("miss");
+    expect(second.headers.get("X-Token-Chair-Cache")).toBe("hit");
+    expect(secondBody.status).toBe("success");
+    expect(fetchSpy).toHaveBeenCalledTimes(1);
+  });
+
   it("returns malformed-response as an upstream failure HTTP status", async () => {
     vi.stubGlobal(
       "fetch",
@@ -437,7 +503,7 @@ describe("Token Chair Sniffer API route", () => {
     const body = await response.json();
 
     expect(response.status).toBe(502);
-    expectNoStore(response);
+    expectTokenChairNoStoreHeaders(response);
     expect(body.status).toBe("malformed-response");
   });
 });
