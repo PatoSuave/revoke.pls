@@ -182,6 +182,84 @@ describe("Token Chair Sniffer API route", () => {
     expect(fetchSpy).not.toHaveBeenCalled();
   });
 
+  it("rejects unsupported query params before upstream fetch", async () => {
+    const fetchSpy = vi.fn();
+    vi.stubGlobal("fetch", fetchSpy);
+
+    const response = await GET(
+      new Request(
+        `https://pulserevoke.test/api/token-chair-sniffer?token=${TOKEN}&callback=alert`,
+      ),
+    );
+    const body = await response.json();
+
+    expect(response.status).toBe(400);
+    expectNoStore(response);
+    expect(body.status).toBe("bad-request");
+    expect(body.errors.join(" ")).toContain("Unsupported query param: callback");
+    expect(fetchSpy).not.toHaveBeenCalled();
+  });
+
+  it("rejects duplicate token params before upstream fetch", async () => {
+    const fetchSpy = vi.fn();
+    vi.stubGlobal("fetch", fetchSpy);
+
+    const response = await GET(
+      new Request(
+        `https://pulserevoke.test/api/token-chair-sniffer?token=${TOKEN}&token=${QUOTE}`,
+      ),
+    );
+    const body = await response.json();
+
+    expect(response.status).toBe(400);
+    expectNoStore(response);
+    expect(body.status).toBe("bad-request");
+    expect(body.errors.join(" ")).toContain("Duplicate query param: token");
+    expect(fetchSpy).not.toHaveBeenCalled();
+  });
+
+  it("rejects conflicting token and address aliases before upstream fetch", async () => {
+    const fetchSpy = vi.fn();
+    vi.stubGlobal("fetch", fetchSpy);
+
+    const response = await GET(
+      new Request(
+        `https://pulserevoke.test/api/token-chair-sniffer?token=${TOKEN}&address=${QUOTE}`,
+      ),
+    );
+    const body = await response.json();
+
+    expect(response.status).toBe(400);
+    expectNoStore(response);
+    expect(body.status).toBe("bad-request");
+    expect(body.errors.join(" ")).toContain("Provide either ?token=0x...");
+    expect(fetchSpy).not.toHaveBeenCalled();
+  });
+
+  it("rejects zero and burn addresses before upstream fetch", async () => {
+    const fetchSpy = vi.fn();
+    vi.stubGlobal("fetch", fetchSpy);
+
+    for (const blockedAddress of [
+      "0x0000000000000000000000000000000000000000",
+      "0x000000000000000000000000000000000000dEaD",
+    ]) {
+      const response = await GET(
+        new Request(
+          `https://pulserevoke.test/api/token-chair-sniffer?token=${blockedAddress}`,
+        ),
+      );
+      const body = await response.json();
+
+      expect(response.status).toBe(400);
+      expectNoStore(response);
+      expect(body.status).toBe("bad-request");
+      expect(body.errors.join(" ")).toContain("zero and burn addresses");
+    }
+
+    expect(fetchSpy).not.toHaveBeenCalled();
+  });
+
   it("rejects non-PulseChain chain IDs", async () => {
     const response = await GET(
       new Request(

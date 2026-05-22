@@ -254,6 +254,8 @@ The app route accepts a `token` query parameter and an `address` alias:
 
 Valid EVM-style query addresses are checksum-normalized, prefilled, and scanned automatically through the same read-only server route. Manual scans replace the current URL with the canonical `?token=` form so the result can be shared for review. Invalid query values are ignored instead of triggering a wallet action or transaction.
 
+The API route is stricter than the share-link UI. It rejects unsupported or duplicate query parameters, conflicting `token` / `address` aliases, overlong query values, and zero or burn addresses before any upstream market, explorer, holder, or RPC reads. Upstream JSON/text responses are bounded before parsing so oversized DEX Screener or PulseScan responses degrade to an unavailable/malformed state instead of consuming unbounded memory.
+
 ## Non-Goals
 
 The current preview does not add:

@@ -92,6 +92,8 @@ Expected:
 npx.cmd vercel curl "$preview/api/token-chair-sniffer/market?token=not-an-address"
 npx.cmd vercel curl "$preview/api/token-chair-sniffer/market?chainId=ethereum&token=0x0000000000000000000000000000000000000000"
 npx.cmd vercel curl "$preview/api/token-chair-sniffer/market?token=0x95B303987A60C71504D99Aa1b13B4DA07b0790ab&page=2"
+npx.cmd vercel curl "$preview/api/token-chair-sniffer/market?token=0x95B303987A60C71504D99Aa1b13B4DA07b0790ab&callback=alert"
+npx.cmd vercel curl "$preview/api/token-chair-sniffer/market?token=0x95B303987A60C71504D99Aa1b13B4DA07b0790ab&address=0xA1077a294dDE1B09bB078844df40758a5D0f9a27"
 ```
 
 Expected:
@@ -99,6 +101,8 @@ Expected:
 - Invalid token returns `bad-request`.
 - Non-PulseChain `chainId` returns `bad-request`.
 - Unsupported range parameters return `bad-request`.
+- Unsupported query parameters, duplicate params, and conflicting `token` / `address` aliases return `bad-request`.
+- Zero and burn addresses return `bad-request` before upstream reads.
 
 ## Visual Review
 

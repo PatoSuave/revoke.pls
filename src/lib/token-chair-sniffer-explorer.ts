@@ -11,6 +11,11 @@ import type {
   TokenChairSourceSignal,
   TokenChairSourceSignalKey,
 } from "@/lib/token-chair-sniffer";
+import { TOKEN_CHAIR_EXPLORER_MAX_RESPONSE_BYTES } from "@/lib/token-chair-sniffer-controls";
+import {
+  isTokenChairResponseTooLargeError,
+  readTokenChairBoundedJson,
+} from "@/lib/token-chair-sniffer-fetch";
 
 export interface FetchTokenChairExplorerOptions {
   fetchImpl?: typeof fetch;
@@ -323,15 +328,21 @@ async function fetchExplorerJson(
     return {
       ok: true,
       status: response.status,
-      payload: await response.json(),
+      payload: await readTokenChairBoundedJson(
+        response,
+        "PulseScan source metadata",
+        TOKEN_CHAIR_EXPLORER_MAX_RESPONSE_BYTES,
+      ),
       error: null,
     };
-  } catch {
+  } catch (error) {
     return {
       ok: false,
       status: response.status,
       payload: null,
-      error: "PulseScan returned a response that could not be parsed as JSON.",
+      error: isTokenChairResponseTooLargeError(error)
+        ? "PulseScan source metadata response was too large to process safely."
+        : "PulseScan returned a response that could not be parsed as JSON.",
     };
   }
 }

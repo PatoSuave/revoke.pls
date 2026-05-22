@@ -6,6 +6,11 @@ import type {
   TokenChairHolderDistribution,
   TokenChairHolderData,
 } from "@/lib/token-chair-sniffer";
+import { TOKEN_CHAIR_HOLDER_PAGE_MAX_RESPONSE_BYTES } from "@/lib/token-chair-sniffer-controls";
+import {
+  isTokenChairResponseTooLargeError,
+  readTokenChairBoundedText,
+} from "@/lib/token-chair-sniffer-fetch";
 
 export interface FetchTokenChairHolderOptions {
   fetchImpl?: typeof fetch;
@@ -390,7 +395,11 @@ async function fetchHolderPage(
   }
 
   try {
-    const text = await response.text();
+    const text = await readTokenChairBoundedText(
+      response,
+      "PulseScan holder data",
+      TOKEN_CHAIR_HOLDER_PAGE_MAX_RESPONSE_BYTES,
+    );
     const payload = JSON.parse(text) as unknown;
     return {
       ok: true,
@@ -402,12 +411,14 @@ async function fetchHolderPage(
       maxPagesReached: false,
       nextPageParams: extractNextPageParams(text),
     };
-  } catch {
+  } catch (error) {
     return {
       ok: false,
       status: response.status,
       payload: null,
-      error: "PulseScan holder data could not be parsed as JSON.",
+      error: isTokenChairResponseTooLargeError(error)
+        ? "PulseScan holder data response was too large to process safely."
+        : "PulseScan holder data could not be parsed as JSON.",
       warning: null,
       pageCount: 0,
       maxPagesReached: false,

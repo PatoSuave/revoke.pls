@@ -6,6 +6,11 @@ import {
   normalizeDexScreenerTokenPairsResponse,
   type TokenChairApiResponse,
 } from "@/lib/token-chair-sniffer";
+import { TOKEN_CHAIR_DEX_SCREENER_MAX_RESPONSE_BYTES } from "@/lib/token-chair-sniffer-controls";
+import {
+  isTokenChairResponseTooLargeError,
+  readTokenChairBoundedJson,
+} from "@/lib/token-chair-sniffer-fetch";
 
 interface FetchDexScreenerTokenPairsOptions {
   fetchImpl?: typeof fetch;
@@ -48,12 +53,20 @@ export async function fetchDexScreenerTokenPairs(
 
   let payload: unknown;
   try {
-    payload = await response.json();
-  } catch {
+    payload = await readTokenChairBoundedJson(
+      response,
+      "DEX Screener",
+      TOKEN_CHAIR_DEX_SCREENER_MAX_RESPONSE_BYTES,
+    );
+  } catch (error) {
     return createTokenChairApiResponse({
       status: "malformed-response",
       tokenAddress,
-      errors: ["DEX Screener returned a response that could not be parsed as JSON."],
+      errors: [
+        isTokenChairResponseTooLargeError(error)
+          ? "DEX Screener returned a response that was too large to process safely."
+          : "DEX Screener returned a response that could not be parsed as JSON.",
+      ],
     });
   }
 

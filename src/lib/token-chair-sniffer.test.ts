@@ -390,6 +390,24 @@ describe("Token Chair Sniffer helpers", () => {
     expect(result.ok).toBe(false);
   });
 
+  it("caps oversized DEX Screener responses before parsing JSON", async () => {
+    const fetchImpl = vi.fn(
+      async () =>
+        new Response("[]", {
+          status: 200,
+          headers: {
+            "content-type": "application/json",
+            "content-length": "1000001",
+          },
+        }),
+    ) as unknown as typeof fetch;
+    const result = await fetchDexScreenerTokenPairs(TOKEN, { fetchImpl });
+
+    expect(result.status).toBe("malformed-response");
+    expect(result.ok).toBe(false);
+    expect(result.errors.join(" ")).toContain("too large");
+  });
+
   it("keeps verdict copy away from safe claims and defaults complete-looking Phase 1 results to unable", () => {
     const success = normalizeDexScreenerTokenPairsResponse([dexPair()], TOKEN);
     const highRisk = normalizeDexScreenerTokenPairsResponse(
