@@ -1,14 +1,14 @@
 import Link from "next/link";
+import type { ReactNode } from "react";
 
-import { ConnectWalletButton } from "@/components/connect-wallet-button";
 import { PulseMark } from "@/components/pulse-mark";
 import { ThemeModeToggle } from "@/components/theme-mode-toggle";
 import { siteConfig } from "@/lib/site";
 
 export function SiteHeader({
-  showWalletButton = true,
+  action,
 }: {
-  showWalletButton?: boolean;
+  action?: ReactNode;
 } = {}) {
   return (
     <header className="sticky top-0 z-40 w-full border-b border-pulse-border/60 bg-pulse-bg/80 backdrop-blur">
@@ -47,9 +47,7 @@ export function SiteHeader({
 
         <div className="order-2 flex min-w-0 flex-wrap items-center gap-2 lg:order-3 lg:justify-end">
           <ThemeModeToggle className="shrink-0" />
-          {showWalletButton ? (
-            <ConnectWalletButton className="max-w-full justify-start lg:justify-end" />
-          ) : (
+          {action ?? (
             <Link
               href="/app#scanner"
               className="inline-flex min-h-9 items-center justify-center rounded-xl border border-pulse-border bg-pulse-panel/60 px-3 py-2 text-xs font-semibold text-pulse-muted transition hover:bg-pulse-text/10 hover:text-pulse-text"

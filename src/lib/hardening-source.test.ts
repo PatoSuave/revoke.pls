@@ -93,6 +93,47 @@ describe("hardening source invariants", () => {
     expect(routes).not.toContain("function rateLimitKey");
   });
 
+  it("keeps wallet providers out of the global and Token Chair route shells", () => {
+    const globalProviders = readFileSync(
+      join(process.cwd(), "src", "components", "providers.tsx"),
+      "utf8",
+    );
+    const walletProviders = readFileSync(
+      join(process.cwd(), "src", "components", "wallet-providers.tsx"),
+      "utf8",
+    );
+    const siteHeader = readFileSync(
+      join(process.cwd(), "src", "components", "sections", "site-header.tsx"),
+      "utf8",
+    );
+    const appPage = readFileSync(
+      join(process.cwd(), "src", "app", "app", "page.tsx"),
+      "utf8",
+    );
+    const tokenChairPage = readFileSync(
+      join(
+        process.cwd(),
+        "src",
+        "app",
+        "app",
+        "token-chair-sniffer",
+        "page.tsx",
+      ),
+      "utf8",
+    );
+
+    expect(globalProviders).not.toContain("WagmiProvider");
+    expect(globalProviders).not.toContain("@/lib/wagmi");
+    expect(siteHeader).not.toContain("ConnectWalletButton");
+    expect(siteHeader).not.toContain("@/lib/wagmi");
+    expect(walletProviders).toContain("WagmiProvider");
+    expect(walletProviders).toContain("@/lib/wagmi");
+    expect(appPage).toContain("<WalletProviders>");
+    expect(appPage).toContain("<ConnectWalletButton");
+    expect(tokenChairPage).not.toContain("WalletProviders");
+    expect(tokenChairPage).not.toContain("WagmiProvider");
+  });
+
   it("keeps public approval API responses explicitly non-cacheable", () => {
     const cacheHeaders = readFileSync(
       join(process.cwd(), "src", "lib", "approval-api-cache.ts"),

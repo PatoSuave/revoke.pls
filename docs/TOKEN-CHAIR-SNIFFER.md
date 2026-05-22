@@ -277,6 +277,10 @@ The current preview does not add:
 
 Existing approval scanner and revoke behavior are intentionally unchanged.
 
+The Token Chair route should also stay outside the wallet-provider shell. Wagmi,
+WalletConnect, and revoke hooks belong on `/app` approval/revoke surfaces, not
+on `/app/token-chair-sniffer`.
+
 ## Preview QA
 
 Use `docs/TOKEN-CHAIR-VERCEL-QA.md` for the Vercel Preview QA matrix. It covers the sample-token presets, deep-link checks, API checks through `vercel curl`, expected degradation states, and the non-live honeypot/simulation guardrail.
