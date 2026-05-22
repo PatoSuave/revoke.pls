@@ -297,7 +297,6 @@ OPTIMISM_EXPLORER_API_URL=https://api.etherscan.io/v2/api
 OPTIMISM_EXPLORER_CHAIN_ID=10
 OPTIMISM_EXPLORER_API_KEY=replace_with_server_only_etherscan_v2_key
 OPTIMISTIC_ETHERSCAN_API_KEY=
-
 ```
 
 ## Provider Limitations

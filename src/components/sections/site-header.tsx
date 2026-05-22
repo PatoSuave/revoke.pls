@@ -1,15 +1,11 @@
 import Link from "next/link";
-import type { ReactNode } from "react";
 
+import { ConnectWalletButton } from "@/components/connect-wallet-button";
 import { PulseMark } from "@/components/pulse-mark";
 import { ThemeModeToggle } from "@/components/theme-mode-toggle";
 import { siteConfig } from "@/lib/site";
 
-export function SiteHeader({
-  action,
-}: {
-  action?: ReactNode;
-} = {}) {
+export function SiteHeader() {
   return (
     <header className="sticky top-0 z-40 w-full border-b border-pulse-border/60 bg-pulse-bg/80 backdrop-blur">
       <div className="mx-auto grid min-h-16 w-full min-w-0 max-w-6xl grid-cols-1 gap-3 px-3 py-3 sm:px-6 lg:grid-cols-[auto_minmax(0,1fr)_auto] lg:items-center lg:gap-5 lg:py-0">
@@ -47,14 +43,7 @@ export function SiteHeader({
 
         <div className="order-2 flex min-w-0 flex-wrap items-center gap-2 lg:order-3 lg:justify-end">
           <ThemeModeToggle className="shrink-0" />
-          {action ?? (
-            <Link
-              href="/app#scanner"
-              className="inline-flex min-h-9 items-center justify-center rounded-xl border border-pulse-border bg-pulse-panel/60 px-3 py-2 text-xs font-semibold text-pulse-muted transition hover:bg-pulse-text/10 hover:text-pulse-text"
-            >
-              Approval scanner
-            </Link>
-          )}
+          <ConnectWalletButton className="max-w-full justify-start lg:justify-end" />
         </div>
       </div>
     </header>

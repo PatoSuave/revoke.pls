@@ -60,7 +60,6 @@ a documented address without expanding scanner coverage.
    - `bridge`  — cross-chain bridge contract
    - `staking` — single-sided staking contract
    - `farm`    — LP staking / yield farm contract
-   - `locker`  - LP/token locking contract
    - `unknown` — no confident claim
 4. Set `isTrusted: true` **only** if both of the following are true:
    - the address is confirmed canonical against the protocol's own docs
