@@ -1,9 +1,9 @@
 # Environment Variables
 
-Pulse Revoke is primarily a wallet-side frontend app, with server-side
-Ethereum, Arbitrum, and Optimism API routes for discovery. Variables prefixed with
-`NEXT_PUBLIC_` are embedded into the browser bundle and are visible to users.
-Do not store private secrets in these variables.
+Pulse Revoke is primarily a wallet-side frontend app, with server-side BSC,
+Base, Ethereum, Arbitrum, and Optimism API routes for discovery. Variables
+prefixed with `NEXT_PUBLIC_` are embedded into the browser bundle and are
+visible to users. Do not store private secrets in these variables.
 
 ## Production Requirements
 
@@ -13,13 +13,13 @@ plus Optimism ERC-20/NFT verified-row revoke, configure:
 | Variable | Production status | Notes |
 | --- | --- | --- |
 | `NEXT_PUBLIC_SITE_URL` | Recommended | Use `https://pulserevoke.com` for the public deployment. |
-| `NEXT_PUBLIC_BSC_EXPLORER_API_URL` | Recommended | Defaults to `https://api.etherscan.io/v2/api`; set explicitly in hosted environments. |
-| `NEXT_PUBLIC_BSC_EXPLORER_CHAIN_ID` | Recommended | Must be `56` for BNB Smart Chain Etherscan API V2 logs. Defaults to `56`. |
-| `NEXT_PUBLIC_BSC_EXPLORER_API_KEY` | Required for reliable BSC discovery | Use an Etherscan API V2 key with BNB Smart Chain access. |
+| `BSC_EXPLORER_API_URL` | Optional | Server-only BSC logs API. Defaults to `https://api.etherscan.io/v2/api`. |
+| `BSC_EXPLORER_CHAIN_ID` | Optional | Must be `56` for BNB Smart Chain Etherscan API V2 logs. Defaults to `56`. |
+| `BSC_EXPLORER_API_KEY` / `ETHERSCAN_API_KEY` | Required for reliable BSC discovery | Server-only Etherscan API V2 key with BNB Smart Chain access. |
 | `NEXT_PUBLIC_BSC_RPC_URL` | Recommended | Public fallback is available, but production should prefer a reliable RPC. |
-| `NEXT_PUBLIC_BASE_EXPLORER_API_URL` | Recommended | Defaults to `https://api.etherscan.io/v2/api`; set explicitly in hosted environments. |
-| `NEXT_PUBLIC_BASE_EXPLORER_CHAIN_ID` | Recommended | Must be `8453` for Base Etherscan API V2 logs. Defaults to `8453`. |
-| `NEXT_PUBLIC_BASE_EXPLORER_API_KEY` | Required for reliable Base discovery | Use an Etherscan API V2 key with Base Mainnet access. |
+| `BASE_EXPLORER_API_URL` | Optional | Server-only Base logs API. Defaults to `https://api.etherscan.io/v2/api`. |
+| `BASE_EXPLORER_CHAIN_ID` | Optional | Must be `8453` for Base Etherscan API V2 logs. Defaults to `8453`. |
+| `BASE_EXPLORER_API_KEY` / `ETHERSCAN_API_KEY` | Required for reliable Base discovery | Server-only Etherscan API V2 key with Base Mainnet access. |
 | `NEXT_PUBLIC_BASE_RPC_URL` | Recommended | Public fallback is available, but production should prefer a reliable RPC. |
 | `MAINNET_RPC_URL` / `ETHEREUM_RPC_URL` | Required for Ethereum scan | Server-only Ethereum RPC URL for `/api/ethereum/approvals`. |
 | `ETHERSCAN_API_KEY` | Required for Ethereum scan | Server-only Etherscan API key. Do not use a `NEXT_PUBLIC_` key for Ethereum server discovery. |
@@ -50,8 +50,9 @@ Recommended for production. Overrides the BSC RPC used by wagmi/viem for live
 validation and transaction submission. If unset, the app uses
 `https://bsc-dataseed.bnbchain.org`.
 
-Historical BSC approval discovery does not rely on public BSC RPC
-`eth_getLogs`; it uses Etherscan API V2 logs.
+Hosted web BSC approval discovery does not rely on public BSC RPC
+`eth_getLogs`; it uses the server-side `/api/discovery/approvals` route with
+Etherscan API V2 logs.
 
 ### `NEXT_PUBLIC_BASE_RPC_URL`
 
@@ -59,8 +60,9 @@ Recommended for production. Overrides the Base RPC used by wagmi/viem for live
 validation and transaction submission. If unset, the app uses
 `https://mainnet.base.org`.
 
-Historical Base approval discovery does not rely on public Base RPC
-`eth_getLogs`; it uses Etherscan API V2 logs.
+Hosted web Base approval discovery does not rely on public Base RPC
+`eth_getLogs`; it uses the server-side `/api/discovery/approvals` route with
+Etherscan API V2 logs.
 
 ### `NEXT_PUBLIC_PULSECHAIN_EXPLORER_API`
 
@@ -76,9 +78,9 @@ metadata and does not receive wallet owner, spender, or allowance data. Treat
 logos as visual convenience only; explorer links and live chain reads remain
 the source of verification.
 
-### `NEXT_PUBLIC_BSC_EXPLORER_API_URL`
+### `BSC_EXPLORER_API_URL`
 
-Recommended. BSC historical logs API base URL. Default:
+Optional server-only BSC historical logs API base URL. Default:
 
 ```text
 https://api.etherscan.io/v2/api
@@ -89,9 +91,9 @@ Do not configure the deprecated BscScan V1 logs endpoint
 the app falls back to the Etherscan API V2 default and surfaces a diagnostic
 warning.
 
-### `NEXT_PUBLIC_BSC_EXPLORER_CHAIN_ID`
+### `BSC_EXPLORER_CHAIN_ID`
 
-Recommended. Etherscan API V2 chain ID parameter for BNB Smart Chain logs.
+Optional server-only Etherscan API V2 chain ID parameter for BNB Smart Chain logs.
 Default:
 
 ```text
@@ -100,23 +102,24 @@ Default:
 
 Every BSC historical log request should include `chainid=56`.
 
-### `NEXT_PUBLIC_BSC_EXPLORER_API_KEY`
+### `BSC_EXPLORER_API_KEY`
 
-Required for reliable BSC discovery. This should be an Etherscan API V2 key with
-BNB Smart Chain access. Etherscan plan limits can affect whether BSC logs are
-available and how quickly requests are served.
+Required for reliable hosted web BSC discovery unless `ETHERSCAN_API_KEY` is
+used as the shared server-side Etherscan API V2 key. Etherscan plan limits can
+affect whether BSC logs are available and how quickly requests are served.
 
-This is a public frontend variable. Treat it as a public API key, not a private
-secret. Restrict and monitor it through the provider if possible.
+Do not configure this value as `NEXT_PUBLIC_*`; the frontend does not need a
+BSC explorer key in hosted web deployments.
 
-### `NEXT_PUBLIC_BSCSCAN_API_KEY`
+### `NEXT_PUBLIC_BSC_EXPLORER_API_KEY` / `NEXT_PUBLIC_BSCSCAN_API_KEY`
 
-Deprecated fallback for older deploys. Prefer
-`NEXT_PUBLIC_BSC_EXPLORER_API_KEY`.
+Desktop/static-only fallback values for builds without API routes.
+`NEXT_PUBLIC_BSCSCAN_API_KEY` is retained only for older compatibility. Hosted
+web deployments should leave both unset.
 
-### `NEXT_PUBLIC_BASE_EXPLORER_API_URL`
+### `BASE_EXPLORER_API_URL`
 
-Recommended. Base historical logs API base URL. Default:
+Optional server-only Base historical logs API base URL. Default:
 
 ```text
 https://api.etherscan.io/v2/api
@@ -125,9 +128,9 @@ https://api.etherscan.io/v2/api
 BaseScan remains the user-facing explorer for links, but historical Base log
 reads use Etherscan API V2.
 
-### `NEXT_PUBLIC_BASE_EXPLORER_CHAIN_ID`
+### `BASE_EXPLORER_CHAIN_ID`
 
-Recommended. Etherscan API V2 chain ID parameter for Base Mainnet logs.
+Optional server-only Etherscan API V2 chain ID parameter for Base Mainnet logs.
 Default:
 
 ```text
@@ -136,14 +139,20 @@ Default:
 
 Every Base historical log request should include `chainid=8453`.
 
+### `BASE_EXPLORER_API_KEY`
+
+Required for reliable hosted web Base discovery unless `ETHERSCAN_API_KEY` is
+used as the shared server-side Etherscan API V2 key. Etherscan paid-chain access
+and plan limits can affect whether Base logs are available and how quickly
+requests are served.
+
+Do not configure this value as `NEXT_PUBLIC_*`; the frontend does not need a
+Base explorer key in hosted web deployments.
+
 ### `NEXT_PUBLIC_BASE_EXPLORER_API_KEY`
 
-Required for reliable Base discovery. This should be an Etherscan API V2 key
-with Base Mainnet access. Etherscan paid-chain access and plan limits can affect
-whether Base logs are available and how quickly requests are served.
-
-This is a public frontend variable. Treat it as a public API key, not a private
-secret. Restrict and monitor it through the provider if possible.
+Desktop/static-only fallback value for builds without API routes. Hosted web
+deployments should leave it unset.
 
 ### `MAINNET_RPC_URL` / `ETHEREUM_RPC_URL`
 
@@ -274,13 +283,19 @@ NEXT_PUBLIC_BASE_RPC_URL=https://mainnet.base.org
 NEXT_PUBLIC_PULSECHAIN_EXPLORER_API=
 NEXT_PUBLIC_BSC_EXPLORER_API_URL=https://api.etherscan.io/v2/api
 NEXT_PUBLIC_BSC_EXPLORER_CHAIN_ID=56
-NEXT_PUBLIC_BSC_EXPLORER_API_KEY=replace_with_public_etherscan_v2_key
+NEXT_PUBLIC_BSC_EXPLORER_API_KEY=
 NEXT_PUBLIC_BSCSCAN_API_KEY=
 NEXT_PUBLIC_BASE_EXPLORER_API_URL=https://api.etherscan.io/v2/api
 NEXT_PUBLIC_BASE_EXPLORER_CHAIN_ID=8453
-NEXT_PUBLIC_BASE_EXPLORER_API_KEY=replace_with_public_etherscan_v2_key
+NEXT_PUBLIC_BASE_EXPLORER_API_KEY=
 NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID=
 NEXT_PUBLIC_TELEMETRY_ENABLED=
+BSC_EXPLORER_API_URL=https://api.etherscan.io/v2/api
+BSC_EXPLORER_CHAIN_ID=56
+BSC_EXPLORER_API_KEY=replace_with_server_only_etherscan_v2_key
+BASE_EXPLORER_API_URL=https://api.etherscan.io/v2/api
+BASE_EXPLORER_CHAIN_ID=8453
+BASE_EXPLORER_API_KEY=replace_with_server_only_etherscan_v2_key
 MAINNET_RPC_URL=https://your-server-only-ethereum-rpc.example
 ETHEREUM_RPC_URL=
 ETHEREUM_EXPLORER_API_URL=https://api.etherscan.io/v2/api
@@ -304,7 +319,8 @@ OPTIMISTIC_ETHERSCAN_API_KEY=
 Explorer APIs and public RPC endpoints can rate-limit, cap responses, or fail.
 The app should surface incomplete discovery or validation instead of displaying
 a false "clear" state. For production BSC and Base discovery, use Etherscan API
-V2 keys and account plans that support BNB Smart Chain and Base Mainnet logs.
+V2 keys server-side and account plans that support BNB Smart Chain and Base
+Mainnet logs.
 For Arbitrum, configure server-only managed RPC plus an Arbiscan or
 Etherscan-compatible API key with Arbitrum One log access. For Optimism,
 configure server-only managed RPC plus an Etherscan API V2 key with OP Mainnet

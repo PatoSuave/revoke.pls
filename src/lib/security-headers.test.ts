@@ -15,6 +15,12 @@ describe("security headers", () => {
     expect(byName.get("Content-Security-Policy")).toContain(
       "object-src 'none'",
     );
+    expect(byName.get("Content-Security-Policy-Report-Only")).toContain(
+      "script-src 'self'",
+    );
+    expect(byName.get("Content-Security-Policy-Report-Only")).toContain(
+      "report-uri /api/csp-report",
+    );
     expect(byName.get("X-Frame-Options")).toBe("DENY");
     expect(byName.get("X-Content-Type-Options")).toBe("nosniff");
     expect(byName.get("Strict-Transport-Security")).toContain(

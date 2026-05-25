@@ -117,7 +117,7 @@ const bscDiscoveryWarnings = [
     ? `NEXT_PUBLIC_BSC_EXPLORER_CHAIN_ID must be ${BSC_EXPLORER_CHAIN_ID_DEFAULT} for BNB Smart Chain. The app is using chainid=${BSC_EXPLORER_CHAIN_ID_DEFAULT}.`
     : null,
   !bscPreferredApiKeyEnv && bscScanApiKeyEnv
-    ? "Using deprecated fallback NEXT_PUBLIC_BSCSCAN_API_KEY. Prefer NEXT_PUBLIC_BSC_EXPLORER_API_KEY for the Etherscan API V2 key."
+    ? "Using deprecated desktop/static fallback NEXT_PUBLIC_BSCSCAN_API_KEY. Prefer NEXT_PUBLIC_BSC_EXPLORER_API_KEY only for builds without API routes."
     : null,
 ].filter((warning): warning is string => Boolean(warning));
 const baseDiscoveryWarnings = [
@@ -440,7 +440,7 @@ const bscDiscovery = buildDiscoveryConfig({
   limitations:
     "Etherscan API V2 can rate-limit, cap responses, or require smaller block windows for BNB Smart Chain logs.",
   missingApiKeyMessage:
-    "BSC historical discovery uses Etherscan API V2. Set NEXT_PUBLIC_BSC_EXPLORER_API_KEY to an Etherscan V2 API key with BNB Smart Chain access. NEXT_PUBLIC_BSCSCAN_API_KEY is only a deprecated fallback.",
+    "BSC historical discovery uses Etherscan API V2. Set NEXT_PUBLIC_BSC_EXPLORER_API_KEY only for desktop/static builds without API routes. Hosted web deployments should use BSC_EXPLORER_API_KEY or ETHERSCAN_API_KEY server-side.",
   warnings: bscDiscoveryWarnings,
 });
 
@@ -465,7 +465,7 @@ const baseDiscovery = buildDiscoveryConfig({
   limitations:
     "Etherscan API V2 can rate-limit, cap responses, or require smaller block windows for Base logs.",
   missingApiKeyMessage:
-    "Base historical discovery uses Etherscan API V2. Set NEXT_PUBLIC_BASE_EXPLORER_API_KEY to an Etherscan V2 API key with Base Mainnet access.",
+    "Base historical discovery uses Etherscan API V2. Set NEXT_PUBLIC_BASE_EXPLORER_API_KEY only for desktop/static builds without API routes. Hosted web deployments should use BASE_EXPLORER_API_KEY or ETHERSCAN_API_KEY server-side.",
   warnings: baseDiscoveryWarnings,
 });
 

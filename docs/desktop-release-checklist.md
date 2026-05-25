@@ -32,16 +32,16 @@ does not mean a desktop release exists today.
   `https://api.etherscan.io/v2/api`; the old BscScan V1 endpoint is deprecated
   for this logs flow.
 - `NEXT_PUBLIC_BSC_EXPLORER_CHAIN_ID` should be unset or set to `56`.
-- `NEXT_PUBLIC_BSC_EXPLORER_API_KEY` is required for BSC discovery. It should
-  be an Etherscan API V2 key with BNB Smart Chain access.
+- `NEXT_PUBLIC_BSC_EXPLORER_API_KEY` is required for desktop/static BSC
+  discovery. It should be an Etherscan API V2 key with BNB Smart Chain access.
 - `NEXT_PUBLIC_BSCSCAN_API_KEY` remains a deprecated fallback key name for older
   deploys.
 - `NEXT_PUBLIC_BASE_EXPLORER_API_URL` is an optional Base historical logs API
   override. It defaults to Etherscan API V2 at
   `https://api.etherscan.io/v2/api`.
 - `NEXT_PUBLIC_BASE_EXPLORER_CHAIN_ID` should be unset or set to `8453`.
-- `NEXT_PUBLIC_BASE_EXPLORER_API_KEY` is required for Base discovery. It should
-  be an Etherscan API V2 key with Base Mainnet access.
+- `NEXT_PUBLIC_BASE_EXPLORER_API_KEY` is required for desktop/static Base
+  discovery. It should be an Etherscan API V2 key with Base Mainnet access.
 
 Do not commit local `.env` files or release secrets.
 

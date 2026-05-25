@@ -78,16 +78,16 @@ The scanner uses a discovery-first pipeline:
 7. The curated registry enriches known tokens and spenders. It is not a
    discovery source.
 
-BSC historical discovery uses Etherscan API V2 `module=logs&action=getLogs`
-with `chainid=56`, `topic0` for the event signature, and the padded owner
-address in `topic1`. Public BSC RPC `eth_getLogs` is not used for historical
-approval discovery. BscScan remains the explorer for address, token, and
-transaction links.
+BSC hosted web discovery is exposed through `/api/discovery/approvals`, backed
+by Etherscan API V2 `module=logs&action=getLogs` with `chainid=56`, `topic0`
+for the event signature, and the padded owner address in `topic1`. Public BSC
+RPC `eth_getLogs` is not used for historical approval discovery. BscScan
+remains the explorer for address, token, and transaction links.
 
-Base historical discovery uses the same Etherscan API V2 logs path with
-`chainid=8453`. Public Base RPC `eth_getLogs` is not used for historical
-approval discovery. BaseScan remains the explorer for address, token, and
-transaction links.
+Base hosted web discovery uses the same server route and Etherscan API V2 logs
+path with `chainid=8453`. Public Base RPC `eth_getLogs` is not used for
+historical approval discovery. BaseScan remains the explorer for address,
+token, and transaction links.
 
 Ethereum historical discovery is exposed through `/api/ethereum/approvals` so
 the Etherscan key stays server-only. The route is read-only, uses bounded
@@ -115,16 +115,18 @@ row-level revoke stays limited to verified ERC-20 and NFT rows.
 - BSC discovery API default:
   `https://api.etherscan.io/v2/api`
 - BSC discovery API chain id:
-  `NEXT_PUBLIC_BSC_EXPLORER_CHAIN_ID=56`
-- Preferred BSC API key env var:
-  `NEXT_PUBLIC_BSC_EXPLORER_API_KEY`
-- Deprecated fallback BSC key env var:
-  `NEXT_PUBLIC_BSCSCAN_API_KEY`
+  `BSC_EXPLORER_CHAIN_ID=56`
+- BSC server API key env vars:
+  `BSC_EXPLORER_API_KEY` / `ETHERSCAN_API_KEY`
+- Desktop/static BSC fallback key env vars:
+  `NEXT_PUBLIC_BSC_EXPLORER_API_KEY` / `NEXT_PUBLIC_BSCSCAN_API_KEY`
 - Base discovery API default:
   `https://api.etherscan.io/v2/api`
 - Base discovery API chain id:
-  `NEXT_PUBLIC_BASE_EXPLORER_CHAIN_ID=8453`
-- Base API key env var:
+  `BASE_EXPLORER_CHAIN_ID=8453`
+- Base server API key env vars:
+  `BASE_EXPLORER_API_KEY` / `ETHERSCAN_API_KEY`
+- Desktop/static Base fallback key env var:
   `NEXT_PUBLIC_BASE_EXPLORER_API_KEY`
 - Ethereum server RPC env vars:
   `MAINNET_RPC_URL` / `ETHEREUM_RPC_URL`

@@ -5,6 +5,11 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import type { Address } from "viem";
 import { useReadContracts } from "wagmi";
 
+import {
+  fetchServerNftDiscovery,
+  hydrateNftDiscoveryResult,
+  usesServerApprovalDiscovery,
+} from "@/lib/approval-discovery-api";
 import type { SupportedChainId } from "@/lib/chains";
 import type {
   DiscoverySource,
@@ -224,9 +229,31 @@ export function useNftApprovalDiscovery({
     () => source ?? getDiscoverySourceForChain(chainId),
     [source, chainId],
   );
+  const useServerDiscovery = usesServerApprovalDiscovery(chainId);
 
   const discoveryEnabled =
-    enabled && Boolean(owner) && Boolean(discoverySource) && Boolean(chainId);
+    enabled &&
+    Boolean(owner) &&
+    Boolean(chainId) &&
+    (useServerDiscovery || Boolean(discoverySource));
+
+  const serverDiscoveryQuery = useQuery({
+    queryKey: [
+      "server-nft-approval-discovery",
+      chainId ?? null,
+      owner?.toLowerCase() ?? null,
+    ],
+    enabled: discoveryEnabled && useServerDiscovery,
+    staleTime: 60_000,
+    gcTime: 5 * 60_000,
+    queryFn: async ({ signal }) => {
+      if (!owner) throw new Error("owner required");
+      if (!usesServerApprovalDiscovery(chainId)) {
+        throw new Error("unsupported server discovery chain");
+      }
+      return fetchServerNftDiscovery({ owner, chainId, signal });
+    },
+  });
 
   const discoveryQuery = useQuery({
     queryKey: [
@@ -235,7 +262,7 @@ export function useNftApprovalDiscovery({
       chainId ?? null,
       owner?.toLowerCase() ?? null,
     ],
-    enabled: discoveryEnabled,
+    enabled: discoveryEnabled && !useServerDiscovery,
     staleTime: 60_000,
     gcTime: 5 * 60_000,
     queryFn: async ({ signal }) => {
@@ -245,9 +272,23 @@ export function useNftApprovalDiscovery({
     },
   });
 
+  const nftDiscoveryData = useMemo(
+    () =>
+      useServerDiscovery && serverDiscoveryQuery.data
+        ? hydrateNftDiscoveryResult(serverDiscoveryQuery.data.nft)
+        : discoveryQuery.data,
+    [discoveryQuery.data, serverDiscoveryQuery.data, useServerDiscovery],
+  );
+  const nftDiscoveryStatus = useServerDiscovery
+    ? serverDiscoveryQuery.status
+    : discoveryQuery.status;
+  const nftDiscoveryError = useServerDiscovery
+    ? serverDiscoveryQuery.error
+    : discoveryQuery.error;
+
   const candidates: readonly NftDiscoveredApproval[] = useMemo(
-    () => discoveryQuery.data?.approvals ?? EMPTY_CANDIDATES,
-    [discoveryQuery.data],
+    () => nftDiscoveryData?.approvals ?? EMPTY_CANDIDATES,
+    [nftDiscoveryData],
   );
 
   const { contracts, uniqueCollections } = useMemo(() => {
@@ -263,7 +304,7 @@ export function useNftApprovalDiscovery({
 
   const readsEnabled =
     discoveryEnabled &&
-    discoveryQuery.status === "success" &&
+    nftDiscoveryStatus === "success" &&
     contracts.length > 0;
 
   const reads = useReadContracts({
@@ -297,16 +338,16 @@ export function useNftApprovalDiscovery({
 
   const status: NftDiscoveryStatus = useMemo(() => {
     if (!discoveryEnabled) return "idle";
-    if (discoveryQuery.status === "pending") return "pending";
-    if (discoveryQuery.status === "error") return "error";
+    if (nftDiscoveryStatus === "pending") return "pending";
+    if (nftDiscoveryStatus === "error") return "error";
     if (candidates.length === 0) return "success";
     if (reads.status === "pending") return "pending";
     if (reads.status === "error") return "error";
     return "success";
-  }, [discoveryEnabled, discoveryQuery.status, candidates.length, reads.status]);
+  }, [discoveryEnabled, nftDiscoveryStatus, candidates.length, reads.status]);
 
   const error: Error | null =
-    (discoveryQuery.error as Error | null) ?? reads.error ?? null;
+    (nftDiscoveryError as Error | null) ?? reads.error ?? null;
   const timing = usePipelineTiming(status);
 
   const lastStatusRef = useRef<NftDiscoveryStatus>("idle");
@@ -325,9 +366,9 @@ export function useNftApprovalDiscovery({
         candidates: candidates.length,
         active: parsed.approvals.length,
         registryMatched: parsed.stats.registryMatched,
-        windows: discoveryQuery.data?.windows ?? 0,
+        windows: nftDiscoveryData?.windows ?? 0,
       });
-      if (discoveryQuery.data?.truncated) {
+      if (nftDiscoveryData?.truncated) {
         trackEvent("scan_truncated", { kind: "nft", source: src, chainId });
       }
     } else if (status === "error") {
@@ -340,20 +381,30 @@ export function useNftApprovalDiscovery({
     candidates.length,
     parsed.approvals.length,
     parsed.stats.registryMatched,
-    discoveryQuery.data?.windows,
-    discoveryQuery.data?.truncated,
+    nftDiscoveryData?.windows,
+    nftDiscoveryData?.truncated,
   ]);
 
   const refetch = () => {
-    void discoveryQuery.refetch();
+    if (useServerDiscovery) {
+      void serverDiscoveryQuery.refetch();
+    } else {
+      void discoveryQuery.refetch();
+    }
     void reads.refetch();
   };
 
   return {
     approvals: parsed.approvals,
     status,
-    isFetching: discoveryQuery.isFetching || reads.isFetching,
-    isRefetching: discoveryQuery.isRefetching || reads.isRefetching,
+    isFetching:
+      serverDiscoveryQuery.isFetching ||
+      discoveryQuery.isFetching ||
+      reads.isFetching,
+    isRefetching:
+      serverDiscoveryQuery.isRefetching ||
+      discoveryQuery.isRefetching ||
+      reads.isRefetching,
     error,
     refetch,
     stats: {
@@ -361,18 +412,18 @@ export function useNftApprovalDiscovery({
       uniqueCollections: uniqueCollections.length,
       active: parsed.stats.active,
       registryMatched: parsed.stats.registryMatched,
-      rawCandidateLogs: discoveryQuery.data?.rawCount ?? 0,
-      windows: discoveryQuery.data?.windows ?? 0,
-      requests: discoveryQuery.data?.requests ?? 0,
+      rawCandidateLogs: nftDiscoveryData?.rawCount ?? 0,
+      windows: nftDiscoveryData?.windows ?? 0,
+      requests: nftDiscoveryData?.requests ?? 0,
     },
     diagnostics: {
-      discoveryError: errorMessage(discoveryQuery.error),
+      discoveryError: errorMessage(nftDiscoveryError),
       liveReadError: errorMessage(reads.error),
       liveReadFailureCount: countReadFailures(reads.data),
       liveReadFailures: readFailureDiagnostics,
       timing,
     },
-    sourceMeta: discoverySource?.meta ?? null,
-    truncated: discoveryQuery.data?.truncated ?? false,
+    sourceMeta: nftDiscoveryData?.source ?? discoverySource?.meta ?? null,
+    truncated: nftDiscoveryData?.truncated ?? false,
   };
 }

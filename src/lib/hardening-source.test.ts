@@ -28,8 +28,14 @@ describe("hardening source invariants", () => {
       join(process.cwd(), "src", "app", "api", "optimism", "approvals", "route.ts"),
       "utf8",
     );
+    const bscBaseRoute = readFileSync(
+      join(process.cwd(), "src", "app", "api", "discovery", "approvals", "route.ts"),
+      "utf8",
+    );
 
-    expect(`${ethereumRoute}\n${arbitrumRoute}\n${optimismRoute}`).not.toMatch(
+    expect(
+      `${ethereumRoute}\n${arbitrumRoute}\n${optimismRoute}\n${bscBaseRoute}`,
+    ).not.toMatch(
       /writeContract|sendTransaction|signTransaction|privateKey|mnemonic|seed|relayer/i,
     );
   });
@@ -51,11 +57,20 @@ describe("hardening source invariants", () => {
       join(process.cwd(), "src", "app", "api", "optimism", "approvals", "route.ts"),
       "utf8",
     );
+    const bscBaseRoute = readFileSync(
+      join(process.cwd(), "src", "app", "api", "discovery", "approvals", "route.ts"),
+      "utf8",
+    );
 
     expect(cacheHeaders).toContain("Cache-Control");
     expect(cacheHeaders).toContain("Vercel-CDN-Cache-Control");
     expect(cacheHeaders).toContain("no-store");
-    for (const route of [ethereumRoute, arbitrumRoute, optimismRoute]) {
+    for (const route of [
+      ethereumRoute,
+      arbitrumRoute,
+      optimismRoute,
+      bscBaseRoute,
+    ]) {
       expect(route).toContain("approvalApiNoStoreHeaders");
       expect(route).toContain("headers: approvalApiNoStoreHeaders({");
     }
