@@ -17,19 +17,51 @@ describe("hardening source invariants", () => {
 
   it("keeps API routes free of server-side write, signing, or relayer logic", () => {
     const ethereumRoute = readFileSync(
-      join(process.cwd(), "src", "app", "api", "ethereum", "approvals", "route.ts"),
+      join(
+        process.cwd(),
+        "src",
+        "app",
+        "api",
+        "ethereum",
+        "approvals",
+        "route.ts",
+      ),
       "utf8",
     );
     const arbitrumRoute = readFileSync(
-      join(process.cwd(), "src", "app", "api", "arbitrum", "approvals", "route.ts"),
+      join(
+        process.cwd(),
+        "src",
+        "app",
+        "api",
+        "arbitrum",
+        "approvals",
+        "route.ts",
+      ),
       "utf8",
     );
     const optimismRoute = readFileSync(
-      join(process.cwd(), "src", "app", "api", "optimism", "approvals", "route.ts"),
+      join(
+        process.cwd(),
+        "src",
+        "app",
+        "api",
+        "optimism",
+        "approvals",
+        "route.ts",
+      ),
       "utf8",
     );
     const bscBaseRoute = readFileSync(
-      join(process.cwd(), "src", "app", "api", "discovery", "approvals", "route.ts"),
+      join(
+        process.cwd(),
+        "src",
+        "app",
+        "api",
+        "discovery",
+        "approvals",
+        "route.ts",
+      ),
       "utf8",
     );
 
@@ -46,19 +78,51 @@ describe("hardening source invariants", () => {
       "utf8",
     );
     const ethereumRoute = readFileSync(
-      join(process.cwd(), "src", "app", "api", "ethereum", "approvals", "route.ts"),
+      join(
+        process.cwd(),
+        "src",
+        "app",
+        "api",
+        "ethereum",
+        "approvals",
+        "route.ts",
+      ),
       "utf8",
     );
     const arbitrumRoute = readFileSync(
-      join(process.cwd(), "src", "app", "api", "arbitrum", "approvals", "route.ts"),
+      join(
+        process.cwd(),
+        "src",
+        "app",
+        "api",
+        "arbitrum",
+        "approvals",
+        "route.ts",
+      ),
       "utf8",
     );
     const optimismRoute = readFileSync(
-      join(process.cwd(), "src", "app", "api", "optimism", "approvals", "route.ts"),
+      join(
+        process.cwd(),
+        "src",
+        "app",
+        "api",
+        "optimism",
+        "approvals",
+        "route.ts",
+      ),
       "utf8",
     );
     const bscBaseRoute = readFileSync(
-      join(process.cwd(), "src", "app", "api", "discovery", "approvals", "route.ts"),
+      join(
+        process.cwd(),
+        "src",
+        "app",
+        "api",
+        "discovery",
+        "approvals",
+        "route.ts",
+      ),
       "utf8",
     );
 
