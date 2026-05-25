@@ -63,15 +63,20 @@ const securityHeaders = [
 
 const nextConfig: NextConfig = {
   reactStrictMode: true,
-  async headers() {
-    return [
-      {
-        source: "/:path*",
-        headers: securityHeaders,
-      },
-    ];
-  },
+  ...(isDesktopBuild && {
+    // Desktop export only needs TSX app pages. Omitting `.ts` route files keeps
+    // hosted-only server APIs out of the static Tauri bundle.
+    pageExtensions: ["tsx", "jsx"],
+  }),
   ...(!isDesktopBuild && {
+    async headers() {
+      return [
+        {
+          source: "/:path*",
+          headers: securityHeaders,
+        },
+      ];
+    },
     async redirects() {
       const canonicalHosts = [
         "www.pulserevoke.com",
