@@ -8,6 +8,11 @@ import {
   normalizeServerDiscoveryOwner,
   serverDiscoveryTimeoutSignal,
 } from "@/lib/server-approval-discovery";
+import {
+  SERVER_APPROVAL_API_RATE_LIMIT,
+  checkServerApprovalApiRateLimit,
+  type RateLimitResult,
+} from "@/lib/server-approval-api-controls";
 
 export const runtime = "nodejs";
 
@@ -43,6 +48,29 @@ export async function GET(request: Request) {
     return badRequest("Provide a valid owner address in ?owner=0x...");
   }
 
+  const rateLimit = checkServerApprovalApiRateLimit(rateLimitKey(request));
+  if (!rateLimit.allowed) {
+    return NextResponse.json(
+      {
+        ok: false,
+        status: "upstream-failure",
+        chainId,
+        warnings: [],
+        errors: [
+          "Server approval discovery rate limit exceeded. Try again shortly.",
+        ],
+        missingConfig: [],
+        rateLimited: true,
+      },
+      {
+        status: 429,
+        headers: approvalApiNoStoreHeaders(
+          rateLimitHeaders(rateLimit, { includeRetryAfter: true }),
+        ),
+      },
+    );
+  }
+
   const timed = serverDiscoveryTimeoutSignal(request.signal);
   try {
     const result =
@@ -61,6 +89,7 @@ export async function GET(request: Request) {
     return NextResponse.json(result, {
       status: statusCodeFor(result.status),
       headers: approvalApiNoStoreHeaders({
+        ...rateLimitHeaders(rateLimit),
         "X-Approval-Discovery-Source": "server",
       }),
     });
@@ -114,6 +143,32 @@ function statusCodeFor(status: string): number {
   if (status === "upstream-failure") return 502;
   if (status === "bad-request") return 400;
   return 200;
+}
+
+function rateLimitKey(request: Request): string {
+  const forwardedFor = request.headers.get("x-forwarded-for");
+  const forwardedIp = forwardedFor?.split(",")[0]?.trim();
+  return (
+    request.headers.get("cf-connecting-ip")?.trim() ||
+    request.headers.get("x-real-ip")?.trim() ||
+    forwardedIp ||
+    "unknown-client"
+  );
+}
+
+function rateLimitHeaders(
+  rateLimit: RateLimitResult,
+  options: { includeRetryAfter?: boolean } = {},
+): HeadersInit {
+  return {
+    ...(options.includeRetryAfter
+      ? { "Retry-After": rateLimit.retryAfterSeconds.toString() }
+      : {}),
+    "X-RateLimit-Limit": rateLimit.limit.toString(),
+    "X-RateLimit-Remaining": rateLimit.remaining.toString(),
+    "X-RateLimit-Reset": Math.ceil(rateLimit.resetAt / 1000).toString(),
+    "X-RateLimit-Window-Ms": SERVER_APPROVAL_API_RATE_LIMIT.windowMs.toString(),
+  };
 }
 
 function redactSensitiveErrorText(value: string): string {
