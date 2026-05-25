@@ -87,15 +87,16 @@ For each chain, confirm diagnostics show:
 
 ## BSC Discovery Checks
 
-- `NEXT_PUBLIC_BSC_EXPLORER_API_URL` is either unset or points to a
+- `BSC_EXPLORER_API_URL` is either unset or points to a
   compatible Etherscan API V2 endpoint. The default is
   `https://api.etherscan.io/v2/api`.
-- `NEXT_PUBLIC_BSC_EXPLORER_CHAIN_ID` is unset or set to `56`.
-- `NEXT_PUBLIC_BSC_EXPLORER_API_KEY` is set to an Etherscan API V2 key with
-  BNB Smart Chain access. `NEXT_PUBLIC_BSCSCAN_API_KEY` is only a deprecated
-  fallback key name.
+- `BSC_EXPLORER_CHAIN_ID` is unset or set to `56`.
+- `BSC_EXPLORER_API_KEY` or `ETHERSCAN_API_KEY` is set server-side to an
+  Etherscan API V2 key with BNB Smart Chain access.
+- `NEXT_PUBLIC_BSC_EXPLORER_API_KEY` and `NEXT_PUBLIC_BSCSCAN_API_KEY` are
+  unset in hosted web deployments; they are desktop/static-only fallbacks.
 - BSC scans use Etherscan API V2 logs with `chainid=56` for historical approval
-  discovery.
+  discovery through `/api/discovery/approvals`.
 - The app does not rely on public BSC RPC `eth_getLogs` for historical
   approval discovery.
 - If the deprecated BscScan V1 endpoint `https://api.bscscan.com/api` is
@@ -105,14 +106,16 @@ For each chain, confirm diagnostics show:
 
 ## Base Discovery Checks
 
-- `NEXT_PUBLIC_BASE_EXPLORER_API_URL` is either unset or points to a compatible
+- `BASE_EXPLORER_API_URL` is either unset or points to a compatible
   Etherscan API V2 endpoint. The default is
   `https://api.etherscan.io/v2/api`.
-- `NEXT_PUBLIC_BASE_EXPLORER_CHAIN_ID` is unset or set to `8453`.
-- `NEXT_PUBLIC_BASE_EXPLORER_API_KEY` is set to an Etherscan API V2 key with
-  Base Mainnet access.
+- `BASE_EXPLORER_CHAIN_ID` is unset or set to `8453`.
+- `BASE_EXPLORER_API_KEY` or `ETHERSCAN_API_KEY` is set server-side to an
+  Etherscan API V2 key with Base Mainnet access.
+- `NEXT_PUBLIC_BASE_EXPLORER_API_KEY` is unset in hosted web deployments; it is
+  a desktop/static-only fallback.
 - Base scans use Etherscan API V2 logs with `chainid=8453` for historical
-  approval discovery.
+  approval discovery through `/api/discovery/approvals`.
 - The app does not rely on public Base RPC `eth_getLogs` for historical
   approval discovery.
 - Rate limits, malformed responses, missing API keys, and capped responses are

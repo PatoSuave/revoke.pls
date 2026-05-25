@@ -58,6 +58,9 @@ Active scan networks are intentionally limited to:
 Ethereum discovery uses a server-read-only API, while Ethereum revoke remains
 wallet-side only with owner, chain, preflight, gas, and row-level verification
 gates.
+BSC and Base hosted web discovery use the server-side
+`/api/discovery/approvals` route so explorer API keys stay out of the browser
+bundle.
 Arbitrum discovery also uses a server-read-only API, and Arbitrum revoke stays
 limited to live-verified ERC-20 and NFT rows.
 Optimism discovery uses a server-side API. Optimism revoke is limited to
@@ -131,7 +134,8 @@ product. Optimism batch revoke does not expose revoke actions.
 
 ## BSC Implementation Notes
 
-- Historical BSC approval discovery uses Etherscan API V2:
+- Hosted web BSC approval discovery uses `/api/discovery/approvals`, backed by
+  Etherscan API V2:
   `https://api.etherscan.io/v2/api`
 - Every BSC historical log request includes `chainid=56`.
 - Public BSC RPC `eth_getLogs` is not used for historical approval discovery.
@@ -145,7 +149,8 @@ product. Optimism batch revoke does not expose revoke actions.
 
 ## Base Implementation Notes
 
-- Historical Base approval discovery uses Etherscan API V2:
+- Hosted web Base approval discovery uses `/api/discovery/approvals`, backed by
+  Etherscan API V2:
   `https://api.etherscan.io/v2/api`
 - Every Base historical log request includes `chainid=8453`.
 - Public Base RPC `eth_getLogs` is not used for historical approval discovery.
@@ -261,13 +266,13 @@ supports it.
 | `NEXT_PUBLIC_BSC_RPC_URL` | Recommended for production | Override BSC RPC. Defaults to `https://bsc-dataseed.bnbchain.org`. |
 | `NEXT_PUBLIC_BASE_RPC_URL` | Recommended for production | Override Base RPC. Defaults to `https://mainnet.base.org`. |
 | `NEXT_PUBLIC_PULSECHAIN_EXPLORER_API` | Optional | Override PulseChain discovery API. Defaults to `https://api.scan.pulsechain.com/api`. |
-| `NEXT_PUBLIC_BSC_EXPLORER_API_URL` | Optional | BSC historical logs API. Defaults to `https://api.etherscan.io/v2/api`. |
-| `NEXT_PUBLIC_BSC_EXPLORER_CHAIN_ID` | Optional | Etherscan API V2 chain ID for BNB Smart Chain logs. Defaults to `56`; keep it at `56`. |
-| `NEXT_PUBLIC_BSC_EXPLORER_API_KEY` | Required for reliable BSC discovery | Preferred Etherscan API V2 key with BNB Smart Chain access. |
-| `NEXT_PUBLIC_BSCSCAN_API_KEY` | Deprecated fallback | Backward-compatible fallback key name for older deploys. Prefer `NEXT_PUBLIC_BSC_EXPLORER_API_KEY`. |
-| `NEXT_PUBLIC_BASE_EXPLORER_API_URL` | Optional | Base historical logs API. Defaults to `https://api.etherscan.io/v2/api`. |
-| `NEXT_PUBLIC_BASE_EXPLORER_CHAIN_ID` | Optional | Etherscan API V2 chain ID for Base logs. Defaults to `8453`; keep it at `8453`. |
-| `NEXT_PUBLIC_BASE_EXPLORER_API_KEY` | Required for reliable Base discovery | Etherscan API V2 key with Base Mainnet access. |
+| `BSC_EXPLORER_API_URL` | Optional | Server-only BSC logs API. Defaults to `https://api.etherscan.io/v2/api`. |
+| `BSC_EXPLORER_CHAIN_ID` | Optional | Server-only BSC Etherscan API V2 chain ID. Defaults to `56`; keep it at `56`. |
+| `BSC_EXPLORER_API_KEY` / `ETHERSCAN_API_KEY` | Required for reliable BSC discovery | Server-only Etherscan API V2 key with BNB Smart Chain access. |
+| `BASE_EXPLORER_API_URL` | Optional | Server-only Base logs API. Defaults to `https://api.etherscan.io/v2/api`. |
+| `BASE_EXPLORER_CHAIN_ID` | Optional | Server-only Base Etherscan API V2 chain ID. Defaults to `8453`; keep it at `8453`. |
+| `BASE_EXPLORER_API_KEY` / `ETHERSCAN_API_KEY` | Required for reliable Base discovery | Server-only Etherscan API V2 key with Base Mainnet access. |
+| `NEXT_PUBLIC_BSC_EXPLORER_API_KEY` / `NEXT_PUBLIC_BASE_EXPLORER_API_KEY` | Desktop/static only | Public fallback keys for builds without API routes. Do not configure these for hosted web deployments. |
 | `NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID` | Optional | Enables WalletConnect QR pairing. |
 | `NEXT_PUBLIC_SITE_URL` | Optional | Canonical public URL used by metadata and social images. Production should use `https://pulserevoke.com`. |
 | `NEXT_PUBLIC_TELEMETRY_ENABLED` | Optional | Enables the current telemetry sink in production when set to `true`. |

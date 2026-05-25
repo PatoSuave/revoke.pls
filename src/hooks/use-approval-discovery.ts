@@ -6,6 +6,12 @@ import type { Address } from "viem";
 import { useReadContracts } from "wagmi";
 
 import {
+  fetchServerApprovalDiscovery,
+  hydrateDiscoveryResult,
+  hydratePermit2DiscoveryResult,
+  usesServerApprovalDiscovery,
+} from "@/lib/approval-discovery-api";
+import {
   buildDiscoveryContracts,
   buildPermit2AllowanceContracts,
   collectDiscoveryReadFailures,
@@ -183,9 +189,31 @@ export function useApprovalDiscovery({
     () => source ?? getDiscoverySourceForChain(chainId),
     [source, chainId],
   );
+  const useServerDiscovery = usesServerApprovalDiscovery(chainId);
 
   const discoveryEnabled =
-    enabled && Boolean(owner) && Boolean(discoverySource) && Boolean(chainId);
+    enabled &&
+    Boolean(owner) &&
+    Boolean(chainId) &&
+    (useServerDiscovery || Boolean(discoverySource));
+
+  const serverDiscoveryQuery = useQuery({
+    queryKey: [
+      "server-approval-discovery",
+      chainId ?? null,
+      owner?.toLowerCase() ?? null,
+    ],
+    enabled: discoveryEnabled && useServerDiscovery,
+    staleTime: 60_000,
+    gcTime: 5 * 60_000,
+    queryFn: async ({ signal }) => {
+      if (!owner) throw new Error("owner required");
+      if (!usesServerApprovalDiscovery(chainId)) {
+        throw new Error("unsupported server discovery chain");
+      }
+      return fetchServerApprovalDiscovery({ owner, chainId, signal });
+    },
+  });
 
   const discoveryQuery = useQuery({
     queryKey: [
@@ -194,7 +222,7 @@ export function useApprovalDiscovery({
       chainId ?? null,
       owner?.toLowerCase() ?? null,
     ],
-    enabled: discoveryEnabled,
+    enabled: discoveryEnabled && !useServerDiscovery,
     staleTime: 60_000,
     gcTime: 5 * 60_000,
     queryFn: async ({ signal }) => {
@@ -205,7 +233,8 @@ export function useApprovalDiscovery({
   });
 
   const permit2DiscoveryEnabled =
-    discoveryEnabled && Boolean(discoverySource?.discoverPermit2Allowances);
+    discoveryEnabled &&
+    (useServerDiscovery || Boolean(discoverySource?.discoverPermit2Allowances));
 
   const permit2Query = useQuery({
     queryKey: [
@@ -214,7 +243,7 @@ export function useApprovalDiscovery({
       chainId ?? null,
       owner?.toLowerCase() ?? null,
     ],
-    enabled: permit2DiscoveryEnabled,
+    enabled: permit2DiscoveryEnabled && !useServerDiscovery,
     staleTime: 60_000,
     gcTime: 5 * 60_000,
     queryFn: async ({ signal }) => {
@@ -226,14 +255,43 @@ export function useApprovalDiscovery({
     },
   });
 
+  const erc20DiscoveryData = useMemo(
+    () =>
+      useServerDiscovery && serverDiscoveryQuery.data
+        ? hydrateDiscoveryResult(serverDiscoveryQuery.data.erc20)
+        : discoveryQuery.data,
+    [discoveryQuery.data, serverDiscoveryQuery.data, useServerDiscovery],
+  );
+
+  const permit2DiscoveryData = useMemo(
+    () =>
+      useServerDiscovery && serverDiscoveryQuery.data
+        ? hydratePermit2DiscoveryResult(serverDiscoveryQuery.data.permit2)
+        : permit2Query.data,
+    [permit2Query.data, serverDiscoveryQuery.data, useServerDiscovery],
+  );
+
+  const erc20DiscoveryStatus = useServerDiscovery
+    ? serverDiscoveryQuery.status
+    : discoveryQuery.status;
+  const permit2DiscoveryStatus = useServerDiscovery
+    ? serverDiscoveryQuery.status
+    : permit2Query.status;
+  const discoveryError = useServerDiscovery
+    ? serverDiscoveryQuery.error
+    : discoveryQuery.error;
+  const permit2Error = useServerDiscovery
+    ? serverDiscoveryQuery.error
+    : permit2Query.error;
+
   const pairs: readonly DiscoveredPair[] = useMemo(
-    () => discoveryQuery.data?.pairs ?? EMPTY_PAIRS,
-    [discoveryQuery.data],
+    () => erc20DiscoveryData?.pairs ?? EMPTY_PAIRS,
+    [erc20DiscoveryData],
   );
 
   const permit2Candidates: readonly Permit2DiscoveredAllowance[] = useMemo(
-    () => permit2Query.data?.allowances ?? EMPTY_PERMIT2_ALLOWANCES,
-    [permit2Query.data],
+    () => permit2DiscoveryData?.allowances ?? EMPTY_PERMIT2_ALLOWANCES,
+    [permit2DiscoveryData],
   );
 
   const { contracts, uniqueTokens } = useMemo(() => {
@@ -257,7 +315,7 @@ export function useApprovalDiscovery({
 
   const readsEnabled =
     discoveryEnabled &&
-    discoveryQuery.status === "success" &&
+    erc20DiscoveryStatus === "success" &&
     contracts.length > 0;
 
   const reads = useReadContracts({
@@ -272,7 +330,7 @@ export function useApprovalDiscovery({
 
   const permit2ReadsEnabled =
     discoveryEnabled &&
-    permit2Query.status === "success" &&
+    permit2DiscoveryStatus === "success" &&
     permit2Contracts.length > 0;
 
   const permit2Reads = useReadContracts({
@@ -358,12 +416,15 @@ export function useApprovalDiscovery({
   const status: DiscoveryStatus = useMemo(() => {
     if (!discoveryEnabled) return "idle";
     if (
-      discoveryQuery.status === "pending" ||
-      (permit2DiscoveryEnabled && permit2Query.status === "pending")
+      erc20DiscoveryStatus === "pending" ||
+      (permit2DiscoveryEnabled && permit2DiscoveryStatus === "pending")
     ) {
       return "pending";
     }
-    if (discoveryQuery.status === "error" || permit2Query.status === "error") {
+    if (
+      erc20DiscoveryStatus === "error" ||
+      permit2DiscoveryStatus === "error"
+    ) {
       return "error";
     }
     // Discovery succeeded. If there are candidate pairs, the on-chain
@@ -381,9 +442,9 @@ export function useApprovalDiscovery({
     return "success";
   }, [
     discoveryEnabled,
-    discoveryQuery.status,
+    erc20DiscoveryStatus,
     permit2DiscoveryEnabled,
-    permit2Query.status,
+    permit2DiscoveryStatus,
     pairs.length,
     permit2Candidates.length,
     reads.status,
@@ -391,8 +452,8 @@ export function useApprovalDiscovery({
   ]);
 
   const error: Error | null =
-    (discoveryQuery.error as Error | null) ??
-    (permit2Query.error as Error | null) ??
+    (discoveryError as Error | null) ??
+    (permit2Error as Error | null) ??
     reads.error ??
     permit2Reads.error ??
     null;
@@ -416,10 +477,10 @@ export function useApprovalDiscovery({
         registryMatched:
           parsed.stats.registryMatched + permit2Parsed.stats.registryMatched,
         windows:
-          (discoveryQuery.data?.windows ?? 0) +
-          (permit2Query.data?.windows ?? 0),
+          (erc20DiscoveryData?.windows ?? 0) +
+          (permit2DiscoveryData?.windows ?? 0),
       });
-      if (discoveryQuery.data?.truncated || permit2Query.data?.truncated) {
+      if (erc20DiscoveryData?.truncated || permit2DiscoveryData?.truncated) {
         trackEvent("scan_truncated", { kind: "erc20", source: src, chainId });
       }
     } else if (status === "error") {
@@ -434,15 +495,19 @@ export function useApprovalDiscovery({
     approvals.length,
     parsed.stats.registryMatched,
     permit2Parsed.stats.registryMatched,
-    discoveryQuery.data?.windows,
-    permit2Query.data?.windows,
-    discoveryQuery.data?.truncated,
-    permit2Query.data?.truncated,
+    erc20DiscoveryData?.windows,
+    permit2DiscoveryData?.windows,
+    erc20DiscoveryData?.truncated,
+    permit2DiscoveryData?.truncated,
   ]);
 
   const refetch = () => {
-    void discoveryQuery.refetch();
-    void permit2Query.refetch();
+    if (useServerDiscovery) {
+      void serverDiscoveryQuery.refetch();
+    } else {
+      void discoveryQuery.refetch();
+      void permit2Query.refetch();
+    }
     void reads.refetch();
     void permit2Reads.refetch();
   };
@@ -451,11 +516,13 @@ export function useApprovalDiscovery({
     approvals,
     status,
     isFetching:
+      serverDiscoveryQuery.isFetching ||
       discoveryQuery.isFetching ||
       permit2Query.isFetching ||
       reads.isFetching ||
       permit2Reads.isFetching,
     isRefetching:
+      serverDiscoveryQuery.isRefetching ||
       discoveryQuery.isRefetching ||
       permit2Query.isRefetching ||
       reads.isRefetching ||
@@ -474,18 +541,18 @@ export function useApprovalDiscovery({
       permit2Candidates: permit2Candidates.length,
       permit2Active: permit2Parsed.stats.active,
       rawCandidateLogs:
-        (discoveryQuery.data?.rawCount ?? 0) +
-        (permit2Query.data?.rawCount ?? 0),
+        (erc20DiscoveryData?.rawCount ?? 0) +
+        (permit2DiscoveryData?.rawCount ?? 0),
       windows:
-        (discoveryQuery.data?.windows ?? 0) +
-        (permit2Query.data?.windows ?? 0),
+        (erc20DiscoveryData?.windows ?? 0) +
+        (permit2DiscoveryData?.windows ?? 0),
       requests:
-        (discoveryQuery.data?.requests ?? 0) +
-        (permit2Query.data?.requests ?? 0),
+        (erc20DiscoveryData?.requests ?? 0) +
+        (permit2DiscoveryData?.requests ?? 0),
     },
     diagnostics: {
       discoveryError:
-        errorMessage(discoveryQuery.error) ?? errorMessage(permit2Query.error),
+        errorMessage(discoveryError) ?? errorMessage(permit2Error),
       liveReadError: errorMessage(reads.error) ?? errorMessage(permit2Reads.error),
       liveReadFailureCount:
         readFailures.allowance +
@@ -494,12 +561,12 @@ export function useApprovalDiscovery({
         readFailures.decimals +
         readFailures.other,
       liveReadFailures: readFailures,
-      parse: discoveryQuery.data?.erc20Parse ?? EMPTY_ERC20_PARSE,
+      parse: erc20DiscoveryData?.erc20Parse ?? EMPTY_ERC20_PARSE,
       timing,
     },
-    sourceMeta: discoverySource?.meta ?? null,
+    sourceMeta: erc20DiscoveryData?.source ?? discoverySource?.meta ?? null,
     truncated:
-      (discoveryQuery.data?.truncated ?? false) ||
-      (permit2Query.data?.truncated ?? false),
+      (erc20DiscoveryData?.truncated ?? false) ||
+      (permit2DiscoveryData?.truncated ?? false),
   };
 }

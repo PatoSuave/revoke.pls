@@ -16,6 +16,7 @@ with Arbitrum One verified-row revoke and Optimism verified-row revoke.
   display only
 - Prepares standard approval-clearing transactions when the user chooses to
   revoke
+- Scans BSC and Base through a server-side read-only API in hosted web builds
 - Scans Arbitrum One through a server-side read-only API and enables only
   live-verified ERC-20 and NFT row revoke
 - Scans Optimism / OP Mainnet through a server-side API and enables only
@@ -55,12 +56,14 @@ unreliable or impractical for large historical `eth_getLogs` scans, especially
 on BSC and Base. Pulse Revoke uses explorer log APIs for historical discovery
 and then uses live RPC reads to validate current state.
 
-For BSC, historical discovery uses Etherscan API V2 with `chainid=56`. BscScan
-is still used for public explorer links. For Base, historical discovery uses
-Etherscan API V2 with `chainid=8453`. BaseScan is still used for public
-explorer links. Ethereum and Arbitrum discovery use server-side read-only API
-routes so managed RPC URLs and explorer API keys do not need to be exposed to
-the browser; Arbitrum requests use `chainid=42161` and Arbiscan links.
+For BSC, hosted web historical discovery uses a server-side route backed by
+Etherscan API V2 with `chainid=56`. BscScan is still used for public explorer
+links. For Base, hosted web historical discovery uses the same server-side
+route backed by Etherscan API V2 with `chainid=8453`. BaseScan is still used
+for public explorer links. Ethereum and Arbitrum discovery use server-side
+read-only API routes so managed RPC URLs and explorer API keys do not need to
+be exposed to the browser; Arbitrum requests use `chainid=42161` and Arbiscan
+links.
 Optimism requests also use a server-side route, Etherscan API V2 with
 `chainid=10`, and Optimistic Etherscan links.
 
