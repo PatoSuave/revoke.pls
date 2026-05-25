@@ -25,6 +25,8 @@ does not mean a desktop release exists today.
   from `src/lib/chains.ts` is used.
 - `NEXT_PUBLIC_BASE_RPC_URL` is optional. If unset, the Base public fallback
   RPC from `src/lib/chains.ts` is used.
+- `NEXT_PUBLIC_POLYGON_RPC_URL` is optional. If unset, the Polygon public
+  fallback RPC from `src/lib/chains.ts` is used.
 - `NEXT_PUBLIC_PULSECHAIN_EXPLORER_API` is optional. If unset, the PulseScan
   API default is used.
 - `NEXT_PUBLIC_BSC_EXPLORER_API_URL` is an optional BSC historical logs API
@@ -42,6 +44,12 @@ does not mean a desktop release exists today.
 - `NEXT_PUBLIC_BASE_EXPLORER_CHAIN_ID` should be unset or set to `8453`.
 - `NEXT_PUBLIC_BASE_EXPLORER_API_KEY` is required for desktop/static Base
   discovery. It should be an Etherscan API V2 key with Base Mainnet access.
+- `NEXT_PUBLIC_POLYGON_EXPLORER_API_URL` is an optional Polygon historical logs
+  API override. It defaults to Etherscan API V2 at
+  `https://api.etherscan.io/v2/api`.
+- `NEXT_PUBLIC_POLYGON_EXPLORER_CHAIN_ID` should be unset or set to `137`.
+- `NEXT_PUBLIC_POLYGON_EXPLORER_API_KEY` is required for desktop/static Polygon
+  discovery. It should be an Etherscan API V2 key with Polygon Mainnet access.
 
 Do not commit local `.env` files or release secrets.
 

@@ -15,6 +15,7 @@ Active supported chains are configured in `src/lib/chains.ts`:
 - BSC / BNB Smart Chain, chain ID `56`, native gas token `BNB`, explorer
   `BscScan`
 - Base, chain ID `8453`, native gas token `ETH`, explorer `BaseScan`
+- Polygon, chain ID `137`, native gas token `POL`, explorer `PolygonScan`
 - Ethereum Mainnet, chain ID `1`, native gas token `ETH`, explorer `Etherscan`
 - Arbitrum One, chain ID `42161`, native gas token `ETH`, explorer `Arbiscan`
 - Optimism / OP Mainnet, chain ID `10`, native gas token `ETH`, explorer
@@ -36,12 +37,13 @@ does not route to generic batch or global revoke.
 
 ## Web3 Layer
 
-- `src/lib/wagmi.ts` registers PulseChain, BSC, Base, Ethereum Mainnet,
-  Arbitrum One, and OP Mainnet with wagmi. Ethereum, Arbitrum, and Optimism
-  use separate scanner lanes.
+- `src/lib/wagmi.ts` registers PulseChain, BSC, Base, Polygon, Ethereum
+  Mainnet, Arbitrum One, and OP Mainnet with wagmi. Ethereum, Arbitrum, and
+  Optimism use separate scanner lanes.
 - PulseChain RPC defaults to `https://rpc.pulsechain.com`.
 - BSC RPC defaults to `https://bsc-dataseed.bnbchain.org`.
 - Base RPC defaults to `https://mainnet.base.org`.
+- Polygon RPC defaults to `https://polygon.drpc.org`.
 - Ethereum wallet RPC defaults to `https://ethereum-rpc.publicnode.com` unless
   overridden for the wallet client.
 - Arbitrum wallet chain recognition uses `https://arb1.arbitrum.io/rpc`.
@@ -89,6 +91,11 @@ path with `chainid=8453`. Public Base RPC `eth_getLogs` is not used for
 historical approval discovery. BaseScan remains the explorer for address,
 token, and transaction links.
 
+Polygon hosted web discovery uses the same server route and Etherscan API V2
+logs path with `chainid=137`. Public Polygon RPC `eth_getLogs` is not used for
+historical approval discovery. PolygonScan remains the explorer for address,
+token, and transaction links.
+
 Ethereum historical discovery is exposed through `/api/ethereum/approvals` so
 the Etherscan key stays server-only. The route is read-only, uses bounded
 discovery and live-validation caps, and never signs, relays, or submits
@@ -128,6 +135,14 @@ row-level revoke stays limited to verified ERC-20 and NFT rows.
   `BASE_EXPLORER_API_KEY` / `ETHERSCAN_API_KEY`
 - Desktop/static Base fallback key env var:
   `NEXT_PUBLIC_BASE_EXPLORER_API_KEY`
+- Polygon discovery API default:
+  `https://api.etherscan.io/v2/api`
+- Polygon discovery API chain id:
+  `POLYGON_EXPLORER_CHAIN_ID=137`
+- Polygon server API key env vars:
+  `POLYGON_EXPLORER_API_KEY` / `ETHERSCAN_API_KEY`
+- Desktop/static Polygon fallback key env var:
+  `NEXT_PUBLIC_POLYGON_EXPLORER_API_KEY`
 - Ethereum server RPC env vars:
   `MAINNET_RPC_URL` / `ETHEREUM_RPC_URL`
 - Ethereum server API key env var:
@@ -174,6 +189,13 @@ User-facing Base copy uses:
 - `ERC-1155` for multi-token NFT / semi-fungible approvals
 - `ETH` for gas
 
+User-facing Polygon copy uses:
+
+- `ERC-20` for fungible token approvals
+- `ERC-721` for NFT approvals
+- `ERC-1155` for multi-token NFT / semi-fungible approvals
+- `POL` for gas
+
 User-facing Arbitrum copy uses:
 
 - `ERC-20` for fungible token approvals
@@ -207,8 +229,8 @@ Fungible token revoke:
 2. App refreshes live allowance on the same chain.
 3. App prepares `approve(spender, 0)`.
 4. Wallet signs and submits on the approval's `chainId`.
-5. UI links the transaction to PulseScan, BscScan, BaseScan, Etherscan, or
-   Arbiscan and rescans after success.
+5. UI links the transaction to PulseScan, BscScan, BaseScan, PolygonScan,
+   Etherscan, or Arbiscan and rescans after success.
 
 Permit2 delegated allowance revoke:
 

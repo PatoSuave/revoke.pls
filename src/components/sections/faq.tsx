@@ -51,9 +51,9 @@ const QUESTIONS: ReadonlyArray<{ q: string; a: React.ReactNode }> = [
     a: (
       <>
         PulseChain mainnet (chainId 369), Ethereum Mainnet (chainId 1), BSC /
-        BNB Smart Chain (chainId 56), and Base (chainId 8453). Discovery uses
-        each chain&apos;s explorer/API path, PulseScan on PulseChain, Etherscan for
-        Ethereum,{" "}
+        BNB Smart Chain (chainId 56), Base (chainId 8453), and Polygon
+        (chainId 137). Discovery uses each chain&apos;s explorer/API path,
+        PulseScan on PulseChain, Etherscan for Ethereum,{" "}
         <a
           className="underline underline-offset-2 hover:text-pulse-cyan"
           href="https://bscscan.com"
@@ -62,7 +62,7 @@ const QUESTIONS: ReadonlyArray<{ q: string; a: React.ReactNode }> = [
         >
           BscScan
         </a>{" "}
-        on BSC, and{" "}
+        on BSC,{" "}
         <a
           className="underline underline-offset-2 hover:text-pulse-cyan"
           href="https://basescan.org"
@@ -71,7 +71,16 @@ const QUESTIONS: ReadonlyArray<{ q: string; a: React.ReactNode }> = [
         >
           BaseScan
         </a>{" "}
-        on Base, and every discovered allowance is re-verified live on-chain
+        on Base, and{" "}
+        <a
+          className="underline underline-offset-2 hover:text-pulse-cyan"
+          href="https://polygonscan.com"
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          PolygonScan
+        </a>{" "}
+        on Polygon, and every discovered allowance is re-verified live on-chain
         before display. Ethereum revoke is wallet-side and available only for
         rows that pass the current live-verification gates. Known protocol
         labels come from a chain-scoped curated registry, so a PulseChain

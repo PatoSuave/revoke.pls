@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   BASE_CHAIN_ID,
   BSC_CHAIN_ID,
+  POLYGON_CHAIN_ID,
   PULSECHAIN_CHAIN_ID,
   supportedChains,
 } from "./chains";
@@ -17,12 +18,14 @@ describe("wagmi wallet chains", () => {
       PULSECHAIN_CHAIN_ID,
       BSC_CHAIN_ID,
       BASE_CHAIN_ID,
+      POLYGON_CHAIN_ID,
     ]);
 
     expect(walletChains.map((chain) => chain.id)).toEqual([
       PULSECHAIN_CHAIN_ID,
       BSC_CHAIN_ID,
       BASE_CHAIN_ID,
+      POLYGON_CHAIN_ID,
       ETHEREUM_MAINNET_CLIENT_CHAIN_ID,
       ARBITRUM_ONE_CLIENT_CHAIN_ID,
       OPTIMISM_CLIENT_CHAIN_ID,

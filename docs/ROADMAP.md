@@ -9,6 +9,7 @@ ship.
 - PulseChain support
 - BSC / BNB Smart Chain support
 - Base support
+- Polygon support
 - Ethereum Mainnet read-only discovery and wallet-side revoke
 - Arbitrum One ERC-20/NFT verified-row revoke
 - Optimism / OP Mainnet ERC-20/NFT verified-row revoke
@@ -22,6 +23,7 @@ ship.
 - Chain-scoped token and spender registry enrichment
 - BSC Etherscan API V2 discovery with `chainid=56`
 - Base Etherscan API V2 discovery with `chainid=8453`
+- Polygon Etherscan API V2 discovery with `chainid=137`
 - Ethereum server-read-only Etherscan API V2 discovery with `chainid=1`
 - Arbitrum server-read-only Etherscan API V2 discovery with `chainid=42161`
 - Optimism server-read-only Etherscan API V2 discovery with `chainid=10`
@@ -50,7 +52,7 @@ ship.
 
 ## Future Ideas Requiring Review
 
-- More manually verified PulseChain, BSC, and Base registry labels
+- More manually verified PulseChain, BSC, Base, and Polygon registry labels
 - Future Arbitrum batch revoke only after separate planning and QA
 - Future Optimism batch revoke only after separate planning and QA
 - Additional suspicious-spender heuristics

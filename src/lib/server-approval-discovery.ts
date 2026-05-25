@@ -9,6 +9,9 @@ import {
   BSC_CHAIN_ID,
   BSC_EXPLORER_API_DEFAULT,
   BSC_EXPLORER_CHAIN_ID_DEFAULT,
+  POLYGON_CHAIN_ID,
+  POLYGON_EXPLORER_API_DEFAULT,
+  POLYGON_EXPLORER_CHAIN_ID_DEFAULT,
   type DiscoverySourceConfig,
 } from "@/lib/chains";
 import {
@@ -50,6 +53,15 @@ const CHAIN_CONFIGS = {
     apiKeyEnvNames: ["BASE_EXPLORER_API_KEY", "ETHERSCAN_API_KEY"],
     apiChainIdEnvNames: ["BASE_EXPLORER_CHAIN_ID"],
   },
+  [POLYGON_CHAIN_ID]: {
+    displayName: "Polygon",
+    explorerBaseUrl: "https://polygonscan.com",
+    apiUrlDefault: POLYGON_EXPLORER_API_DEFAULT,
+    apiChainIdDefault: POLYGON_EXPLORER_CHAIN_ID_DEFAULT,
+    apiUrlEnvNames: ["POLYGON_EXPLORER_API_URL"],
+    apiKeyEnvNames: ["POLYGON_EXPLORER_API_KEY", "ETHERSCAN_API_KEY"],
+    apiChainIdEnvNames: ["POLYGON_EXPLORER_CHAIN_ID"],
+  },
 } as const;
 
 type ServerDiscoveryChainId = keyof typeof CHAIN_CONFIGS;
@@ -62,7 +74,7 @@ export function normalizeServerDiscoveryOwner(value: string | null): Address | n
 export function isServerDiscoveryChainId(
   value: number,
 ): value is ServerDiscoveryChainId {
-  return value === BSC_CHAIN_ID || value === BASE_CHAIN_ID;
+  return value in CHAIN_CONFIGS;
 }
 
 export async function discoverServerErc20Approvals({

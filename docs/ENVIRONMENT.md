@@ -1,14 +1,14 @@
 # Environment Variables
 
 Pulse Revoke is primarily a wallet-side frontend app, with server-side BSC,
-Base, Ethereum, Arbitrum, and Optimism API routes for discovery. Variables
+Base, Polygon, Ethereum, Arbitrum, and Optimism API routes for discovery. Variables
 prefixed with `NEXT_PUBLIC_` are embedded into the browser bundle and are
 visible to users. Do not store private secrets in these variables.
 
 ## Production Requirements
 
-For the live PulseChain + BSC + Base + Ethereum + Arbitrum verified-row product
-plus Optimism ERC-20/NFT verified-row revoke, configure:
+For the live PulseChain + BSC + Base + Polygon + Ethereum + Arbitrum
+verified-row product plus Optimism ERC-20/NFT verified-row revoke, configure:
 
 | Variable | Production status | Notes |
 | --- | --- | --- |
@@ -21,6 +21,10 @@ plus Optimism ERC-20/NFT verified-row revoke, configure:
 | `BASE_EXPLORER_CHAIN_ID` | Optional | Must be `8453` for Base Etherscan API V2 logs. Defaults to `8453`. |
 | `BASE_EXPLORER_API_KEY` / `ETHERSCAN_API_KEY` | Required for reliable Base discovery | Server-only Etherscan API V2 key with Base Mainnet access. |
 | `NEXT_PUBLIC_BASE_RPC_URL` | Recommended | Public fallback is available, but production should prefer a reliable RPC. |
+| `POLYGON_EXPLORER_API_URL` | Optional | Server-only Polygon logs API. Defaults to `https://api.etherscan.io/v2/api`. |
+| `POLYGON_EXPLORER_CHAIN_ID` | Optional | Must be `137` for Polygon Mainnet Etherscan API V2 logs. Defaults to `137`. |
+| `POLYGON_EXPLORER_API_KEY` / `ETHERSCAN_API_KEY` | Required for reliable Polygon discovery | Server-only Etherscan API V2 key with Polygon Mainnet access. |
+| `NEXT_PUBLIC_POLYGON_RPC_URL` | Recommended | Public fallback is available, but production should prefer a reliable RPC. |
 | `MAINNET_RPC_URL` / `ETHEREUM_RPC_URL` | Required for Ethereum scan | Server-only Ethereum RPC URL for `/api/ethereum/approvals`. |
 | `ETHERSCAN_API_KEY` | Required for Ethereum scan | Server-only Etherscan API key. Do not use a `NEXT_PUBLIC_` key for Ethereum server discovery. |
 | `ARBITRUM_ONE_RPC_URL` / `ARBITRUM_RPC_URL` | Required for Arbitrum scan | Server-only Arbitrum RPC URL for `/api/arbitrum/approvals`. |
@@ -31,8 +35,8 @@ plus Optimism ERC-20/NFT verified-row revoke, configure:
 PulseChain has defaults for RPC and explorer API, but hosted production can
 override them for reliability.
 
-PulseChain and BSC token logos use Dex Screener's public token lookup endpoint
-through `/api/token-logos`. No API key is required. The app sends token
+PulseChain, BSC, and Polygon token logos use Dex Screener's public token lookup
+endpoint through `/api/token-logos`. No API key is required. The app sends token
 contract addresses only, caps each request at `30` addresses, caches successful
 display metadata at the CDN, and falls back to symbol initials when no logo is
 returned.
@@ -64,6 +68,16 @@ Hosted web Base approval discovery does not rely on public Base RPC
 `eth_getLogs`; it uses the server-side `/api/discovery/approvals` route with
 Etherscan API V2 logs.
 
+### `NEXT_PUBLIC_POLYGON_RPC_URL`
+
+Recommended for production. Overrides the Polygon RPC used by wagmi/viem for
+live validation and transaction submission. If unset, the app uses
+`https://polygon.drpc.org`.
+
+Hosted web Polygon approval discovery does not rely on public Polygon RPC
+`eth_getLogs`; it uses the server-side `/api/discovery/approvals` route with
+Etherscan API V2 logs.
+
 ### `NEXT_PUBLIC_PULSECHAIN_EXPLORER_API`
 
 Optional. Overrides the PulseChain explorer API used for historical approval log
@@ -71,9 +85,10 @@ discovery. If unset, the app uses `https://api.scan.pulsechain.com/api`.
 
 ### Token Logo Lookup
 
-No environment variable is required for PulseChain or BSC token logos. The
-server route `/api/token-logos?chainId=369&addresses=...` or
-`/api/token-logos?chainId=56&addresses=...` calls Dex Screener for display
+No environment variable is required for PulseChain, BSC, or Polygon token
+logos. The server route `/api/token-logos?chainId=369&addresses=...`,
+`/api/token-logos?chainId=56&addresses=...`, or
+`/api/token-logos?chainId=137&addresses=...` calls Dex Screener for display
 metadata and does not receive wallet owner, spender, or allowance data. Treat
 logos as visual convenience only; explorer links and live chain reads remain
 the source of verification.
@@ -150,6 +165,44 @@ Do not configure this value as `NEXT_PUBLIC_*`; the frontend does not need a
 Base explorer key in hosted web deployments.
 
 ### `NEXT_PUBLIC_BASE_EXPLORER_API_KEY`
+
+Desktop/static-only fallback value for builds without API routes. Hosted web
+deployments should leave it unset.
+
+### `POLYGON_EXPLORER_API_URL`
+
+Optional server-only Polygon historical logs API base URL. Default:
+
+```text
+https://api.etherscan.io/v2/api
+```
+
+PolygonScan remains the user-facing explorer for links, but historical Polygon
+log reads use Etherscan API V2. Do not configure the deprecated PolygonScan V1
+logs endpoint `https://api.polygonscan.com/api` for this flow.
+
+### `POLYGON_EXPLORER_CHAIN_ID`
+
+Optional server-only Etherscan API V2 chain ID parameter for Polygon Mainnet
+logs. Default:
+
+```text
+137
+```
+
+Every Polygon historical log request should include `chainid=137`.
+
+### `POLYGON_EXPLORER_API_KEY`
+
+Required for reliable hosted web Polygon discovery unless `ETHERSCAN_API_KEY`
+is used as the shared server-side Etherscan API V2 key. Etherscan plan limits
+can affect whether Polygon logs are available and how quickly requests are
+served.
+
+Do not configure this value as `NEXT_PUBLIC_*`; the frontend does not need a
+Polygon explorer key in hosted web deployments.
+
+### `NEXT_PUBLIC_POLYGON_EXPLORER_API_KEY`
 
 Desktop/static-only fallback value for builds without API routes. Hosted web
 deployments should leave it unset.
@@ -280,6 +333,7 @@ NEXT_PUBLIC_SITE_URL=https://pulserevoke.com
 NEXT_PUBLIC_PULSECHAIN_RPC_URL=
 NEXT_PUBLIC_BSC_RPC_URL=https://bsc-dataseed.bnbchain.org
 NEXT_PUBLIC_BASE_RPC_URL=https://mainnet.base.org
+NEXT_PUBLIC_POLYGON_RPC_URL=https://polygon.drpc.org
 NEXT_PUBLIC_PULSECHAIN_EXPLORER_API=
 NEXT_PUBLIC_BSC_EXPLORER_API_URL=https://api.etherscan.io/v2/api
 NEXT_PUBLIC_BSC_EXPLORER_CHAIN_ID=56
@@ -288,6 +342,9 @@ NEXT_PUBLIC_BSCSCAN_API_KEY=
 NEXT_PUBLIC_BASE_EXPLORER_API_URL=https://api.etherscan.io/v2/api
 NEXT_PUBLIC_BASE_EXPLORER_CHAIN_ID=8453
 NEXT_PUBLIC_BASE_EXPLORER_API_KEY=
+NEXT_PUBLIC_POLYGON_EXPLORER_API_URL=https://api.etherscan.io/v2/api
+NEXT_PUBLIC_POLYGON_EXPLORER_CHAIN_ID=137
+NEXT_PUBLIC_POLYGON_EXPLORER_API_KEY=
 NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID=
 NEXT_PUBLIC_TELEMETRY_ENABLED=
 BSC_EXPLORER_API_URL=https://api.etherscan.io/v2/api
@@ -296,6 +353,9 @@ BSC_EXPLORER_API_KEY=replace_with_server_only_etherscan_v2_key
 BASE_EXPLORER_API_URL=https://api.etherscan.io/v2/api
 BASE_EXPLORER_CHAIN_ID=8453
 BASE_EXPLORER_API_KEY=replace_with_server_only_etherscan_v2_key
+POLYGON_EXPLORER_API_URL=https://api.etherscan.io/v2/api
+POLYGON_EXPLORER_CHAIN_ID=137
+POLYGON_EXPLORER_API_KEY=replace_with_server_only_etherscan_v2_key
 MAINNET_RPC_URL=https://your-server-only-ethereum-rpc.example
 ETHEREUM_RPC_URL=
 ETHEREUM_EXPLORER_API_URL=https://api.etherscan.io/v2/api
@@ -318,9 +378,9 @@ OPTIMISTIC_ETHERSCAN_API_KEY=
 
 Explorer APIs and public RPC endpoints can rate-limit, cap responses, or fail.
 The app should surface incomplete discovery or validation instead of displaying
-a false "clear" state. For production BSC and Base discovery, use Etherscan API
-V2 keys server-side and account plans that support BNB Smart Chain and Base
-Mainnet logs.
+a false "clear" state. For production BSC, Base, and Polygon discovery, use
+Etherscan API V2 keys server-side and account plans that support BNB Smart
+Chain, Base Mainnet, and Polygon Mainnet logs.
 For Arbitrum, configure server-only managed RPC plus an Arbiscan or
 Etherscan-compatible API key with Arbitrum One log access. For Optimism,
 configure server-only managed RPC plus an Etherscan API V2 key with OP Mainnet

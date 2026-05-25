@@ -5,7 +5,7 @@ Pulse Revoke
 
 ## Vision
 Create a clean, fast approval management interface for PulseChain, BSC, Base,
-Ethereum, Arbitrum One verified-row revoke, and Optimism verified-row revoke
+Polygon, Ethereum, Arbitrum One verified-row revoke, and Optimism verified-row revoke
 while preserving the Pulse Revoke identity and a narrow security-first scope.
 
 ## Primary Problem
@@ -15,6 +15,7 @@ Users often approve tokens to contracts and forget about those approvals. Unlimi
 - PulseChain users
 - BSC users
 - Base users
+- Polygon users
 - Ethereum users
 - Arbitrum users reviewing and clearing live-verified ERC-20 and NFT approvals
 - Optimism users reviewing and clearing live-verified ERC-20 and NFT approvals

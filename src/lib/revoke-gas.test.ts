@@ -3,7 +3,12 @@ import { join } from "node:path";
 
 import { describe, expect, it } from "vitest";
 
-import { BSC_CHAIN_ID, BASE_CHAIN_ID, PULSECHAIN_CHAIN_ID } from "@/lib/chains";
+import {
+  BASE_CHAIN_ID,
+  BSC_CHAIN_ID,
+  POLYGON_CHAIN_ID,
+  PULSECHAIN_CHAIN_ID,
+} from "@/lib/chains";
 import { ETHEREUM_MAINNET_CLIENT_CHAIN_ID } from "@/lib/ethereum-approval-client";
 import {
   blockGasEstimateFailure,
@@ -161,6 +166,7 @@ describe("revoke gas safety policy", () => {
     expect(shouldEstimateRevokeGas(BSC_CHAIN_ID)).toBe(true);
     expect(shouldEstimateRevokeGas(PULSECHAIN_CHAIN_ID)).toBe(false);
     expect(shouldEstimateRevokeGas(BASE_CHAIN_ID)).toBe(false);
+    expect(shouldEstimateRevokeGas(POLYGON_CHAIN_ID)).toBe(false);
   });
 
   it("keeps the Ethereum gas warning and wallet-safety copy explicit", () => {

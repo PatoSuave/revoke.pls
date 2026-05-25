@@ -44,6 +44,12 @@ describe("security content", () => {
       revoke: "Yes",
       status: "Live",
     });
+    expect(rowsByChain.get("Polygon")).toMatchObject({
+      chainId: "137",
+      scan: "Yes",
+      revoke: "Yes",
+      status: "Live",
+    });
     expect(rowsByChain.get("Ethereum Mainnet")?.revoke).toContain(
       "live-verified rows",
     );

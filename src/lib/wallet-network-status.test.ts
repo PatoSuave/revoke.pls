@@ -4,6 +4,7 @@ import { ARBITRUM_ONE_CLIENT_CHAIN_ID } from "@/lib/arbitrum-approval-client";
 import {
   BASE_CHAIN_ID,
   BSC_CHAIN_ID,
+  POLYGON_CHAIN_ID,
   PULSECHAIN_CHAIN_ID,
   supportedChainConfigList,
 } from "@/lib/chains";
@@ -50,6 +51,7 @@ describe("wallet header network status", () => {
         PULSECHAIN_CHAIN_ID,
         BSC_CHAIN_ID,
         BASE_CHAIN_ID,
+        POLYGON_CHAIN_ID,
       ]);
     }
   });
@@ -83,18 +85,20 @@ describe("wallet header network status", () => {
     expect(status.label).toBe("Ethereum Mainnet");
   });
 
-  it("keeps PulseChain, BSC, and Base as generic supported product chains", () => {
+  it("keeps PulseChain, BSC, Base, and Polygon as generic supported product chains", () => {
     expect(
-      [PULSECHAIN_CHAIN_ID, BSC_CHAIN_ID, BASE_CHAIN_ID].map((chainId) =>
-        resolveHeaderNetworkStatus({
-          walletChainId: chainId,
-          wagmiChainId: chainId,
-        }),
+      [PULSECHAIN_CHAIN_ID, BSC_CHAIN_ID, BASE_CHAIN_ID, POLYGON_CHAIN_ID].map(
+        (chainId) =>
+          resolveHeaderNetworkStatus({
+            walletChainId: chainId,
+            wagmiChainId: chainId,
+          }),
       ),
     ).toEqual([
       expect.objectContaining({ kind: "supported", label: "PulseChain" }),
       expect.objectContaining({ kind: "supported", label: "BNB Smart Chain" }),
       expect.objectContaining({ kind: "supported", label: "Base" }),
+      expect.objectContaining({ kind: "supported", label: "Polygon" }),
     ]);
   });
 
@@ -103,6 +107,7 @@ describe("wallet header network status", () => {
       PULSECHAIN_CHAIN_ID,
       BSC_CHAIN_ID,
       BASE_CHAIN_ID,
+      POLYGON_CHAIN_ID,
     ]);
     expect(supportedChainConfigList.map((chain) => chain.chainId)).not.toContain(
       ARBITRUM_ONE_CLIENT_CHAIN_ID,

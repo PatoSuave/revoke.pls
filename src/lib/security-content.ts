@@ -84,6 +84,14 @@ export const SECURITY_CHAIN_STATUS_ROWS: readonly ChainStatusRow[] = [
     note: "Shared scanner and wallet-side revoke flow using Base explorer discovery and live verification.",
   },
   {
+    chain: "Polygon",
+    chainId: "137",
+    scan: "Yes",
+    revoke: "Yes",
+    status: "Live",
+    note: "Shared scanner and wallet-side revoke flow using PolygonScan/Etherscan API V2 discovery and live verification.",
+  },
+  {
     chain: "Arbitrum One",
     chainId: "42161",
     scan: "Yes",

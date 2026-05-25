@@ -1,7 +1,7 @@
 # Scanner QA Checklist
 
 Use this checklist to verify that Pulse Revoke reads approval state correctly on
-PulseChain, BSC, Base, Ethereum, Arbitrum One verified-row revoke, and
+PulseChain, BSC, Base, Polygon, Ethereum, Arbitrum One verified-row revoke, and
 Optimism verified-row revoke.
 Keep all testing low-risk and manual.
 
@@ -35,6 +35,7 @@ Run the scanner flow on all supported chains:
 - PulseChain mainnet, chain ID `369`, gas token `PLS`.
 - BSC / BNB Smart Chain, chain ID `56`, gas token `BNB`.
 - Base, chain ID `8453`, gas token `ETH`.
+- Polygon, chain ID `137`, gas token `POL`.
 - Ethereum Mainnet, chain ID `1`, gas token `ETH`.
 - Arbitrum One, chain ID `42161`, gas token `ETH`, ERC-20/NFT verified-row
   lane.
@@ -52,6 +53,7 @@ For each chain, confirm diagnostics show:
 - Etherscan API V2 key presence as configured/missing, never the key value.
 - BSC API chain ID `56` when testing BNB Smart Chain.
 - Base API chain ID `8453` when testing Base.
+- Polygon API chain ID `137` when testing Polygon.
 - Arbitrum API chain ID `42161` when testing Arbitrum One.
 - Optimism API chain ID `10` when testing OP Mainnet.
 - Fungible token and NFT scan status.
@@ -121,6 +123,23 @@ For each chain, confirm diagnostics show:
 - Rate limits, malformed responses, missing API keys, and capped responses are
   shown as incomplete/error states, not as "clear".
 
+## Polygon Discovery Checks
+
+- `POLYGON_EXPLORER_API_URL` is either unset or points to a compatible
+  Etherscan API V2 endpoint. The default is
+  `https://api.etherscan.io/v2/api`.
+- `POLYGON_EXPLORER_CHAIN_ID` is unset or set to `137`.
+- `POLYGON_EXPLORER_API_KEY` or `ETHERSCAN_API_KEY` is set server-side to an
+  Etherscan API V2 key with Polygon Mainnet access.
+- `NEXT_PUBLIC_POLYGON_EXPLORER_API_KEY` is unset in hosted web deployments; it
+  is a desktop/static-only fallback.
+- Polygon scans use Etherscan API V2 logs with `chainid=137` for historical
+  approval discovery through `/api/discovery/approvals`.
+- The app does not rely on public Polygon RPC `eth_getLogs` for historical
+  approval discovery.
+- Rate limits, malformed responses, missing API keys, and capped responses are
+  shown as incomplete/error states, not as "clear".
+
 ## Arbitrum Verified-Row Checks
 
 - `ARBITRUM_ONE_RPC_URL` or `ARBITRUM_RPC_URL` is set server-side for
@@ -177,8 +196,8 @@ For each chain, confirm diagnostics show:
 13. On revoke-enabled chains, revoke the approval from the app.
 14. Rescan after the transaction confirms.
 15. Confirm the approval disappears or diagnostics show no nonzero allowance.
-16. Verify directly on PulseScan, BscScan, BaseScan, Etherscan, Arbiscan, or
-    Optimistic Etherscan if results disagree.
+16. Verify directly on PulseScan, BscScan, BaseScan, PolygonScan, Etherscan,
+    Arbiscan, or Optimistic Etherscan if results disagree.
 
 ## NFT Approval Test
 
@@ -219,6 +238,7 @@ For per-token approvals:
 - Single PulseChain revoke confirm panel says PulseChain and PLS.
 - Single BSC revoke confirm panel says BSC or BNB Smart Chain and BNB.
 - Single Base revoke confirm panel says Base and ETH.
+- Single Polygon revoke confirm panel says Polygon and POL.
 - Permit2 revoke confirm panel clearly identifies a Permit2 delegated allowance
   and clears it through the Permit2 contract.
 - Arbitrum One shows a revoke confirm panel only for live-verified ERC-20 and
@@ -229,6 +249,7 @@ For per-token approvals:
 - PulseChain transaction links open PulseScan.
 - BSC transaction links open BscScan.
 - Base transaction links open BaseScan.
+- Polygon transaction links open PolygonScan.
 - Arbitrum address and token links open Arbiscan.
 - Optimism address and token links open Optimistic Etherscan.
 - Batch revoke submits one transaction at a time.
@@ -239,7 +260,7 @@ For per-token approvals:
 ## Unsupported Network Checks
 
 - Connect to an unsupported chain.
-- Confirm the app lists PulseChain, BSC, Base, Ethereum, Arbitrum, and
+- Confirm the app lists PulseChain, BSC, Base, Polygon, Ethereum, Arbitrum, and
   Optimism with the correct scan/revoke statuses.
 - Confirm no scan starts.
 - Confirm no revoke action is available.
@@ -253,4 +274,4 @@ For per-token approvals:
 - Wallet with historical approvals that validate to zero shows a clear state.
 - Failed live reads show verification incomplete, not clear.
 - Etherscan API V2 rate limits, the BscScan V1 deprecation error, or a missing
-  BSC/Base API key show an actionable error.
+  BSC/Base/Polygon API key show an actionable error.

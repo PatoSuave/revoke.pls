@@ -10,6 +10,7 @@ Current active supported networks should be exactly:
 - PulseChain, chain ID `369`
 - BSC / BNB Smart Chain, chain ID `56`
 - Base, chain ID `8453`
+- Polygon, chain ID `137`
 - Ethereum Mainnet, chain ID `1`
 - Arbitrum One, chain ID `42161`, ERC-20/NFT verified-row revoke
 - Optimism / OP Mainnet, chain ID `10`, ERC-20/NFT verified-row revoke
@@ -54,7 +55,7 @@ submission must stay unavailable.
 
 ## Chain Safety Questions
 
-- Are active supported chains exactly PulseChain, BSC, Base, wallet-enabled
+- Are active supported chains exactly PulseChain, BSC, Base, Polygon, wallet-enabled
   Ethereum Mainnet, Arbitrum One's separate verified-row revoke lane, and
   Optimism's separate verified-row lane?
 - Does `src/lib/wagmi.ts` register Ethereum, Arbitrum, and Optimism only for
@@ -167,6 +168,16 @@ submission must stay unavailable.
   the approval source of truth?
 - Does public Base RPC avoid historical `eth_getLogs` discovery?
 
+## Polygon Discovery Questions
+
+- Do Polygon historical log requests use Etherscan API V2 at
+  `https://api.etherscan.io/v2/api`?
+- Does every Polygon log request include `chainid=137`?
+- Are Polygon explorer links built with `https://polygonscan.com`?
+- Does Polygon discovery use approval logs rather than token-transfer endpoints
+  as the approval source of truth?
+- Does public Polygon RPC avoid historical `eth_getLogs` discovery?
+
 ## Live Validation Questions
 
 - Are discovered fungible token candidates rechecked with `allowance(owner,
@@ -191,6 +202,7 @@ submission must stay unavailable.
 - Do BSC revokes use BNB wording and BscScan links?
 - Do PulseChain revokes use PLS wording and PulseScan links?
 - Do Base revokes use ETH wording and BaseScan links?
+- Do Polygon revokes use POL wording and PolygonScan links?
 - Does Arbitrum show only ERC-20/NFT verified-row revoke while batch
   revoke remains unavailable?
 - Does Optimism show only ERC-20/NFT verified-row revoke while batch and global
@@ -213,14 +225,16 @@ submission must stay unavailable.
 - Are registry lookups scoped by `chainId` and address?
 - Do PulseChain labels avoid leaking onto BSC approvals?
 - Do PulseChain or BSC labels avoid leaking onto Base approvals?
+- Do PulseChain, BSC, or Base labels avoid leaking onto Polygon approvals?
 - Are BSC labels empty unless manually verified?
 - Are Base labels empty unless manually verified?
-- Are unknown BSC and Base spenders shown as unknown rather than guessed?
+- Are Polygon labels empty unless manually verified?
+- Are unknown BSC, Base, and Polygon spenders shown as unknown rather than guessed?
 - Is registry data treated only as enrichment, not discovery truth?
 
 ## Token Logo Questions
 
-- Is token-logo lookup scoped to PulseChain and BSC only until each additional
+- Is token-logo lookup scoped to PulseChain, BSC, and Polygon only until each additional
   chain is explicitly enabled and reviewed?
 - Does the logo resolver send only token contract addresses, not scanned owner
   addresses, spender addresses, allowances, or wallet connection state?

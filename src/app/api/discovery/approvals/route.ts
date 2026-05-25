@@ -26,7 +26,9 @@ export async function GET(request: Request) {
 
   const chainId = Number(url.searchParams.get("chainId"));
   if (!Number.isInteger(chainId) || !isServerDiscoveryChainId(chainId)) {
-    return badRequest("Server discovery currently supports chainId=56 and 8453.");
+    return badRequest(
+      "Server discovery currently supports chainId=56, 8453, and 137.",
+    );
   }
 
   const scope = parseScope(url.searchParams.get("scope"));

@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   BASE_CHAIN_ID,
   BSC_CHAIN_ID,
+  POLYGON_CHAIN_ID,
   PULSECHAIN_CHAIN_ID,
 } from "@/lib/chains";
 import { PERMIT2_ADDRESS } from "@/lib/permit2";
@@ -21,6 +22,7 @@ const LIVE_PERMIT2_CHAIN_IDS = [
   PULSECHAIN_CHAIN_ID,
   BSC_CHAIN_ID,
   BASE_CHAIN_ID,
+  POLYGON_CHAIN_ID,
   ETHEREUM_MAINNET_CHAIN_ID,
   ARBITRUM_ONE_CHAIN_ID,
   OPTIMISM_CHAIN_ID,
@@ -42,6 +44,7 @@ describe("Permit2 spender metadata", () => {
     for (const chainId of [
       BSC_CHAIN_ID,
       BASE_CHAIN_ID,
+      POLYGON_CHAIN_ID,
       ETHEREUM_MAINNET_CHAIN_ID,
       ARBITRUM_ONE_CHAIN_ID,
       OPTIMISM_CHAIN_ID,
@@ -66,7 +69,7 @@ describe("Permit2 spender metadata", () => {
   });
 
   it("does not expand connected-chain registry scan targets", () => {
-    expect(PERMIT2_SPENDER_METADATA_REGISTRY).toHaveLength(5);
+    expect(PERMIT2_SPENDER_METADATA_REGISTRY).toHaveLength(6);
     expect(
       getSpendersForChain(PULSECHAIN_CHAIN_ID).some(
         (entry) => entry.address.toLowerCase() === PERMIT2_ADDRESS.toLowerCase(),
@@ -74,5 +77,6 @@ describe("Permit2 spender metadata", () => {
     ).toBe(false);
     expect(getSpendersForChain(BSC_CHAIN_ID)).toEqual([]);
     expect(getSpendersForChain(BASE_CHAIN_ID)).toEqual([]);
+    expect(getSpendersForChain(POLYGON_CHAIN_ID)).toEqual([]);
   });
 });

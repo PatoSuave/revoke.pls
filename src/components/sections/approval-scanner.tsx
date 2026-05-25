@@ -73,7 +73,7 @@ import {
 import { tokenLogoAddressKey } from "@/lib/token-logos";
 
 /**
- * Connected-wallet approval scanner for the shared PulseChain/BSC/Base lane.
+ * Connected-wallet approval scanner for the shared PulseChain/BSC/Base/Polygon lane.
  * Ethereum, Arbitrum, and Optimism are routed through read-only scanner lanes
  * in this component before verified rows can expose revoke actions.
  *

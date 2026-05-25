@@ -285,9 +285,9 @@ function Hero({ desktopReady }: { desktopReady: boolean }) {
           </dl>
 
           <p className="mt-5 max-w-xl text-xs leading-5 text-pulse-muted">
-            Always verify spender addresses on PulseScan, BscScan, BaseScan, or
-            Etherscan before signing. Registry labels are curated, not a
-            guarantee of safety.
+            Always verify spender addresses on PulseScan, BscScan, BaseScan,
+            PolygonScan, or Etherscan before signing. Registry labels are
+            curated, not a guarantee of safety.
           </p>
         </div>
 

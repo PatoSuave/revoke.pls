@@ -7,6 +7,7 @@ const LIVE_CHAIN_DISPLAY_ORDER = [
   "PulseChain",
   "BNB Smart Chain",
   "Base",
+  "Polygon",
   "Ethereum Mainnet",
   "Arbitrum One",
   "Optimism",
