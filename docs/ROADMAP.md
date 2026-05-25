@@ -13,6 +13,7 @@ ship.
 - Ethereum Mainnet read-only discovery and wallet-side revoke
 - Arbitrum One ERC-20/NFT verified-row revoke
 - Optimism / OP Mainnet ERC-20/NFT verified-row revoke
+- First-class product copy and wallet switching for all seven live chains
 - Browser wallet connection
 - WalletConnect when configured
 - Historical approval log discovery

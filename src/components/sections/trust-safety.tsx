@@ -1,9 +1,11 @@
 import Link from "next/link";
 
+import { LIVE_SUPPORTED_CHAIN_COMPACT_LIST } from "@/lib/supported-chain-copy";
+
 const PILLARS = [
   {
     title: "Non-custodial by design",
-    body: "Pulse Revoke never holds your funds or your keys. Every action is signed locally by your wallet and broadcast directly to the chain it targets (PulseChain, BSC, Base, Polygon, or Ethereum Mainnet).",
+    body: `Pulse Revoke never holds your funds or your keys. Every action is signed locally by your wallet and broadcast directly to the chain it targets (${LIVE_SUPPORTED_CHAIN_COMPACT_LIST}).`,
   },
   {
     title: "No seed phrases. Ever.",

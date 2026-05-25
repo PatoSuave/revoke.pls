@@ -11,22 +11,54 @@ import {
 } from "@/lib/chains";
 import {
   ETHEREUM_MAINNET_CLIENT_CHAIN_ID,
+  ETHEREUM_MAINNET_DISPLAY_NAME,
   ETHEREUM_MAINNET_STATUS_LABEL,
   resolveEthereumReadOnlyChainId,
 } from "@/lib/ethereum-approval-client";
 import {
   OPTIMISM_CLIENT_CHAIN_ID,
+  OPTIMISM_DISPLAY_NAME,
   resolveOptimismReadOnlyChainId,
 } from "@/lib/optimism-approval-client";
 
-export const ARBITRUM_HEADER_STATUS_LABEL = "Arbitrum verified-row";
+export type HeaderSwitchChainId =
+  | SupportedChainId
+  | typeof ETHEREUM_MAINNET_CLIENT_CHAIN_ID
+  | typeof ARBITRUM_ONE_CLIENT_CHAIN_ID
+  | typeof OPTIMISM_CLIENT_CHAIN_ID;
+
+export interface HeaderSwitchChainOption {
+  chainId: HeaderSwitchChainId;
+  displayName: string;
+}
+
+export const headerSwitchChainOptions: readonly HeaderSwitchChainOption[] = [
+  ...supportedChainConfigList.map((chain) => ({
+    chainId: chain.chainId,
+    displayName: chain.displayName,
+  })),
+  {
+    chainId: ETHEREUM_MAINNET_CLIENT_CHAIN_ID,
+    displayName: ETHEREUM_MAINNET_DISPLAY_NAME,
+  },
+  {
+    chainId: ARBITRUM_ONE_CLIENT_CHAIN_ID,
+    displayName: "Arbitrum One",
+  },
+  {
+    chainId: OPTIMISM_CLIENT_CHAIN_ID,
+    displayName: OPTIMISM_DISPLAY_NAME,
+  },
+];
+
+export const ARBITRUM_HEADER_STATUS_LABEL = "Arbitrum One";
 export const ARBITRUM_HEADER_STATUS_SHORT_HELPER =
-  "ERC-20 and NFT rows only. Batch off.";
+  "Verified rows only. Batch off.";
 export const ARBITRUM_HEADER_STATUS_HELPER =
   "Verified ERC-20 and NFT rows can be revoked on Arbitrum. Batch revoke is not enabled.";
-export const OPTIMISM_HEADER_STATUS_LABEL = "Optimism verified-row";
+export const OPTIMISM_HEADER_STATUS_LABEL = "Optimism";
 export const OPTIMISM_HEADER_STATUS_SHORT_HELPER =
-  "ERC-20 and NFT rows only. Batch off.";
+  "Verified rows only. Batch off.";
 export const OPTIMISM_HEADER_STATUS_HELPER =
   "Verified ERC-20 and NFT rows can be revoked on Optimism. Batch revoke is not enabled.";
 
@@ -59,7 +91,7 @@ export type HeaderNetworkStatus =
   | {
       kind: "unsupported";
       label: "Unsupported network";
-      switchChains: typeof supportedChainConfigList;
+      switchChains: typeof headerSwitchChainOptions;
     };
 
 export function resolveHeaderNetworkStatus({
@@ -123,6 +155,6 @@ export function resolveHeaderNetworkStatus({
   return {
     kind: "unsupported",
     label: "Unsupported network",
-    switchChains: supportedChainConfigList,
+    switchChains: headerSwitchChainOptions,
   };
 }

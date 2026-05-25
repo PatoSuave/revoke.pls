@@ -58,17 +58,21 @@ describe("supported chain copy", () => {
     ).toBe("ERC-20/NFT verified rows only");
   });
 
-  it("keeps landing and app pages wired to the shared live-chain copy", () => {
-    const landingPage = readFileSync(
+  it("keeps product-facing surfaces wired to the shared live-chain copy", () => {
+    const sources = [
       join(process.cwd(), "src", "app", "page.tsx"),
-      "utf8",
-    );
-    const appPage = readFileSync(
       join(process.cwd(), "src", "app", "app", "page.tsx"),
-      "utf8",
-    );
+      join(process.cwd(), "src", "components", "sections", "approval-scanner.tsx"),
+      join(process.cwd(), "src", "components", "sections", "faq.tsx"),
+      join(process.cwd(), "src", "components", "sections", "how-it-works.tsx"),
+      join(process.cwd(), "src", "components", "sections", "scanner-diagnostics.tsx"),
+      join(process.cwd(), "src", "components", "sections", "trust-safety.tsx"),
+    ].map((path) => readFileSync(path, "utf8"));
 
-    expect(landingPage).toContain("LIVE_SUPPORTED_CHAIN_ROWS");
-    expect(appPage).toContain("LIVE_SUPPORTED_CHAIN_ROWS");
+    expect(sources[0]).toContain("LIVE_SUPPORTED_CHAIN_ROWS");
+    expect(sources[1]).toContain("LIVE_SUPPORTED_CHAIN_ROWS");
+    for (const source of sources.slice(2)) {
+      expect(source).toContain("LIVE_SUPPORTED_CHAIN");
+    }
   });
 });
