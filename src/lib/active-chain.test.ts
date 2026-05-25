@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   BASE_CHAIN_ID,
   BSC_CHAIN_ID,
+  POLYGON_CHAIN_ID,
   PULSECHAIN_CHAIN_ID,
   getSupportedChainShortNames,
   isSupportedChainId,
@@ -49,6 +50,19 @@ describe("active chain resolution", () => {
     expect(result.walletMatchesActiveChain).toBe(true);
   });
 
+  it("resolves a connected Polygon wallet to Polygon without falling back to PulseChain", () => {
+    const result = resolveActiveChain({
+      isConnected: true,
+      walletChainId: POLYGON_CHAIN_ID,
+      wagmiChainId: PULSECHAIN_CHAIN_ID,
+    });
+
+    expect(result.status).toBe("supported");
+    expect(result.activeChainId).toBe(POLYGON_CHAIN_ID);
+    expect(result.activeChainConfig?.displayName).toBe("Polygon");
+    expect(result.walletMatchesActiveChain).toBe(true);
+  });
+
   it("does not default to PulseChain when disconnected", () => {
     const result = resolveActiveChain({
       isConnected: false,
@@ -75,8 +89,10 @@ describe("active chain resolution", () => {
     expect(isSupportedChainId(1)).toBe(false);
   });
 
-  it("uses only PulseChain, BSC, and Base in supported-network copy", () => {
-    expect(getSupportedChainShortNames()).toBe("PulseChain, BSC, or Base");
+  it("uses PulseChain, BSC, Base, and Polygon in supported-network copy", () => {
+    expect(getSupportedChainShortNames()).toBe(
+      "PulseChain, BSC, Base, or Polygon",
+    );
   });
 
   it("changes scanner session keys when the wallet chain changes", () => {

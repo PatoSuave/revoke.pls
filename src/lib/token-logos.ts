@@ -1,6 +1,10 @@
 import { getAddress, isAddress, type Address } from "viem";
 
-import { BSC_CHAIN_ID, PULSECHAIN_CHAIN_ID } from "@/lib/chains";
+import {
+  BSC_CHAIN_ID,
+  POLYGON_CHAIN_ID,
+  PULSECHAIN_CHAIN_ID,
+} from "@/lib/chains";
 
 export const TOKEN_LOGO_MAX_ADDRESSES = 30;
 export const TOKEN_LOGO_REQUEST_TIMEOUT_MS = 8_000;
@@ -8,6 +12,7 @@ export const TOKEN_LOGO_REQUEST_TIMEOUT_MS = 8_000;
 const DEXSCREENER_CHAIN_SLUG_BY_CHAIN_ID: Readonly<Record<number, string>> = {
   [PULSECHAIN_CHAIN_ID]: "pulsechain",
   [BSC_CHAIN_ID]: "bsc",
+  [POLYGON_CHAIN_ID]: "polygon",
 };
 
 export type TokenLogoSource = "dexscreener";

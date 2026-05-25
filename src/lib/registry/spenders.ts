@@ -3,6 +3,7 @@ import type { Address } from "viem";
 import {
   BASE_CHAIN_ID,
   BSC_CHAIN_ID,
+  POLYGON_CHAIN_ID,
   PULSECHAIN_CHAIN_ID,
 } from "@/lib/chains";
 import { PERMIT2_ADDRESS } from "@/lib/permit2";
@@ -481,6 +482,10 @@ export const PERMIT2_SPENDER_METADATA_REGISTRY: readonly SpenderEntry[] = [
     officialDeployment: true,
   }),
   permit2MetadataEntry({
+    chainId: POLYGON_CHAIN_ID,
+    officialDeployment: true,
+  }),
+  permit2MetadataEntry({
     chainId: ARBITRUM_ONE_CHAIN_ID,
     officialDeployment: true,
   }),
@@ -530,6 +535,7 @@ for (const [chainId, label] of [
   [PULSECHAIN_CHAIN_ID, "pulsechain"],
   [BSC_CHAIN_ID, "bsc"],
   [BASE_CHAIN_ID, "base"],
+  [POLYGON_CHAIN_ID, "polygon"],
   [ARBITRUM_ONE_CHAIN_ID, "arbitrum"],
   [OPTIMISM_CHAIN_ID, "optimism"],
 ] as const) {

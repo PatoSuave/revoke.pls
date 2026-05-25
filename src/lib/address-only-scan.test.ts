@@ -7,7 +7,12 @@ import {
   resolveDefaultAddressOnlyScanChainId,
 } from "@/lib/address-only-scan";
 import { ARBITRUM_ONE_CLIENT_CHAIN_ID } from "@/lib/arbitrum-approval-client";
-import { BASE_CHAIN_ID, BSC_CHAIN_ID, PULSECHAIN_CHAIN_ID } from "@/lib/chains";
+import {
+  BASE_CHAIN_ID,
+  BSC_CHAIN_ID,
+  POLYGON_CHAIN_ID,
+  PULSECHAIN_CHAIN_ID,
+} from "@/lib/chains";
 import { ETHEREUM_MAINNET_CLIENT_CHAIN_ID } from "@/lib/ethereum-approval-client";
 import { OPTIMISM_CLIENT_CHAIN_ID } from "@/lib/optimism-approval-client";
 
@@ -66,6 +71,7 @@ describe("address-only scan selection", () => {
       PULSECHAIN_CHAIN_ID,
       BSC_CHAIN_ID,
       BASE_CHAIN_ID,
+      POLYGON_CHAIN_ID,
     ]);
     expect(ADDRESS_ONLY_SCAN_ALL_CONCURRENCY).toBe(1);
     expect(

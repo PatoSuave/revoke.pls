@@ -1,6 +1,6 @@
 import type { Address } from "viem";
 
-import { BASE_CHAIN_ID, BSC_CHAIN_ID } from "@/lib/chains";
+import { BASE_CHAIN_ID, BSC_CHAIN_ID, POLYGON_CHAIN_ID } from "@/lib/chains";
 import type {
   DiscoveredPair,
   DiscoveryResult,
@@ -74,7 +74,7 @@ export interface SerializableNftDiscoveryResult {
 export interface ServerApprovalDiscoveryResponse {
   ok: boolean;
   status: "complete" | "config-missing" | "bad-request" | "upstream-failure";
-  chainId: typeof BSC_CHAIN_ID | typeof BASE_CHAIN_ID;
+  chainId: ServerApprovalDiscoveryChainId;
   erc20: SerializableDiscoveryResult;
   permit2: SerializablePermit2DiscoveryResult;
   warnings: string[];
@@ -85,18 +85,27 @@ export interface ServerApprovalDiscoveryResponse {
 export interface ServerNftDiscoveryResponse {
   ok: boolean;
   status: "complete" | "config-missing" | "bad-request" | "upstream-failure";
-  chainId: typeof BSC_CHAIN_ID | typeof BASE_CHAIN_ID;
+  chainId: ServerApprovalDiscoveryChainId;
   nft: SerializableNftDiscoveryResult;
   warnings: string[];
   errors: string[];
   missingConfig: string[];
 }
 
+export type ServerApprovalDiscoveryChainId =
+  | typeof BSC_CHAIN_ID
+  | typeof BASE_CHAIN_ID
+  | typeof POLYGON_CHAIN_ID;
+
 export function usesServerApprovalDiscovery(
   chainId: number | undefined,
-): chainId is typeof BSC_CHAIN_ID | typeof BASE_CHAIN_ID {
+): chainId is ServerApprovalDiscoveryChainId {
   if (isDesktopBuild) return false;
-  return chainId === BSC_CHAIN_ID || chainId === BASE_CHAIN_ID;
+  return (
+    chainId === BSC_CHAIN_ID ||
+    chainId === BASE_CHAIN_ID ||
+    chainId === POLYGON_CHAIN_ID
+  );
 }
 
 export async function fetchServerApprovalDiscovery({
@@ -105,7 +114,7 @@ export async function fetchServerApprovalDiscovery({
   signal,
 }: {
   owner: Address;
-  chainId: typeof BSC_CHAIN_ID | typeof BASE_CHAIN_ID;
+  chainId: ServerApprovalDiscoveryChainId;
   signal?: AbortSignal;
 }): Promise<ServerApprovalDiscoveryResponse> {
   const url = new URL("/api/discovery/approvals", window.location.origin);
@@ -132,7 +141,7 @@ export async function fetchServerNftDiscovery({
   signal,
 }: {
   owner: Address;
-  chainId: typeof BSC_CHAIN_ID | typeof BASE_CHAIN_ID;
+  chainId: ServerApprovalDiscoveryChainId;
   signal?: AbortSignal;
 }): Promise<ServerNftDiscoveryResponse> {
   const url = new URL("/api/discovery/approvals", window.location.origin);

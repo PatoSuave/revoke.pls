@@ -9,6 +9,7 @@ import {
 import {
   BASE_CHAIN_ID,
   BSC_CHAIN_ID,
+  POLYGON_CHAIN_ID,
   PULSECHAIN_CHAIN_ID,
   isSupportedChainId,
   supportedChainConfigList,
@@ -212,6 +213,7 @@ describe("Ethereum approval API foundation", () => {
       PULSECHAIN_CHAIN_ID,
       BSC_CHAIN_ID,
       BASE_CHAIN_ID,
+      POLYGON_CHAIN_ID,
     ]);
   });
 

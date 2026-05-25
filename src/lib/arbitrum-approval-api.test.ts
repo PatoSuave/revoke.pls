@@ -4,6 +4,7 @@ import { getAddress, type Address } from "viem";
 import {
   BASE_CHAIN_ID,
   BSC_CHAIN_ID,
+  POLYGON_CHAIN_ID,
   PULSECHAIN_CHAIN_ID,
   isSupportedChainId,
   supportedChainConfigList,
@@ -202,6 +203,7 @@ describe("Arbitrum approval API foundation", () => {
       PULSECHAIN_CHAIN_ID,
       BSC_CHAIN_ID,
       BASE_CHAIN_ID,
+      POLYGON_CHAIN_ID,
     ]);
   });
 

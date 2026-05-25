@@ -5,7 +5,7 @@ import {
   ARBITRUM_ONE_PUBLIC_RPC_URL,
   arbitrumOneWalletChain,
 } from "@/lib/arbitrum-approval-client";
-import { base, bsc, pulsechain, supportedChains } from "@/lib/chains";
+import { base, bsc, polygon, pulsechain, supportedChains } from "@/lib/chains";
 import {
   ETHEREUM_MAINNET_PUBLIC_RPC_URL,
   ethereumMainnetWalletChain,
@@ -22,6 +22,7 @@ import {
  *  - PulseChain mainnet (369)
  *  - BNB Smart Chain mainnet (56)
  *  - Base mainnet (8453)
+ *  - Polygon mainnet (137)
  *
  * Ethereum Mainnet (1) is registered as a wallet-only chain for the
  * Ethereum scanner/revoke flow. It is intentionally not part of the active
@@ -55,7 +56,7 @@ export const hasWalletConnect: boolean = Boolean(walletConnectProjectId);
 const WALLETCONNECT_METADATA = {
   name: "Pulse Revoke",
   description:
-    "Review token approvals on PulseChain, BSC, Base, Ethereum, Arbitrum, and Optimism.",
+    "Review token approvals on PulseChain, BSC, Base, Polygon, Ethereum, Arbitrum, and Optimism.",
   url: "https://pulserevoke.com",
   icons: ["https://pulserevoke.com/icon.png"],
 };
@@ -89,6 +90,7 @@ export const wagmiConfig = createConfig({
     ),
     [bsc.id]: http(process.env.NEXT_PUBLIC_BSC_RPC_URL ?? undefined),
     [base.id]: http(process.env.NEXT_PUBLIC_BASE_RPC_URL ?? undefined),
+    [polygon.id]: http(process.env.NEXT_PUBLIC_POLYGON_RPC_URL ?? undefined),
     [ethereumMainnetWalletChain.id]: http(
       process.env.NEXT_PUBLIC_MAINNET_RPC_URL ??
         process.env.NEXT_PUBLIC_ETHEREUM_RPC_URL ??

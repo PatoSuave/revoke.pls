@@ -75,6 +75,14 @@ export function SiteFooter() {
           >
             BaseScan
           </a>
+          <a
+            href={siteConfig.links.polygonscan}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="transition hover:text-pulse-text"
+          >
+            PolygonScan
+          </a>
         </nav>
 
         <div className="flex flex-col gap-1 text-[11px] text-pulse-muted md:items-end">
@@ -98,7 +106,7 @@ export function SiteFooter() {
             >
               BscScan
             </a>
-            , or{" "}
+            ,{" "}
             <a
               href={siteConfig.links.basescan}
               target="_blank"
@@ -106,6 +114,15 @@ export function SiteFooter() {
               className="text-pulse-text underline underline-offset-2 hover:text-pulse-cyan"
             >
               BaseScan
+            </a>
+            , or{" "}
+            <a
+              href={siteConfig.links.polygonscan}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-pulse-text underline underline-offset-2 hover:text-pulse-cyan"
+            >
+              PolygonScan
             </a>{" "}
             before signing.
           </p>

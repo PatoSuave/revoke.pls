@@ -18,16 +18,17 @@ describe("supported chain copy", () => {
       "PulseChain",
       "BNB Smart Chain",
       "Base",
+      "Polygon",
       "Ethereum Mainnet",
       "Arbitrum One",
       "Optimism",
     ]);
-    expect(LIVE_SUPPORTED_CHAIN_COUNT).toBe(6);
+    expect(LIVE_SUPPORTED_CHAIN_COUNT).toBe(7);
     expect(LIVE_SUPPORTED_CHAIN_LIST).toBe(
-      "PulseChain, BNB Smart Chain, Base, Ethereum Mainnet, Arbitrum One, and Optimism",
+      "PulseChain, BNB Smart Chain, Base, Polygon, Ethereum Mainnet, Arbitrum One, and Optimism",
     );
     expect(LIVE_SUPPORTED_CHAIN_COMPACT_LIST).toBe(
-      "PulseChain, BSC, Base, Ethereum, Arbitrum, and Optimism",
+      "PulseChain, BSC, Base, Polygon, Ethereum, Arbitrum, and Optimism",
     );
   });
 

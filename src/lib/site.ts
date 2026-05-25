@@ -96,13 +96,13 @@ export const siteConfig = {
   domain: hostFromUrl(resolvedUrl),
   /** One-line tagline. */
   tagline:
-    "Manage PulseChain, BSC, Base, Ethereum, Arbitrum, and Optimism token approvals",
+    "Manage PulseChain, BSC, Base, Polygon, Ethereum, Arbitrum, and Optimism token approvals",
   /** Single-sentence meta description (used for SEO + OG). */
   description:
-    "Pulse Revoke is a non-custodial tool to review and revoke token and NFT approvals on PulseChain, BSC, Base, Ethereum Mainnet, Arbitrum One, and Optimism. Arbitrum and Optimism revoke support is limited to verified ERC-20/NFT rows.",
+    "Pulse Revoke is a non-custodial tool to review and revoke token and NFT approvals on PulseChain, BSC, Base, Polygon, Ethereum Mainnet, Arbitrum One, and Optimism. Arbitrum and Optimism revoke support is limited to verified ERC-20/NFT rows.",
   /** Longer paragraph for hero copy and social previews. */
   longDescription:
-    "Review every token allowance and NFT operator approval your wallet has granted on PulseChain, BSC, Base, Ethereum Mainnet, Arbitrum One, or Optimism, understand the risk, and revoke enabled approvals you no longer need one signature at a time. Arbitrum and Optimism support row-level ERC-20/NFT revoke after verification.",
+    "Review every token allowance and NFT operator approval your wallet has granted on PulseChain, BSC, Base, Polygon, Ethereum Mainnet, Arbitrum One, or Optimism, understand the risk, and revoke enabled approvals you no longer need one signature at a time. Arbitrum and Optimism support row-level ERC-20/NFT revoke after verification.",
   /** Canonical public URL. Override at build time with NEXT_PUBLIC_SITE_URL. */
   url: resolvedUrl,
   /** Keywords for search engines. Keep conservative and factual. */
@@ -111,11 +111,13 @@ export const siteConfig = {
     "BSC",
     "BNB Smart Chain",
     "Base",
+    "Polygon",
     "Arbitrum",
     "Optimism",
     "PulseChain approvals",
     "BSC approvals",
     "Base approvals",
+    "Polygon approvals",
     "Arbitrum approvals",
     "Pulse Revoke",
     "revoke approvals",
@@ -137,6 +139,7 @@ export const siteConfig = {
     explorer: "https://scan.pulsechain.com",
     bscscan: "https://bscscan.com",
     basescan: "https://basescan.org",
+    polygonscan: "https://polygonscan.com",
     pulsex: "https://pulsex.com",
     walletConnect: "https://cloud.reown.com",
     github: "https://github.com/PatoSuave",
@@ -144,7 +147,7 @@ export const siteConfig = {
   },
   /** Short attribution line shown in the footer. */
   attribution:
-    "Built for the PulseChain, BSC, Base, Ethereum, Arbitrum, and Optimism communities.",
+    "Built for the PulseChain, BSC, Base, Polygon, Ethereum, Arbitrum, and Optimism communities.",
   /** Brand accent colors used by the OG image and icon renderers. */
   brandColors: {
     background: "#07070b",

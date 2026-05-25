@@ -1,7 +1,7 @@
 # Pulse Revoke / revoke.pls
 
 Pulse Revoke is a non-custodial approval scanner and revoker for PulseChain,
-BSC / BNB Smart Chain, Base, Ethereum Mainnet, Arbitrum One verified-row
+BSC / BNB Smart Chain, Base, Polygon, Ethereum Mainnet, Arbitrum One verified-row
 revoke, and Optimism verified ERC-20/NFT row revoke.
 
 Live app: <https://pulserevoke.com>
@@ -18,9 +18,10 @@ launcher, trust, and distribution page.
 ## Current Production Status
 
 Revoke.PLS is live as a non-custodial approval review and revoke tool for
-PulseChain, BSC / BNB Smart Chain, Base, Ethereum Mainnet, Arbitrum One
-verified-row revoke, and Optimism verified ERC-20/NFT row revoke. The current
-production checkpoint includes:
+PulseChain, BSC / BNB Smart Chain, Base, Polygon, Ethereum Mainnet, Arbitrum
+One verified-row revoke, and Optimism verified ERC-20/NFT row revoke. The
+current Polygon branch keeps this support off `main` until preview testing is
+complete. The current production checkpoint includes:
 
 - A focused `/app` scanner workspace with address-only scan and connected-wallet
   scan modes.
@@ -49,6 +50,7 @@ Active scan networks are intentionally limited to:
 - PulseChain mainnet, chain ID `369`, gas token `PLS`, explorer `PulseScan`
 - BSC / BNB Smart Chain, chain ID `56`, gas token `BNB`, explorer `BscScan`
 - Base Mainnet, chain ID `8453`, gas token `ETH`, explorer `BaseScan`
+- Polygon Mainnet, chain ID `137`, gas token `POL`, explorer `PolygonScan`
 - Ethereum Mainnet, chain ID `1`, gas token `ETH`, explorer `Etherscan`
 - Arbitrum One, chain ID `42161`, gas token `ETH`, explorer `Arbiscan`
   (ERC-20/NFT verified-row revoke; batch revoke not enabled)
@@ -58,7 +60,7 @@ Active scan networks are intentionally limited to:
 Ethereum discovery uses a server-read-only API, while Ethereum revoke remains
 wallet-side only with owner, chain, preflight, gas, and row-level verification
 gates.
-BSC and Base hosted web discovery use the server-side
+BSC, Base, and Polygon hosted web discovery use the server-side
 `/api/discovery/approvals` route so explorer API keys stay out of the browser
 bundle.
 Arbitrum discovery also uses a server-read-only API, and Arbitrum revoke stays
@@ -71,6 +73,7 @@ live-verified ERC-20 and NFT rows; batch revoke remains unavailable.
 - PulseChain PRC-20 / ERC-20-compatible fungible token approvals
 - BSC BEP-20 fungible token approvals
 - Base ERC-20 fungible token approvals
+- Polygon ERC-20 fungible token approvals
 - Ethereum ERC-20 fungible token approvals
 - Arbitrum ERC-20 and NFT approvals with verified-row revoke
 - Optimism ERC-20 and NFT approvals with verified-row revoke
@@ -81,6 +84,7 @@ live-verified ERC-20 and NFT rows; batch revoke remains unavailable.
 User-facing BSC labels are `BEP-20`, `BEP-721`, and `BEP-1155`. User-facing
 Base labels are `ERC-20`, `ERC-721`, and `ERC-1155`. Internal ABI and event
 handling uses ERC-compatible EVM interfaces where appropriate.
+User-facing Polygon labels are `ERC-20`, `ERC-721`, and `ERC-1155`.
 User-facing Arbitrum labels are `ERC-20`, `ERC-721`, and `ERC-1155`.
 User-facing Optimism labels are `ERC-20`, `ERC-721`, and `ERC-1155`.
 
@@ -126,6 +130,7 @@ wallet:
 The app sets the transaction `chainId` from the approval record. PulseChain
 revokes use PLS gas wording and PulseScan links. BSC revokes use BNB gas wording
 and BscScan links. Base revokes use ETH gas wording and BaseScan links.
+Polygon revokes use POL gas wording and PolygonScan links.
 Every revoke requires wallet confirmation before the transaction is submitted.
 Arbitrum revoke is limited to live-verified ERC-20 and NFT rows in the current
 product. Arbitrum batch revoke does not expose revoke actions.
@@ -159,6 +164,20 @@ product. Optimism batch revoke does not expose revoke actions.
 - Base gas wording is `ETH`.
 - Base does not inherit BSC's Osaka/Mendel gas cap or high-gas warning
   thresholds.
+
+## Polygon Implementation Notes
+
+- Hosted web Polygon approval discovery uses `/api/discovery/approvals`, backed
+  by Etherscan API V2:
+  `https://api.etherscan.io/v2/api`
+- Every Polygon historical log request includes `chainid=137`.
+- Public Polygon RPC `eth_getLogs` is not used for historical approval
+  discovery.
+- PolygonScan remains the public explorer for Polygon address, token, and
+  transaction links.
+- Polygon gas wording is `POL`.
+- The default browser-safe Polygon RPC is `https://polygon.drpc.org`;
+  production can override it with `NEXT_PUBLIC_POLYGON_RPC_URL`.
 
 ## Arbitrum Implementation Notes
 
@@ -203,7 +222,8 @@ product. Optimism batch revoke does not expose revoke actions.
   is not a safety guarantee.
 
 Always verify token, spender, operator, and transaction details in your wallet
-and on PulseScan, BscScan, BaseScan, Etherscan, or Arbiscan before signing.
+and on PulseScan, BscScan, BaseScan, PolygonScan, Etherscan, or Arbiscan before
+signing.
 
 ## Privacy Posture
 
@@ -265,6 +285,7 @@ supports it.
 | `NEXT_PUBLIC_PULSECHAIN_RPC_URL` | Optional | Override PulseChain RPC. Defaults to `https://rpc.pulsechain.com`. |
 | `NEXT_PUBLIC_BSC_RPC_URL` | Recommended for production | Override BSC RPC. Defaults to `https://bsc-dataseed.bnbchain.org`. |
 | `NEXT_PUBLIC_BASE_RPC_URL` | Recommended for production | Override Base RPC. Defaults to `https://mainnet.base.org`. |
+| `NEXT_PUBLIC_POLYGON_RPC_URL` | Recommended for production | Override Polygon RPC. Defaults to `https://polygon.drpc.org`. |
 | `NEXT_PUBLIC_PULSECHAIN_EXPLORER_API` | Optional | Override PulseChain discovery API. Defaults to `https://api.scan.pulsechain.com/api`. |
 | `BSC_EXPLORER_API_URL` | Optional | Server-only BSC logs API. Defaults to `https://api.etherscan.io/v2/api`. |
 | `BSC_EXPLORER_CHAIN_ID` | Optional | Server-only BSC Etherscan API V2 chain ID. Defaults to `56`; keep it at `56`. |
@@ -272,7 +293,10 @@ supports it.
 | `BASE_EXPLORER_API_URL` | Optional | Server-only Base logs API. Defaults to `https://api.etherscan.io/v2/api`. |
 | `BASE_EXPLORER_CHAIN_ID` | Optional | Server-only Base Etherscan API V2 chain ID. Defaults to `8453`; keep it at `8453`. |
 | `BASE_EXPLORER_API_KEY` / `ETHERSCAN_API_KEY` | Required for reliable Base discovery | Server-only Etherscan API V2 key with Base Mainnet access. |
-| `NEXT_PUBLIC_BSC_EXPLORER_API_KEY` / `NEXT_PUBLIC_BASE_EXPLORER_API_KEY` | Desktop/static only | Public fallback keys for builds without API routes. Do not configure these for hosted web deployments. |
+| `POLYGON_EXPLORER_API_URL` | Optional | Server-only Polygon logs API. Defaults to `https://api.etherscan.io/v2/api`. |
+| `POLYGON_EXPLORER_CHAIN_ID` | Optional | Server-only Polygon Etherscan API V2 chain ID. Defaults to `137`; keep it at `137`. |
+| `POLYGON_EXPLORER_API_KEY` / `ETHERSCAN_API_KEY` | Required for reliable Polygon discovery | Server-only Etherscan API V2 key with Polygon Mainnet access. |
+| `NEXT_PUBLIC_BSC_EXPLORER_API_KEY` / `NEXT_PUBLIC_BASE_EXPLORER_API_KEY` / `NEXT_PUBLIC_POLYGON_EXPLORER_API_KEY` | Desktop/static only | Public fallback keys for builds without API routes. Do not configure these for hosted web deployments. |
 | `NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID` | Optional | Enables WalletConnect QR pairing. |
 | `NEXT_PUBLIC_SITE_URL` | Optional | Canonical public URL used by metadata and social images. Production should use `https://pulserevoke.com`. |
 | `NEXT_PUBLIC_TELEMETRY_ENABLED` | Optional | Enables the current telemetry sink in production when set to `true`. |
@@ -293,10 +317,10 @@ See [docs/ENVIRONMENT.md](docs/ENVIRONMENT.md) for details.
 ## Audit Starting Points
 
 - `src/lib/chains.ts` - active supported chains, RPC defaults, explorer config,
-  gas symbols, BSC gas safety thresholds, and Base Etherscan V2 settings
+  gas symbols, BSC gas safety thresholds, and Etherscan V2 settings
 - `src/lib/wagmi.ts` - registered wallet chains and transports
 - `src/lib/discovery.ts` - historical log discovery, pagination/windowing,
-  Etherscan API V2 `chainid=56` / `chainid=8453` request construction
+  Etherscan API V2 `chainid=56` / `chainid=8453` / `chainid=137` request construction
 - `src/app/api/ethereum/approvals/route.ts` - read-only Ethereum Mainnet
   approval API route
 - `src/app/api/arbitrum/approvals/route.ts` - read-only Arbitrum One approval

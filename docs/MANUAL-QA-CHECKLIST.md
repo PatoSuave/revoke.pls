@@ -97,7 +97,7 @@ exposure.
       legacy note.
 - [ ] Confirm the row still shows essential top-level data: token, spender,
       exposure/risk, and action or disabled state.
-- [ ] Confirm known PulseChain and BSC token rows can show a token logo when
+- [ ] Confirm known PulseChain, BSC, and Polygon token rows can show a token logo when
       Dex Screener has one, while unknown or failed logo loads still show the
       token initials.
 - [ ] Confirm token logos do not hide the token symbol, token explorer link,

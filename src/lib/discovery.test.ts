@@ -7,6 +7,8 @@ import {
   BSC_CHAIN_ID,
   BSC_DEPRECATED_V1_EXPLORER_API_URL,
   BSC_EXPLORER_API_DEFAULT,
+  POLYGON_CHAIN_ID,
+  POLYGON_EXPLORER_API_DEFAULT,
   PULSECHAIN_CHAIN_ID,
   type DiscoverySourceConfig,
   getChainConfig,
@@ -439,6 +441,39 @@ describe("createBlockscoutDiscoverySource", () => {
 
     const url = new URL(String(fetch.mock.calls[0]?.[0]));
     expect(url.searchParams.get("chainid")).toBe("8453");
+  });
+
+  it("builds Polygon ERC-20 log requests with Etherscan V2 and chainid=137", async () => {
+    const fetch = vi.fn(async (input: RequestInfo | URL) => {
+      void input;
+      return jsonResponse({ status: "1", message: "OK", result: [] });
+    });
+    vi.stubGlobal("fetch", fetch);
+    const config = getChainConfig(POLYGON_CHAIN_ID)!;
+    const discovery = createBlockscoutDiscoverySource({
+      chainId: POLYGON_CHAIN_ID,
+      source: {
+        ...config.discovery,
+        apiKey: "polygon-key",
+        hasApiKey: true,
+      },
+      limits: {
+        ...DEFAULT_DISCOVERY_LIMITS,
+        maxRequests: 2,
+        requestTimeoutMs: 1000,
+      },
+    });
+
+    await discovery.discover(OWNER);
+
+    const url = new URL(String(fetch.mock.calls[0]?.[0]));
+    expect(`${url.origin}${url.pathname}`).toBe(POLYGON_EXPLORER_API_DEFAULT);
+    expect(url.searchParams.get("chainid")).toBe("137");
+    expect(url.searchParams.get("module")).toBe("logs");
+    expect(url.searchParams.get("action")).toBe("getLogs");
+    expect(url.searchParams.get("topic0")).toBe(ERC20_APPROVAL_TOPIC0);
+    expect(url.searchParams.get("topic1")).toBe(pad(OWNER));
+    expect(url.searchParams.get("apikey")).toBe("polygon-key");
   });
 
   it("turns Base Etherscan V2 paid-plan errors into discovery failures", async () => {

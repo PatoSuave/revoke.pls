@@ -13,6 +13,7 @@ import {
 import {
   BASE_CHAIN_ID,
   BSC_CHAIN_ID,
+  POLYGON_CHAIN_ID,
   PULSECHAIN_CHAIN_ID,
 } from "@/lib/chains";
 import type {
@@ -36,9 +37,10 @@ const SOURCE = {
 };
 
 describe("approval discovery API serialization", () => {
-  it("uses server discovery for hosted BSC and Base scans", () => {
+  it("uses server discovery for hosted BSC, Base, and Polygon scans", () => {
     expect(usesServerApprovalDiscovery(BSC_CHAIN_ID)).toBe(true);
     expect(usesServerApprovalDiscovery(BASE_CHAIN_ID)).toBe(true);
+    expect(usesServerApprovalDiscovery(POLYGON_CHAIN_ID)).toBe(true);
     expect(usesServerApprovalDiscovery(PULSECHAIN_CHAIN_ID)).toBe(false);
     expect(usesServerApprovalDiscovery(undefined)).toBe(false);
   });

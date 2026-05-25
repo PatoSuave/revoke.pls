@@ -1,7 +1,11 @@
 import { describe, expect, it } from "vitest";
 import { getAddress } from "viem";
 
-import { BSC_CHAIN_ID, PULSECHAIN_CHAIN_ID } from "@/lib/chains";
+import {
+  BSC_CHAIN_ID,
+  POLYGON_CHAIN_ID,
+  PULSECHAIN_CHAIN_ID,
+} from "@/lib/chains";
 import {
   TOKEN_LOGO_MAX_ADDRESSES,
   extractTokenLogosFromDexScreenerPairs,
@@ -16,6 +20,7 @@ import {
 const WPLS = getAddress("0xA1077a294dDE1B09bB078844df40758a5D0f9a27");
 const PLSX = getAddress("0x95B303987A60C71504D99Aa1b13B4DA07b0790ab");
 const WBNB = getAddress("0xBB4CdB9CBd36B01bD1cBaEBF2De08d9173bc095c");
+const WPOL = getAddress("0x0d500B1d8E8eF31E21C99d1Db9A6444d3ADf1270");
 
 describe("token logo helpers", () => {
   it("keeps logo lookup scoped to explicitly enabled chains", () => {
@@ -25,6 +30,10 @@ describe("token logo helpers", () => {
     );
     expect(isTokenLogoSupportedChain(BSC_CHAIN_ID)).toBe(true);
     expect(getDexScreenerChainSlugForTokenLogos(BSC_CHAIN_ID)).toBe("bsc");
+    expect(isTokenLogoSupportedChain(POLYGON_CHAIN_ID)).toBe(true);
+    expect(getDexScreenerChainSlugForTokenLogos(POLYGON_CHAIN_ID)).toBe(
+      "polygon",
+    );
     expect(isTokenLogoSupportedChain(8453)).toBe(false);
     expect(getDexScreenerChainSlugForTokenLogos(8453)).toBeNull();
   });
@@ -112,6 +121,28 @@ describe("token logo helpers", () => {
       imageUrl: "https://cdn.dexscreener.com/wbnb.png",
       source: "dexscreener",
       sourceUrl: "https://dexscreener.com/bsc/0xpair1",
+    });
+  });
+
+  it("extracts Polygon logos from Dex Screener token pairs", () => {
+    const logos = extractTokenLogosFromDexScreenerPairs({
+      chainId: POLYGON_CHAIN_ID,
+      requestedAddresses: [WPOL],
+      payload: [
+        {
+          url: "https://dexscreener.com/polygon/0xpair1",
+          baseToken: { address: WPOL.toLowerCase() },
+          info: { imageUrl: "https://cdn.dexscreener.com/wpol.png" },
+        },
+      ],
+    });
+
+    expect(logos[tokenLogoAddressKey(WPOL)]).toMatchObject({
+      chainId: POLYGON_CHAIN_ID,
+      tokenAddress: WPOL,
+      imageUrl: "https://cdn.dexscreener.com/wpol.png",
+      source: "dexscreener",
+      sourceUrl: "https://dexscreener.com/polygon/0xpair1",
     });
   });
 });

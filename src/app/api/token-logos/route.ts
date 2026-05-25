@@ -22,7 +22,7 @@ export async function GET(request: Request) {
         ok: false,
         status: "bad-request",
         errors: [
-          "Token logo lookup currently supports PulseChain chainId=369 and BSC chainId=56.",
+          "Token logo lookup currently supports PulseChain chainId=369, BSC chainId=56, and Polygon chainId=137.",
         ],
       },
       { status: 400, headers: tokenLogoNoStoreHeaders() },
