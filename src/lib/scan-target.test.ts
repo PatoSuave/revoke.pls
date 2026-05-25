@@ -163,11 +163,27 @@ describe("scan target state", () => {
 
   it("does not add address-only API transaction submission or signing helpers", () => {
     const ethereumRoute = readFileSync(
-      join(process.cwd(), "src", "app", "api", "ethereum", "approvals", "route.ts"),
+      join(
+        process.cwd(),
+        "src",
+        "app",
+        "api",
+        "ethereum",
+        "approvals",
+        "route.ts",
+      ),
       "utf8",
     );
     const arbitrumRoute = readFileSync(
-      join(process.cwd(), "src", "app", "api", "arbitrum", "approvals", "route.ts"),
+      join(
+        process.cwd(),
+        "src",
+        "app",
+        "api",
+        "arbitrum",
+        "approvals",
+        "route.ts",
+      ),
       "utf8",
     );
 

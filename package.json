@@ -8,17 +8,18 @@
     "build": "next build",
     "build:desktop": "node scripts/build-desktop.mjs",
     "start": "next start",
-    "lint": "next lint",
+    "lint": "eslint . --max-warnings=0",
     "smoke:preview": "node scripts/preview-smoke.mjs",
+    "test": "vitest run",
     "typecheck": "tsc --noEmit",
     "tauri": "tauri"
   },
   "dependencies": {
-    "@tanstack/react-query": "^5.59.0",
+    "@tanstack/react-query": "^5.100.14",
     "next": "^15.5.18",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
-    "viem": "^2.50.4",
+    "viem": "2.50.4",
     "wagmi": "^2.12.0"
   },
   "overrides": {
@@ -30,21 +31,22 @@
     "@walletconnect/universal-provider": "2.23.9",
     "@walletconnect/utils": "2.23.9",
     "axios": "1.16.0",
-    "postcss": "8.5.14",
+    "postcss": "8.5.15",
     "uuid": "11.1.1",
     "ws": "8.20.1"
   },
   "devDependencies": {
-    "@tauri-apps/cli": "^2",
+    "@eslint/eslintrc": "^3.3.5",
+    "@tauri-apps/cli": "^2.11.2",
     "@types/node": "^22.0.0",
-    "@types/react": "^19.0.0",
+    "@types/react": "^19.2.15",
     "@types/react-dom": "^19.0.0",
     "autoprefixer": "^10.4.20",
     "eslint": "^9.0.0",
     "eslint-config-next": "^15.0.0",
-    "postcss": "8.5.14",
+    "postcss": "8.5.15",
     "tailwindcss": "^3.4.0",
     "typescript": "^5.9.3",
-    "vitest": "^4.1.5"
+    "vitest": "^4.1.7"
   }
 }
