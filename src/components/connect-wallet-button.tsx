@@ -10,7 +10,6 @@ import {
   type Connector,
 } from "wagmi";
 
-import type { SupportedChainId } from "@/lib/chains";
 import { shortenAddress } from "@/lib/format";
 import { isDesktopBuild } from "@/lib/platform";
 import { trackEvent } from "@/lib/telemetry";
@@ -204,9 +203,7 @@ export function ConnectWalletButton({
             <button
               key={c.chainId}
               type="button"
-              onClick={() =>
-                switchChain({ chainId: c.chainId as SupportedChainId })
-              }
+              onClick={() => switchChain({ chainId: c.chainId })}
               disabled={isSwitching}
               className={`${base} bg-pulse-red/20 text-pulse-red border border-pulse-red/40 hover:bg-pulse-red/30`}
             >

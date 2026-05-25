@@ -2,14 +2,14 @@ import type { UseApprovalDiscoveryResult } from "@/hooks/use-approval-discovery"
 import type { UseBatchRevokeResult } from "@/hooks/use-batch-revoke";
 import type { UseNftApprovalDiscoveryResult } from "@/hooks/use-nft-approval-discovery";
 import type { Address } from "viem";
-import {
-  getChainConfig,
-  getSupportedChainShortNames,
-  type SupportedChainConfig,
-} from "@/lib/chains";
+import { getChainConfig, type SupportedChainConfig } from "@/lib/chains";
 import { FUNGIBLE_APPROVAL_SHAPE_COPY } from "@/lib/diagnostic-copy";
 import { shortenAddress } from "@/lib/format";
 import type { ScanMode } from "@/lib/scan-target";
+import {
+  LIVE_SUPPORTED_CHAIN_COMPACT_LIST,
+  VERIFIED_ROW_SUPPORT_NOTE,
+} from "@/lib/supported-chain-copy";
 
 interface ScannerDiagnosticsPanelProps {
   enabled: boolean;
@@ -69,7 +69,6 @@ export function ScannerDiagnosticsPanel({
   const requiresChainIdParam =
     chainConfig?.discovery.apiProviderKind === "etherscan-v2";
   const walletChainConfig = getChainConfig(walletChainId);
-  const supportedChains = getSupportedChainShortNames();
   const effectiveScanTarget = scanTargetAddress ?? owner;
   const effectiveConnectedWallet = connectedWalletAddress ?? owner;
   const effectiveWalletMatchesScanTarget =
@@ -211,7 +210,8 @@ export function ScannerDiagnosticsPanel({
                     : "No",
               ],
               ["Scanner chain supported", onSupportedChain ? "Yes" : "No"],
-              ["Supported chains", supportedChains],
+              ["Live supported chains", LIVE_SUPPORTED_CHAIN_COMPACT_LIST],
+              ["Verified-row support", VERIFIED_ROW_SUPPORT_NOTE],
               ["Discovery target chain", discoveryTarget],
               ["Explorer links", chainConfig?.explorer.name ?? "Unavailable"],
               ["Explorer source", sourceName ?? "Unavailable"],

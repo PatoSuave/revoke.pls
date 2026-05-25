@@ -33,9 +33,8 @@ describe("wallet header network status", () => {
       helper:
         "Verified ERC-20 and NFT rows can be revoked on Arbitrum. Batch revoke is not enabled.",
     });
-    expect(ARBITRUM_HEADER_STATUS_SHORT_HELPER).toBe(
-      "ERC-20 and NFT rows only. Batch off.",
-    );
+    expect(ARBITRUM_HEADER_STATUS_LABEL).toBe("Arbitrum One");
+    expect(ARBITRUM_HEADER_STATUS_SHORT_HELPER).toBe("Verified rows only. Batch off.");
   });
 
   it("keeps truly unsupported chains unsupported", () => {
@@ -52,6 +51,9 @@ describe("wallet header network status", () => {
         BSC_CHAIN_ID,
         BASE_CHAIN_ID,
         POLYGON_CHAIN_ID,
+        ETHEREUM_MAINNET_CLIENT_CHAIN_ID,
+        ARBITRUM_ONE_CLIENT_CHAIN_ID,
+        OPTIMISM_CLIENT_CHAIN_ID,
       ]);
     }
   });
@@ -70,9 +72,8 @@ describe("wallet header network status", () => {
       helper:
         "Verified ERC-20 and NFT rows can be revoked on Optimism. Batch revoke is not enabled.",
     });
-    expect(OPTIMISM_HEADER_STATUS_SHORT_HELPER).toBe(
-      "ERC-20 and NFT rows only. Batch off.",
-    );
+    expect(OPTIMISM_HEADER_STATUS_LABEL).toBe("Optimism");
+    expect(OPTIMISM_HEADER_STATUS_SHORT_HELPER).toBe("Verified rows only. Batch off.");
   });
 
   it("keeps Ethereum header behavior on the existing special lane", () => {

@@ -1,3 +1,8 @@
+import {
+  LIVE_SUPPORTED_CHAIN_LIST,
+  VERIFIED_ROW_SUPPORT_NOTE,
+} from "@/lib/supported-chain-copy";
+
 const QUESTIONS: ReadonlyArray<{ q: string; a: React.ReactNode }> = [
   {
     q: "What is a token approval?",
@@ -50,10 +55,9 @@ const QUESTIONS: ReadonlyArray<{ q: string; a: React.ReactNode }> = [
     q: "What chains and tokens are supported?",
     a: (
       <>
-        PulseChain mainnet (chainId 369), Ethereum Mainnet (chainId 1), BSC /
-        BNB Smart Chain (chainId 56), Base (chainId 8453), and Polygon
-        (chainId 137). Discovery uses each chain&apos;s explorer/API path,
-        PulseScan on PulseChain, Etherscan for Ethereum,{" "}
+        {LIVE_SUPPORTED_CHAIN_LIST} are live in the scanner. Discovery uses
+        each chain&apos;s explorer/API path, PulseScan on PulseChain, Etherscan
+        for Ethereum,{" "}
         <a
           className="underline underline-offset-2 hover:text-pulse-cyan"
           href="https://bscscan.com"
@@ -80,11 +84,28 @@ const QUESTIONS: ReadonlyArray<{ q: string; a: React.ReactNode }> = [
         >
           PolygonScan
         </a>{" "}
-        on Polygon, and every discovered allowance is re-verified live on-chain
-        before display. Ethereum revoke is wallet-side and available only for
-        rows that pass the current live-verification gates. Known protocol
-        labels come from a chain-scoped curated registry, so a PulseChain
-        address is never mislabeled from another chain entry.
+        on Polygon,{" "}
+        <a
+          className="underline underline-offset-2 hover:text-pulse-cyan"
+          href="https://arbiscan.io"
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          Arbiscan
+        </a>{" "}
+        on Arbitrum One, and{" "}
+        <a
+          className="underline underline-offset-2 hover:text-pulse-cyan"
+          href="https://optimistic.etherscan.io"
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          Optimistic Etherscan
+        </a>{" "}
+        on Optimism. Every discovered allowance is re-verified live on-chain
+        before display. {VERIFIED_ROW_SUPPORT_NOTE} Known protocol labels come
+        from a chain-scoped curated registry, so a PulseChain address is never
+        mislabeled from another chain entry.
       </>
     ),
   },

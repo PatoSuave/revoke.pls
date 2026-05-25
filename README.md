@@ -20,8 +20,7 @@ launcher, trust, and distribution page.
 Revoke.PLS is live as a non-custodial approval review and revoke tool for
 PulseChain, BSC / BNB Smart Chain, Base, Polygon, Ethereum Mainnet, Arbitrum
 One verified-row revoke, and Optimism verified ERC-20/NFT row revoke. The
-current Polygon branch keeps this support off `main` until preview testing is
-complete. The current production checkpoint includes:
+current production checkpoint includes:
 
 - A focused `/app` scanner workspace with address-only scan and connected-wallet
   scan modes.

@@ -29,10 +29,7 @@ import {
   resolveDefaultAddressOnlyScanChainId,
   type AddressOnlyScanChainId,
 } from "@/lib/address-only-scan";
-import {
-  getSupportedChainShortNames,
-  type SupportedChainConfig,
-} from "@/lib/chains";
+import type { SupportedChainConfig } from "@/lib/chains";
 import {
   ARBITRUM_ONE_CLIENT_CHAIN_ID,
   resolveArbitrumReadOnlyChainId,
@@ -70,6 +67,7 @@ import {
   type ScanMode,
   type ScanTarget,
 } from "@/lib/scan-target";
+import { LIVE_SUPPORTED_CHAIN_COMPACT_LIST } from "@/lib/supported-chain-copy";
 import { tokenLogoAddressKey } from "@/lib/token-logos";
 
 /**
@@ -523,13 +521,13 @@ function ScannerBody({
   }
 
   if (!onSupportedChain || !chainConfig) {
-    const names = getSupportedChainShortNames();
+    const names = LIVE_SUPPORTED_CHAIN_COMPACT_LIST;
     return (
       <div className="space-y-5">
         <ScannerState
           tone="warning"
           eyebrow="Unsupported network"
-          title={`Switch to ${names}`}
+          title="Switch to a live supported network"
           body={`Pulse Revoke supports ${names}. Switch networks in your wallet to continue. Your wallet stays connected, and no transaction is requested.`}
           action={<ConnectWalletButton variant="ghost" />}
         />

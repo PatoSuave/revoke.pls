@@ -9,7 +9,7 @@
 
 ## Active Chains
 
-Active supported chains are configured in `src/lib/chains.ts`:
+Seven live product chains are surfaced across the app:
 
 - PulseChain, chain ID `369`, native gas token `PLS`, explorer `PulseScan`
 - BSC / BNB Smart Chain, chain ID `56`, native gas token `BNB`, explorer
@@ -21,19 +21,24 @@ Active supported chains are configured in `src/lib/chains.ts`:
 - Optimism / OP Mainnet, chain ID `10`, native gas token `ETH`, explorer
   `Optimistic Etherscan`, verified ERC-20/NFT row revoke
 
+PulseChain, BSC, Base, and Polygon use the generic scanner registry in
+`src/lib/chains.ts`, including the shared scan, revoke, and batch lane.
+
 Ethereum Mainnet is wallet-enabled for the Ethereum read-only discovery and
-wallet-side revoke lane. It is not handled by the default supported-chain
-scanner path.
+wallet-side revoke lane. It is surfaced as a live product chain, but it is not
+handled by the generic scanner/batch path.
 
 Arbitrum One is wallet-enabled so the app can recognize the connected network
-and run the separate Arbitrum scanner lane. It is not part of the default
-supported-chain scanner path. Only live-verified ERC-20 and NFT rows can route
-through controlled wallet-side revoke hooks; batch revoke remains disabled.
+and run the separate Arbitrum scanner lane. It is surfaced as a live product
+chain, but it is not part of the generic scanner/batch path. Only live-verified
+ERC-20 and NFT rows can route through controlled wallet-side revoke hooks;
+batch revoke remains disabled.
 
-Optimism is wallet-recognized so the app can show a neutral network status and
-run the separate scanner lane. It is not part of the default supported-chain
-scanner path. Optimism revoke is limited to verified ERC-20 and NFT rows and
-does not route to generic batch or global revoke.
+Optimism is wallet-recognized so the app can show a live network status and run
+the separate scanner lane. It is surfaced as a live product chain, but it is
+not part of the generic scanner/batch path. Optimism revoke is limited to
+verified ERC-20 and NFT rows and does not route to generic batch or global
+revoke.
 
 ## Web3 Layer
 

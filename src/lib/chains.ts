@@ -1,10 +1,12 @@
 import { defineChain, type Chain, type Address } from "viem";
 
 /**
- * Supported chain registry.
+ * Shared scanner chain registry.
  *
- * This is the single source of truth for active app chains. The active list is
- * intentionally narrow: PulseChain, BNB Smart Chain, Base, and Polygon.
+ * This is the single source of truth for the generic scan + revoke + batch
+ * lane. Ethereum Mainnet, Arbitrum One, and Optimism are live product chains
+ * with separate verified-row lanes, so they intentionally stay out of this
+ * registry until their broader write paths are separately reviewed.
  */
 
 export const PULSECHAIN_CHAIN_ID = 369;
