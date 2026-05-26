@@ -23,7 +23,7 @@ npm run smoke:preview -- https://your-preview.vercel.app
 ```
 
 The smoke checks the `/app?debug=1` page markers and the server-backed
-Ethereum, Arbitrum, and Optimism approval APIs with a harmless address. It
+Ethereum, Arbitrum, Optimism, and HyperEVM approval APIs with a harmless address. It
 should pass with RPC/explorer diagnostics configured and no missing config.
 This does not replace wallet QA; it only confirms the preview deployment and
 environment wiring are usable.
