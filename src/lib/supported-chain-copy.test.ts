@@ -8,6 +8,7 @@ import {
   LIVE_SUPPORTED_CHAIN_COUNT,
   LIVE_SUPPORTED_CHAIN_LIST,
   LIVE_SUPPORTED_CHAIN_ROWS,
+  HYPEREVM_LIVE_NETWORK_NOTE,
   VERIFIED_ROW_SUPPORT_NOTE,
   formatRevokeSupport,
 } from "@/lib/supported-chain-copy";
@@ -39,6 +40,8 @@ describe("supported chain copy", () => {
     );
     expect(VERIFIED_ROW_SUPPORT_NOTE).toContain("row-level ERC-20/NFT revoke");
     expect(VERIFIED_ROW_SUPPORT_NOTE).toContain("batch revoke is not enabled");
+    expect(HYPEREVM_LIVE_NETWORK_NOTE).toContain("HyperEVM is live");
+    expect(HYPEREVM_LIVE_NETWORK_NOTE).toContain("chain ID 999");
   });
 
   it("formats revoke support labels without overstating row-level lanes", () => {

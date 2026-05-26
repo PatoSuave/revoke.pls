@@ -102,7 +102,16 @@ const QUESTIONS: ReadonlyArray<{ q: string; a: React.ReactNode }> = [
         >
           Optimistic Etherscan
         </a>{" "}
-        on Optimism. Every discovered allowance is re-verified live on-chain
+        on Optimism, and{" "}
+        <a
+          className="underline underline-offset-2 hover:text-pulse-cyan"
+          href="https://hyperevmscan.io"
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          Hyperevmscan
+        </a>{" "}
+        on HyperEVM. Every discovered allowance is re-verified live on-chain
         before display. {VERIFIED_ROW_SUPPORT_NOTE} Known protocol labels come
         from a chain-scoped curated registry, so a PulseChain address is never
         mislabeled from another chain entry.
