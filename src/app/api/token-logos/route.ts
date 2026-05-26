@@ -9,6 +9,11 @@ import {
   normalizeLogoAddress,
   normalizeLogoAddresses,
 } from "@/lib/token-logos";
+import {
+  TOKEN_LOGO_API_RATE_LIMIT,
+  checkTokenLogoApiRateLimit,
+  type RateLimitResult,
+} from "@/lib/token-logo-api-controls";
 
 export const runtime = "nodejs";
 
@@ -69,6 +74,25 @@ export async function GET(request: Request) {
         logos: {},
       },
       { headers: tokenLogoCacheHeaders() },
+    );
+  }
+
+  const rateLimit = checkTokenLogoApiRateLimit(rateLimitKey(request));
+  if (!rateLimit.allowed) {
+    return NextResponse.json(
+      {
+        ok: false,
+        status: "upstream-failure",
+        errors: ["Token logo lookup rate limit exceeded. Try again shortly."],
+        logos: {},
+        rateLimited: true,
+      },
+      {
+        status: 429,
+        headers: tokenLogoNoStoreHeaders(
+          rateLimitHeaders(rateLimit, { includeRetryAfter: true }),
+        ),
+      },
     );
   }
 
@@ -157,10 +181,37 @@ function tokenLogoCacheHeaders(): HeadersInit {
   };
 }
 
-function tokenLogoNoStoreHeaders(): HeadersInit {
+function tokenLogoNoStoreHeaders(headers: HeadersInit = {}): HeadersInit {
   return {
     "Cache-Control": "private, no-store, max-age=0, must-revalidate",
     "CDN-Cache-Control": "no-store",
     "Vercel-CDN-Cache-Control": "no-store",
+    ...headers,
+  };
+}
+
+function rateLimitKey(request: Request): string {
+  const forwardedFor = request.headers.get("x-forwarded-for");
+  const forwardedIp = forwardedFor?.split(",")[0]?.trim();
+  return (
+    request.headers.get("cf-connecting-ip")?.trim() ||
+    request.headers.get("x-real-ip")?.trim() ||
+    forwardedIp ||
+    "unknown-client"
+  );
+}
+
+function rateLimitHeaders(
+  rateLimit: RateLimitResult,
+  options: { includeRetryAfter?: boolean } = {},
+): HeadersInit {
+  return {
+    ...(options.includeRetryAfter
+      ? { "Retry-After": rateLimit.retryAfterSeconds.toString() }
+      : {}),
+    "X-RateLimit-Limit": rateLimit.limit.toString(),
+    "X-RateLimit-Remaining": rateLimit.remaining.toString(),
+    "X-RateLimit-Reset": Math.ceil(rateLimit.resetAt / 1000).toString(),
+    "X-RateLimit-Window-Ms": TOKEN_LOGO_API_RATE_LIMIT.windowMs.toString(),
   };
 }
