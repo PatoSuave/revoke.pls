@@ -7,6 +7,10 @@ import {
   POLYGON_CHAIN_ID,
   PULSECHAIN_CHAIN_ID,
 } from "@/lib/chains";
+import {
+  TOKEN_LOGO_API_RATE_LIMIT,
+  resetTokenLogoApiRateLimitForTests,
+} from "@/lib/token-logo-api-controls";
 import { tokenLogoAddressKey } from "@/lib/token-logos";
 import { GET } from "./route";
 
@@ -17,6 +21,7 @@ const WPOL = getAddress("0x0d500B1d8E8eF31E21C99d1Db9A6444d3ADf1270");
 
 afterEach(() => {
   vi.unstubAllGlobals();
+  resetTokenLogoApiRateLimitForTests();
 });
 
 describe("token logo API route", () => {
@@ -190,5 +195,32 @@ describe("token logo API route", () => {
     expect(response.headers.get("Cache-Control")).toContain("no-store");
     expect(body.status).toBe("upstream-failure");
     expect(body.logos).toEqual({});
+  });
+
+  it("rate-limits repeated token logo lookups before hitting Dex Screener", async () => {
+    const fetch = vi.fn(async () => Response.json([]));
+    vi.stubGlobal("fetch", fetch);
+
+    let response: Response | null = null;
+    for (let i = 0; i <= TOKEN_LOGO_API_RATE_LIMIT.maxRequests; i++) {
+      response = await GET(
+        new Request(
+          `https://pulserevoke.test/api/token-logos?chainId=${PULSECHAIN_CHAIN_ID}&addresses=${WPLS}`,
+          { headers: { "x-forwarded-for": "203.0.113.10" } },
+        ),
+      );
+    }
+
+    expect(response?.status).toBe(429);
+    expect(response?.headers.get("Cache-Control")).toContain("no-store");
+    expect(response?.headers.get("Retry-After")).toBeTruthy();
+    const body = await response!.json();
+    expect(body).toMatchObject({
+      ok: false,
+      status: "upstream-failure",
+      rateLimited: true,
+      logos: {},
+    });
+    expect(fetch).toHaveBeenCalledTimes(TOKEN_LOGO_API_RATE_LIMIT.maxRequests);
   });
 });

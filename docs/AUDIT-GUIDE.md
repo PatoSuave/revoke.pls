@@ -251,6 +251,8 @@ submission must stay unavailable.
   verification, registry, or discovery evidence?
 - Does `/api/token-logos` cap requests to `30` token addresses and avoid
   caching malformed or upstream-failure responses?
+- Does `/api/token-logos` rate-limit upstream lookups so repeated logo requests
+  cannot freely amplify traffic to Dex Screener?
 
 ## Telemetry Questions
 

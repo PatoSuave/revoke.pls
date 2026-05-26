@@ -165,6 +165,31 @@ describe("hardening source invariants", () => {
     }
   });
 
+  it("keeps token-logo lookup bounded and rate-limited", () => {
+    const route = readFileSync(
+      join(process.cwd(), "src", "app", "api", "token-logos", "route.ts"),
+      "utf8",
+    );
+    const helpers = readFileSync(
+      join(process.cwd(), "src", "lib", "token-logos.ts"),
+      "utf8",
+    );
+    const controls = readFileSync(
+      join(process.cwd(), "src", "lib", "token-logo-api-controls.ts"),
+      "utf8",
+    );
+
+    expect(helpers).toContain("TOKEN_LOGO_MAX_ADDRESSES = 30");
+    expect(helpers).toContain("TOKEN_LOGO_REQUEST_TIMEOUT_MS = 8_000");
+    expect(route).toContain("checkTokenLogoApiRateLimit");
+    expect(route).toContain("tokenLogoNoStoreHeaders");
+    expect(route).toContain("Retry-After");
+    expect(controls).toContain("TOKEN_LOGO_API_RATE_LIMIT");
+    expect(`${route}\n${helpers}`).not.toMatch(
+      /writeContract|sendTransaction|signTransaction|privateKey|mnemonic|seed|relayer/i,
+    );
+  });
+
   it("keeps Arbitrum revoke limited to controlled row hooks", () => {
     const component = readFileSync(
       join(
