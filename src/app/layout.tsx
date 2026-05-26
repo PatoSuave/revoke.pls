@@ -9,18 +9,16 @@ import {
   THEME_STORAGE_KEY,
 } from "@/lib/theme";
 
-// Icons and social previews are generated from the co-located metadata
-// files (`icon.tsx`, `apple-icon.tsx`, `opengraph-image.tsx`). Next.js
-// auto-populates `metadata.icons.*` and `metadata.openGraph.images` from
-// those routes — do not duplicate them here.
+// Icons and social previews are generated from co-located metadata files.
+// Next.js auto-populates the metadata fields from those routes.
 
-const pageTitle = `${siteConfig.name} — ${siteConfig.tagline}`;
+const pageTitle = `${siteConfig.name} - ${siteConfig.tagline}`;
 
 export const metadata: Metadata = {
   metadataBase: new URL(siteConfig.url),
   title: {
     default: pageTitle,
-    template: `%s · ${siteConfig.shortName}`,
+    template: `%s | ${siteConfig.shortName}`,
   },
   description: siteConfig.description,
   applicationName: siteConfig.name,

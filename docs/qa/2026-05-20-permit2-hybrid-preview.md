@@ -4,6 +4,10 @@ This record tracks the feature-branch QA pass for Permit2 delegated allowances,
 hybrid token risk signals, and the scanner filter hardening added before any
 merge to `main`.
 
+Historical note: the preview URLs below were temporary Vercel deployments for
+this dated QA run. They are retained as evidence only and are not current setup
+or release instructions.
+
 ## Branch And Preview
 
 - Branch: `feature/permit2-hybrid-scanner-hardening`

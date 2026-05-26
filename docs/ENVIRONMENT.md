@@ -1,14 +1,15 @@
 # Environment Variables
 
 Pulse Revoke is primarily a wallet-side frontend app, with server-side BSC,
-Base, Polygon, Ethereum, Arbitrum, Optimism, and HyperEVM API routes for discovery. Variables
-prefixed with `NEXT_PUBLIC_` are embedded into the browser bundle and are
-visible to users. Do not store private secrets in these variables.
+Base, Polygon, Ethereum, Arbitrum, Optimism, and HyperEVM API routes for
+discovery. Variables prefixed with `NEXT_PUBLIC_` are embedded into the browser
+bundle and are visible to users. Do not store private secrets in these
+variables.
 
 ## Production Requirements
 
-For the live PulseChain + BSC + Base + Polygon + Ethereum + Arbitrum
-verified-row product plus Optimism ERC-20/NFT verified-row revoke, configure:
+For the live PulseChain, BSC, Base, Polygon, Ethereum, Arbitrum, Optimism, and
+HyperEVM product, configure:
 
 | Variable | Production status | Notes |
 | --- | --- | --- |
@@ -79,6 +80,13 @@ live validation and transaction submission. If unset, the app uses
 Hosted web Polygon approval discovery does not rely on public Polygon RPC
 `eth_getLogs`; it uses the server-side `/api/discovery/approvals` route with
 Etherscan API V2 logs.
+
+### `NEXT_PUBLIC_MAINNET_RPC_URL` / `NEXT_PUBLIC_ETHEREUM_RPC_URL`
+
+Optional browser-visible Ethereum wallet transport overrides. These are used by
+wagmi for wallet-chain reads and should contain only public, browser-safe RPC
+URLs. They are not a substitute for the server-only `MAINNET_RPC_URL` or
+`ETHEREUM_RPC_URL` used by `/api/ethereum/approvals`.
 
 ### `NEXT_PUBLIC_PULSECHAIN_EXPLORER_API`
 
@@ -371,53 +379,58 @@ intended for product-health events and aggregate fields only.
 ## Example `.env.local`
 
 ```env
-NEXT_PUBLIC_SITE_URL=https://pulserevoke.com
+# Public browser variables. Do not put secrets or private RPC URLs here.
+NEXT_PUBLIC_SITE_URL=
 NEXT_PUBLIC_PULSECHAIN_RPC_URL=
-NEXT_PUBLIC_BSC_RPC_URL=https://bsc-dataseed.bnbchain.org
-NEXT_PUBLIC_BASE_RPC_URL=https://mainnet.base.org
-NEXT_PUBLIC_POLYGON_RPC_URL=https://polygon.drpc.org
+NEXT_PUBLIC_BSC_RPC_URL=
+NEXT_PUBLIC_BASE_RPC_URL=
+NEXT_PUBLIC_POLYGON_RPC_URL=
+NEXT_PUBLIC_MAINNET_RPC_URL=
+NEXT_PUBLIC_ETHEREUM_RPC_URL=
 NEXT_PUBLIC_PULSECHAIN_EXPLORER_API=
-NEXT_PUBLIC_BSC_EXPLORER_API_URL=https://api.etherscan.io/v2/api
+NEXT_PUBLIC_BSC_EXPLORER_API_URL=
 NEXT_PUBLIC_BSC_EXPLORER_CHAIN_ID=56
 NEXT_PUBLIC_BSC_EXPLORER_API_KEY=
 NEXT_PUBLIC_BSCSCAN_API_KEY=
-NEXT_PUBLIC_BASE_EXPLORER_API_URL=https://api.etherscan.io/v2/api
+NEXT_PUBLIC_BASE_EXPLORER_API_URL=
 NEXT_PUBLIC_BASE_EXPLORER_CHAIN_ID=8453
 NEXT_PUBLIC_BASE_EXPLORER_API_KEY=
-NEXT_PUBLIC_POLYGON_EXPLORER_API_URL=https://api.etherscan.io/v2/api
+NEXT_PUBLIC_POLYGON_EXPLORER_API_URL=
 NEXT_PUBLIC_POLYGON_EXPLORER_CHAIN_ID=137
 NEXT_PUBLIC_POLYGON_EXPLORER_API_KEY=
 NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID=
 NEXT_PUBLIC_TELEMETRY_ENABLED=
-BSC_EXPLORER_API_URL=https://api.etherscan.io/v2/api
+
+# Server-only variables. Keep these out of NEXT_PUBLIC_*.
+BSC_EXPLORER_API_URL=
 BSC_EXPLORER_CHAIN_ID=56
-BSC_EXPLORER_API_KEY=replace_with_server_only_etherscan_v2_key
-BASE_EXPLORER_API_URL=https://api.etherscan.io/v2/api
+BSC_EXPLORER_API_KEY=
+BASE_EXPLORER_API_URL=
 BASE_EXPLORER_CHAIN_ID=8453
-BASE_EXPLORER_API_KEY=replace_with_server_only_etherscan_v2_key
-POLYGON_EXPLORER_API_URL=https://api.etherscan.io/v2/api
+BASE_EXPLORER_API_KEY=
+POLYGON_EXPLORER_API_URL=
 POLYGON_EXPLORER_CHAIN_ID=137
-POLYGON_EXPLORER_API_KEY=replace_with_server_only_etherscan_v2_key
-MAINNET_RPC_URL=https://your-server-only-ethereum-rpc.example
+POLYGON_EXPLORER_API_KEY=
+MAINNET_RPC_URL=
 ETHEREUM_RPC_URL=
-ETHEREUM_EXPLORER_API_URL=https://api.etherscan.io/v2/api
-ETHERSCAN_API_KEY=replace_with_server_only_etherscan_key
-ARBITRUM_ONE_RPC_URL=https://your-server-only-arbitrum-rpc.example
+ETHEREUM_EXPLORER_API_URL=
+ETHERSCAN_API_KEY=
+ARBITRUM_ONE_RPC_URL=
 ARBITRUM_RPC_URL=
-ARBITRUM_EXPLORER_API_URL=https://api.etherscan.io/v2/api
+ARBITRUM_EXPLORER_API_URL=
 ARBITRUM_EXPLORER_CHAIN_ID=42161
-ARBISCAN_API_KEY=replace_with_server_only_arbiscan_or_etherscan_key
-OPTIMISM_RPC_URL=https://your-server-only-optimism-rpc.example
+ARBISCAN_API_KEY=
+OPTIMISM_RPC_URL=
 OPTIMISM_MAINNET_RPC_URL=
 OP_MAINNET_RPC_URL=
-OPTIMISM_EXPLORER_API_URL=https://api.etherscan.io/v2/api
+OPTIMISM_EXPLORER_API_URL=
 OPTIMISM_EXPLORER_CHAIN_ID=10
-OPTIMISM_EXPLORER_API_KEY=replace_with_server_only_etherscan_v2_key
+OPTIMISM_EXPLORER_API_KEY=
 OPTIMISTIC_ETHERSCAN_API_KEY=
-HYPEREVM_RPC_URL=https://your-server-only-hyperevm-rpc.example
+HYPEREVM_RPC_URL=
 HYPEREVM_MAINNET_RPC_URL=
-HYPERLIQUID_EVM_RPC_URL=https://rpc.hyperliquid.xyz/evm
-HYPEREVM_EXPLORER_API_URL=https://api.etherscan.io/v2/api
+HYPERLIQUID_EVM_RPC_URL=
+HYPEREVM_EXPLORER_API_URL=
 HYPEREVM_EXPLORER_CHAIN_ID=999
 HYPEREVM_EXPLORER_API_KEY=
 HYPEREVM_ETHERSCAN_API_KEY=

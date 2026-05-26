@@ -24,9 +24,9 @@ import {
 } from "@/lib/supported-chain-copy";
 
 const productName = "Pulse Revoke";
-const launcherTitle = `${productName} - ${LIVE_SUPPORTED_CHAIN_COMPACT_LIST} approval safety`;
+const launcherTitle = `${productName} - Scan, review, revoke`;
 const launcherDescription =
-  `Launch the Pulse Revoke scanner or track desktop release status. Review and revoke token approvals on ${LIVE_SUPPORTED_CHAIN_LIST} without custody.`;
+  `Launch the Pulse Revoke scanner. Review and revoke token approvals on ${LIVE_SUPPORTED_CHAIN_LIST} without custody.`;
 
 export const metadata: Metadata = {
   title: launcherTitle,
@@ -230,7 +230,7 @@ function Hero({ desktopReady }: { desktopReady: boolean }) {
               {LIVE_SUPPORTED_CHAIN_COUNT} live EVM networks
             </span>
             <span className="hidden sm:inline">
-              {LIVE_SUPPORTED_CHAIN_COMPACT_LIST} approval safety
+              {LIVE_SUPPORTED_CHAIN_COMPACT_LIST} approval review
             </span>
           </div>
 
@@ -239,8 +239,8 @@ function Hero({ desktopReady }: { desktopReady: boolean }) {
           </h1>
 
           <p className="mt-5 max-w-2xl text-xl font-semibold leading-8 text-pulse-text sm:text-2xl">
-            Revoke risky approvals across {LIVE_SUPPORTED_CHAIN_COUNT} live EVM
-            networks with a scanner built for careful wallet review.
+            Revoke what you do not trust across {LIVE_SUPPORTED_CHAIN_COUNT} live
+            EVM networks.
           </p>
 
           <p className="mt-4 max-w-2xl text-base leading-7 text-pulse-muted">
@@ -290,8 +290,9 @@ function Hero({ desktopReady }: { desktopReady: boolean }) {
 
           <p className="mt-5 max-w-xl text-xs leading-5 text-pulse-muted">
             Always verify spender addresses on PulseScan, BscScan, BaseScan,
-            PolygonScan, or Etherscan before signing. Registry labels are
-            curated, not a guarantee of safety.
+            PolygonScan, Etherscan, Arbiscan, Optimistic Etherscan, or
+            Hyperevmscan before signing. Registry labels are context, not a
+            guarantee of safety.
           </p>
         </div>
 

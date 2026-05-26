@@ -1,287 +1,149 @@
-# Pulse Revoke / revoke.pls
+# Pulse Revoke
 
-Pulse Revoke is a non-custodial approval scanner and revoker for PulseChain,
-BSC / BNB Smart Chain, Base, Polygon, Ethereum Mainnet, Arbitrum One verified-row
-revoke, Optimism verified ERC-20/NFT row revoke, and HyperEVM verified-row
-revoke.
+Pulse Revoke helps users review and revoke token approvals on supported EVM
+chains.
 
 Live app: <https://pulserevoke.com>
 
-Production routes:
-
-- Scanner workspace: [`/app`](https://pulserevoke.com/app)
-- Security and trust guide: [`/security`](https://pulserevoke.com/security)
+- Scanner: <https://pulserevoke.com/app>
+- Security guide: <https://pulserevoke.com/security>
 - Manual QA checklist: [docs/MANUAL-QA-CHECKLIST.md](docs/MANUAL-QA-CHECKLIST.md)
 
-The `/app` route is the focused scanner workspace. The `/` route is the
-launcher, trust, and distribution page.
+## What It Does
 
-## Current Production Status
+Pulse Revoke scans public approval history, checks current approval state
+on-chain, and shows active allowances or NFT approvals that may still let a
+spender move assets.
 
-Revoke.PLS is live as a non-custodial approval review and revoke tool for
-PulseChain, BSC / BNB Smart Chain, Base, Polygon, Ethereum Mainnet, Arbitrum
-One verified-row revoke, Optimism verified ERC-20/NFT row revoke, and HyperEVM
-verified-row revoke. The
-current production checkpoint includes:
+Users can:
 
-- A focused `/app` scanner workspace with address-only scan and connected-wallet
-  scan modes.
-- Live-read verification for scanner and revoke decisions where available.
-- Ethereum Mainnet read-only discovery with wallet-side row-level revoke only
-  for live-verified rows.
-- Arbitrum One server-side approval discovery with ERC-20/NFT verified-row
-  revoke; Arbitrum batch revoke is not enabled.
-- Optimism server-side approval discovery with ERC-20/NFT verified-row revoke;
-  Optimism batch revoke is not enabled.
-- HyperEVM server-side approval discovery with ERC-20/NFT verified-row revoke;
-  HyperEVM batch revoke is not enabled.
-- Verification-incomplete copy for approvals that cannot be fully confirmed.
-- Collapsed approval explanation panels inside result rows.
-- LibertySwap current and legacy contract metadata labels.
-- Revoke receipts with post-revoke live verification status.
-- A public `/security` page with anti-phishing, supported-chain, and wallet
-  safety guidance.
+- scan connected wallets
+- scan a pasted EVM address without connecting a wallet where the current
+  scanner supports it
+- review token, spender, operator, chain, risk, and explorer context
+- revoke approvals they no longer trust
+- run sequential batch revoke for fungible approvals on the generic chain lane
+- review security and trust information before signing
 
-Revoke.PLS never asks for seed phrases or private keys. Revoke actions require
-the connected wallet to show and confirm the transaction before anything is
-submitted on-chain.
+Revoke transactions are sent from the user's wallet. The app does not custody
+funds and does not sign transactions on a server.
 
-## Live Supported Networks
+## Supported Chains
 
-Active scan networks are intentionally limited to:
+This table is based on the current source code, especially
+[src/lib/security-content.ts](src/lib/security-content.ts),
+[src/lib/chains.ts](src/lib/chains.ts), [src/lib/wagmi.ts](src/lib/wagmi.ts),
+and the chain-specific scanner clients.
 
-- PulseChain mainnet, chain ID `369`, gas token `PLS`, explorer `PulseScan`
-- BSC / BNB Smart Chain, chain ID `56`, gas token `BNB`, explorer `BscScan`
-- Base Mainnet, chain ID `8453`, gas token `ETH`, explorer `BaseScan`
-- Polygon Mainnet, chain ID `137`, gas token `POL`, explorer `PolygonScan`
-- Ethereum Mainnet, chain ID `1`, gas token `ETH`, explorer `Etherscan`
-- Arbitrum One, chain ID `42161`, gas token `ETH`, explorer `Arbiscan`
-  (ERC-20/NFT verified-row revoke; batch revoke not enabled)
-- Optimism / OP Mainnet, chain ID `10`, gas token `ETH`, explorer
-  `Optimistic Etherscan` (ERC-20/NFT verified-row revoke; batch revoke not enabled)
-- HyperEVM, chain ID `999`, gas token `HYPE`, explorer `Hyperevmscan`
-  (ERC-20/NFT verified-row revoke; batch revoke not enabled)
+| Chain | Chain ID | Scan support | Revoke support | Notes |
+| --- | ---: | --- | --- | --- |
+| PulseChain | 369 | Yes | Yes | Generic scanner and wallet-side revoke flow. Gas is paid in PLS. |
+| BNB Smart Chain | 56 | Yes | Yes | Generic scanner and wallet-side revoke flow. BSC gas cap and high-gas warnings are preserved. |
+| Base | 8453 | Yes | Yes | Generic scanner and wallet-side revoke flow. |
+| Polygon | 137 | Yes | Yes | Generic scanner and wallet-side revoke flow. Gas is paid in POL. |
+| Ethereum Mainnet | 1 | Yes | Live-verified rows | Server-side read-only discovery. Revoke stays wallet-side and depends on live verification, matching wallet, and correct chain checks. |
+| Arbitrum One | 42161 | Yes | ERC-20/NFT verified rows only | Server-side read-only discovery. Batch and global revoke are not enabled. |
+| Optimism / OP Mainnet | 10 | Yes | ERC-20/NFT verified rows only | Server-side read-only discovery. Batch and global revoke are not enabled. |
+| HyperEVM | 999 | Yes | ERC-20/NFT verified rows only | Server-side read-only discovery. Batch and global revoke are not enabled. Gas is paid in HYPE. |
 
-Ethereum discovery uses a server-read-only API, while Ethereum revoke remains
-wallet-side only with owner, chain, preflight, gas, and row-level verification
-gates.
-BSC, Base, and Polygon hosted web discovery use the server-side
-`/api/discovery/approvals` route so explorer API keys stay out of the browser
-bundle.
-Arbitrum discovery also uses a server-read-only API, and Arbitrum revoke stays
-limited to live-verified ERC-20 and NFT rows.
-Optimism discovery uses a server-side API. Optimism revoke is limited to
-live-verified ERC-20 and NFT rows; batch revoke remains unavailable.
-HyperEVM discovery uses a server-side API. HyperEVM revoke is limited to
-live-verified ERC-20 and NFT rows; batch revoke remains unavailable.
+Solana is not supported by the current EVM approval scanner design.
 
-## What It Can Scan And Revoke
+## Core Features
 
-- PulseChain PRC-20 / ERC-20-compatible fungible token approvals
-- BSC BEP-20 fungible token approvals
-- Base ERC-20 fungible token approvals
-- Polygon ERC-20 fungible token approvals
-- Ethereum ERC-20 fungible token approvals
-- Arbitrum ERC-20 and NFT approvals with verified-row revoke
-- Optimism ERC-20 and NFT approvals with verified-row revoke
-- HyperEVM ERC-20 and NFT approvals with verified-row revoke
-- NFT operator approvals where supported by the app pipeline
-- NFT per-token approvals where supported by the app pipeline
-- Sequential batch revoke for fungible token approvals on one chain at a time
-
-User-facing BSC labels are `BEP-20`, `BEP-721`, and `BEP-1155`. User-facing
-Base labels are `ERC-20`, `ERC-721`, and `ERC-1155`. Internal ABI and event
-handling uses ERC-compatible EVM interfaces where appropriate.
-User-facing Polygon labels are `ERC-20`, `ERC-721`, and `ERC-1155`.
-User-facing Arbitrum labels are `ERC-20`, `ERC-721`, and `ERC-1155`.
-User-facing Optimism labels are `ERC-20`, `ERC-721`, and `ERC-1155`.
-User-facing HyperEVM labels are `ERC-20`, `ERC-721`, and `ERC-1155`.
-
-## What It Does Not Do
-
-- Does not take custody of funds
-- Does not ask for seed phrases or private keys
-- Does not require token transfers
-- Does not use server-side signing, private-key handling, or a relayer
-- Does not guarantee complete discovery if explorer/API providers are
-  rate-limited, capped, unavailable, or return malformed data
-- Does not treat registry labels as proof that a spender is safe
-- Does not publish desktop binaries or IPFS/Pinata artifacts in the current
-  live product
-
-## How Approval Discovery Works
-
-1. Fetch historical approval logs for the connected owner on the active chain.
-2. Deduplicate token/spender and collection/operator candidates by chain and
-   approval type.
-3. Validate live allowance or approval state on-chain using the same chain's RPC.
-4. Enrich known token and spender labels from the chain-scoped registry.
-5. Show currently active approvals only.
-6. Prepare revoke transactions only after the user chooses to revoke.
-
-Scanner and revoke behavior is verified through live reads where available:
-fungible approvals use `allowance(owner, spender)`, NFT operator approvals use
-`isApprovedForAll(owner, operator)`, and NFT per-token approvals use
-`getApproved(tokenId)` where supported. Discovery failure, API caps, rate
-limits, or live validation failures are reported as incomplete/unverified
-states. The app should not show a false "clear" state when discovery or
-validation did not complete.
-
-## How Revoking Works
-
-Revokes are standard approval-clearing transactions submitted by the user's
-wallet:
-
-- PRC-20 / BEP-20 / ERC-compatible fungible approvals: `approve(spender, 0)`
-- NFT operator approvals: `setApprovalForAll(operator, false)`
-- NFT per-token approvals: `approve(address(0), tokenId)`
-
-The app sets the transaction `chainId` from the approval record. PulseChain
-revokes use PLS gas wording and PulseScan links. BSC revokes use BNB gas wording
-and BscScan links. Base revokes use ETH gas wording and BaseScan links.
-Polygon revokes use POL gas wording and PolygonScan links.
-Every revoke requires wallet confirmation before the transaction is submitted.
-Arbitrum revoke is limited to live-verified ERC-20 and NFT rows in the current
-product. Arbitrum batch revoke does not expose revoke actions.
-Optimism revoke is limited to live-verified ERC-20 and NFT rows in the current
-product. Optimism batch revoke does not expose revoke actions.
-
-## BSC Implementation Notes
-
-- Hosted web BSC approval discovery uses `/api/discovery/approvals`, backed by
-  Etherscan API V2:
-  `https://api.etherscan.io/v2/api`
-- Every BSC historical log request includes `chainid=56`.
-- Public BSC RPC `eth_getLogs` is not used for historical approval discovery.
-- BscScan remains the public explorer for BSC address, token, and transaction
-  links.
-- BSC gas wording is `BNB`.
-- BSC revokes above the Osaka/Mendel hard transaction gas cap of `16,777,216`
-  gas are blocked before wallet submission.
-- BSC revokes estimated above `1,000,000` gas and at or below `16,777,216` gas
-  show an in-app high-gas warning before the wallet opens.
-
-## Base Implementation Notes
-
-- Hosted web Base approval discovery uses `/api/discovery/approvals`, backed by
-  Etherscan API V2:
-  `https://api.etherscan.io/v2/api`
-- Every Base historical log request includes `chainid=8453`.
-- Public Base RPC `eth_getLogs` is not used for historical approval discovery.
-- BaseScan remains the public explorer for Base address, token, and transaction
-  links.
-- Base gas wording is `ETH`.
-- Base does not inherit BSC's Osaka/Mendel gas cap or high-gas warning
-  thresholds.
-
-## Polygon Implementation Notes
-
-- Hosted web Polygon approval discovery uses `/api/discovery/approvals`, backed
-  by Etherscan API V2:
-  `https://api.etherscan.io/v2/api`
-- Every Polygon historical log request includes `chainid=137`.
-- Public Polygon RPC `eth_getLogs` is not used for historical approval
-  discovery.
-- PolygonScan remains the public explorer for Polygon address, token, and
-  transaction links.
-- Polygon gas wording is `POL`.
-- The default browser-safe Polygon RPC is `https://polygon.drpc.org`;
-  production can override it with `NEXT_PUBLIC_POLYGON_RPC_URL`.
-
-## Arbitrum Implementation Notes
-
-- Arbitrum One is chain ID `42161`.
-- Historical Arbitrum approval discovery uses the server-side
-  `/api/arbitrum/approvals` route.
-- The route uses Etherscan-compatible logs with `chainid=42161` and Arbiscan
-  links for user-facing address, token, and transaction URLs.
-- Arbitrum RPC and API keys are server-only values. Do not put managed
-  Arbitrum RPC URLs or API keys in `NEXT_PUBLIC_*` variables.
-- Arbitrum ERC-20 revoke uses the same wallet-side `approve(spender, 0)` path
-  as other EVM ERC-20 revokes, with owner, chain, preflight, and post-revoke
-  live verification gates.
-- Arbitrum NFT row revoke uses the existing wallet-side
-  `setApprovalForAll(operator, false)` and `approve(address(0), tokenId)` paths
-  after the same owner, chain, preflight, and post-revoke live verification
-  gates.
-- Arbitrum batch revoke is not enabled.
-
-## Optimism Implementation Notes
-
-- Optimism / OP Mainnet is chain ID `10`.
-- Historical Optimism approval discovery uses the server-side
-  `/api/optimism/approvals` route.
-- The route uses Etherscan API V2 logs with `chainid=10` and Optimistic
-  Etherscan links.
-- Optimism RPC and API keys are server-only values. Do not put managed
-  Optimism RPC URLs or API keys in `NEXT_PUBLIC_*` variables.
-- Optimism ERC-20 and NFT rows can be revoked only when live verification,
-  matching wallet, and OP Mainnet checks pass. Batch and global revoke actions
-  are not enabled for Optimism.
-
-## HyperEVM Implementation Notes
-
-- HyperEVM is chain ID `999`.
-- Historical HyperEVM approval discovery uses the server-side
-  `/api/hyperevm/approvals` route.
-- The route uses Etherscan API V2 logs with `chainid=999` and Hyperevmscan
-  links.
-- HyperEVM RPC and API keys are server-only values. Do not put managed
-  HyperEVM RPC URLs or API keys in `NEXT_PUBLIC_*` variables.
-- HyperEVM gas is paid in `HYPE`, not ETH.
-- HyperEVM ERC-20 and NFT rows can be revoked only when live verification,
-  matching wallet, and HyperEVM checks pass. Batch and global revoke actions
-  are not enabled for HyperEVM.
+- PRC-20, BEP-20, ERC-20-compatible allowance scanning
+- NFT operator and per-token approval scanning where the app pipeline supports
+  it
+- Permit2 delegated allowance rows where live verification confirms active
+  state
+- Address-only scan mode for review before connecting a wallet
+- Chain-scoped token and spender labels for context
+- Token-logo lookup for PulseChain, BSC, and Polygon display only
+- Revoke receipt status with post-revoke live verification
+- `/app?debug=1` diagnostics for scanner status, chain, source, and incomplete
+  scan reasons
 
 ## Security Model
 
-- Wallet interactions are client-side through wagmi/viem connectors.
-- Users sign transactions in their own wallet.
-- The app never needs a private key or seed phrase.
-- The app does not custody funds.
-- Read flows fetch public chain/explorer data for the connected address.
-- Write flows are limited to approval-clearing calls listed above.
-- Registry data is enrichment only; it is not the discovery source of truth and
-  is not a safety guarantee.
+- Pulse Revoke is non-custodial.
+- Users keep their keys in their own wallet.
+- The app never asks for a seed phrase, private key, or mnemonic.
+- Address-only scans are read-only.
+- Read APIs fetch public chain, explorer, and RPC data.
+- Revoke transactions are standard approval-clearing calls that the user signs
+  in their wallet.
+- Results are risk signals, not guarantees.
+- Registry labels and token logos are context, not safety endorsements.
+- Users should verify the site, chain, token, spender, function, and gas before
+  signing.
+- Malicious or nonstandard contracts can hide behavior or fail normal reads.
+- RPCs, explorers, APIs, wallets, browsers, and hosting providers can fail,
+  rate-limit, cap responses, or return incomplete data.
 
-Always verify token, spender, operator, and transaction details in your wallet
-and on PulseScan, BscScan, BaseScan, PolygonScan, Etherscan, Arbiscan,
-Optimistic Etherscan, or Hyperevmscan before signing.
+## What Pulse Revoke Does Not Do
 
-## Privacy Posture
-
-The repo does not include a third-party analytics SDK. The telemetry module is a
-small product-health sink for fixed lifecycle events and aggregate fields. It is
-silent in production unless `NEXT_PUBLIC_TELEMETRY_ENABLED=true` is set.
-
-Telemetry rules documented in `src/lib/telemetry.ts` forbid wallet addresses,
-token addresses, spender addresses, transaction hashes, balances, token amounts,
-and fingerprinting data.
+- Does not take custody of funds
+- Does not ask for seed phrases, private keys, or mnemonics
+- Does not create wallets
+- Does not move, swap, bridge, stake, or transfer tokens
+- Does not run server-side signing
+- Does not use a relayer or server wallet
+- Does not auto-submit transactions
+- Does not guarantee complete discovery when upstream providers fail
+- Does not guarantee that a spender is safe
+- Does not support Solana revoke flows
 
 ## Local Development
 
-Requires Node.js 18.18+; Node 20 is recommended.
+Node.js 18.18+ is required. Node 20 is recommended.
+
+PowerShell:
 
 ```powershell
-npm install
+npm.cmd install
 Copy-Item .env.example .env.local
 npm.cmd run dev
 ```
 
-Then open `http://localhost:3000`.
+Generic npm:
 
-Useful verification commands:
-
-```powershell
-npm.cmd run typecheck
-npx.cmd vitest run
-npm.cmd run lint
-npm.cmd run build
+```bash
+npm install
+npm run dev
 ```
 
-## Before Production Push
+Open <http://localhost:3000>.
 
-Run the full production checklist before pushing a release branch or `main`:
+## Environment Variables
+
+Copy [.env.example](.env.example) to `.env.local` and fill only the values you
+need.
+
+Rules:
+
+- `NEXT_PUBLIC_*` variables are bundled into the browser. Do not put secrets or
+  private RPC URLs there.
+- Server-only RPC URLs and explorer API keys belong in unprefixed variables.
+- Keep public explorer keys blank for hosted web deployments unless you are
+  building a desktop/static target without API routes.
+- Never commit real keys.
+
+Common groups:
+
+| Group | Variables |
+| --- | --- |
+| Site and wallet UI | `NEXT_PUBLIC_SITE_URL`, `NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID`, `NEXT_PUBLIC_TELEMETRY_ENABLED` |
+| Public wallet RPC overrides | `NEXT_PUBLIC_PULSECHAIN_RPC_URL`, `NEXT_PUBLIC_BSC_RPC_URL`, `NEXT_PUBLIC_BASE_RPC_URL`, `NEXT_PUBLIC_POLYGON_RPC_URL`, `NEXT_PUBLIC_MAINNET_RPC_URL`, `NEXT_PUBLIC_ETHEREUM_RPC_URL` |
+| Hosted BSC/Base/Polygon discovery | `BSC_EXPLORER_API_KEY`, `BASE_EXPLORER_API_KEY`, `POLYGON_EXPLORER_API_KEY`, `ETHERSCAN_API_KEY` |
+| Ethereum discovery | `MAINNET_RPC_URL`, `ETHEREUM_RPC_URL`, `ETHEREUM_EXPLORER_API_URL`, `ETHERSCAN_API_KEY` |
+| Arbitrum discovery | `ARBITRUM_ONE_RPC_URL`, `ARBITRUM_RPC_URL`, `ARBITRUM_EXPLORER_API_URL`, `ARBITRUM_EXPLORER_CHAIN_ID`, `ARBISCAN_API_KEY` |
+| Optimism discovery | `OPTIMISM_RPC_URL`, `OPTIMISM_MAINNET_RPC_URL`, `OP_MAINNET_RPC_URL`, `OPTIMISM_EXPLORER_API_KEY`, `OPTIMISTIC_ETHERSCAN_API_KEY`, `ETHERSCAN_API_KEY` |
+| HyperEVM discovery | `HYPEREVM_RPC_URL`, `HYPEREVM_MAINNET_RPC_URL`, `HYPERLIQUID_EVM_RPC_URL`, `HYPEREVM_EXPLORER_API_KEY`, `HYPEREVM_ETHERSCAN_API_KEY`, `ETHERSCAN_API_KEY`, `BSC_EXPLORER_API_KEY` |
+
+See [docs/ENVIRONMENT.md](docs/ENVIRONMENT.md) for details.
+
+## Test And Validation Commands
+
+Run these before treating a branch as ready:
 
 ```powershell
 npm.cmd run build
@@ -290,94 +152,72 @@ npx.cmd vitest run
 npm.cmd run lint
 npm.cmd audit --omit=dev
 git diff --check
-git diff -- src/hooks src/app/api src/lib/wagmi.ts src/lib/preflight.ts
 ```
 
-The sensitive-path diff should be empty unless the release explicitly changes
-scanner, wallet, API, preflight, or execution behavior.
+Generic npm equivalents:
 
-## Environment Variables
+```bash
+npm run build
+npx tsc --noEmit
+npx vitest run
+npm run lint
+npm audit --omit=dev
+git diff --check
+```
 
-All `NEXT_PUBLIC_` variables are bundled into the frontend and visible in the
-browser. Do not put private secrets in these variables. Public API keys can
-still be rate-limited or abused; restrict and monitor them where the provider
-supports it.
+For documentation-only work, also check that sensitive runtime paths were not
+changed unexpectedly:
 
-| Variable | Required | Purpose |
-| --- | --- | --- |
-| `NEXT_PUBLIC_PULSECHAIN_RPC_URL` | Optional | Override PulseChain RPC. Defaults to `https://rpc.pulsechain.com`. |
-| `NEXT_PUBLIC_BSC_RPC_URL` | Recommended for production | Override BSC RPC. Defaults to `https://bsc-dataseed.bnbchain.org`. |
-| `NEXT_PUBLIC_BASE_RPC_URL` | Recommended for production | Override Base RPC. Defaults to `https://mainnet.base.org`. |
-| `NEXT_PUBLIC_POLYGON_RPC_URL` | Recommended for production | Override Polygon RPC. Defaults to `https://polygon.drpc.org`. |
-| `NEXT_PUBLIC_PULSECHAIN_EXPLORER_API` | Optional | Override PulseChain discovery API. Defaults to `https://api.scan.pulsechain.com/api`. |
-| `BSC_EXPLORER_API_URL` | Optional | Server-only BSC logs API. Defaults to `https://api.etherscan.io/v2/api`. |
-| `BSC_EXPLORER_CHAIN_ID` | Optional | Server-only BSC Etherscan API V2 chain ID. Defaults to `56`; keep it at `56`. |
-| `BSC_EXPLORER_API_KEY` / `ETHERSCAN_API_KEY` | Required for reliable BSC discovery | Server-only Etherscan API V2 key with BNB Smart Chain access. |
-| `BASE_EXPLORER_API_URL` | Optional | Server-only Base logs API. Defaults to `https://api.etherscan.io/v2/api`. |
-| `BASE_EXPLORER_CHAIN_ID` | Optional | Server-only Base Etherscan API V2 chain ID. Defaults to `8453`; keep it at `8453`. |
-| `BASE_EXPLORER_API_KEY` / `ETHERSCAN_API_KEY` | Required for reliable Base discovery | Server-only Etherscan API V2 key with Base Mainnet access. |
-| `POLYGON_EXPLORER_API_URL` | Optional | Server-only Polygon logs API. Defaults to `https://api.etherscan.io/v2/api`. |
-| `POLYGON_EXPLORER_CHAIN_ID` | Optional | Server-only Polygon Etherscan API V2 chain ID. Defaults to `137`; keep it at `137`. |
-| `POLYGON_EXPLORER_API_KEY` / `ETHERSCAN_API_KEY` | Required for reliable Polygon discovery | Server-only Etherscan API V2 key with Polygon Mainnet access. |
-| `NEXT_PUBLIC_BSC_EXPLORER_API_KEY` / `NEXT_PUBLIC_BASE_EXPLORER_API_KEY` / `NEXT_PUBLIC_POLYGON_EXPLORER_API_KEY` | Desktop/static only | Public fallback keys for builds without API routes. Do not configure these for hosted web deployments. |
-| `NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID` | Optional | Enables WalletConnect QR pairing. |
-| `NEXT_PUBLIC_SITE_URL` | Optional | Canonical public URL used by metadata and social images. Production should use `https://pulserevoke.com`. |
-| `NEXT_PUBLIC_TELEMETRY_ENABLED` | Optional | Enables the current telemetry sink in production when set to `true`. |
-| `MAINNET_RPC_URL` / `ETHEREUM_RPC_URL` | Required for Ethereum scan | Server-only Ethereum RPC URL used by `/api/ethereum/approvals`. |
-| `ETHEREUM_EXPLORER_API_URL` | Optional | Server-only Etherscan API V2 endpoint override. Defaults to `https://api.etherscan.io/v2/api`. |
-| `ETHERSCAN_API_KEY` | Required for Ethereum scan | Server-only Etherscan API key for Ethereum Mainnet approval discovery. Do not use a `NEXT_PUBLIC_` key for this route. |
-| `ARBITRUM_ONE_RPC_URL` / `ARBITRUM_RPC_URL` | Required for Arbitrum scan | Server-only Arbitrum RPC URL used by `/api/arbitrum/approvals`. |
-| `ARBITRUM_EXPLORER_API_URL` | Optional | Server-only Etherscan-compatible API V2 endpoint override. Defaults to `https://api.etherscan.io/v2/api`. |
-| `ARBITRUM_EXPLORER_CHAIN_ID` | Optional | Etherscan API V2 chain ID for Arbitrum One logs. Defaults to `42161`; keep it at `42161`. |
-| `ARBISCAN_API_KEY` | Required for Arbitrum scan | Server-only Arbiscan/Etherscan-compatible API key for Arbitrum One approval discovery. Do not use a `NEXT_PUBLIC_` key for this route. |
-| `OPTIMISM_RPC_URL` / `OPTIMISM_MAINNET_RPC_URL` / `OP_MAINNET_RPC_URL` | Required for Optimism scan | Server-only Optimism RPC URL used by `/api/optimism/approvals`. |
-| `OPTIMISM_EXPLORER_API_URL` | Optional | Server-only Etherscan API V2 endpoint override. Defaults to `https://api.etherscan.io/v2/api`. |
-| `OPTIMISM_EXPLORER_CHAIN_ID` | Optional | Etherscan API V2 chain ID for OP Mainnet logs. Defaults to `10`; keep it at `10`. |
-| `OPTIMISM_EXPLORER_API_KEY` / `OPTIMISTIC_ETHERSCAN_API_KEY` / `ETHERSCAN_API_KEY` | Required for Optimism scan | Server-only Etherscan API V2 key for Optimism approval discovery. Do not use a `NEXT_PUBLIC_` key for this route. |
-| `HYPEREVM_RPC_URL` / `HYPEREVM_MAINNET_RPC_URL` / `HYPERLIQUID_EVM_RPC_URL` | Required for HyperEVM scan | Server-only HyperEVM RPC URL used by `/api/hyperevm/approvals`. |
-| `HYPEREVM_EXPLORER_API_URL` | Optional | Server-only Etherscan API V2 endpoint override. Defaults to `https://api.etherscan.io/v2/api`. |
-| `HYPEREVM_EXPLORER_CHAIN_ID` | Optional | Etherscan API V2 chain ID for HyperEVM logs. Defaults to `999`; keep it at `999`. |
-| `HYPEREVM_EXPLORER_API_KEY` / `HYPEREVM_ETHERSCAN_API_KEY` / `ETHERSCAN_API_KEY` / `BSC_EXPLORER_API_KEY` | Required for HyperEVM scan | Server-only Etherscan API V2 key for HyperEVM approval discovery. `BSC_EXPLORER_API_KEY` is accepted as a shared paid-plan fallback. Do not use a `NEXT_PUBLIC_` key for this route. |
+```powershell
+git diff -- src/hooks src/app/api src/lib/wagmi.ts src/lib/preflight.ts src/lib/permit2.ts src/lib/risk.ts
+```
 
-See [docs/ENVIRONMENT.md](docs/ENVIRONMENT.md) for details.
+## Project Structure
 
-## Audit Starting Points
-
-- `src/lib/chains.ts` - active supported chains, RPC defaults, explorer config,
-  gas symbols, BSC gas safety thresholds, and Etherscan V2 settings
-- `src/lib/wagmi.ts` - registered wallet chains and transports
-- `src/lib/discovery.ts` - historical log discovery, pagination/windowing,
-  Etherscan API V2 `chainid=56` / `chainid=8453` / `chainid=137` request construction
-- `src/app/api/ethereum/approvals/route.ts` - read-only Ethereum Mainnet
-  approval API route
-- `src/app/api/arbitrum/approvals/route.ts` - read-only Arbitrum One approval
-  discovery API route
-- `src/app/api/optimism/approvals/route.ts` - server-side Optimism approval
-  discovery API route
-- `src/lib/ethereum-approval-api.ts` - server-only Ethereum discovery and live
-  validation
-- `src/lib/arbitrum-approval-api.ts` - server-only Arbitrum discovery and live
-  validation
-- `src/lib/optimism-approval-api.ts` - server-only Optimism discovery and live
-  validation
-- `src/lib/explorer.ts` - explorer URL generation
-- `src/lib/preflight.ts` - live validation helpers, BSC hard cap, high-gas
-  warning classification
-- `src/hooks/use-revoke-approval.ts` - single fungible approval revoke flow
-- `src/hooks/use-revoke-nft-approval.ts` - NFT revoke flow
-- `src/hooks/use-batch-revoke.ts` - sequential batch revoke flow
-- `src/lib/registry/` - chain-scoped registry enrichment
-- `src/lib/telemetry.ts` - privacy posture and product-health event rules
-
-See [docs/AUDIT-GUIDE.md](docs/AUDIT-GUIDE.md) for a practical audit checklist.
+| Path | Purpose |
+| --- | --- |
+| `src/app/` | Next.js App Router routes, metadata, API routes, and pages |
+| `src/components/sections/approval-scanner.tsx` | Main scanner surface and chain-lane routing |
+| `src/components/sections/*readonly-scanner.tsx` | Ethereum, Arbitrum, Optimism, and HyperEVM verified-row scanner surfaces |
+| `src/hooks/use-revoke-approval.ts` | Wallet-side fungible revoke hook |
+| `src/hooks/use-revoke-nft-approval.ts` | Wallet-side NFT revoke hook |
+| `src/hooks/use-batch-revoke.ts` | Sequential batch revoke for the generic lane |
+| `src/lib/chains.ts` | Generic supported-chain registry for PulseChain, BSC, Base, and Polygon |
+| `src/lib/wagmi.ts` | Wallet connectors, registered wallet chains, and transports |
+| `src/lib/security-content.ts` | Public security copy and supported-chain status matrix |
+| `src/lib/*approval-api.ts` | Server-side read-only discovery and live validation helpers |
+| `src/lib/*approval-client.ts` | Chain-specific client mapping and revoke eligibility copy |
+| `src/lib/preflight.ts` | Live preflight checks and gas policy |
+| `src/lib/registry/` | Chain-scoped token and spender labels |
+| `docs/` | Architecture, security, QA, environment, and release notes |
 
 ## Documentation
 
-- [Changelog](CHANGELOG.md)
 - [Architecture](docs/ARCHITECTURE.md)
-- [Audit guide](docs/AUDIT-GUIDE.md)
 - [Environment variables](docs/ENVIRONMENT.md)
 - [Security policy](SECURITY.md)
+- [Security notes](docs/SECURITY.md)
 - [Transparency notes](docs/TRANSPARENCY.md)
+- [Audit guide](docs/AUDIT-GUIDE.md)
+- [Manual QA checklist](docs/MANUAL-QA-CHECKLIST.md)
 - [Scanner QA checklist](docs/scanner-qa-checklist.md)
-- [Manual production QA checklist](docs/MANUAL-QA-CHECKLIST.md)
+- [Roadmap](docs/ROADMAP.md)
+- [Changelog](CHANGELOG.md)
+
+## Contributing And Review Expectations
+
+- Keep scanner behavior, revoke hooks, API behavior, wallet writes, and
+  preflight behavior unchanged unless the change is explicitly scoped and
+  reviewed.
+- Document chain support from source files, not assumptions.
+- Keep server-only secrets out of `NEXT_PUBLIC_*`.
+- Treat registry labels, logos, and risk scores as context, not guarantees.
+- Add or update tests when behavior changes.
+- Run the validation commands above before asking for release review.
+
+## Disclaimer
+
+Pulse Revoke is not an external audit, insurance product, or guarantee of
+wallet safety. It helps surface approval data and prepare standard revoke
+transactions. Users are responsible for checking the site, chain, spender,
+function, and wallet prompt before signing.

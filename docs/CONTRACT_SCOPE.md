@@ -39,6 +39,15 @@ remain ERC-compatible because BSC is EVM-compatible.
 Base user-facing copy uses ERC-20, ERC-721, ERC-1155, and ETH. Base is
 EVM-compatible, but it is not Ethereum Mainnet support.
 
+## Polygon Naming
+Polygon user-facing copy uses ERC-20, ERC-721, ERC-1155, and POL. Polygon uses
+the generic scanner and wallet-side revoke lane in the current product.
+
+## Ethereum Naming
+Ethereum user-facing copy uses ERC-20, ERC-721, ERC-1155, and ETH. Ethereum
+uses a separate read-only discovery lane with wallet-side revoke after live
+verification, matching-wallet, and chain checks pass.
+
 ## Arbitrum Naming
 Arbitrum user-facing copy uses ERC-20, ERC-721, ERC-1155, and ETH. Arbitrum One
 uses a separate verified-row lane in the current product; the app reads
@@ -51,6 +60,14 @@ where chain-specific naming is helpful. Optimism uses a separate verified-row
 lane in the current product; the app reads `allowance`, `isApprovedForAll`, and
 `getApproved`, then only enables matching-wallet row-level ERC-20 and NFT
 revoke after live verification. Optimism batch and global revoke are not
+enabled.
+
+## HyperEVM Naming
+HyperEVM user-facing copy uses ERC-20, ERC-721, ERC-1155, HYPE, and HyperEVM
+where chain-specific naming is helpful. HyperEVM uses a separate verified-row
+lane in the current product; the app reads `allowance`, `isApprovedForAll`, and
+`getApproved`, then only enables matching-wallet row-level ERC-20 and NFT
+revoke after live verification. HyperEVM batch and global revoke are not
 enabled.
 
 ## Known Limitations

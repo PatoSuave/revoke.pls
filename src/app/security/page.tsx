@@ -18,7 +18,7 @@ import { absoluteUrl, siteConfig } from "@/lib/site";
 
 const title = "Security & Trust";
 const description =
-  "Official Pulse Revoke safety guidance, supported-chain status, wallet connection limits, revoke transaction expectations, and anti-phishing reminders.";
+  "Official Pulse Revoke security guidance, supported-chain status, wallet connection limits, revoke transaction expectations, and anti-phishing reminders.";
 
 export const metadata: Metadata = {
   title,
