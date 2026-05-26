@@ -337,7 +337,7 @@ supports it.
 | `HYPEREVM_RPC_URL` / `HYPEREVM_MAINNET_RPC_URL` / `HYPERLIQUID_EVM_RPC_URL` | Required for HyperEVM scan | Server-only HyperEVM RPC URL used by `/api/hyperevm/approvals`. |
 | `HYPEREVM_EXPLORER_API_URL` | Optional | Server-only Etherscan API V2 endpoint override. Defaults to `https://api.etherscan.io/v2/api`. |
 | `HYPEREVM_EXPLORER_CHAIN_ID` | Optional | Etherscan API V2 chain ID for HyperEVM logs. Defaults to `999`; keep it at `999`. |
-| `HYPEREVM_EXPLORER_API_KEY` / `HYPEREVM_ETHERSCAN_API_KEY` / `ETHERSCAN_API_KEY` | Required for HyperEVM scan | Server-only Etherscan API V2 key for HyperEVM approval discovery. Do not use a `NEXT_PUBLIC_` key for this route. |
+| `HYPEREVM_EXPLORER_API_KEY` / `HYPEREVM_ETHERSCAN_API_KEY` / `ETHERSCAN_API_KEY` / `BSC_EXPLORER_API_KEY` | Required for HyperEVM scan | Server-only Etherscan API V2 key for HyperEVM approval discovery. `BSC_EXPLORER_API_KEY` is accepted as a shared paid-plan fallback. Do not use a `NEXT_PUBLIC_` key for this route. |
 
 See [docs/ENVIRONMENT.md](docs/ENVIRONMENT.md) for details.
 

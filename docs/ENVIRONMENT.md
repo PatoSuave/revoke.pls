@@ -32,7 +32,7 @@ verified-row product plus Optimism ERC-20/NFT verified-row revoke, configure:
 | `OPTIMISM_RPC_URL` / `OPTIMISM_MAINNET_RPC_URL` / `OP_MAINNET_RPC_URL` | Required for Optimism scan | Server-only OP Mainnet RPC URL for `/api/optimism/approvals`. |
 | `OPTIMISM_EXPLORER_API_KEY` / `OPTIMISTIC_ETHERSCAN_API_KEY` / `ETHERSCAN_API_KEY` | Required for Optimism scan | Server-only Etherscan API V2 key with OP Mainnet access. Do not use a `NEXT_PUBLIC_` key for Optimism server discovery. |
 | `HYPEREVM_RPC_URL` / `HYPEREVM_MAINNET_RPC_URL` / `HYPERLIQUID_EVM_RPC_URL` | Required for HyperEVM scan | Server-only HyperEVM RPC URL for `/api/hyperevm/approvals`. |
-| `HYPEREVM_EXPLORER_API_KEY` / `HYPEREVM_ETHERSCAN_API_KEY` / `ETHERSCAN_API_KEY` | Required for HyperEVM scan | Server-only Etherscan API V2 key with HyperEVM access. Do not use a `NEXT_PUBLIC_` key for HyperEVM server discovery. |
+| `HYPEREVM_EXPLORER_API_KEY` / `HYPEREVM_ETHERSCAN_API_KEY` / `ETHERSCAN_API_KEY` / `BSC_EXPLORER_API_KEY` | Required for HyperEVM scan | Server-only Etherscan API V2 key with HyperEVM access. `BSC_EXPLORER_API_KEY` is accepted as a shared paid-plan fallback. Do not use a `NEXT_PUBLIC_` key for HyperEVM server discovery. |
 
 PulseChain has defaults for RPC and explorer API, but hosted production can
 override them for reliability.
@@ -342,9 +342,10 @@ diagnostic warning.
 
 ### `HYPEREVM_EXPLORER_API_KEY` / `HYPEREVM_ETHERSCAN_API_KEY`
 
-Required for HyperEVM approval discovery unless `ETHERSCAN_API_KEY` is used as
-the shared server-side Etherscan API V2 key. Do not configure these values as
-`NEXT_PUBLIC_*`; the frontend does not need a HyperEVM explorer key.
+Required for HyperEVM approval discovery unless `ETHERSCAN_API_KEY` or
+`BSC_EXPLORER_API_KEY` is used as the shared server-side Etherscan API V2 key.
+Do not configure these values as `NEXT_PUBLIC_*`; the frontend does not need a
+HyperEVM explorer key.
 
 ### `NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID`
 
@@ -418,7 +419,7 @@ HYPEREVM_MAINNET_RPC_URL=
 HYPERLIQUID_EVM_RPC_URL=https://rpc.hyperliquid.xyz/evm
 HYPEREVM_EXPLORER_API_URL=https://api.etherscan.io/v2/api
 HYPEREVM_EXPLORER_CHAIN_ID=999
-HYPEREVM_EXPLORER_API_KEY=replace_with_server_only_etherscan_v2_key
+HYPEREVM_EXPLORER_API_KEY=
 HYPEREVM_ETHERSCAN_API_KEY=
 ```
 

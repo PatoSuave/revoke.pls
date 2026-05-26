@@ -174,6 +174,25 @@ For each chain, confirm diagnostics show:
 - Rate limits, malformed responses, missing API keys, and capped responses are
   shown as incomplete/error states, not as "clear".
 
+## HyperEVM Verified-Row Checks
+
+- `HYPEREVM_RPC_URL`, `HYPEREVM_MAINNET_RPC_URL`, or
+  `HYPERLIQUID_EVM_RPC_URL` is set server-side for
+  `/api/hyperevm/approvals`.
+- `HYPEREVM_EXPLORER_API_KEY`, `HYPEREVM_ETHERSCAN_API_KEY`,
+  `ETHERSCAN_API_KEY`, or `BSC_EXPLORER_API_KEY` is set server-side.
+  `BSC_EXPLORER_API_KEY` may be reused as the shared paid-plan Etherscan V2
+  key. Do not expose HyperEVM keys through a `NEXT_PUBLIC_` variable.
+- `HYPEREVM_EXPLORER_CHAIN_ID` is unset or set to `999`.
+- HyperEVM scans use Etherscan API V2 logs with `chainid=999`.
+- HyperEVM rows can render only after live verification.
+- HyperEVM ERC-20 and NFT row revoke appears only for live-verified rows when
+  the connected wallet matches the scan target and is on chain `999`.
+- HyperEVM batch revoke and global revoke are not shown.
+- HyperEVM revoke confirmation copy uses HYPE gas wording.
+- Rate limits, malformed responses, missing API keys, and capped responses are
+  shown as incomplete/error states, not as "clear".
+
 ## Controlled Fungible Approval Test
 
 1. Use a burner wallet as the owner wallet.

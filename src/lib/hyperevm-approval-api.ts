@@ -54,6 +54,7 @@ const API_KEY_ENV_NAMES = [
   "HYPEREVM_EXPLORER_API_KEY",
   "HYPEREVM_ETHERSCAN_API_KEY",
   "ETHERSCAN_API_KEY",
+  "BSC_EXPLORER_API_KEY",
 ] as const;
 const API_URL_ENV_NAMES = ["HYPEREVM_EXPLORER_API_URL"] as const;
 const API_CHAIN_ID_ENV_NAME = "HYPEREVM_EXPLORER_CHAIN_ID";
@@ -219,7 +220,7 @@ export function createHyperEVMDiscoverySource(
     limitations:
       "Etherscan API V2 can rate-limit, cap responses, or require smaller block windows for HyperEVM logs.",
     missingApiKeyMessage:
-      "HyperEVM discovery requires an Etherscan API V2 key. Set HYPEREVM_EXPLORER_API_KEY, HYPEREVM_ETHERSCAN_API_KEY, or ETHERSCAN_API_KEY.",
+      "HyperEVM discovery requires an Etherscan API V2 key. Set HYPEREVM_EXPLORER_API_KEY, HYPEREVM_ETHERSCAN_API_KEY, ETHERSCAN_API_KEY, or BSC_EXPLORER_API_KEY.",
   };
 
   return createBlockscoutDiscoverySource({
