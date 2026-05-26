@@ -13,6 +13,7 @@ const PAGE_MARKERS = [
   "Ethereum Mainnet",
   "Arbitrum One",
   "Optimism",
+  "HyperEVM",
 ];
 
 function usage() {

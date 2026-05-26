@@ -1,0 +1,83 @@
+import { afterEach, describe, expect, it } from "vitest";
+
+import { resetHyperEVMApprovalApiRateLimitForTests } from "@/lib/hyperevm-approval-api-controls";
+import { GET } from "./route";
+
+const OWNER = "0xcae394005c9c4c309621c53d53db9ceb701fc8d8";
+
+afterEach(() => {
+  resetHyperEVMApprovalApiRateLimitForTests();
+});
+
+function expectNoStore(response: Response) {
+  expect(response.headers.get("Cache-Control")).toBe(
+    "private, no-store, max-age=0, must-revalidate",
+  );
+  expect(response.headers.get("CDN-Cache-Control")).toBe("no-store");
+  expect(response.headers.get("Vercel-CDN-Cache-Control")).toBe("no-store");
+}
+
+describe("HyperEVM approvals API route hardening", () => {
+  it("keeps invalid owners as bad requests before rate limiting", async () => {
+    const response = await GET(
+      new Request("https://pulserevoke.test/api/hyperevm/approvals?owner=nope", {
+        headers: { "x-forwarded-for": "203.0.113.11" },
+      }),
+    );
+    const body = await response.json();
+
+    expect(response.status).toBe(400);
+    expectNoStore(response);
+    expect(body.status).toBe("bad-request");
+  });
+
+  it("rejects non-HyperEVM chain IDs before discovery", async () => {
+    const response = await GET(
+      new Request(
+        `https://pulserevoke.test/api/hyperevm/approvals?owner=${OWNER}&chainId=1`,
+        { headers: { "x-forwarded-for": "203.0.113.12" } },
+      ),
+    );
+    const body = await response.json();
+
+    expect(response.status).toBe(400);
+    expect(body.status).toBe("bad-request");
+    expect(body.errors.join(" ")).toContain("chainId=999");
+  });
+
+  it("rejects caller-controlled HyperEVM discovery ranges", async () => {
+    const response = await GET(
+      new Request(
+        `https://pulserevoke.test/api/hyperevm/approvals?owner=${OWNER}&fromBlock=1`,
+        { headers: { "x-forwarded-for": "203.0.113.14" } },
+      ),
+    );
+    const body = await response.json();
+
+    expect(response.status).toBe(400);
+    expect(body.status).toBe("bad-request");
+    expect(body.errors.join(" ")).toContain("server-bounded windows");
+  });
+
+  it("rate-limits repeated public HyperEVM scan requests as non-clear JSON", async () => {
+    let response: Response | null = null;
+    for (let i = 0; i < 21; i += 1) {
+      response = await GET(
+        new Request(
+          `https://pulserevoke.test/api/hyperevm/approvals?owner=${OWNER}`,
+          { headers: { "x-forwarded-for": "203.0.113.13" } },
+        ),
+      );
+    }
+
+    expect(response?.status).toBe(429);
+    expectNoStore(response!);
+    expect(response?.headers.get("Retry-After")).toBeTruthy();
+    const body = await response!.json();
+    expect(body.ok).toBe(false);
+    expect(body.status).toBe("upstream-failure");
+    expect(body.diagnostics.rateLimited).toBe(true);
+    expect(body.diagnostics.incompleteVerificationCount).toBeGreaterThan(0);
+    expect(body.status).not.toBe("complete-clear");
+  });
+});

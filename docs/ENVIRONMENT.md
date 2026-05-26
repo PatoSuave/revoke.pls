@@ -1,7 +1,7 @@
 # Environment Variables
 
 Pulse Revoke is primarily a wallet-side frontend app, with server-side BSC,
-Base, Polygon, Ethereum, Arbitrum, and Optimism API routes for discovery. Variables
+Base, Polygon, Ethereum, Arbitrum, Optimism, and HyperEVM API routes for discovery. Variables
 prefixed with `NEXT_PUBLIC_` are embedded into the browser bundle and are
 visible to users. Do not store private secrets in these variables.
 
@@ -31,6 +31,8 @@ verified-row product plus Optimism ERC-20/NFT verified-row revoke, configure:
 | `ARBISCAN_API_KEY` | Required for Arbitrum scan | Server-only Arbiscan/Etherscan-compatible API key. Do not use a `NEXT_PUBLIC_` key for Arbitrum server discovery. |
 | `OPTIMISM_RPC_URL` / `OPTIMISM_MAINNET_RPC_URL` / `OP_MAINNET_RPC_URL` | Required for Optimism scan | Server-only OP Mainnet RPC URL for `/api/optimism/approvals`. |
 | `OPTIMISM_EXPLORER_API_KEY` / `OPTIMISTIC_ETHERSCAN_API_KEY` / `ETHERSCAN_API_KEY` | Required for Optimism scan | Server-only Etherscan API V2 key with OP Mainnet access. Do not use a `NEXT_PUBLIC_` key for Optimism server discovery. |
+| `HYPEREVM_RPC_URL` / `HYPEREVM_MAINNET_RPC_URL` / `HYPERLIQUID_EVM_RPC_URL` | Required for HyperEVM scan | Server-only HyperEVM RPC URL for `/api/hyperevm/approvals`. |
+| `HYPEREVM_EXPLORER_API_KEY` / `HYPEREVM_ETHERSCAN_API_KEY` / `ETHERSCAN_API_KEY` | Required for HyperEVM scan | Server-only Etherscan API V2 key with HyperEVM access. Do not use a `NEXT_PUBLIC_` key for HyperEVM server discovery. |
 
 PulseChain has defaults for RPC and explorer API, but hosted production can
 override them for reliability.
@@ -305,6 +307,45 @@ Required for Optimism approval discovery unless `ETHERSCAN_API_KEY` is used as
 the shared server-side Etherscan API V2 key. Do not configure these values as
 `NEXT_PUBLIC_*`; the frontend does not need an Optimism explorer key.
 
+### `HYPEREVM_RPC_URL` / `HYPEREVM_MAINNET_RPC_URL` / `HYPERLIQUID_EVM_RPC_URL`
+
+Required for HyperEVM approval discovery. These are server-only values used by
+`/api/hyperevm/approvals` for live RPC validation. Prefer
+`HYPEREVM_RPC_URL`; `HYPEREVM_MAINNET_RPC_URL` and
+`HYPERLIQUID_EVM_RPC_URL` are accepted as fallback names.
+
+Do not configure managed or secret-key HyperEVM RPC URLs as `NEXT_PUBLIC_*`
+variables. HyperEVM approval scanning uses the server route. HyperEVM revoke is
+limited to verified ERC-20 and NFT rows; HyperEVM batch and global revoke are
+not enabled. HyperEVM gas is paid in HYPE.
+
+### `HYPEREVM_EXPLORER_API_URL`
+
+Optional server-only Etherscan API V2 endpoint override for HyperEVM logs. If
+unset, the API route uses:
+
+```text
+https://api.etherscan.io/v2/api
+```
+
+### `HYPEREVM_EXPLORER_CHAIN_ID`
+
+Optional server-only Etherscan API V2 chain ID parameter for HyperEVM logs.
+Default:
+
+```text
+999
+```
+
+If this is set to any other value, the app falls back to `999` and reports a
+diagnostic warning.
+
+### `HYPEREVM_EXPLORER_API_KEY` / `HYPEREVM_ETHERSCAN_API_KEY`
+
+Required for HyperEVM approval discovery unless `ETHERSCAN_API_KEY` is used as
+the shared server-side Etherscan API V2 key. Do not configure these values as
+`NEXT_PUBLIC_*`; the frontend does not need a HyperEVM explorer key.
+
 ### `NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID`
 
 Optional. Enables WalletConnect QR pairing through Reown / WalletConnect. If
@@ -372,6 +413,13 @@ OPTIMISM_EXPLORER_API_URL=https://api.etherscan.io/v2/api
 OPTIMISM_EXPLORER_CHAIN_ID=10
 OPTIMISM_EXPLORER_API_KEY=replace_with_server_only_etherscan_v2_key
 OPTIMISTIC_ETHERSCAN_API_KEY=
+HYPEREVM_RPC_URL=https://your-server-only-hyperevm-rpc.example
+HYPEREVM_MAINNET_RPC_URL=
+HYPERLIQUID_EVM_RPC_URL=https://rpc.hyperliquid.xyz/evm
+HYPEREVM_EXPLORER_API_URL=https://api.etherscan.io/v2/api
+HYPEREVM_EXPLORER_CHAIN_ID=999
+HYPEREVM_EXPLORER_API_KEY=replace_with_server_only_etherscan_v2_key
+HYPEREVM_ETHERSCAN_API_KEY=
 ```
 
 ## Provider Limitations
@@ -386,3 +434,6 @@ Etherscan-compatible API key with Arbitrum One log access. For Optimism,
 configure server-only managed RPC plus an Etherscan API V2 key with OP Mainnet
 log access. Optimism scan failures should surface as incomplete/config/upstream
 states, not as false clear results.
+For HyperEVM, configure server-only RPC plus an Etherscan API V2 key with
+HyperEVM Mainnet log access. HyperEVM scan failures should surface as
+incomplete/config/upstream states, not as false clear results.

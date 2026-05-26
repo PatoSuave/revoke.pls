@@ -48,7 +48,8 @@ export type WalletWriteChainId =
   | SupportedChainId
   | typeof ETHEREUM_MAINNET_CLIENT_CHAIN_ID
   | 42161
-  | 10;
+  | 10
+  | 999;
 
 export type EthereumApprovalApiStatus =
   | "active-approvals-found"

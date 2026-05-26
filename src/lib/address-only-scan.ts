@@ -18,18 +18,24 @@ import {
   OPTIMISM_DISPLAY_NAME,
   OPTIMISM_SHORT_NAME,
 } from "@/lib/optimism-approval-client";
+import {
+  HYPEREVM_CLIENT_CHAIN_ID,
+  HYPEREVM_DISPLAY_NAME,
+  HYPEREVM_SHORT_NAME,
+} from "@/lib/hyperevm-approval-client";
 
 export type AddressOnlyScanChainId =
   | typeof ETHEREUM_MAINNET_CLIENT_CHAIN_ID
   | typeof ARBITRUM_ONE_CLIENT_CHAIN_ID
   | typeof OPTIMISM_CLIENT_CHAIN_ID
+  | typeof HYPEREVM_CLIENT_CHAIN_ID
   | SupportedChainId;
 
 export interface AddressOnlyScanOption {
   chainId: AddressOnlyScanChainId;
   displayName: string;
   shortName: string;
-  kind: "ethereum" | "arbitrum" | "optimism" | "supported";
+  kind: "ethereum" | "arbitrum" | "optimism" | "hyperevm" | "supported";
 }
 
 export const ADDRESS_ONLY_SCAN_ALL_CONCURRENCY = 1;
@@ -52,6 +58,12 @@ export const addressOnlyScanOptions: readonly AddressOnlyScanOption[] = [
     displayName: OPTIMISM_DISPLAY_NAME,
     shortName: OPTIMISM_SHORT_NAME,
     kind: "optimism",
+  },
+  {
+    chainId: HYPEREVM_CLIENT_CHAIN_ID,
+    displayName: HYPEREVM_DISPLAY_NAME,
+    shortName: HYPEREVM_SHORT_NAME,
+    kind: "hyperevm",
   },
   ...supportedChainConfigList.map((chain) => ({
     chainId: chain.chainId,

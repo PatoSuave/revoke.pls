@@ -14,6 +14,7 @@ import {
   PULSECHAIN_CHAIN_ID,
 } from "@/lib/chains";
 import { ETHEREUM_MAINNET_CLIENT_CHAIN_ID } from "@/lib/ethereum-approval-client";
+import { HYPEREVM_CLIENT_CHAIN_ID } from "@/lib/hyperevm-approval-client";
 import { OPTIMISM_CLIENT_CHAIN_ID } from "@/lib/optimism-approval-client";
 
 describe("address-only scan selection", () => {
@@ -53,6 +54,15 @@ describe("address-only scan selection", () => {
     ).toBe(OPTIMISM_CLIENT_CHAIN_ID);
   });
 
+  it("defaults to HyperEVM when the connected wallet is on HyperEVM", () => {
+    expect(
+      resolveDefaultAddressOnlyScanChainId({
+        walletChainId: HYPEREVM_CLIENT_CHAIN_ID,
+        wagmiChainId: ETHEREUM_MAINNET_CLIENT_CHAIN_ID,
+      }),
+    ).toBe(HYPEREVM_CLIENT_CHAIN_ID);
+  });
+
   it("scans only the selected chain by default", () => {
     expect(
       getAddressOnlyActiveScanChainIds({
@@ -68,6 +78,7 @@ describe("address-only scan selection", () => {
       ETHEREUM_MAINNET_CLIENT_CHAIN_ID,
       ARBITRUM_ONE_CLIENT_CHAIN_ID,
       OPTIMISM_CLIENT_CHAIN_ID,
+      HYPEREVM_CLIENT_CHAIN_ID,
       PULSECHAIN_CHAIN_ID,
       BSC_CHAIN_ID,
       BASE_CHAIN_ID,
@@ -98,6 +109,18 @@ describe("address-only scan selection", () => {
       ETHEREUM_MAINNET_CLIENT_CHAIN_ID,
       ARBITRUM_ONE_CLIENT_CHAIN_ID,
       OPTIMISM_CLIENT_CHAIN_ID,
+    ]);
+    expect(
+      getAddressOnlyActiveScanChainIds({
+        selectedChainId: BASE_CHAIN_ID,
+        scanAllStarted: true,
+        scanAllIndex: 3,
+      }),
+    ).toEqual([
+      ETHEREUM_MAINNET_CLIENT_CHAIN_ID,
+      ARBITRUM_ONE_CLIENT_CHAIN_ID,
+      OPTIMISM_CLIENT_CHAIN_ID,
+      HYPEREVM_CLIENT_CHAIN_ID,
     ]);
   });
 });

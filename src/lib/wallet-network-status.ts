@@ -16,6 +16,11 @@ import {
   resolveEthereumReadOnlyChainId,
 } from "@/lib/ethereum-approval-client";
 import {
+  HYPEREVM_CLIENT_CHAIN_ID,
+  HYPEREVM_DISPLAY_NAME,
+  resolveHyperEVMReadOnlyChainId,
+} from "@/lib/hyperevm-approval-client";
+import {
   OPTIMISM_CLIENT_CHAIN_ID,
   OPTIMISM_DISPLAY_NAME,
   resolveOptimismReadOnlyChainId,
@@ -25,7 +30,8 @@ export type HeaderSwitchChainId =
   | SupportedChainId
   | typeof ETHEREUM_MAINNET_CLIENT_CHAIN_ID
   | typeof ARBITRUM_ONE_CLIENT_CHAIN_ID
-  | typeof OPTIMISM_CLIENT_CHAIN_ID;
+  | typeof OPTIMISM_CLIENT_CHAIN_ID
+  | typeof HYPEREVM_CLIENT_CHAIN_ID;
 
 export interface HeaderSwitchChainOption {
   chainId: HeaderSwitchChainId;
@@ -49,6 +55,10 @@ export const headerSwitchChainOptions: readonly HeaderSwitchChainOption[] = [
     chainId: OPTIMISM_CLIENT_CHAIN_ID,
     displayName: OPTIMISM_DISPLAY_NAME,
   },
+  {
+    chainId: HYPEREVM_CLIENT_CHAIN_ID,
+    displayName: HYPEREVM_DISPLAY_NAME,
+  },
 ];
 
 export const ARBITRUM_HEADER_STATUS_LABEL = "Arbitrum One";
@@ -61,6 +71,11 @@ export const OPTIMISM_HEADER_STATUS_SHORT_HELPER =
   "Verified rows only. Batch off.";
 export const OPTIMISM_HEADER_STATUS_HELPER =
   "Verified ERC-20 and NFT rows can be revoked on Optimism. Batch revoke is not enabled.";
+export const HYPEREVM_HEADER_STATUS_LABEL = "HyperEVM";
+export const HYPEREVM_HEADER_STATUS_SHORT_HELPER =
+  "Verified rows only. Batch off.";
+export const HYPEREVM_HEADER_STATUS_HELPER =
+  "Verified ERC-20 and NFT rows can be revoked on HyperEVM. Batch revoke is not enabled.";
 
 export type HeaderNetworkStatus =
   | {
@@ -87,6 +102,13 @@ export type HeaderNetworkStatus =
       label: typeof OPTIMISM_HEADER_STATUS_LABEL;
       shortHelper: typeof OPTIMISM_HEADER_STATUS_SHORT_HELPER;
       helper: typeof OPTIMISM_HEADER_STATUS_HELPER;
+    }
+  | {
+      kind: "hyperevm";
+      chainId: typeof HYPEREVM_CLIENT_CHAIN_ID;
+      label: typeof HYPEREVM_HEADER_STATUS_LABEL;
+      shortHelper: typeof HYPEREVM_HEADER_STATUS_SHORT_HELPER;
+      helper: typeof HYPEREVM_HEADER_STATUS_HELPER;
     }
   | {
       kind: "unsupported";
@@ -138,6 +160,20 @@ export function resolveHeaderNetworkStatus({
       label: OPTIMISM_HEADER_STATUS_LABEL,
       shortHelper: OPTIMISM_HEADER_STATUS_SHORT_HELPER,
       helper: OPTIMISM_HEADER_STATUS_HELPER,
+    };
+  }
+
+  const hyperevmChainId = resolveHyperEVMReadOnlyChainId({
+    walletChainId,
+    wagmiChainId,
+  });
+  if (hyperevmChainId === HYPEREVM_CLIENT_CHAIN_ID) {
+    return {
+      kind: "hyperevm",
+      chainId: HYPEREVM_CLIENT_CHAIN_ID,
+      label: HYPEREVM_HEADER_STATUS_LABEL,
+      shortHelper: HYPEREVM_HEADER_STATUS_SHORT_HELPER,
+      helper: HYPEREVM_HEADER_STATUS_HELPER,
     };
   }
 

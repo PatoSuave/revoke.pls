@@ -9,7 +9,7 @@
 
 ## Active Chains
 
-Seven live product chains are surfaced across the app:
+Eight live product chains are surfaced across the app:
 
 - PulseChain, chain ID `369`, native gas token `PLS`, explorer `PulseScan`
 - BSC / BNB Smart Chain, chain ID `56`, native gas token `BNB`, explorer
@@ -20,6 +20,8 @@ Seven live product chains are surfaced across the app:
 - Arbitrum One, chain ID `42161`, native gas token `ETH`, explorer `Arbiscan`
 - Optimism / OP Mainnet, chain ID `10`, native gas token `ETH`, explorer
   `Optimistic Etherscan`, verified ERC-20/NFT row revoke
+- HyperEVM, chain ID `999`, native gas token `HYPE`, explorer `Hyperevmscan`,
+  verified ERC-20/NFT row revoke
 
 PulseChain, BSC, Base, and Polygon use the generic scanner registry in
 `src/lib/chains.ts`, including the shared scan, revoke, and batch lane.
@@ -40,11 +42,17 @@ not part of the generic scanner/batch path. Optimism revoke is limited to
 verified ERC-20 and NFT rows and does not route to generic batch or global
 revoke.
 
+HyperEVM is wallet-recognized so the app can show a live network status and run
+the separate scanner lane. It is surfaced as a live product chain, but it is
+not part of the generic scanner/batch path. HyperEVM revoke is limited to
+verified ERC-20 and NFT rows and does not route to generic batch or global
+revoke. HyperEVM gas is paid in HYPE.
+
 ## Web3 Layer
 
 - `src/lib/wagmi.ts` registers PulseChain, BSC, Base, Polygon, Ethereum
-  Mainnet, Arbitrum One, and OP Mainnet with wagmi. Ethereum, Arbitrum, and
-  Optimism use separate scanner lanes.
+  Mainnet, Arbitrum One, OP Mainnet, and HyperEVM with wagmi. Ethereum,
+  Arbitrum, Optimism, and HyperEVM use separate scanner lanes.
 - PulseChain RPC defaults to `https://rpc.pulsechain.com`.
 - BSC RPC defaults to `https://bsc-dataseed.bnbchain.org`.
 - Base RPC defaults to `https://mainnet.base.org`.
@@ -57,6 +65,9 @@ revoke.
 - Optimism wallet chain recognition uses `https://mainnet.optimism.io`.
   Production Optimism approval discovery uses server-only RPC/API settings
   through `/api/optimism/approvals`.
+- HyperEVM wallet chain recognition uses `https://rpc.hyperliquid.xyz/evm`.
+  Production HyperEVM approval discovery uses server-only RPC/API settings
+  through `/api/hyperevm/approvals`.
 - RPCs can be overridden with public env vars.
 - Live reads and writes always include the approval record's `chainId`.
 - When connected, the wallet account `chainId` is the active scanner source of

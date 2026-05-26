@@ -12,6 +12,7 @@ import {
 } from "@/components/approvals/batch-revoke-panel";
 import { ArbitrumReadOnlyScanner } from "@/components/sections/arbitrum-readonly-scanner";
 import { EthereumReadOnlyScanner } from "@/components/sections/ethereum-readonly-scanner";
+import { HyperEVMReadOnlyScanner } from "@/components/sections/hyperevm-readonly-scanner";
 import { OptimismReadOnlyScanner } from "@/components/sections/optimism-readonly-scanner";
 import { NftApprovalRow } from "@/components/approvals/nft-approval-row";
 import { ConnectWalletButton } from "@/components/connect-wallet-button";
@@ -42,6 +43,10 @@ import {
   OPTIMISM_CLIENT_CHAIN_ID,
   resolveOptimismReadOnlyChainId,
 } from "@/lib/optimism-approval-client";
+import {
+  HYPEREVM_CLIENT_CHAIN_ID,
+  resolveHyperEVMReadOnlyChainId,
+} from "@/lib/hyperevm-approval-client";
 import { shortenAddress } from "@/lib/format";
 import type { NftApproval } from "@/lib/nft-approvals";
 import {
@@ -72,8 +77,9 @@ import { tokenLogoAddressKey } from "@/lib/token-logos";
 
 /**
  * Connected-wallet approval scanner for the shared PulseChain/BSC/Base/Polygon lane.
- * Ethereum, Arbitrum, and Optimism are routed through read-only scanner lanes
- * in this component before verified rows can expose revoke actions.
+ * Ethereum, Arbitrum, Optimism, and HyperEVM are routed through read-only
+ * scanner lanes in this component before verified rows can expose revoke
+ * actions.
  *
  * Uses `useApprovalDiscovery` to pull historical `Approval` events from the
  * configured explorer, re-validate every `(token, spender)` pair live via
@@ -520,6 +526,23 @@ function ScannerBody({
     );
   }
 
+  const hyperevmReadOnlyChainId = resolveHyperEVMReadOnlyChainId({
+    walletChainId,
+    wagmiChainId,
+  });
+
+  if (hyperevmReadOnlyChainId === HYPEREVM_CLIENT_CHAIN_ID) {
+    return (
+      <HyperEVMReadOnlyScanner
+        owner={address}
+        connectedAddress={address}
+        walletChainId={walletChainId}
+        wagmiChainId={wagmiChainId}
+        debugMode={debugMode}
+      />
+    );
+  }
+
   if (!onSupportedChain || !chainConfig) {
     const names = LIVE_SUPPORTED_CHAIN_COMPACT_LIST;
     return (
@@ -831,6 +854,19 @@ function AddressOnlyChainScan({
   if (chainId === OPTIMISM_CLIENT_CHAIN_ID) {
     return (
       <OptimismReadOnlyScanner
+        owner={owner}
+        connectedAddress={connectedAddress}
+        walletChainId={walletChainId}
+        wagmiChainId={wagmiChainId}
+        debugMode={debugMode}
+        onScanSettled={handleScanSettled}
+      />
+    );
+  }
+
+  if (chainId === HYPEREVM_CLIENT_CHAIN_ID) {
+    return (
+      <HyperEVMReadOnlyScanner
         owner={owner}
         connectedAddress={connectedAddress}
         walletChainId={walletChainId}

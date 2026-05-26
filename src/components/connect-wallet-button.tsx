@@ -163,7 +163,11 @@ export function ConnectWalletButton({
       );
     }
 
-    if (networkStatus.kind === "arbitrum" || networkStatus.kind === "optimism") {
+    if (
+      networkStatus.kind === "arbitrum" ||
+      networkStatus.kind === "optimism" ||
+      networkStatus.kind === "hyperevm"
+    ) {
       return (
         <div className={`${connectedControls} ${className}`}>
           <span

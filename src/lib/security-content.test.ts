@@ -71,6 +71,15 @@ describe("security content", () => {
     expect(rowsByChain.get("Optimism")?.note).toContain(
       "batch revoke is not enabled",
     );
+    expect(rowsByChain.get("HyperEVM")).toMatchObject({
+      chainId: "999",
+      scan: "Yes",
+      revoke: "ERC-20/NFT verified rows only",
+      status: "Live",
+    });
+    expect(rowsByChain.get("HyperEVM")?.note).toContain(
+      "Gas is paid in HYPE",
+    );
     expect(rowsByChain.get("Solana")).toMatchObject({
       scan: "No",
       revoke: "No",

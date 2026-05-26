@@ -11,6 +11,7 @@ const LIVE_CHAIN_DISPLAY_ORDER = [
   "Ethereum Mainnet",
   "Arbitrum One",
   "Optimism",
+  "HyperEVM",
 ] as const;
 
 const COMPACT_CHAIN_NAMES: Record<string, string> = {
