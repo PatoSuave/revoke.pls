@@ -15,6 +15,7 @@ import {
 } from "@/lib/release";
 import { absoluteUrl, siteConfig } from "@/lib/site";
 import {
+  HYPEREVM_LIVE_NETWORK_NOTE,
   LIVE_SUPPORTED_CHAIN_COMPACT_LIST,
   LIVE_SUPPORTED_CHAIN_COUNT,
   LIVE_SUPPORTED_CHAIN_LIST,
@@ -248,6 +249,9 @@ function Hero({ desktopReady }: { desktopReady: boolean }) {
             trust. The app stays read-only until you choose a revoke action and
             confirm it in your own wallet.
           </p>
+          <p className="mt-3 max-w-2xl text-sm font-semibold leading-6 text-pulse-cyan">
+            {HYPEREVM_LIVE_NETWORK_NOTE}
+          </p>
 
           <div className="mt-8 flex flex-col gap-3 sm:flex-row">
             <Link
@@ -326,6 +330,7 @@ function LiveNetworksStrip() {
         ))}
       </div>
       <p className="mt-3 text-xs leading-5 text-pulse-muted">
+        {HYPEREVM_LIVE_NETWORK_NOTE}{" "}
         {VERIFIED_ROW_SUPPORT_NOTE}
       </p>
     </div>

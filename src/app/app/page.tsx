@@ -7,6 +7,7 @@ import { SiteFooter } from "@/components/sections/site-footer";
 import { SiteHeader } from "@/components/sections/site-header";
 import { absoluteUrl, siteConfig } from "@/lib/site";
 import {
+  HYPEREVM_LIVE_NETWORK_NOTE,
   LIVE_SUPPORTED_CHAIN_ROWS,
 } from "@/lib/supported-chain-copy";
 
@@ -59,6 +60,9 @@ function AppWorkspaceIntro() {
             <p className="mt-3 max-w-2xl text-sm leading-6 text-pulse-muted sm:text-base">
               Review active token and NFT approvals. Revoke only after live
               verification confirms the approval is still active.
+            </p>
+            <p className="mt-2 max-w-2xl text-sm leading-6 text-pulse-muted sm:text-base">
+              {HYPEREVM_LIVE_NETWORK_NOTE}
             </p>
           </div>
 
