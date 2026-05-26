@@ -1,8 +1,8 @@
 # Transparency Notes
 
 Pulse Revoke is public code for reviewing and clearing wallet approvals on
-PulseChain, BSC / BNB Smart Chain, Base, Polygon, and Ethereum Mainnet verified rows,
-with Arbitrum One verified-row revoke and Optimism verified-row revoke.
+PulseChain, BSC / BNB Smart Chain, Base, Polygon, Ethereum Mainnet, Arbitrum
+One, Optimism / OP Mainnet, and HyperEVM.
 
 ## What The App Does
 
@@ -21,6 +21,8 @@ with Arbitrum One verified-row revoke and Optimism verified-row revoke.
   live-verified ERC-20 and NFT row revoke
 - Scans Optimism / OP Mainnet through a server-side API and enables only
   live-verified ERC-20 and NFT row revoke
+- Scans HyperEVM through a server-side API and enables only live-verified
+  ERC-20 and NFT row revoke
 
 ## What The App Does Not Do
 
@@ -30,6 +32,7 @@ with Arbitrum One verified-row revoke and Optimism verified-row revoke.
 - Does not require token transfers
 - Does not support Arbitrum batch revoke yet
 - Does not support Optimism batch or global revoke yet
+- Does not support HyperEVM batch or global revoke yet
 - Does not use server-side signing, relayers, or private-key handling
 - Does not guarantee complete discovery when explorer APIs are capped,
   rate-limited, unavailable, or malformed
@@ -41,7 +44,7 @@ with Arbitrum One verified-row revoke and Optimism verified-row revoke.
 
 - Review the active chain shown in the app.
 - Open token and spender links on PulseScan, BscScan, BaseScan, PolygonScan,
-  Etherscan, Arbiscan, or Optimistic Etherscan.
+  Etherscan, Arbiscan, Optimistic Etherscan, or Hyperevmscan.
 - Check that revoke wallet prompts match the intended approval-clearing call.
 - Confirm BSC transactions use BNB gas and BscScan links.
 - Confirm PulseChain transactions use PLS gas and PulseScan links.
@@ -63,12 +66,12 @@ links. For Base, hosted web historical discovery uses the same server-side
 route backed by Etherscan API V2 with `chainid=8453`. BaseScan is still used
 for public explorer links. Polygon hosted web historical discovery uses the same
 server-side route backed by Etherscan API V2 with `chainid=137`. PolygonScan is
-still used for public explorer links. Ethereum and Arbitrum discovery use server-side
-read-only API routes so managed RPC URLs and explorer API keys do not need to
-be exposed to the browser; Arbitrum requests use `chainid=42161` and Arbiscan
-links.
-Optimism requests also use a server-side route, Etherscan API V2 with
-`chainid=10`, and Optimistic Etherscan links.
+still used for public explorer links. Ethereum, Arbitrum, Optimism, and
+HyperEVM discovery use server-side read-only API routes so managed RPC URLs and
+explorer API keys do not need to be exposed to the browser. Arbitrum requests
+use `chainid=42161` and Arbiscan links. Optimism requests use `chainid=10` and
+Optimistic Etherscan links. HyperEVM requests use `chainid=999` and
+Hyperevmscan links.
 
 ## Why Live Validation Matters
 
@@ -114,6 +117,9 @@ eligibility.
 - Optimism row revoke is limited to live-verified ERC-20 and NFT rows with a
   matching connected wallet on chain `10`; batch and global revoke are not
   enabled.
+- HyperEVM row revoke is limited to live-verified ERC-20 and NFT rows with a
+  matching connected wallet on chain `999`; batch and global revoke are not
+  enabled, and gas is paid in HYPE.
 - BSC revokes above `16,777,216` estimated gas are blocked because BNB Smart
   Chain rejects individual transactions above the Osaka/Mendel cap.
 - BSC revokes above `1,000,000` estimated gas show a warning before the wallet

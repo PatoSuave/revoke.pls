@@ -9,7 +9,7 @@ const PILLARS = [
   },
   {
     title: "No seed phrases. Ever.",
-    body: "Connection uses the standard wallet protocols — injected or WalletConnect. You will never be asked for a seed phrase or private key.",
+    body: "Connection uses standard wallet protocols: injected wallets or WalletConnect. You will never be asked for a seed phrase or private key.",
   },
   {
     title: "Minimal, legible transactions",

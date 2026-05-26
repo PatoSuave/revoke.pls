@@ -35,6 +35,12 @@ entry, and existing controlled ERC-20/NFT row revoke hook usage, but no
 batch revoke, server-signing, relayer, or browser-exposed Optimism secret
 exposure.
 
+For HyperEVM verified-row revoke work, expected sensitive-path output may
+include the HyperEVM API route, hook/client, scanner UI, wagmi
+wallet-recognition entry, and existing controlled ERC-20/NFT row revoke hook
+usage, but no batch revoke, server-signing, relayer, or browser-exposed
+HyperEVM secret exposure.
+
 ## 1. Production Smoke
 
 - [ ] `/` loads without a framework error overlay.
@@ -83,6 +89,12 @@ exposure.
 - [ ] Confirm Optimism address-only rows keep revoke unavailable until the
       connected wallet exactly matches the pasted scan target and is on OP
       Mainnet.
+- [ ] Select HyperEVM in address-only mode and confirm the pasted scan target
+      is preserved even when a different wallet is connected.
+- [ ] Confirm no wallet is required to start a HyperEVM address-only scan.
+- [ ] Confirm HyperEVM address-only rows keep revoke unavailable until the
+      connected wallet exactly matches the pasted scan target and is on
+      HyperEVM.
 
 ## 4. PulseChain Approval Scanning
 
@@ -268,7 +280,39 @@ exposure.
       ERC-20 row revoke status, NFT row revoke status, and batch revoke
       disabled.
 
-## 10. Security And Trust
+## 10. HyperEVM Verified-Row Revoke
+
+- [ ] Connect on HyperEVM and confirm `/app` shows the HyperEVM verified-row
+      lane, not the generic revoke scanner.
+- [ ] Confirm `/api/hyperevm/approvals` discovery uses server-side settings
+      and reports `chainId` / `chainid` `999`.
+- [ ] Confirm active HyperEVM ERC-20 rows appear only after
+      `allowance(owner, spender)` live verification.
+- [ ] Confirm active HyperEVM NFT rows appear only after `getApproved(tokenId)`
+      or `isApprovedForAll(owner, operator)` live verification.
+- [ ] Confirm HyperEVM ERC-20 row revoke appears only for live-verified ERC-20
+      rows when the connected wallet matches the scan target and is on
+      HyperEVM.
+- [ ] Confirm HyperEVM ERC-20 preflight blocks the wallet prompt when
+      `allowance(owner, spender)` returns `0` or fails.
+- [ ] Confirm HyperEVM ERC-20 post-revoke verification reports
+      `Confirmed cleared.` only when `allowance(owner, spender)` returns `0`.
+- [ ] Confirm HyperEVM NFT row revoke appears only for live-verified NFT rows
+      when the connected wallet matches the scan target and is on HyperEVM.
+- [ ] Confirm HyperEVM batch revoke and global revoke are not visible or
+      enabled.
+- [ ] Reject one HyperEVM ERC-20 or NFT revoke transaction and confirm no
+      `Confirmed cleared.` state appears.
+- [ ] Confirm failed reads, truncation, caps, rate limits, and upstream
+      failures show verification-incomplete copy instead of a clear state.
+- [ ] Confirm HyperEVM explorer links open Hyperevmscan.
+- [ ] Confirm wallet prompts show HYPE gas.
+- [ ] In `/app?debug=1`, confirm diagnostics show scan target, connected
+      wallet, wallet chain ID, API status, config presence, incomplete reasons,
+      ERC-20 row revoke status, NFT row revoke status, and batch revoke
+      disabled.
+
+## 11. Security And Trust
 
 - [ ] Anti-phishing banner is visible on production pages.
 - [ ] `/security` loads and remains readable on desktop and mobile.
@@ -277,6 +321,9 @@ exposure.
       is live.
 - [ ] Supported-chain matrix lists Optimism as `Yes` /
       `ERC-20/NFT verified rows only` / `Live` and does not claim Optimism
+      batch revoke is live.
+- [ ] Supported-chain matrix lists HyperEVM as `Yes` /
+      `ERC-20/NFT verified rows only` / `Live` and does not claim HyperEVM
       batch revoke is live.
 - [ ] The app never requests a seed phrase, private key, mnemonic, or raw
       signing secret.
@@ -287,7 +334,7 @@ exposure.
 - [ ] Wallet prompts show expected revoke functions, not transfers, swaps,
       bridges, or unrelated approvals.
 
-## 11. Regression Guardrails
+## 12. Regression Guardrails
 
 - [ ] No server-side signing was introduced.
 - [ ] No private key, seed phrase, or mnemonic handling was introduced.
@@ -302,6 +349,8 @@ exposure.
 - [ ] No Arbitrum API route write, signing, relayer, or private-key behavior
       was introduced.
 - [ ] No Optimism API route write, signing, relayer, private-key, or
+      wallet-write behavior was introduced.
+- [ ] No HyperEVM API route write, signing, relayer, private-key, or
       wallet-write behavior was introduced.
 - [ ] No address-only scan gating changed unless explicitly intended and
       reviewed.

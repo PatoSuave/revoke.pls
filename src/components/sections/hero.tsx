@@ -22,7 +22,7 @@ export function Hero() {
             />
             <span className="min-w-0 max-w-[15rem] break-words">
               PulseChain, BSC, Base, Polygon, Ethereum, Arbitrum, Optimism, and
-              HyperEVM approval safety
+              HyperEVM approval review
             </span>
           </span>
 

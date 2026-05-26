@@ -68,7 +68,9 @@ revoke. HyperEVM gas is paid in HYPE.
 - HyperEVM wallet chain recognition uses `https://rpc.hyperliquid.xyz/evm`.
   Production HyperEVM approval discovery uses server-only RPC/API settings
   through `/api/hyperevm/approvals`.
-- RPCs can be overridden with public env vars.
+- PulseChain, BSC, Base, Polygon, and Ethereum wallet RPCs can be overridden
+  with browser-visible public env vars. Server-side discovery RPCs use
+  unprefixed server-only env vars.
 - Live reads and writes always include the approval record's `chainId`.
 - When connected, the wallet account `chainId` is the active scanner source of
   truth. The app does not fall back to PulseChain after a supported wallet chain
@@ -128,6 +130,13 @@ Optimism historical discovery is exposed through `/api/optimism/approvals` so
 managed RPC URLs and Etherscan API V2 keys stay server-only. The route is
 read-only, uses bounded discovery and live-validation caps, requires
 `chainid=10`, and never signs, relays, or submits transactions. Optimism rows
+can be shown only after live reads verify current approval state, and
+row-level revoke stays limited to verified ERC-20 and NFT rows.
+
+HyperEVM historical discovery is exposed through `/api/hyperevm/approvals` so
+managed RPC URLs and Etherscan API V2 keys stay server-only. The route is
+read-only, uses bounded discovery and live-validation caps, requires
+`chainid=999`, and never signs, relays, or submits transactions. HyperEVM rows
 can be shown only after live reads verify current approval state, and
 row-level revoke stays limited to verified ERC-20 and NFT rows.
 
@@ -241,6 +250,15 @@ User-facing Optimism copy uses:
 - `Verified-row revoke` for ERC-20 and NFT row state
 - `Batch revoke disabled` for Optimism batch/global actions
 
+User-facing HyperEVM copy uses:
+
+- `ERC-20` for fungible token approvals
+- `ERC-721` for NFT approvals
+- `ERC-1155` for multi-token NFT / semi-fungible approvals
+- `HYPE` for gas
+- `Verified-row revoke` for ERC-20 and NFT row state
+- `Batch revoke disabled` for HyperEVM batch/global actions
+
 Permit2 rows are shown as delegated token allowances. The row still carries the
 underlying token address and spender address, but live reads and revoke calls go
 through the Permit2 contract. Hybrid rows are display/risk annotations for token
@@ -256,7 +274,8 @@ Fungible token revoke:
 3. App prepares `approve(spender, 0)`.
 4. Wallet signs and submits on the approval's `chainId`.
 5. UI links the transaction to PulseScan, BscScan, BaseScan, PolygonScan,
-   Etherscan, or Arbiscan and rescans after success.
+   Etherscan, Arbiscan, Optimistic Etherscan, or Hyperevmscan and rescans after
+   success.
 
 Permit2 delegated allowance revoke:
 
@@ -289,6 +308,11 @@ server-side Optimism API. It uses the existing controlled ERC-20 and NFT revoke
 hooks, including owner, chain, preflight, and post-revoke verification gates.
 Optimism batch and global revoke remain unavailable.
 
+HyperEVM revoke is limited to live-verified ERC-20 and NFT rows from the
+server-side HyperEVM API. It uses the existing controlled ERC-20 and NFT revoke
+hooks, including owner, chain, preflight, and post-revoke verification gates.
+HyperEVM batch and global revoke remain unavailable. Gas is paid in HYPE.
+
 ## BSC Gas Safety
 
 BNB Smart Chain enforces an Osaka/Mendel transaction gas cap. Pulse Revoke keeps
@@ -300,8 +324,8 @@ two BSC-specific revoke preflight thresholds in `src/lib/chains.ts` and
 
 BSC revokes estimated above the hard cap are blocked before wallet submission.
 BSC revokes estimated above the warning threshold and at or below the hard cap
-require an explicit in-app confirmation before the wallet opens. Safe BSC
-revokes pass viem/wagmi transaction gas as `gas`, not `gasLimit`.
+require an explicit in-app confirmation before the wallet opens. BSC revokes
+that pass policy use viem/wagmi transaction gas as `gas`, not `gasLimit`.
 
 ## Security Principles
 

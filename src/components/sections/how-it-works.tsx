@@ -7,7 +7,7 @@ const STEPS = [
   {
     n: "01",
     title: "Connect your wallet",
-    body: "Use an injected wallet or WalletConnect. Pulse Revoke only reads your address to look up allowances — it never asks for a seed phrase or signs anything until you revoke.",
+    body: "Use an injected wallet or WalletConnect. Pulse Revoke only reads your address to look up allowances. It never asks for a seed phrase or signs anything until you revoke.",
   },
   {
     n: "02",
@@ -16,8 +16,8 @@ const STEPS = [
   },
   {
     n: "03",
-    title: "Revoke what you don't need",
-    body: `Clear approvals one at a time, or select several and run them as a sequential batch on chains where batch is enabled. Each revoke is a standard approve(spender, 0) transaction on the token contract, submitted on-chain and paid in the native gas token (PLS, BNB, POL, or ETH); there is no fee on top. ${VERIFIED_ROW_SUPPORT_NOTE}`,
+    title: "Revoke what you do not trust",
+    body: `Clear approvals one at a time, or select several and run them as a sequential batch on chains where batch is enabled. Each revoke is a standard approve(spender, 0) transaction on the token contract, submitted on-chain and paid in the native gas token (PLS, BNB, POL, ETH, or HYPE); there is no fee on top. ${VERIFIED_ROW_SUPPORT_NOTE}`,
   },
 ] as const;
 
@@ -38,7 +38,7 @@ export function HowItWorks() {
           </h2>
           <p className="mt-4 text-pulse-muted">
             Pulse Revoke is built around the minimum surface area needed to
-            manage approvals safely. No account, no custody, and no
+            review and clear approvals. No account, no custody, and no
             third-party analytics SDK.
           </p>
         </div>
