@@ -180,6 +180,16 @@ row-level revoke stays limited to verified ERC-20 and NFT rows.
 - Optimism server API key env vars:
   `OPTIMISM_EXPLORER_API_KEY` / `OPTIMISTIC_ETHERSCAN_API_KEY` /
   `ETHERSCAN_API_KEY`
+- HyperEVM server RPC env vars:
+  `HYPEREVM_RPC_URL` / `HYPEREVM_MAINNET_RPC_URL` /
+  `HYPERLIQUID_EVM_RPC_URL`
+- HyperEVM server discovery API default:
+  `https://api.etherscan.io/v2/api`
+- HyperEVM server discovery API chain id:
+  `HYPEREVM_EXPLORER_CHAIN_ID=999`
+- HyperEVM server API key env vars:
+  `HYPEREVM_EXPLORER_API_KEY` / `HYPEREVM_ETHERSCAN_API_KEY` /
+  `ETHERSCAN_API_KEY` / `BSC_EXPLORER_API_KEY`
 
 The old BscScan V1 endpoint `https://api.bscscan.com/api` is deprecated for
 BSC log discovery. If it is configured or returned by a custom endpoint, debug

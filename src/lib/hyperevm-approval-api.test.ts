@@ -236,6 +236,7 @@ describe("HyperEVM approval API foundation", () => {
         HYPEREVM_EXPLORER_API_KEY: undefined,
         HYPEREVM_ETHERSCAN_API_KEY: undefined,
         ETHERSCAN_API_KEY: undefined,
+        BSC_EXPLORER_API_KEY: undefined,
         [publicHyperEVMRpcEnv]: "https://public-HyperEVM-rpc.example",
         NEXT_PUBLIC_HYPEREVM_EXPLORER_API_KEY: "public-key",
       }),
@@ -248,6 +249,24 @@ describe("HyperEVM approval API foundation", () => {
     expect(result.diagnostics.explorerConfigured).toBe(false);
     expect(result.missingConfig.join(" ")).toContain("HYPEREVM_RPC_URL");
     expect(result.missingConfig.join(" ")).toContain("HYPEREVM_EXPLORER_API_KEY");
+  });
+
+  it("accepts the server-only BSC explorer key as a HyperEVM Etherscan V2 fallback", async () => {
+    const result = await scanHyperEVMApprovals(OWNER, {
+      env: env({
+        HYPEREVM_EXPLORER_API_KEY: undefined,
+        HYPEREVM_ETHERSCAN_API_KEY: undefined,
+        ETHERSCAN_API_KEY: undefined,
+        BSC_EXPLORER_API_KEY: "shared-bsc-server-key",
+      }),
+      discoverySource: fakeSource(),
+      reader: { readContract: vi.fn() },
+    });
+
+    expect(result.diagnostics.explorerConfigured).toBe(true);
+    expect(result.missingConfig.join(" ")).not.toContain(
+      "HYPEREVM_EXPLORER_API_KEY",
+    );
   });
 
   it("decodes HyperEVM ERC-20 Approval logs through chainid=999", async () => {
