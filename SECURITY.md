@@ -12,7 +12,8 @@ It is open for review, but it is not claiming an external audit.
 - Always verify the connected site URL before connecting a wallet.
 - Always review transaction details in your wallet before signing.
 - When unsure, verify token, spender, operator, and transaction links on
-  PulseScan, BscScan, BaseScan, Etherscan, Arbiscan, or Optimistic Etherscan.
+  PulseScan, BscScan, BaseScan, PolygonScan, Etherscan, Arbiscan, Optimistic
+  Etherscan, or Hyperevmscan.
 
 ## What Revoke Transactions Do
 
@@ -33,9 +34,12 @@ Current active supported networks:
 - PulseChain, chain ID `369`
 - BSC / BNB Smart Chain, chain ID `56`
 - Base, chain ID `8453`
+- Polygon, chain ID `137`
 - Ethereum Mainnet, chain ID `1`
 - Arbitrum One, chain ID `42161`, verified ERC-20 and NFT rows only
 - Optimism / OP Mainnet, chain ID `10`, verified ERC-20 and NFT rows only
+- HyperEVM, chain ID `999`, verified ERC-20 and NFT rows only, gas paid in
+  `HYPE`
 
 Ethereum server-read-only discovery uses an API for historical logs and live RPC
 validation. Ethereum revoke transactions are still wallet-side only: there is
@@ -54,6 +58,13 @@ logs and live RPC validation. Optimism ERC-20 and NFT row revoke are wallet-side
 only after owner, chain, preflight, and row-level verification gates pass.
 Optimism batch and global revoke are not enabled, and there is no server-side
 signing, private key handling, relayer, or API route transaction submission.
+
+HyperEVM server-side discovery uses `/api/hyperevm/approvals` for historical
+logs and live RPC validation. HyperEVM ERC-20 and NFT row revoke are wallet-side
+only after owner, chain, preflight, and row-level verification gates pass.
+HyperEVM batch and global revoke are not enabled, gas is paid in HYPE, and
+there is no server-side signing, private key handling, relayer, or API route
+transaction submission.
 
 Address-only scanning is read-only until a connected wallet exactly matches the
 scanned owner address and is on the row's chain.

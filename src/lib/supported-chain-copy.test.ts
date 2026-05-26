@@ -22,18 +22,21 @@ describe("supported chain copy", () => {
       "Ethereum Mainnet",
       "Arbitrum One",
       "Optimism",
+      "HyperEVM",
     ]);
-    expect(LIVE_SUPPORTED_CHAIN_COUNT).toBe(7);
+    expect(LIVE_SUPPORTED_CHAIN_COUNT).toBe(8);
     expect(LIVE_SUPPORTED_CHAIN_LIST).toBe(
-      "PulseChain, BNB Smart Chain, Base, Polygon, Ethereum Mainnet, Arbitrum One, and Optimism",
+      "PulseChain, BNB Smart Chain, Base, Polygon, Ethereum Mainnet, Arbitrum One, Optimism, and HyperEVM",
     );
     expect(LIVE_SUPPORTED_CHAIN_COMPACT_LIST).toBe(
-      "PulseChain, BSC, Base, Polygon, Ethereum, Arbitrum, and Optimism",
+      "PulseChain, BSC, Base, Polygon, Ethereum, Arbitrum, Optimism, and HyperEVM",
     );
   });
 
-  it("keeps verified-row limitations explicit for Arbitrum and Optimism", () => {
-    expect(VERIFIED_ROW_SUPPORT_NOTE).toContain("Arbitrum One and Optimism");
+  it("keeps verified-row limitations explicit for Arbitrum, Optimism, and HyperEVM", () => {
+    expect(VERIFIED_ROW_SUPPORT_NOTE).toContain(
+      "Arbitrum One, Optimism, and HyperEVM",
+    );
     expect(VERIFIED_ROW_SUPPORT_NOTE).toContain("row-level ERC-20/NFT revoke");
     expect(VERIFIED_ROW_SUPPORT_NOTE).toContain("batch revoke is not enabled");
   });

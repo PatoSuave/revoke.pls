@@ -52,6 +52,18 @@ describe("hardening source invariants", () => {
       ),
       "utf8",
     );
+    const hyperevmRoute = readFileSync(
+      join(
+        process.cwd(),
+        "src",
+        "app",
+        "api",
+        "hyperevm",
+        "approvals",
+        "route.ts",
+      ),
+      "utf8",
+    );
     const bscBaseRoute = readFileSync(
       join(
         process.cwd(),
@@ -66,7 +78,7 @@ describe("hardening source invariants", () => {
     );
 
     expect(
-      `${ethereumRoute}\n${arbitrumRoute}\n${optimismRoute}\n${bscBaseRoute}`,
+      `${ethereumRoute}\n${arbitrumRoute}\n${optimismRoute}\n${hyperevmRoute}\n${bscBaseRoute}`,
     ).not.toMatch(
       /writeContract|sendTransaction|signTransaction|privateKey|mnemonic|seed|relayer/i,
     );
@@ -113,6 +125,18 @@ describe("hardening source invariants", () => {
       ),
       "utf8",
     );
+    const hyperevmRoute = readFileSync(
+      join(
+        process.cwd(),
+        "src",
+        "app",
+        "api",
+        "hyperevm",
+        "approvals",
+        "route.ts",
+      ),
+      "utf8",
+    );
     const bscBaseRoute = readFileSync(
       join(
         process.cwd(),
@@ -133,6 +157,7 @@ describe("hardening source invariants", () => {
       ethereumRoute,
       arbitrumRoute,
       optimismRoute,
+      hyperevmRoute,
       bscBaseRoute,
     ]) {
       expect(route).toContain("approvalApiNoStoreHeaders");
@@ -217,6 +242,45 @@ describe("hardening source invariants", () => {
     expect(`${component}\n${client}`).not.toMatch(/\bsafe\b/i);
   });
 
+  it("keeps HyperEVM revoke limited to controlled row hooks", () => {
+    const component = readFileSync(
+      join(
+        process.cwd(),
+        "src",
+        "components",
+        "sections",
+        "hyperevm-readonly-scanner.tsx",
+      ),
+      "utf8",
+    );
+    const hook = readFileSync(
+      join(process.cwd(), "src", "hooks", "use-hyperevm-approval-scan.ts"),
+      "utf8",
+    );
+    const client = readFileSync(
+      join(process.cwd(), "src", "lib", "hyperevm-approval-client.ts"),
+      "utf8",
+    );
+
+    expect(component).toContain("useRevokeApproval");
+    expect(component).toContain("useRevokeNftApproval");
+    expect(`${hook}\n${client}`).not.toMatch(
+      /useRevokeApproval|useRevokeNftApproval|useBatchRevoke|writeContract|sendTransaction/i,
+    );
+    expect(component).not.toMatch(
+      /useBatchRevoke|writeContract|sendTransaction/i,
+    );
+    expect(client).toContain("revokeEnabled: false");
+    expect(client).toContain("batchRevokeEnabled: false");
+    expect(client).toContain("nftRevokeEnabled: false");
+    expect(client).toContain("erc20RowRevokeEnabled");
+    expect(client).toContain("nftRowRevokeEnabled");
+    expect(client).toContain("/api/hyperevm/approvals?owner=");
+    expect(hook).toContain('queryKey: ["hyperevm-approval-api"');
+    expect(hook).toContain('emptyHyperEVMApprovalApiResponse("upstream-failure"');
+    expect(`${component}\n${client}`).not.toMatch(/\bsafe\b/i);
+  });
+
   it("keeps Ethereum security docs current", () => {
     const security = readFileSync(join(process.cwd(), "SECURITY.md"), "utf8");
     const auditGuide = readFileSync(
@@ -230,9 +294,12 @@ describe("hardening source invariants", () => {
     expect(security).toContain("verified ERC-20 and NFT rows");
     expect(security).toContain("Optimism / OP Mainnet, chain ID `10`");
     expect(security).toContain("verified ERC-20 and NFT rows");
+    expect(security).toContain("HyperEVM, chain ID `999`");
+    expect(security).toContain("HYPE");
     expect(auditGuide).toContain("Ethereum Mainnet, chain ID `1`");
     expect(auditGuide).toContain("Arbitrum One, chain ID `42161`");
     expect(auditGuide).toContain("Optimism / OP Mainnet, chain ID `10`");
+    expect(auditGuide).toContain("HyperEVM, chain ID `999`");
     expect(auditGuide).toContain("CSP report-only");
     expect(auditGuide).toContain("Permit2 And Hybrid Discovery Questions");
     expect(auditGuide).toContain("Permit2.approve(token, spender, 0, 0)");

@@ -2,7 +2,8 @@
 
 Pulse Revoke is a non-custodial approval scanner and revoker for PulseChain,
 BSC / BNB Smart Chain, Base, Polygon, Ethereum Mainnet, Arbitrum One verified-row
-revoke, and Optimism verified ERC-20/NFT row revoke.
+revoke, Optimism verified ERC-20/NFT row revoke, and HyperEVM verified-row
+revoke.
 
 Live app: <https://pulserevoke.com>
 
@@ -19,7 +20,8 @@ launcher, trust, and distribution page.
 
 Revoke.PLS is live as a non-custodial approval review and revoke tool for
 PulseChain, BSC / BNB Smart Chain, Base, Polygon, Ethereum Mainnet, Arbitrum
-One verified-row revoke, and Optimism verified ERC-20/NFT row revoke. The
+One verified-row revoke, Optimism verified ERC-20/NFT row revoke, and HyperEVM
+verified-row revoke. The
 current production checkpoint includes:
 
 - A focused `/app` scanner workspace with address-only scan and connected-wallet
@@ -31,6 +33,8 @@ current production checkpoint includes:
   revoke; Arbitrum batch revoke is not enabled.
 - Optimism server-side approval discovery with ERC-20/NFT verified-row revoke;
   Optimism batch revoke is not enabled.
+- HyperEVM server-side approval discovery with ERC-20/NFT verified-row revoke;
+  HyperEVM batch revoke is not enabled.
 - Verification-incomplete copy for approvals that cannot be fully confirmed.
 - Collapsed approval explanation panels inside result rows.
 - LibertySwap current and legacy contract metadata labels.
@@ -55,6 +59,8 @@ Active scan networks are intentionally limited to:
   (ERC-20/NFT verified-row revoke; batch revoke not enabled)
 - Optimism / OP Mainnet, chain ID `10`, gas token `ETH`, explorer
   `Optimistic Etherscan` (ERC-20/NFT verified-row revoke; batch revoke not enabled)
+- HyperEVM, chain ID `999`, gas token `HYPE`, explorer `Hyperevmscan`
+  (ERC-20/NFT verified-row revoke; batch revoke not enabled)
 
 Ethereum discovery uses a server-read-only API, while Ethereum revoke remains
 wallet-side only with owner, chain, preflight, gas, and row-level verification
@@ -66,6 +72,8 @@ Arbitrum discovery also uses a server-read-only API, and Arbitrum revoke stays
 limited to live-verified ERC-20 and NFT rows.
 Optimism discovery uses a server-side API. Optimism revoke is limited to
 live-verified ERC-20 and NFT rows; batch revoke remains unavailable.
+HyperEVM discovery uses a server-side API. HyperEVM revoke is limited to
+live-verified ERC-20 and NFT rows; batch revoke remains unavailable.
 
 ## What It Can Scan And Revoke
 
@@ -76,6 +84,7 @@ live-verified ERC-20 and NFT rows; batch revoke remains unavailable.
 - Ethereum ERC-20 fungible token approvals
 - Arbitrum ERC-20 and NFT approvals with verified-row revoke
 - Optimism ERC-20 and NFT approvals with verified-row revoke
+- HyperEVM ERC-20 and NFT approvals with verified-row revoke
 - NFT operator approvals where supported by the app pipeline
 - NFT per-token approvals where supported by the app pipeline
 - Sequential batch revoke for fungible token approvals on one chain at a time
@@ -86,6 +95,7 @@ handling uses ERC-compatible EVM interfaces where appropriate.
 User-facing Polygon labels are `ERC-20`, `ERC-721`, and `ERC-1155`.
 User-facing Arbitrum labels are `ERC-20`, `ERC-721`, and `ERC-1155`.
 User-facing Optimism labels are `ERC-20`, `ERC-721`, and `ERC-1155`.
+User-facing HyperEVM labels are `ERC-20`, `ERC-721`, and `ERC-1155`.
 
 ## What It Does Not Do
 
@@ -209,6 +219,20 @@ product. Optimism batch revoke does not expose revoke actions.
   matching wallet, and OP Mainnet checks pass. Batch and global revoke actions
   are not enabled for Optimism.
 
+## HyperEVM Implementation Notes
+
+- HyperEVM is chain ID `999`.
+- Historical HyperEVM approval discovery uses the server-side
+  `/api/hyperevm/approvals` route.
+- The route uses Etherscan API V2 logs with `chainid=999` and Hyperevmscan
+  links.
+- HyperEVM RPC and API keys are server-only values. Do not put managed
+  HyperEVM RPC URLs or API keys in `NEXT_PUBLIC_*` variables.
+- HyperEVM gas is paid in `HYPE`, not ETH.
+- HyperEVM ERC-20 and NFT rows can be revoked only when live verification,
+  matching wallet, and HyperEVM checks pass. Batch and global revoke actions
+  are not enabled for HyperEVM.
+
 ## Security Model
 
 - Wallet interactions are client-side through wagmi/viem connectors.
@@ -221,8 +245,8 @@ product. Optimism batch revoke does not expose revoke actions.
   is not a safety guarantee.
 
 Always verify token, spender, operator, and transaction details in your wallet
-and on PulseScan, BscScan, BaseScan, PolygonScan, Etherscan, or Arbiscan before
-signing.
+and on PulseScan, BscScan, BaseScan, PolygonScan, Etherscan, Arbiscan,
+Optimistic Etherscan, or Hyperevmscan before signing.
 
 ## Privacy Posture
 
@@ -310,6 +334,10 @@ supports it.
 | `OPTIMISM_EXPLORER_API_URL` | Optional | Server-only Etherscan API V2 endpoint override. Defaults to `https://api.etherscan.io/v2/api`. |
 | `OPTIMISM_EXPLORER_CHAIN_ID` | Optional | Etherscan API V2 chain ID for OP Mainnet logs. Defaults to `10`; keep it at `10`. |
 | `OPTIMISM_EXPLORER_API_KEY` / `OPTIMISTIC_ETHERSCAN_API_KEY` / `ETHERSCAN_API_KEY` | Required for Optimism scan | Server-only Etherscan API V2 key for Optimism approval discovery. Do not use a `NEXT_PUBLIC_` key for this route. |
+| `HYPEREVM_RPC_URL` / `HYPEREVM_MAINNET_RPC_URL` / `HYPERLIQUID_EVM_RPC_URL` | Required for HyperEVM scan | Server-only HyperEVM RPC URL used by `/api/hyperevm/approvals`. |
+| `HYPEREVM_EXPLORER_API_URL` | Optional | Server-only Etherscan API V2 endpoint override. Defaults to `https://api.etherscan.io/v2/api`. |
+| `HYPEREVM_EXPLORER_CHAIN_ID` | Optional | Etherscan API V2 chain ID for HyperEVM logs. Defaults to `999`; keep it at `999`. |
+| `HYPEREVM_EXPLORER_API_KEY` / `HYPEREVM_ETHERSCAN_API_KEY` / `ETHERSCAN_API_KEY` | Required for HyperEVM scan | Server-only Etherscan API V2 key for HyperEVM approval discovery. Do not use a `NEXT_PUBLIC_` key for this route. |
 
 See [docs/ENVIRONMENT.md](docs/ENVIRONMENT.md) for details.
 

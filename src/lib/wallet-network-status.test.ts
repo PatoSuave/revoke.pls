@@ -9,9 +9,12 @@ import {
   supportedChainConfigList,
 } from "@/lib/chains";
 import { ETHEREUM_MAINNET_CLIENT_CHAIN_ID } from "@/lib/ethereum-approval-client";
+import { HYPEREVM_CLIENT_CHAIN_ID } from "@/lib/hyperevm-approval-client";
 import {
   ARBITRUM_HEADER_STATUS_LABEL,
   ARBITRUM_HEADER_STATUS_SHORT_HELPER,
+  HYPEREVM_HEADER_STATUS_LABEL,
+  HYPEREVM_HEADER_STATUS_SHORT_HELPER,
   OPTIMISM_HEADER_STATUS_LABEL,
   OPTIMISM_HEADER_STATUS_SHORT_HELPER,
   resolveHeaderNetworkStatus,
@@ -54,6 +57,7 @@ describe("wallet header network status", () => {
         ETHEREUM_MAINNET_CLIENT_CHAIN_ID,
         ARBITRUM_ONE_CLIENT_CHAIN_ID,
         OPTIMISM_CLIENT_CHAIN_ID,
+        HYPEREVM_CLIENT_CHAIN_ID,
       ]);
     }
   });
@@ -74,6 +78,24 @@ describe("wallet header network status", () => {
     });
     expect(OPTIMISM_HEADER_STATUS_LABEL).toBe("Optimism");
     expect(OPTIMISM_HEADER_STATUS_SHORT_HELPER).toBe("Verified rows only. Batch off.");
+  });
+
+  it("shows HyperEVM as verified-row revoke instead of unsupported", () => {
+    const status = resolveHeaderNetworkStatus({
+      walletChainId: HYPEREVM_CLIENT_CHAIN_ID,
+      wagmiChainId: HYPEREVM_CLIENT_CHAIN_ID,
+    });
+
+    expect(status.kind).toBe("hyperevm");
+    expect(status.label).toBe(HYPEREVM_HEADER_STATUS_LABEL);
+    expect(JSON.stringify(status)).not.toContain("Unsupported network");
+    expect(status).toMatchObject({
+      shortHelper: HYPEREVM_HEADER_STATUS_SHORT_HELPER,
+      helper:
+        "Verified ERC-20 and NFT rows can be revoked on HyperEVM. Batch revoke is not enabled.",
+    });
+    expect(HYPEREVM_HEADER_STATUS_LABEL).toBe("HyperEVM");
+    expect(HYPEREVM_HEADER_STATUS_SHORT_HELPER).toBe("Verified rows only. Batch off.");
   });
 
   it("keeps Ethereum header behavior on the existing special lane", () => {
@@ -103,7 +125,7 @@ describe("wallet header network status", () => {
     ]);
   });
 
-  it("keeps Arbitrum and Optimism out of the generic supported chain config list", () => {
+  it("keeps Arbitrum, Optimism, and HyperEVM out of the generic supported chain config list", () => {
     expect(supportedChainConfigList.map((chain) => chain.chainId)).toEqual([
       PULSECHAIN_CHAIN_ID,
       BSC_CHAIN_ID,
@@ -115,6 +137,9 @@ describe("wallet header network status", () => {
     );
     expect(supportedChainConfigList.map((chain) => chain.chainId)).not.toContain(
       OPTIMISM_CLIENT_CHAIN_ID,
+    );
+    expect(supportedChainConfigList.map((chain) => chain.chainId)).not.toContain(
+      HYPEREVM_CLIENT_CHAIN_ID,
     );
   });
 });

@@ -11,6 +11,10 @@ import {
   ethereumMainnetWalletChain,
 } from "@/lib/ethereum-approval-client";
 import {
+  HYPEREVM_PUBLIC_RPC_URL,
+  hyperevmWalletChain,
+} from "@/lib/hyperevm-approval-client";
+import {
   OPTIMISM_PUBLIC_RPC_URL,
   optimismWalletChain,
 } from "@/lib/optimism-approval-client";
@@ -33,9 +37,10 @@ import {
  * live-verified ERC-20 and NFT rows may route through controlled single-row
  * revoke hooks. It never routes through the generic scanner/revoke path.
  *
- * OP Mainnet (10) is registered for wallet chain recognition and verified
- * ERC-20/NFT row revoke only. The Optimism approval scanner uses a server-side
- * API and does not route through the generic scanner/revoke path.
+ * OP Mainnet (10) and HyperEVM (999) are registered for wallet chain
+ * recognition and verified ERC-20/NFT row revoke only. Their approval scanners
+ * use server-side APIs and do not route through the generic scanner/revoke
+ * path.
  *
  * Connectors:
  *  - Injected (MetaMask, Rabby, Brave, etc.)
@@ -56,7 +61,7 @@ export const hasWalletConnect: boolean = Boolean(walletConnectProjectId);
 const WALLETCONNECT_METADATA = {
   name: "Pulse Revoke",
   description:
-    "Review token approvals on PulseChain, BSC, Base, Polygon, Ethereum, Arbitrum, and Optimism.",
+    "Review token approvals on PulseChain, BSC, Base, Polygon, Ethereum, Arbitrum, Optimism, and HyperEVM.",
   url: "https://pulserevoke.com",
   icons: ["https://pulserevoke.com/icon.png"],
 };
@@ -79,6 +84,7 @@ export const walletChains = [
   ethereumMainnetWalletChain,
   arbitrumOneWalletChain,
   optimismWalletChain,
+  hyperevmWalletChain,
 ] as const;
 
 export const wagmiConfig = createConfig({
@@ -98,6 +104,7 @@ export const wagmiConfig = createConfig({
     ),
     [arbitrumOneWalletChain.id]: http(ARBITRUM_ONE_PUBLIC_RPC_URL),
     [optimismWalletChain.id]: http(OPTIMISM_PUBLIC_RPC_URL),
+    [hyperevmWalletChain.id]: http(HYPEREVM_PUBLIC_RPC_URL),
   },
   ssr: true,
 });

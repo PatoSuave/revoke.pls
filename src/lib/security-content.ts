@@ -108,6 +108,14 @@ export const SECURITY_CHAIN_STATUS_ROWS: readonly ChainStatusRow[] = [
     note: "Server-side approval discovery and live verification for OP Mainnet. Revoke is row-level only for verified ERC-20 and NFT rows; batch revoke is not enabled on Optimism.",
   },
   {
+    chain: "HyperEVM",
+    chainId: "999",
+    scan: "Yes",
+    revoke: "ERC-20/NFT verified rows only",
+    status: "Live",
+    note: "Server-side approval discovery and live verification for HyperEVM. Revoke is row-level only for verified ERC-20 and NFT rows; batch revoke is not enabled on HyperEVM. Gas is paid in HYPE.",
+  },
+  {
     chain: "Solana",
     chainId: "N/A",
     scan: "No",

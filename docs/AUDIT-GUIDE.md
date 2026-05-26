@@ -14,6 +14,7 @@ Current active supported networks should be exactly:
 - Ethereum Mainnet, chain ID `1`
 - Arbitrum One, chain ID `42161`, ERC-20/NFT verified-row revoke
 - Optimism / OP Mainnet, chain ID `10`, ERC-20/NFT verified-row revoke
+- HyperEVM, chain ID `999`, ERC-20/NFT verified-row revoke, gas paid in HYPE
 
 Ethereum Mainnet uses server-read-only discovery and wallet-side revoke. It is
 wallet-enabled, but it must not introduce server-side signing, relayers, private
@@ -28,6 +29,12 @@ submission must stay unavailable.
 Optimism uses server-side discovery and wallet-side ERC-20/NFT row revoke only
 after row-level live verification, matching owner, chain, preflight, and
 post-revoke verification gates pass. Optimism batch revoke, global revoke,
+server-side signing, relayers, private keys, and API route transaction
+submission must stay unavailable.
+
+HyperEVM uses server-side discovery and wallet-side ERC-20/NFT row revoke only
+after row-level live verification, matching owner, chain, preflight, and
+post-revoke verification gates pass. HyperEVM batch revoke, global revoke,
 server-side signing, relayers, private keys, and API route transaction
 submission must stay unavailable.
 
