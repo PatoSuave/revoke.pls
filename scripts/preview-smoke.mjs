@@ -3,7 +3,7 @@
 import { spawn } from "node:child_process";
 
 const DEFAULT_OWNER = "0x1111111111111111111111111111111111111111";
-const API_ENDPOINTS = ["ethereum", "arbitrum", "optimism"];
+const API_ENDPOINTS = ["ethereum", "arbitrum", "optimism", "hyperevm"];
 const PAGE_MARKERS = [
   "Review active approvals",
   "Address scan",
