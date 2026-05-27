@@ -9,7 +9,7 @@ const SOURCE = readFileSync(
 describe("PulseChain gas tracker component source", () => {
   it("includes loading, available, and unavailable user states", () => {
     expect(SOURCE).toContain("Waiting for PulseChain gas data");
-    expect(SOURCE).toContain("Typical Transaction Costs");
+    expect(SOURCE).toContain("Estimated Transaction Costs");
     expect(SOURCE).toContain("PulseChain gas data is unavailable");
   });
 
@@ -22,9 +22,17 @@ describe("PulseChain gas tracker component source", () => {
 
   it("uses a two-second visual heartbeat without fake samples", () => {
     expect(SOURCE).toContain("2_000");
-    expect(SOURCE).toContain("New blocks + 2s heartbeat");
+    expect(SOURCE).toContain("2s");
     expect(SOURCE).toContain("<animate");
     expect(SOURCE).toContain('dur="2s"');
+  });
+
+  it("keeps gas secondary to the revoke workflow by default", () => {
+    expect(SOURCE).toContain("Network fee");
+    expect(SOURCE).toContain("PulseChain fee monitor");
+    expect(SOURCE).toContain("Estimated revoke");
+    expect(SOURCE).toContain("View live chart");
+    expect(SOURCE).toContain("MiniGasSparkline");
   });
 
   it("renders status-segmented chart UX with motion safety", () => {
