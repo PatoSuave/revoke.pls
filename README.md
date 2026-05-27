@@ -58,30 +58,34 @@ Solana is not supported by the current EVM approval scanner design.
 - Address-only scan mode for review before connecting a wallet
 - Chain-scoped token and spender labels for context
 - Token-logo lookup for PulseChain, BSC, and Polygon display only
-- PulseChain gas tracker with live block-based updates and native PLS cost
+- Multi-chain gas tracker with live block-based updates and native-token cost
   estimates
 - Revoke receipt status with post-revoke live verification
 - `/app?debug=1` diagnostics for scanner status, chain, source, and incomplete
   scan reasons
 
-## PulseChain Gas Tracker
+## Gas Tracker
 
-The `/app` workspace includes an informational PulseChain gas tracker. It
-fetches current gas data through the server-side `/api/gas?chainId=369` route,
-updates when new PulseChain blocks are detected, and keeps only a small
-in-memory chart history in the browser.
+The `/app` workspace includes an informational gas tracker for the supported EVM
+chains in this app: PulseChain, BNB Smart Chain, Base, Polygon, Ethereum
+Mainnet, Arbitrum One, Optimism, and HyperEVM. It fetches current gas data
+through the server-side `/api/gas?chainId=...` route, updates when new blocks
+are detected on the selected chain, and keeps only a small in-memory chart
+history in the browser.
 
-The chart line is status-colored for recent PulseChain samples: green for the
-lower gas range, yellow for the medium range, and red for unusually high gas.
-When available, server-side Owlracle data is shown only as supplemental
-advisory tiers from recent blocks; RPC block samples remain the live source of
-truth. If an `OWLRACLE_API_KEY` is configured, it must stay server-side and must
-not use a `NEXT_PUBLIC_` prefix.
+The chart line is status-colored for recent samples: green for the lower gas
+range, yellow for the medium range, and red for unusually high gas. Thresholds
+are chain-specific and intentionally conservative. When available for
+PulseChain, server-side Owlracle data is shown only as supplemental advisory
+tiers from recent blocks; RPC block samples remain the live source of truth. If
+an `OWLRACLE_API_KEY` is configured, it must stay server-side and must not use a
+`NEXT_PUBLIC_` prefix.
 
-Typical transaction costs are estimates in PLS based on current gas data. The
-tracker does not affect revoke transaction execution, wallet gas estimation,
-preflight checks, or transaction submission. Actual wallet estimates may vary
-by contract.
+Typical transaction costs are estimates in the selected chain's native token
+based on current gas data. For L2 networks, wallet estimates may include L1 data
+fees beyond this gas-price estimate. The tracker does not affect revoke
+transaction execution, wallet gas estimation, preflight checks, or transaction
+submission. Actual wallet estimates may vary by contract.
 
 ## Security Model
 
@@ -153,7 +157,8 @@ Common groups:
 | Group | Variables |
 | --- | --- |
 | Site and wallet UI | `NEXT_PUBLIC_SITE_URL`, `NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID`, `NEXT_PUBLIC_TELEMETRY_ENABLED` |
-| Public wallet RPC overrides | `NEXT_PUBLIC_PULSECHAIN_RPC_URL`, `NEXT_PUBLIC_BSC_RPC_URL`, `NEXT_PUBLIC_BASE_RPC_URL`, `NEXT_PUBLIC_POLYGON_RPC_URL`, `NEXT_PUBLIC_MAINNET_RPC_URL`, `NEXT_PUBLIC_ETHEREUM_RPC_URL` |
+| Public wallet/gas watcher RPC overrides | `NEXT_PUBLIC_PULSECHAIN_RPC_URL`, `NEXT_PUBLIC_BSC_RPC_URL`, `NEXT_PUBLIC_BASE_RPC_URL`, `NEXT_PUBLIC_POLYGON_RPC_URL`, `NEXT_PUBLIC_MAINNET_RPC_URL`, `NEXT_PUBLIC_ETHEREUM_RPC_URL`, `NEXT_PUBLIC_ARBITRUM_RPC_URL`, `NEXT_PUBLIC_OPTIMISM_RPC_URL`, `NEXT_PUBLIC_HYPEREVM_RPC_URL` |
+| Server gas tracker RPC overrides | `PULSECHAIN_RPC_URL`, `BSC_RPC_URL`, `BASE_RPC_URL`, `POLYGON_RPC_URL`, `MAINNET_RPC_URL`, `ETHEREUM_RPC_URL`, `ARBITRUM_ONE_RPC_URL`, `ARBITRUM_RPC_URL`, `OPTIMISM_RPC_URL`, `OPTIMISM_MAINNET_RPC_URL`, `HYPEREVM_RPC_URL`, `HYPEREVM_MAINNET_RPC_URL`, `HYPERLIQUID_EVM_RPC_URL` |
 | Hosted BSC/Base/Polygon discovery | `BSC_EXPLORER_API_KEY`, `BASE_EXPLORER_API_KEY`, `POLYGON_EXPLORER_API_KEY`, `ETHERSCAN_API_KEY` |
 | Ethereum discovery | `MAINNET_RPC_URL`, `ETHEREUM_RPC_URL`, `ETHEREUM_EXPLORER_API_URL`, `ETHERSCAN_API_KEY` |
 | Arbitrum discovery | `ARBITRUM_ONE_RPC_URL`, `ARBITRUM_RPC_URL`, `ARBITRUM_EXPLORER_API_URL`, `ARBITRUM_EXPLORER_CHAIN_ID`, `ARBISCAN_API_KEY` |

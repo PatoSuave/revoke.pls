@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   classifyGasStatus,
+  gasStatusCopy,
   gasStatusChartColor,
   PULSECHAIN_GAS_STATUS_THRESHOLDS,
 } from "@/lib/gas/gas-status";
@@ -37,5 +38,14 @@ describe("gas status classification", () => {
     expect(gasStatusChartColor("elevated")).toBe("#fbbf24");
     expect(gasStatusChartColor("high")).toBe("#ff4d6d");
     expect(gasStatusChartColor("unavailable")).toBe("#8a8db8");
+  });
+
+  it("uses the selected chain name in status copy", () => {
+    expect(gasStatusCopy("elevated", "Base")).toBe(
+      "Gas is in the medium Base range.",
+    );
+    expect(gasStatusCopy("unavailable", "HyperEVM")).toBe(
+      "HyperEVM gas data is unavailable right now.",
+    );
   });
 });

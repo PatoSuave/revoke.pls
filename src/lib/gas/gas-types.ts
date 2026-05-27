@@ -43,6 +43,7 @@ export interface GasApiResponse {
   baseFeeGwei: string | null;
   priorityFeeGwei: string | null;
   typicalTransactions: TypicalGasTransaction[];
+  estimateNote?: string;
   advisory?: GasAdvisory;
   errors?: string[];
 }

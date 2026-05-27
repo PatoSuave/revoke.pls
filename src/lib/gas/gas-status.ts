@@ -37,11 +37,11 @@ export function gasStatusLabel(status: GasStatus): string {
   return "Unavailable";
 }
 
-export function gasStatusCopy(status: GasStatus): string {
-  if (status === "normal") return "Gas is in the lower PulseChain range.";
-  if (status === "elevated") return "Gas is in the medium PulseChain range.";
-  if (status === "high") return "Gas is unusually high for PulseChain.";
-  return "PulseChain gas data is unavailable right now.";
+export function gasStatusCopy(status: GasStatus, chainName = "this network"): string {
+  if (status === "normal") return `Gas is in the lower ${chainName} range.`;
+  if (status === "elevated") return `Gas is in the medium ${chainName} range.`;
+  if (status === "high") return `Gas is unusually high for ${chainName}.`;
+  return `${chainName} gas data is unavailable right now.`;
 }
 
 export function gasStatusChartColor(status: GasStatus): string {

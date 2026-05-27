@@ -2,35 +2,41 @@ import { NextResponse } from "next/server";
 
 import { approvalApiNoStoreHeaders } from "@/lib/approval-api-cache";
 import {
-  PULSECHAIN_GAS_CHAIN_ID,
-  type GasApiResponse,
-} from "@/lib/gas/gas-types";
-import { fetchPulseChainGasData } from "@/lib/gas/pulsechain-gas";
+  GAS_TRACKER_CHAIN_IDS,
+  getGasTrackerChainConfig,
+  type GasTrackerChainConfig,
+} from "@/lib/gas/gas-chains";
+import {
+  fetchGasData,
+  unavailableGasResponseForChain,
+} from "@/lib/gas/evm-gas";
+import type { GasApiResponse } from "@/lib/gas/gas-types";
 
 export const runtime = "nodejs";
 
-let inFlightPulseChainGasData: Promise<GasApiResponse> | null = null;
+const inFlightGasData = new Map<number, Promise<GasApiResponse>>();
 
 export async function GET(request: Request) {
   const url = new URL(request.url);
   const requestedChainId = Number(url.searchParams.get("chainId"));
+  const chain = getGasTrackerChainConfig(requestedChainId);
 
-  if (
-    !Number.isInteger(requestedChainId) ||
-    requestedChainId !== PULSECHAIN_GAS_CHAIN_ID
-  ) {
+  if (!Number.isInteger(requestedChainId) || !chain) {
     return NextResponse.json(
       {
         ok: false,
         status: "bad-request",
-        errors: ["Gas tracker currently supports PulseChain chainId=369."],
+        supportedChainIds: GAS_TRACKER_CHAIN_IDS,
+        errors: [
+          `Gas tracker supports chainId=${GAS_TRACKER_CHAIN_IDS.join(", ")}.`,
+        ],
       },
       { status: 400, headers: approvalApiNoStoreHeaders() },
     );
   }
 
   try {
-    const result = await fetchRoutePulseChainGasData();
+    const result = await fetchRouteGasData(chain);
     return NextResponse.json(result, {
       status: 200,
       headers: approvalApiNoStoreHeaders({
@@ -39,21 +45,9 @@ export async function GET(request: Request) {
     });
   } catch {
     return NextResponse.json(
-      {
-        chainId: PULSECHAIN_GAS_CHAIN_ID,
-        chainName: "PulseChain",
-        nativeCurrency: "PLS",
-        blockNumber: null,
-        source: "unavailable",
-        status: "unavailable",
-        updatedAt: new Date().toISOString(),
-        available: false,
-        gasPriceGwei: null,
-        baseFeeGwei: null,
-        priorityFeeGwei: null,
-        typicalTransactions: [],
-        errors: ["PulseChain gas data is unavailable."],
-      },
+      unavailableGasResponseForChain(chain, new Date().toISOString(), [
+        `${chain.chainName} gas data is unavailable.`,
+      ]),
       {
         status: 200,
         headers: approvalApiNoStoreHeaders({
@@ -64,14 +58,17 @@ export async function GET(request: Request) {
   }
 }
 
-function fetchRoutePulseChainGasData(): Promise<GasApiResponse> {
-  if (!inFlightPulseChainGasData) {
-    inFlightPulseChainGasData = fetchPulseChainGasData({
-      includeAdvisory: true,
-    }).finally(() => {
-      inFlightPulseChainGasData = null;
-    });
-  }
+function fetchRouteGasData(
+  chain: GasTrackerChainConfig,
+): Promise<GasApiResponse> {
+  const existing = inFlightGasData.get(chain.chainId);
+  if (existing) return existing;
 
-  return inFlightPulseChainGasData;
+  const promise = fetchGasData(chain, {
+    includeAdvisory: chain.advisoryProvider === "owlracle-pulse",
+  }).finally(() => {
+    inFlightGasData.delete(chain.chainId);
+  });
+  inFlightGasData.set(chain.chainId, promise);
+  return promise;
 }
