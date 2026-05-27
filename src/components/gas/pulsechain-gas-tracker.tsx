@@ -200,7 +200,8 @@ export function PulseChainGasTrackerView({
                     </div>
                     <p className="mt-1 max-w-2xl text-sm leading-6 text-pulse-muted">
                       Gas is the network fee required to submit transactions.
-                      Revoke.PLS does not add an extra revoke fee.
+                      This tracker is informational and does not add fees or
+                      change wallet gas estimates.
                     </p>
                   </div>
                 </div>
