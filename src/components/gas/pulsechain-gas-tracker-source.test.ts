@@ -33,6 +33,8 @@ describe("PulseChain gas tracker component source", () => {
     expect(SOURCE).toContain("bg-pulse-yellow");
     expect(SOURCE).toContain("prefers-reduced-motion");
     expect(SOURCE).toContain("requestAnimationFrame");
+    expect(SOURCE).toContain("buildSmoothSegmentPath");
+    expect(SOURCE).toContain("stroke-dashoffset");
   });
 
   it("labels Owlracle advisory data as supplemental", () => {
