@@ -545,6 +545,7 @@ function GasLineChart({ samples }: { samples: readonly GasChartSample[] }) {
               y2={y}
               stroke="rgba(148, 163, 184, 0.14)"
               strokeWidth="1"
+              strokeDasharray="3 8"
             />
           );
         })}
@@ -565,22 +566,30 @@ function GasLineChart({ samples }: { samples: readonly GasChartSample[] }) {
             strokeLinejoin="round"
             strokeWidth="3"
             filter={segment.isLatest ? "url(#pulseGasGlow)" : undefined}
-          />
-        ))}
-        {chart.points.map((point, index) => (
-          <circle
-            key={`${point.x}-${point.y}-${index}`}
-            cx={point.x}
-            cy={point.y}
-            r={index === chart.points.length - 1 ? 5 : 3}
-            fill={point.color}
-            stroke="#07111f"
-            strokeWidth="2"
-            opacity={index === chart.points.length - 1 ? 1 : 0.72}
+            vectorEffect="non-scaling-stroke"
           />
         ))}
         {!prefersReducedMotion ? (
           <>
+            <path
+              d={chart.linePath}
+              fill="none"
+              stroke={chart.latestColor}
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeOpacity="0.34"
+              strokeWidth="5"
+              strokeDasharray="1 26"
+              vectorEffect="non-scaling-stroke"
+            >
+              <animate
+                attributeName="stroke-dashoffset"
+                from="28"
+                to="0"
+                dur="2s"
+                repeatCount="indefinite"
+              />
+            </path>
             <line
               x1="42"
               x2="42"
@@ -621,6 +630,18 @@ function GasLineChart({ samples }: { samples: readonly GasChartSample[] }) {
               />
             </circle>
           </>
+        ) : null}
+        {latestPoint ? (
+          <circle
+            cx={latestPoint.x}
+            cy={latestPoint.y}
+            r="5"
+            fill={latestPoint.color}
+            stroke="#07111f"
+            strokeWidth="2"
+            filter="url(#pulseGasGlow)"
+            vectorEffect="non-scaling-stroke"
+          />
         ) : null}
       </svg>
       <div className="mt-2 flex flex-col gap-2 text-xs text-pulse-muted sm:flex-row sm:items-center sm:justify-between">
@@ -795,6 +816,12 @@ function useAnimatedSamples(
   return animatedSamples;
 }
 
+interface ChartPoint {
+  x: number;
+  y: number;
+  color: string;
+}
+
 function buildChart(samples: readonly GasChartSample[]) {
   const values = samples.map((sample) => sample.gasPriceGwei);
   const min = Math.min(...values);
@@ -813,9 +840,7 @@ function buildChart(samples: readonly GasChartSample[]) {
     const y = top + height - ((sample.gasPriceGwei - low) / range) * height;
     return { x, y, color: gasStatusChartColor(sample.status) };
   });
-  const linePath = points
-    .map((point, index) => `${index === 0 ? "M" : "L"} ${point.x} ${point.y}`)
-    .join(" ");
+  const linePath = buildSmoothLinePath(points);
   const last = points.at(-1);
   const first = points[0];
   const areaPath =
@@ -824,10 +849,9 @@ function buildChart(samples: readonly GasChartSample[]) {
       : "";
 
   const segments = points.slice(1).map((point, index) => {
-    const previous = points[index];
     return {
       key: `${samples[index + 1].blockNumber}-${index}`,
-      path: `M ${previous.x} ${previous.y} L ${point.x} ${point.y}`,
+      path: buildSmoothSegmentPath(points, index),
       color: point.color,
       isLatest: index === points.length - 2,
     };
@@ -843,4 +867,50 @@ function buildChart(samples: readonly GasChartSample[]) {
     minLabel: `${low.toFixed(2)} Gwei`,
     maxLabel: `${high.toFixed(2)} Gwei`,
   };
+}
+
+function buildSmoothLinePath(points: readonly ChartPoint[]): string {
+  if (points.length === 0) return "";
+  return points
+    .slice(1)
+    .reduce(
+      (path, _point, index) =>
+        `${path} ${buildSmoothSegmentPath(points, index).replace(/^M [^C]+ /, "")}`,
+      `M ${points[0].x} ${points[0].y}`,
+    );
+}
+
+function buildSmoothSegmentPath(
+  points: readonly ChartPoint[],
+  index: number,
+): string {
+  const current = points[index];
+  const next = points[index + 1];
+  if (!current || !next) return "";
+
+  const previous = points[index - 1] ?? current;
+  const after = points[index + 2] ?? next;
+  const tension = 0.82;
+  const cp1 = {
+    x: current.x + ((next.x - previous.x) / 6) * tension,
+    y: clamp(
+      current.y + ((next.y - previous.y) / 6) * tension,
+      Math.min(current.y, next.y),
+      Math.max(current.y, next.y),
+    ),
+  };
+  const cp2 = {
+    x: next.x - ((after.x - current.x) / 6) * tension,
+    y: clamp(
+      next.y - ((after.y - current.y) / 6) * tension,
+      Math.min(current.y, next.y),
+      Math.max(current.y, next.y),
+    ),
+  };
+
+  return `M ${current.x} ${current.y} C ${cp1.x} ${cp1.y}, ${cp2.x} ${cp2.y}, ${next.x} ${next.y}`;
+}
+
+function clamp(value: number, min: number, max: number): number {
+  return Math.min(max, Math.max(min, value));
 }
