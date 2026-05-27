@@ -276,7 +276,6 @@ export function PulseChainGasTrackerView({
               state={state}
               heartbeat={heartbeat}
             />
-            <GasAdvisoryCard advisory={sample?.advisory} />
           </div>
 
           <div className="border-t border-pulse-border/70 p-4 sm:p-5 lg:p-6">
@@ -350,6 +349,8 @@ function CurrentGasCard({
         />
       </div>
 
+      <GasAdvisoryCompact advisory={sample?.advisory} />
+
       {state === "unavailable" || watcherError ? (
         <div className="mt-4 rounded-xl border border-pulse-red/30 bg-pulse-red/10 p-3 text-sm leading-6 text-pulse-muted">
           {sample?.errors?.[0] ?? watcherError ?? "PulseChain gas data is unavailable."}
@@ -414,60 +415,52 @@ function GasChartCard({
   );
 }
 
-function GasAdvisoryCard({ advisory }: { advisory: GasAdvisory | undefined }) {
+function GasAdvisoryCompact({
+  advisory,
+}: {
+  advisory: GasAdvisory | undefined;
+}) {
+  if (!advisory?.tiers.length) return null;
+
   return (
-    <div className="rounded-2xl border border-pulse-border bg-pulse-bg/45 p-4 sm:p-5">
-      <div className="flex items-start justify-between gap-3">
-        <div>
-          <h3 className="text-lg font-semibold text-pulse-text">
-            Advisory Tiers
-          </h3>
-          <p className="mt-1 text-sm leading-6 text-pulse-muted">
-            Supplemental Owlracle estimates from recent PulseChain blocks. Live
-            block samples still come from PulseChain RPC.
-          </p>
-        </div>
-        <span className="rounded-full border border-pulse-border bg-pulse-panel/70 px-3 py-1 text-xs text-pulse-muted">
-          Optional
+    <div className="mt-5 rounded-xl border border-pulse-border/70 bg-pulse-bg/35 p-3">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <h4 className="text-sm font-semibold text-pulse-text">
+          Advisory tiers
+        </h4>
+        <span className="rounded-full border border-pulse-border bg-pulse-panel/70 px-2.5 py-1 text-[11px] text-pulse-muted">
+          Owlracle
         </span>
       </div>
-
-      {advisory?.tiers.length ? (
-        <div className="mt-4 grid gap-2">
-          {advisory.tiers.map((tier) => (
-            <div
-              key={tier.label}
-              className="flex items-center justify-between gap-3 rounded-xl border border-pulse-border/70 bg-pulse-bg/45 px-3 py-2 text-sm"
-            >
-              <span className="flex min-w-0 items-center gap-2 text-pulse-muted">
-                <span
-                  className={`h-2 w-2 rounded-full ${
-                    tier.label === "Low"
-                      ? "bg-pulse-green"
-                      : tier.label === "Medium"
-                        ? "bg-pulse-yellow"
-                        : "bg-pulse-red"
-                  }`}
-                  aria-hidden="true"
-                />
-                {tier.label} ({Math.round(tier.acceptance * 100)}%)
-              </span>
-              <span className="font-mono text-pulse-text">
-                {tier.gasPriceGwei} Gwei
-              </span>
-            </div>
-          ))}
-          <p className="text-xs leading-5 text-pulse-muted">
-            Updated {formatRelativeTime(advisory.updatedAt)}. Avg block time{" "}
-            {advisory.avgBlockTimeSeconds?.toFixed(1) ?? "--"}s.
-          </p>
-        </div>
-      ) : (
-        <div className="mt-4 rounded-xl border border-pulse-border/70 bg-pulse-bg/40 p-3 text-sm leading-6 text-pulse-muted">
-          Advisory data is unavailable. The live RPC gas sample above remains
-          the source of truth.
-        </div>
-      )}
+      <div className="mt-3 grid gap-2">
+        {advisory.tiers.map((tier) => (
+          <div
+            key={tier.label}
+            className="flex items-center justify-between gap-3 text-sm"
+          >
+            <span className="flex min-w-0 items-center gap-2 text-pulse-muted">
+              <span
+                className={`h-2 w-2 rounded-full ${
+                  tier.label === "Low"
+                    ? "bg-pulse-green"
+                    : tier.label === "Medium"
+                      ? "bg-pulse-yellow"
+                      : "bg-pulse-red"
+                }`}
+                aria-hidden="true"
+              />
+              {tier.label} ({Math.round(tier.acceptance * 100)}%)
+            </span>
+            <span className="whitespace-nowrap font-mono text-pulse-text">
+              {tier.gasPriceGwei} Gwei
+            </span>
+          </div>
+        ))}
+      </div>
+      <p className="mt-3 text-xs leading-5 text-pulse-muted">
+        Supplemental Owlracle estimates from recent blocks. RPC remains source
+        of truth. Updated {formatRelativeTime(advisory.updatedAt)}.
+      </p>
     </div>
   );
 }

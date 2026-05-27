@@ -38,8 +38,8 @@ describe("PulseChain gas tracker component source", () => {
   });
 
   it("labels Owlracle advisory data as supplemental", () => {
-    expect(SOURCE).toContain("Advisory Tiers");
+    expect(SOURCE).toContain("Advisory tiers");
     expect(SOURCE).toContain("Supplemental Owlracle estimates");
-    expect(SOURCE).toContain("source of truth");
+    expect(SOURCE).toMatch(/RPC remains source\s+of truth/);
   });
 });
