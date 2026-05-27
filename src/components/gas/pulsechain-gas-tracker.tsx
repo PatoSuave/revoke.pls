@@ -135,7 +135,7 @@ export function PulseChainGasTracker() {
       if (document.hidden) return;
       setNow(Date.now());
       setHeartbeat((current) => current + 1);
-    }, 3_000);
+    }, 2_000);
     return () => window.clearInterval(interval);
   }, []);
 
@@ -200,7 +200,7 @@ export function PulseChainGasTrackerView({
                 />
                 <InfoRow
                   label="Refresh mode"
-                  value="New blocks + 3s heartbeat"
+                  value="New blocks + 2s heartbeat"
                   valueClassName="text-pulse-green"
                 />
               </div>
@@ -370,8 +370,8 @@ function GasChartCard({
             Live Gas Chart
           </h3>
           <p className="mt-1 text-sm text-pulse-muted">
-            Recent PulseChain block samples in Gwei. The pulse shows the app is
-            still watching for the next block.
+            Recent PulseChain block samples in Gwei. The moving line shows the
+            app is still watching for the next block.
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
@@ -393,7 +393,7 @@ function GasChartCard({
             heartbeat={heartbeat}
           />
         ) : (
-          <GasLineChart samples={history} heartbeat={heartbeat} />
+          <GasLineChart samples={history} />
         )}
       </div>
     </div>
@@ -433,16 +433,9 @@ function TypicalTransactionGrid({ sample }: { sample: GasApiResponse | null }) {
   );
 }
 
-function GasLineChart({
-  samples,
-  heartbeat,
-}: {
-  samples: readonly GasChartSample[];
-  heartbeat: number;
-}) {
+function GasLineChart({ samples }: { samples: readonly GasChartSample[] }) {
   const chart = useMemo(() => buildChart(samples), [samples]);
   const latest = samples.at(-1);
-  const scanX = 42 + ((heartbeat % 12) / 11) * 578;
 
   return (
     <div className="h-full min-h-56 w-full">
@@ -500,21 +493,44 @@ function GasLineChart({
           />
         ))}
         <line
-          x1={scanX}
-          x2={scanX}
+          x1="42"
+          x2="42"
           y1="18"
           y2="208"
           stroke="#34d399"
           strokeOpacity="0.35"
           strokeWidth="2"
-        />
+        >
+          <animate
+            attributeName="x1"
+            from="42"
+            to="620"
+            dur="2s"
+            repeatCount="indefinite"
+          />
+          <animate
+            attributeName="x2"
+            from="42"
+            to="620"
+            dur="2s"
+            repeatCount="indefinite"
+          />
+        </line>
         <circle
-          cx={scanX}
+          cx="42"
           cy="18"
           r="4"
           fill="#34d399"
           opacity="0.85"
-        />
+        >
+          <animate
+            attributeName="cx"
+            from="42"
+            to="620"
+            dur="2s"
+            repeatCount="indefinite"
+          />
+        </circle>
       </svg>
       <div className="mt-2 flex items-center justify-between gap-3 text-xs text-pulse-muted">
         <span>Recent blocks</span>

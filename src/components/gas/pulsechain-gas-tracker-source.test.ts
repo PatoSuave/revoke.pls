@@ -19,4 +19,11 @@ describe("PulseChain gas tracker component source", () => {
     expect(SOURCE).toContain("Revoke.PLS does not add an extra revoke fee");
     expect(SOURCE).not.toMatch(/writeContract|sendTransaction|signTransaction/);
   });
+
+  it("uses a two-second visual heartbeat without fake samples", () => {
+    expect(SOURCE).toContain("2_000");
+    expect(SOURCE).toContain("New blocks + 2s heartbeat");
+    expect(SOURCE).toContain("<animate");
+    expect(SOURCE).toContain('dur="2s"');
+  });
 });
