@@ -1,10 +1,15 @@
 import { NextResponse } from "next/server";
 
 import { approvalApiNoStoreHeaders } from "@/lib/approval-api-cache";
-import { PULSECHAIN_GAS_CHAIN_ID } from "@/lib/gas/gas-types";
+import {
+  PULSECHAIN_GAS_CHAIN_ID,
+  type GasApiResponse,
+} from "@/lib/gas/gas-types";
 import { fetchPulseChainGasData } from "@/lib/gas/pulsechain-gas";
 
 export const runtime = "nodejs";
+
+let inFlightPulseChainGasData: Promise<GasApiResponse> | null = null;
 
 export async function GET(request: Request) {
   const url = new URL(request.url);
@@ -25,10 +30,7 @@ export async function GET(request: Request) {
   }
 
   try {
-    const result = await fetchPulseChainGasData({
-      signal: request.signal,
-      includeAdvisory: true,
-    });
+    const result = await fetchRoutePulseChainGasData();
     return NextResponse.json(result, {
       status: 200,
       headers: approvalApiNoStoreHeaders({
@@ -60,4 +62,16 @@ export async function GET(request: Request) {
       },
     );
   }
+}
+
+function fetchRoutePulseChainGasData(): Promise<GasApiResponse> {
+  if (!inFlightPulseChainGasData) {
+    inFlightPulseChainGasData = fetchPulseChainGasData({
+      includeAdvisory: true,
+    }).finally(() => {
+      inFlightPulseChainGasData = null;
+    });
+  }
+
+  return inFlightPulseChainGasData;
 }
