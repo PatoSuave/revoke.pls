@@ -37,9 +37,9 @@ export default function AppPage() {
       <SiteHeader />
       <main className="bg-pulse-bg">
         <AppWorkspaceIntro />
-        <PulseChainGasTracker />
         <AntiPhishingBanner />
         <ApprovalScanner />
+        <PulseChainGasTracker />
         <PulseChainResourceLinks compact />
       </main>
       <SiteFooter />

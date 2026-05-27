@@ -177,125 +177,207 @@ export function PulseChainGasTrackerView({
   heartbeat,
   now = Date.now(),
 }: TrackerViewProps) {
+  const [detailsOpen, setDetailsOpen] = useState(false);
   const status = isStale ? "elevated" : sample?.status ?? "unavailable";
   const liveLabel = isStale ? "Stale" : state === "loading" ? "Loading" : "Live";
+  const gasPriceLabel =
+    sample?.gasPriceGwei ?? (state === "loading" ? "..." : "Unavailable");
+  const revokeEstimate = getTransactionEstimate(
+    sample,
+    "Token approval / revoke",
+  );
+  const detailsId = "pulsechain-gas-details";
 
   return (
-    <section className="border-b border-pulse-border/50 bg-pulse-bg py-8 sm:py-10">
+    <section className="border-b border-pulse-border/50 bg-pulse-bg py-4 sm:py-5">
       <div className="mx-auto max-w-6xl px-4 sm:px-6">
         <div className="overflow-hidden rounded-2xl border border-pulse-border bg-pulse-panel/70 shadow-glow">
-          <div className="border-b border-pulse-border/70 bg-pulse-bg/35 p-4 sm:p-5 lg:p-6">
-            <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
-              <div className="min-w-0">
-                <div className="flex flex-wrap items-center gap-3">
-                  <span className="inline-flex h-12 w-12 items-center justify-center rounded-2xl border border-pulse-cyan/25 bg-pulse-cyan/10 text-2xl text-pulse-cyan">
-                    <span aria-hidden="true">PLS</span>
-                  </span>
+          <div className="grid gap-4 p-4 sm:p-5 lg:grid-cols-[minmax(0,1fr)_minmax(210px,260px)_auto] lg:items-center">
+            <div className="min-w-0">
+              <div className="flex flex-wrap items-center gap-2">
+                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-pulse-cyan">
+                  Network fee
+                </p>
+                <StatusPill status={status} label={liveLabel} />
+                <LiveHeartbeat heartbeat={heartbeat} compact />
+              </div>
+              <h2 className="mt-2 text-xl font-bold text-pulse-text sm:text-2xl">
+                PulseChain fee monitor
+              </h2>
+              <p className="mt-1 max-w-3xl text-sm leading-6 text-pulse-muted">
+                Live gas context for estimating revoke costs. Wallet estimates
+                still control actual transaction gas. This monitor is
+                informational and does not add fees or change wallet gas
+                estimates.
+              </p>
+            </div>
+
+            <div className="grid grid-cols-2 gap-x-4 gap-y-3 rounded-xl border border-pulse-border/70 bg-pulse-bg/45 p-3 text-xs text-pulse-muted lg:grid-cols-1">
+              <CompactMetric label="Current gas" value={gasPriceLabel} suffix="Gwei" />
+              <CompactMetric
+                label="Estimated revoke"
+                value={revokeEstimate}
+                suffix={revokeEstimate === "Pending" ? undefined : "PLS"}
+                valueClassName="text-pulse-cyan"
+              />
+              <CompactMetric
+                label="Latest block"
+                value={formatBlockNumber(sample?.blockNumber ?? null)}
+              />
+              <CompactMetric
+                label="Updated"
+                value={formatRelativeTime(sample?.updatedAt ?? null, now)}
+              />
+            </div>
+
+            <div className="grid gap-3 sm:grid-cols-[minmax(180px,1fr)_auto] sm:items-center lg:grid-cols-1">
+              <MiniGasSparkline
+                samples={history}
+                state={state}
+                heartbeat={heartbeat}
+              />
+              <button
+                type="button"
+                aria-controls={detailsId}
+                aria-expanded={detailsOpen}
+                onClick={() => setDetailsOpen((open) => !open)}
+                className="inline-flex min-h-10 items-center justify-center rounded-xl border border-pulse-cyan/35 bg-pulse-cyan/10 px-4 py-2 text-xs font-semibold text-pulse-cyan transition hover:bg-pulse-cyan/15"
+              >
+                {detailsOpen ? "Hide live chart" : "View live chart"}
+              </button>
+            </div>
+          </div>
+
+          {state === "unavailable" || watcherError || isStale ? (
+            <div className="border-t border-pulse-border/70 px-4 py-3 text-sm leading-6 text-pulse-muted sm:px-5">
+              {state === "unavailable" || watcherError
+                ? sample?.errors?.[0] ??
+                  watcherError ??
+                  "PulseChain gas data is unavailable."
+                : "No fresh PulseChain block has been detected recently. The latest sample may be stale."}
+            </div>
+          ) : null}
+
+          {detailsOpen ? (
+            <div id={detailsId} className="border-t border-pulse-border/70">
+              <div className="border-b border-pulse-border/70 bg-pulse-bg/25 p-4 sm:p-5 lg:p-6">
+                <ChainSelectorCompact />
+              </div>
+
+              <div className="grid gap-4 p-4 sm:p-5 lg:grid-cols-[1.05fr_1.4fr] lg:p-6">
+                <CurrentGasCard
+                  sample={sample}
+                  state={state}
+                  isStale={isStale}
+                  watcherError={watcherError}
+                />
+                <GasChartCard
+                  history={history}
+                  sample={sample}
+                  state={state}
+                  heartbeat={heartbeat}
+                />
+              </div>
+
+              <div className="border-t border-pulse-border/70 p-4 sm:p-5 lg:p-6">
+                <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
                   <div>
-                    <div className="flex flex-wrap items-center gap-2">
-                      <h2 className="text-2xl font-bold text-pulse-text sm:text-3xl">
-                        Gas Tracker
-                      </h2>
-                      <StatusPill status={status} label={liveLabel} />
-                    </div>
-                    <p className="mt-1 max-w-2xl text-sm leading-6 text-pulse-muted">
-                      Gas is the network fee required to submit transactions.
-                      This tracker is informational and does not add fees or
-                      change wallet gas estimates.
+                    <h3 className="text-lg font-semibold text-pulse-text">
+                      Estimated Transaction Costs
+                    </h3>
+                    <p className="mt-1 text-sm leading-6 text-pulse-muted">
+                      Costs are estimated in PLS using current gas data. Actual
+                      wallet estimates may vary by contract.
                     </p>
                   </div>
                 </div>
-              </div>
-
-              <div className="grid gap-2 rounded-2xl border border-pulse-border/70 bg-pulse-bg/55 p-3 text-sm text-pulse-muted sm:min-w-72">
-                <InfoRow
-                  label="Last updated"
-                  value={formatRelativeTime(sample?.updatedAt ?? null, now)}
-                />
-                <InfoRow
-                  label="Refresh mode"
-                  value="New blocks + 2s heartbeat"
-                  valueClassName="text-pulse-green"
-                />
+                <TypicalTransactionGrid sample={sample} />
               </div>
             </div>
-
-            <div className="mt-6">
-              <p className="mb-3 text-sm font-semibold text-pulse-text">
-                Select Chain
-              </p>
-              <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-6">
-                <button
-                  type="button"
-                  className="flex min-h-16 items-center justify-between rounded-xl border border-pulse-cyan/70 bg-pulse-cyan/10 px-4 py-3 text-left shadow-glow"
-                  aria-pressed="true"
-                >
-                  <span>
-                    <span className="block font-semibold text-pulse-text">
-                      PulseChain
-                    </span>
-                    <span className="block text-sm text-pulse-muted">PLS</span>
-                  </span>
-                  <span className="rounded-full bg-pulse-green/15 px-2 py-1 text-xs font-semibold text-pulse-green">
-                    Active
-                  </span>
-                </button>
-                {COMING_SOON_CHAINS.map((chain) => (
-                  <button
-                    key={chain}
-                    type="button"
-                    disabled
-                    className="flex min-h-16 items-center justify-between rounded-xl border border-pulse-border/70 bg-pulse-bg/35 px-4 py-3 text-left opacity-60"
-                  >
-                    <span>
-                      <span className="block font-semibold text-pulse-text">
-                        {chain}
-                      </span>
-                      <span className="block text-sm text-pulse-muted">
-                        Later
-                      </span>
-                    </span>
-                    <span className="rounded-full border border-pulse-border px-2 py-1 text-xs text-pulse-muted">
-                      Soon
-                    </span>
-                  </button>
-                ))}
-              </div>
-            </div>
-          </div>
-
-          <div className="grid gap-4 p-4 sm:p-5 lg:grid-cols-[1.05fr_1.4fr] lg:p-6">
-            <CurrentGasCard
-              sample={sample}
-              state={state}
-              isStale={isStale}
-              watcherError={watcherError}
-            />
-            <GasChartCard
-              history={history}
-              sample={sample}
-              state={state}
-              heartbeat={heartbeat}
-            />
-          </div>
-
-          <div className="border-t border-pulse-border/70 p-4 sm:p-5 lg:p-6">
-            <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
-              <div>
-                <h3 className="text-lg font-semibold text-pulse-text">
-                  Typical Transaction Costs
-                </h3>
-                <p className="mt-1 text-sm leading-6 text-pulse-muted">
-                  Costs are estimated in PLS using current gas data. Actual
-                  wallet estimates may vary by contract.
-                </p>
-              </div>
-            </div>
-            <TypicalTransactionGrid sample={sample} />
-          </div>
+          ) : null}
         </div>
       </div>
     </section>
+  );
+}
+
+function getTransactionEstimate(
+  sample: GasApiResponse | null,
+  label: string,
+): string {
+  const transaction = sample?.typicalTransactions.find(
+    (entry) => entry.label === label,
+  );
+  return transaction?.costNative ?? "Pending";
+}
+
+function CompactMetric({
+  label,
+  value,
+  suffix,
+  valueClassName = "text-pulse-text",
+}: {
+  label: string;
+  value: string;
+  suffix?: string;
+  valueClassName?: string;
+}) {
+  return (
+    <div className="min-w-0">
+      <span className="block truncate">{label}</span>
+      <span
+        className={`mt-1 block min-w-0 break-words font-mono font-semibold ${valueClassName}`}
+      >
+        {value}
+        {suffix && value !== "..." && value !== "Unavailable" ? (
+          <span className="ml-1 font-sans text-[11px] font-medium text-pulse-muted">
+            {suffix}
+          </span>
+        ) : null}
+      </span>
+    </div>
+  );
+}
+
+function ChainSelectorCompact() {
+  return (
+    <div>
+      <p className="mb-3 text-sm font-semibold text-pulse-text">
+        Select Chain
+      </p>
+      <div className="flex gap-2 overflow-x-auto pb-1">
+        <button
+          type="button"
+          className="inline-flex min-h-11 shrink-0 items-center gap-3 rounded-xl border border-pulse-cyan/70 bg-pulse-cyan/10 px-4 py-2 text-left shadow-glow"
+          aria-pressed="true"
+        >
+          <span>
+            <span className="block text-sm font-semibold text-pulse-text">
+              PulseChain
+            </span>
+            <span className="block text-xs text-pulse-muted">PLS</span>
+          </span>
+          <span className="rounded-full bg-pulse-green/15 px-2 py-1 text-[11px] font-semibold text-pulse-green">
+            Active
+          </span>
+        </button>
+        {COMING_SOON_CHAINS.map((chain) => (
+          <button
+            key={chain}
+            type="button"
+            disabled
+            className="inline-flex min-h-11 shrink-0 items-center gap-2 rounded-xl border border-pulse-border/70 bg-pulse-bg/35 px-3 py-2 text-left opacity-60"
+          >
+            <span className="text-sm font-semibold text-pulse-text">
+              {chain}
+            </span>
+            <span className="rounded-full border border-pulse-border px-2 py-0.5 text-[11px] text-pulse-muted">
+              Soon
+            </span>
+          </button>
+        ))}
+      </div>
+    </div>
   );
 }
 
@@ -499,6 +581,151 @@ function TypicalTransactionGrid({ sample }: { sample: GasApiResponse | null }) {
   );
 }
 
+function MiniGasSparkline({
+  samples,
+  state,
+  heartbeat,
+}: {
+  samples: readonly GasChartSample[];
+  state: LoadState;
+  heartbeat: number;
+}) {
+  const prefersReducedMotion = usePrefersReducedMotion();
+  const animatedSamples = useAnimatedSamples(samples, prefersReducedMotion);
+  const chart = useMemo(
+    () => buildMiniChart(animatedSamples),
+    [animatedSamples],
+  );
+  const latestPoint = chart.points.at(-1);
+
+  if (state === "loading" && samples.length === 0) {
+    return <MiniSparklineEmpty label="Loading gas" heartbeat={heartbeat} />;
+  }
+
+  if (samples.length < 2) {
+    return <MiniSparklineEmpty label="Watching blocks" heartbeat={heartbeat} />;
+  }
+
+  return (
+    <div className="min-h-16 overflow-hidden rounded-xl border border-pulse-border/70 bg-pulse-bg/45 p-2">
+      <svg
+        viewBox="0 0 220 64"
+        role="img"
+        aria-label="Compact PulseChain gas sparkline"
+        className="h-12 w-full"
+        preserveAspectRatio="none"
+      >
+        <defs>
+          <linearGradient id="pulseGasMiniArea" x1="0" x2="0" y1="0" y2="1">
+            <stop offset="0%" stopColor={chart.latestColor} stopOpacity="0.24" />
+            <stop offset="100%" stopColor={chart.latestColor} stopOpacity="0" />
+          </linearGradient>
+          <filter
+            id="pulseGasMiniGlow"
+            x="-20%"
+            y="-30%"
+            width="140%"
+            height="160%"
+          >
+            <feGaussianBlur stdDeviation="3" result="blur" />
+            <feMerge>
+              <feMergeNode in="blur" />
+              <feMergeNode in="SourceGraphic" />
+            </feMerge>
+          </filter>
+        </defs>
+        <path d={chart.areaPath} fill="url(#pulseGasMiniArea)" />
+        {chart.segments.map((segment) => (
+          <path
+            key={segment.key}
+            d={segment.path}
+            fill="none"
+            stroke={segment.color}
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth="3"
+            filter={segment.isLatest ? "url(#pulseGasMiniGlow)" : undefined}
+            vectorEffect="non-scaling-stroke"
+          />
+        ))}
+        {!prefersReducedMotion ? (
+          <path
+            d={chart.linePath}
+            fill="none"
+            stroke={chart.latestColor}
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeOpacity="0.36"
+            strokeWidth="4"
+            strokeDasharray="1 18"
+            vectorEffect="non-scaling-stroke"
+          >
+            <animate
+              attributeName="stroke-dashoffset"
+              from="20"
+              to="0"
+              dur="2s"
+              repeatCount="indefinite"
+            />
+          </path>
+        ) : null}
+        {latestPoint ? (
+          <circle
+            cx={latestPoint.x}
+            cy={latestPoint.y}
+            r="4"
+            fill={latestPoint.color}
+            stroke="#07111f"
+            strokeWidth="2"
+            filter="url(#pulseGasMiniGlow)"
+            vectorEffect="non-scaling-stroke"
+          />
+        ) : null}
+      </svg>
+    </div>
+  );
+}
+
+function MiniSparklineEmpty({
+  label,
+  heartbeat,
+}: {
+  label: string;
+  heartbeat: number;
+}) {
+  return (
+    <div className="grid min-h-16 grid-cols-[minmax(0,1fr)_auto] items-center gap-3 rounded-xl border border-pulse-border/70 bg-pulse-bg/45 p-2 text-xs text-pulse-muted">
+      <svg
+        viewBox="0 0 220 56"
+        role="img"
+        aria-label="Compact PulseChain gas sparkline"
+        className="h-12 min-w-0"
+        preserveAspectRatio="none"
+      >
+        <path
+          d="M 8 32 C 34 24, 55 38, 82 30 S 130 20, 156 31 S 196 40, 212 26"
+          fill="none"
+          stroke="#14f195"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          strokeOpacity="0.7"
+          strokeWidth="3"
+          vectorEffect="non-scaling-stroke"
+        />
+        <path
+          d="M 8 32 C 34 24, 55 38, 82 30 S 130 20, 156 31 S 196 40, 212 26 L 212 52 L 8 52 Z"
+          fill="#14f195"
+          opacity="0.08"
+        />
+      </svg>
+      <span className="grid justify-items-end gap-1">
+        <span>{label}</span>
+        <LiveHeartbeat heartbeat={heartbeat} compact />
+      </span>
+    </div>
+  );
+}
+
 function GasLineChart({ samples }: { samples: readonly GasChartSample[] }) {
   const prefersReducedMotion = usePrefersReducedMotion();
   const animatedSamples = useAnimatedSamples(samples, prefersReducedMotion);
@@ -677,18 +904,28 @@ function ChartEmptyState({
   );
 }
 
-function LiveHeartbeat({ heartbeat }: { heartbeat: number }) {
+function LiveHeartbeat({
+  heartbeat,
+  compact = false,
+}: {
+  heartbeat: number;
+  compact?: boolean;
+}) {
   const active = heartbeat % 2 === 0;
 
   return (
-    <span className="inline-flex items-center gap-2 rounded-full border border-pulse-green/30 bg-pulse-green/10 px-3 py-1 text-xs font-semibold text-pulse-green">
+    <span
+      className={`inline-flex items-center gap-2 rounded-full border border-pulse-green/30 bg-pulse-green/10 text-xs font-semibold text-pulse-green ${
+        compact ? "px-2.5 py-0.5" : "px-3 py-1"
+      }`}
+    >
       <span
         className={`h-2 w-2 rounded-full bg-pulse-green transition ${
           active ? "scale-110 opacity-100" : "scale-75 opacity-45"
         }`}
         aria-hidden="true"
       />
-      Watching
+      {compact ? "Live" : "Watching"}
     </span>
   );
 }
@@ -860,6 +1097,59 @@ function buildChart(samples: readonly GasChartSample[]) {
     latestColor,
     minLabel: `${low.toFixed(2)} Gwei`,
     maxLabel: `${high.toFixed(2)} Gwei`,
+  };
+}
+
+function buildMiniChart(samples: readonly GasChartSample[]) {
+  if (samples.length === 0) {
+    return {
+      points: [],
+      segments: [],
+      linePath: "",
+      areaPath: "",
+      latestColor: gasStatusChartColor("unavailable"),
+    };
+  }
+
+  const values = samples.map((sample) => sample.gasPriceGwei);
+  const min = Math.min(...values);
+  const max = Math.max(...values);
+  const padding = Math.max((max - min) * 0.2, max * 0.08, 1);
+  const low = Math.max(0, min - padding);
+  const high = max + padding;
+  const width = 200;
+  const height = 42;
+  const left = 10;
+  const top = 10;
+  const denominator = Math.max(1, samples.length - 1);
+  const range = Math.max(1, high - low);
+  const points = samples.map((sample, index) => {
+    const x = left + (index / denominator) * width;
+    const y = top + height - ((sample.gasPriceGwei - low) / range) * height;
+    return { x, y, color: gasStatusChartColor(sample.status) };
+  });
+  const linePath = buildSmoothLinePath(points);
+  const last = points.at(-1);
+  const first = points[0];
+  const areaPath =
+    first && last
+      ? `${linePath} L ${last.x} ${top + height} L ${first.x} ${top + height} Z`
+      : "";
+
+  const segments = points.slice(1).map((point, index) => ({
+    key: `mini-${samples[index + 1].blockNumber}-${index}`,
+    path: buildSmoothSegmentPath(points, index),
+    color: point.color,
+    isLatest: index === points.length - 2,
+  }));
+  const latestColor = points.at(-1)?.color ?? gasStatusChartColor("unavailable");
+
+  return {
+    points,
+    segments,
+    linePath,
+    areaPath,
+    latestColor,
   };
 }
 
