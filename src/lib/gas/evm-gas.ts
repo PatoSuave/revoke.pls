@@ -123,9 +123,13 @@ export async function fetchEvmGasSample(
     const priorityFeeWei = lastHexValue(feeHistory.reward?.at(-1));
 
     if (baseFeeWei !== undefined) {
+      const gasPriceWei = baseFeeWei + (priorityFeeWei ?? 0n);
+      if (gasPriceWei === 0n) {
+        throw new Error("Fee history returned a zero gas price");
+      }
       return {
         blockNumber,
-        gasPriceWei: baseFeeWei + (priorityFeeWei ?? 0n),
+        gasPriceWei,
         baseFeeWei,
         priorityFeeWei,
         source: "rpc-fee-history",
