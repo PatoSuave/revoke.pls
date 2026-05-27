@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 
 import { AntiPhishingBanner } from "@/components/sections/anti-phishing-banner";
 import { ApprovalScanner } from "@/components/sections/approval-scanner";
+import { PulseChainGasTracker } from "@/components/gas/pulsechain-gas-tracker";
 import { PulseChainResourceLinks } from "@/components/sections/pulsechain-resource-links";
 import { SiteFooter } from "@/components/sections/site-footer";
 import { SiteHeader } from "@/components/sections/site-header";
@@ -36,6 +37,7 @@ export default function AppPage() {
       <SiteHeader />
       <main className="bg-pulse-bg">
         <AppWorkspaceIntro />
+        <PulseChainGasTracker />
         <AntiPhishingBanner />
         <ApprovalScanner />
         <PulseChainResourceLinks compact />
