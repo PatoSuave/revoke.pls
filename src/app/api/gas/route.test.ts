@@ -15,15 +15,20 @@ describe("/api/gas", () => {
     vi.unstubAllGlobals();
     resetOwlracleAdvisoryCacheForTests();
     delete process.env.PULSECHAIN_RPC_URL;
+    delete process.env.MAINNET_RPC_URL;
     delete process.env.OWLRACLE_API_KEY;
   });
 
   it("rejects unsupported chain IDs", async () => {
-    const response = await GET(new Request("https://example.test/api/gas?chainId=1"));
+    const response = await GET(
+      new Request("https://example.test/api/gas?chainId=12345"),
+    );
     const payload = await response.json();
 
     expect(response.status).toBe(400);
     expect(payload.status).toBe("bad-request");
+    expect(payload.supportedChainIds).toContain(369);
+    expect(payload.supportedChainIds).toContain(1);
   });
 
   it("dedupes simultaneous PulseChain sample requests", async () => {
@@ -68,6 +73,38 @@ describe("/api/gas", () => {
     expect(firstPayload.blockNumber).toBe("32");
     expect(secondPayload.blockNumber).toBe("32");
     expect(fetchMock).toHaveBeenCalledTimes(3);
+  });
+
+  it("returns gas data for Ethereum Mainnet without PulseChain advisory calls", async () => {
+    const fetchMock = vi.fn<typeof fetch>(async (_input, init) => {
+      const body = JSON.parse(String(init?.body ?? "{}")) as {
+        method?: string;
+      };
+      if (body.method === "eth_blockNumber") return rpcResponse("0x2a");
+      if (body.method === "eth_feeHistory") {
+        return rpcResponse({
+          oldestBlock: "0x2a",
+          baseFeePerGas: ["0x3b9aca00", "0x77359400"],
+          reward: [["0x3b9aca00"]],
+        });
+      }
+      return new Response("unknown method", { status: 400 });
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    const response = await GET(
+      new Request("https://example.test/api/gas?chainId=1"),
+    );
+    const payload = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(payload.available).toBe(true);
+    expect(payload.chainId).toBe(1);
+    expect(payload.chainName).toBe("Ethereum Mainnet");
+    expect(payload.nativeCurrency).toBe("ETH");
+    expect(payload.gasPriceGwei).toBe("3");
+    expect(payload.advisory).toBeUndefined();
+    expect(fetchMock).toHaveBeenCalledTimes(2);
   });
 
   it("returns unavailable state without leaking RPC URLs when RPC fails", async () => {

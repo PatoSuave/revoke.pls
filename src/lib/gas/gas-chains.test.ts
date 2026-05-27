@@ -1,0 +1,32 @@
+import { describe, expect, it } from "vitest";
+
+import {
+  GAS_TRACKER_CHAINS,
+  getGasTrackerChainConfig,
+} from "@/lib/gas/gas-chains";
+
+describe("gas tracker chain registry", () => {
+  it("supports the app's EVM gas tracker chains", () => {
+    expect(GAS_TRACKER_CHAINS.map((chain) => chain.chainId)).toEqual([
+      369, 56, 8453, 137, 1, 42161, 10, 999,
+    ]);
+  });
+
+  it("keeps PulseChain advisory isolated to PulseChain", () => {
+    expect(getGasTrackerChainConfig(369)?.advisoryProvider).toBe(
+      "owlracle-pulse",
+    );
+    expect(getGasTrackerChainConfig(1)?.advisoryProvider).toBeUndefined();
+  });
+
+  it("uses chain-specific status thresholds", () => {
+    expect(getGasTrackerChainConfig(369)?.statusThresholds).toEqual({
+      elevatedGwei: 750_000,
+      highGwei: 2_000_000,
+    });
+    expect(getGasTrackerChainConfig(1)?.statusThresholds).toEqual({
+      elevatedGwei: 25,
+      highGwei: 75,
+    });
+  });
+});

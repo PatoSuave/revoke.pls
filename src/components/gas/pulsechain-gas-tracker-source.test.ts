@@ -8,14 +8,14 @@ const SOURCE = readFileSync(
 
 describe("PulseChain gas tracker component source", () => {
   it("includes loading, available, and unavailable user states", () => {
-    expect(SOURCE).toContain("Waiting for PulseChain gas data");
+    expect(SOURCE).toContain("Waiting for ${selectedChain.chainName} gas data");
     expect(SOURCE).toContain("Estimated Transaction Costs");
-    expect(SOURCE).toContain("PulseChain gas data is unavailable");
+    expect(SOURCE).toContain("${selectedChain.chainName} gas data is unavailable");
   });
 
   it("keeps gas tracking informational and block-driven", () => {
     expect(SOURCE).toContain("watchBlockNumber");
-    expect(SOURCE).toContain("/api/gas?chainId=369");
+    expect(SOURCE).toContain("/api/gas?chainId=${chainId}");
     expect(SOURCE).toContain("does not add fees");
     expect(SOURCE).not.toMatch(/writeContract|sendTransaction|signTransaction/);
   });
@@ -29,7 +29,7 @@ describe("PulseChain gas tracker component source", () => {
 
   it("keeps gas secondary to the revoke workflow by default", () => {
     expect(SOURCE).toContain("Network fee");
-    expect(SOURCE).toContain("PulseChain fee monitor");
+    expect(SOURCE).toContain("fee monitor");
     expect(SOURCE).toContain("Estimated revoke");
     expect(SOURCE).toContain("View live chart");
     expect(SOURCE).toContain("MiniGasSparkline");

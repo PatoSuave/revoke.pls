@@ -22,11 +22,20 @@ import type {
   GasChartSample,
   GasStatus,
 } from "@/lib/gas/gas-types";
-import { pulsechain } from "@/lib/chains";
+import {
+  DEFAULT_GAS_TRACKER_CHAIN_ID,
+  GAS_TRACKER_CHAINS,
+  getGasTrackerChainConfig,
+  type GasTrackerChainConfig,
+  type GasTrackerChainId,
+} from "@/lib/gas/gas-chains";
 
 type LoadState = "loading" | "available" | "unavailable";
 
 interface TrackerViewProps {
+  selectedChain: GasTrackerChainConfig;
+  selectedChainId: GasTrackerChainId;
+  onSelectChain: (chainId: GasTrackerChainId) => void;
   state: LoadState;
   sample: GasApiResponse | null;
   history: readonly GasChartSample[];
@@ -39,9 +48,10 @@ interface TrackerViewProps {
 const STALE_AFTER_MS = 90_000;
 const WATCH_POLLING_INTERVAL_MS = 4_000;
 
-const COMING_SOON_CHAINS = ["Ethereum", "BSC", "Base", "Polygon", "HyperEVM"];
-
 export function PulseChainGasTracker() {
+  const [selectedChainId, setSelectedChainId] = useState<GasTrackerChainId>(
+    DEFAULT_GAS_TRACKER_CHAIN_ID,
+  );
   const [sample, setSample] = useState<GasApiResponse | null>(null);
   const [history, setHistory] = useState<GasChartSample[]>([]);
   const [state, setState] = useState<LoadState>("loading");
@@ -52,20 +62,28 @@ export function PulseChainGasTracker() {
   const inFlightRef = useRef(false);
   const abortRef = useRef<AbortController | null>(null);
   const latestWatchedBlockRef = useRef<bigint | null>(null);
+  const activeChainIdRef = useRef<GasTrackerChainId>(selectedChainId);
+
+  const selectedChain: GasTrackerChainConfig =
+    getGasTrackerChainConfig(selectedChainId) ??
+    getGasTrackerChainConfig(DEFAULT_GAS_TRACKER_CHAIN_ID) ??
+    (GAS_TRACKER_CHAINS[0] as GasTrackerChainConfig);
 
   const loadGas = useCallback(async () => {
     if (inFlightRef.current) return;
     inFlightRef.current = true;
+    const chainId = selectedChain.chainId;
     const controller = new AbortController();
     abortRef.current = controller;
 
     try {
-      const response = await fetch("/api/gas?chainId=369", {
+      const response = await fetch(`/api/gas?chainId=${chainId}`, {
         cache: "no-store",
         headers: { Accept: "application/json" },
         signal: controller.signal,
       });
       const payload = (await response.json()) as GasApiResponse;
+      if (activeChainIdRef.current !== chainId) return;
       setSample(payload);
       setState(payload.available ? "available" : "unavailable");
       if (payload.available) {
@@ -80,11 +98,12 @@ export function PulseChainGasTracker() {
       }
     } catch (error) {
       if (error instanceof DOMException && error.name === "AbortError") return;
+      if (activeChainIdRef.current !== chainId) return;
       setState("unavailable");
       setSample({
-        chainId: 369,
-        chainName: "PulseChain",
-        nativeCurrency: "PLS",
+        chainId,
+        chainName: selectedChain.chainName,
+        nativeCurrency: selectedChain.nativeCurrency,
         blockNumber: null,
         source: "unavailable",
         status: "unavailable",
@@ -94,20 +113,32 @@ export function PulseChainGasTracker() {
         baseFeeGwei: null,
         priorityFeeGwei: null,
         typicalTransactions: [],
-        errors: ["PulseChain gas data is unavailable."],
+        ...(selectedChain.estimateNote
+          ? { estimateNote: selectedChain.estimateNote }
+          : {}),
+        errors: [`${selectedChain.chainName} gas data is unavailable.`],
       });
     } finally {
       inFlightRef.current = false;
       if (abortRef.current === controller) abortRef.current = null;
     }
-  }, []);
+  }, [selectedChain]);
 
   useEffect(() => {
+    activeChainIdRef.current = selectedChain.chainId;
+    latestWatchedBlockRef.current = null;
+    abortRef.current?.abort();
+    inFlightRef.current = false;
+    setSample(null);
+    setHistory([]);
+    setState("loading");
+    setWatcherError(null);
+    setLastBlockSeenAt(null);
     void loadGas();
 
     const client = createPublicClient({
-      chain: pulsechain,
-      transport: http(pulsechain.rpcUrls.default.http[0], {
+      chain: selectedChain.viemChain,
+      transport: http(selectedChain.publicRpcUrl, {
         timeout: 4_000,
       }),
       pollingInterval: WATCH_POLLING_INTERVAL_MS,
@@ -124,7 +155,9 @@ export function PulseChainGasTracker() {
         void loadGas();
       },
       onError: () => {
-        setWatcherError("PulseChain block watcher is temporarily unavailable.");
+        setWatcherError(
+          `${selectedChain.chainName} block watcher is temporarily unavailable.`,
+        );
       },
     });
 
@@ -138,10 +171,11 @@ export function PulseChainGasTracker() {
 
     return () => {
       abortRef.current?.abort();
+      inFlightRef.current = false;
       unwatch();
       document.removeEventListener("visibilitychange", onVisibilityChange);
     };
-  }, [loadGas]);
+  }, [loadGas, selectedChain]);
 
   useEffect(() => {
     const interval = window.setInterval(() => {
@@ -157,6 +191,9 @@ export function PulseChainGasTracker() {
 
   return (
     <PulseChainGasTrackerView
+      selectedChain={selectedChain}
+      selectedChainId={selectedChainId}
+      onSelectChain={setSelectedChainId}
       state={state}
       sample={sample}
       history={history}
@@ -169,6 +206,9 @@ export function PulseChainGasTracker() {
 }
 
 export function PulseChainGasTrackerView({
+  selectedChain,
+  selectedChainId,
+  onSelectChain,
   state,
   sample,
   history,
@@ -190,7 +230,7 @@ export function PulseChainGasTrackerView({
     sample,
     "Token approval / revoke",
   );
-  const detailsId = "pulsechain-gas-details";
+  const detailsId = "network-gas-details";
 
   return (
     <section className="border-b border-pulse-border/50 bg-pulse-bg py-4 sm:py-5">
@@ -206,7 +246,7 @@ export function PulseChainGasTrackerView({
                 <LiveHeartbeat heartbeat={heartbeat} compact />
               </div>
               <h2 className="mt-2 text-xl font-bold text-pulse-text sm:text-2xl">
-                PulseChain fee monitor
+                {selectedChain.shortName} fee monitor
               </h2>
               <p className="mt-1 max-w-3xl text-sm leading-6 text-pulse-muted">
                 Live gas context for estimating revoke costs. Wallet estimates
@@ -221,7 +261,11 @@ export function PulseChainGasTrackerView({
               <CompactMetric
                 label="Estimated revoke"
                 value={revokeEstimate}
-                suffix={revokeEstimate === "Pending" ? undefined : "PLS"}
+                suffix={
+                  revokeEstimate === "Pending"
+                    ? undefined
+                    : selectedChain.nativeCurrency
+                }
                 valueClassName="text-pulse-cyan"
               />
               <CompactMetric
@@ -257,25 +301,30 @@ export function PulseChainGasTrackerView({
               {state === "unavailable" || watcherError
                 ? sample?.errors?.[0] ??
                   watcherError ??
-                  "PulseChain gas data is unavailable."
-                : "No fresh PulseChain block has been detected recently. The latest sample may be stale."}
+                  `${selectedChain.chainName} gas data is unavailable.`
+                : `No fresh ${selectedChain.chainName} block has been detected recently. The latest sample may be stale.`}
             </div>
           ) : null}
 
           {detailsOpen ? (
             <div id={detailsId} className="border-t border-pulse-border/70">
               <div className="border-b border-pulse-border/70 bg-pulse-bg/25 p-4 sm:p-5 lg:p-6">
-                <ChainSelectorCompact />
+                <ChainSelectorCompact
+                  selectedChainId={selectedChainId}
+                  onSelectChain={onSelectChain}
+                />
               </div>
 
               <div className="grid gap-4 p-4 sm:p-5 lg:grid-cols-[1.05fr_1.4fr] lg:p-6">
                 <CurrentGasCard
+                  selectedChain={selectedChain}
                   sample={sample}
                   state={state}
                   isStale={isStale}
                   watcherError={watcherError}
                 />
                 <GasChartCard
+                  selectedChain={selectedChain}
                   history={history}
                   sample={sample}
                   state={state}
@@ -289,13 +338,18 @@ export function PulseChainGasTrackerView({
                     <h3 className="text-lg font-semibold text-pulse-text">
                       Estimated Transaction Costs
                     </h3>
-                    <p className="mt-1 text-sm leading-6 text-pulse-muted">
-                      Costs are estimated in PLS using current gas data. Actual
-                      wallet estimates may vary by contract.
-                    </p>
+                  <p className="mt-1 text-sm leading-6 text-pulse-muted">
+                      Costs are estimated in {selectedChain.nativeCurrency} using
+                      current gas data. Actual wallet estimates may vary by
+                      contract.
+                      {sample?.estimateNote ? ` ${sample.estimateNote}` : ""}
+                  </p>
                   </div>
                 </div>
-                <TypicalTransactionGrid sample={sample} />
+                <TypicalTransactionGrid
+                  sample={sample}
+                  selectedChain={selectedChain}
+                />
               </div>
             </div>
           ) : null}
@@ -343,54 +397,62 @@ function CompactMetric({
   );
 }
 
-function ChainSelectorCompact() {
+function ChainSelectorCompact({
+  selectedChainId,
+  onSelectChain,
+}: {
+  selectedChainId: GasTrackerChainId;
+  onSelectChain: (chainId: GasTrackerChainId) => void;
+}) {
   return (
     <div>
       <p className="mb-3 text-sm font-semibold text-pulse-text">
         Select Chain
       </p>
       <div className="flex gap-2 overflow-x-auto pb-1">
-        <button
-          type="button"
-          className="inline-flex min-h-11 shrink-0 items-center gap-3 rounded-xl border border-pulse-cyan/70 bg-pulse-cyan/10 px-4 py-2 text-left shadow-glow"
-          aria-pressed="true"
-        >
-          <span>
-            <span className="block text-sm font-semibold text-pulse-text">
-              PulseChain
-            </span>
-            <span className="block text-xs text-pulse-muted">PLS</span>
-          </span>
-          <span className="rounded-full bg-pulse-green/15 px-2 py-1 text-[11px] font-semibold text-pulse-green">
-            Active
-          </span>
-        </button>
-        {COMING_SOON_CHAINS.map((chain) => (
+        {GAS_TRACKER_CHAINS.map((chain) => {
+          const active = chain.chainId === selectedChainId;
+          return (
           <button
-            key={chain}
+            key={chain.chainId}
             type="button"
-            disabled
-            className="inline-flex min-h-11 shrink-0 items-center gap-2 rounded-xl border border-pulse-border/70 bg-pulse-bg/35 px-3 py-2 text-left opacity-60"
+            onClick={() => onSelectChain(chain.chainId)}
+            className={`inline-flex min-h-11 shrink-0 items-center gap-3 rounded-xl border px-4 py-2 text-left transition ${
+              active
+                ? "border-pulse-cyan/70 bg-pulse-cyan/10 shadow-glow"
+                : "border-pulse-border/70 bg-pulse-bg/35 hover:border-pulse-cyan/40 hover:bg-pulse-panel/60"
+            }`}
+            aria-pressed={active}
           >
-            <span className="text-sm font-semibold text-pulse-text">
-              {chain}
+            <span>
+              <span className="block text-sm font-semibold text-pulse-text">
+                {chain.shortName}
+              </span>
+              <span className="block text-xs text-pulse-muted">
+                {chain.nativeCurrency}
+              </span>
             </span>
-            <span className="rounded-full border border-pulse-border px-2 py-0.5 text-[11px] text-pulse-muted">
-              Soon
-            </span>
+            {active ? (
+              <span className="rounded-full bg-pulse-green/15 px-2 py-1 text-[11px] font-semibold text-pulse-green">
+                Active
+              </span>
+            ) : null}
           </button>
-        ))}
+          );
+        })}
       </div>
     </div>
   );
 }
 
 function CurrentGasCard({
+  selectedChain,
   sample,
   state,
   isStale,
   watcherError,
 }: {
+  selectedChain: GasTrackerChainConfig;
   sample: GasApiResponse | null;
   state: LoadState;
   isStale: boolean;
@@ -402,7 +464,7 @@ function CurrentGasCard({
     <div className="rounded-2xl border border-pulse-border bg-pulse-bg/45 p-4 sm:p-5">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div>
-          <p className="text-sm text-pulse-muted">PulseChain</p>
+          <p className="text-sm text-pulse-muted">{selectedChain.chainName}</p>
           <h3 className="mt-1 text-3xl font-bold text-pulse-text">
             {sample?.gasPriceGwei ?? (state === "loading" ? "..." : "Unavailable")}
             {sample?.gasPriceGwei ? (
@@ -412,16 +474,25 @@ function CurrentGasCard({
             ) : null}
           </h3>
           <p className="mt-2 text-sm text-pulse-muted">
-            Native gas token: <span className="text-pulse-text">PLS</span>
+            Native gas token:{" "}
+            <span className="text-pulse-text">
+              {selectedChain.nativeCurrency}
+            </span>
           </p>
         </div>
         <StatusPill status={status} label={gasStatusLabel(status)} />
       </div>
 
       <div className="mt-5 grid gap-3 text-sm">
-        <InfoRow label="Network status" value={gasStatusCopy(status)} />
+        <InfoRow
+          label="Network status"
+          value={gasStatusCopy(status, selectedChain.chainName)}
+        />
         <InfoRow label="Latest block" value={formatBlockNumber(sample?.blockNumber ?? null)} />
-        <InfoRow label="Source" value={sourceLabel(sample?.source)} />
+        <InfoRow
+          label="Source"
+          value={sourceLabel(sample?.source, selectedChain.chainName)}
+        />
         <InfoRow
           label="Base fee"
           value={sample?.baseFeeGwei ? `${sample.baseFeeGwei} Gwei` : "Unavailable"}
@@ -440,13 +511,15 @@ function CurrentGasCard({
 
       {state === "unavailable" || watcherError ? (
         <div className="mt-4 rounded-xl border border-pulse-red/30 bg-pulse-red/10 p-3 text-sm leading-6 text-pulse-muted">
-          {sample?.errors?.[0] ?? watcherError ?? "PulseChain gas data is unavailable."}
+          {sample?.errors?.[0] ??
+            watcherError ??
+            `${selectedChain.chainName} gas data is unavailable.`}
         </div>
       ) : null}
       {isStale ? (
         <div className="mt-4 rounded-xl border border-pulse-yellow/30 bg-pulse-yellow/10 p-3 text-sm leading-6 text-pulse-muted">
-          No fresh PulseChain block has been detected recently. The latest
-          sample may be stale.
+          No fresh {selectedChain.chainName} block has been detected recently.
+          The latest sample may be stale.
         </div>
       ) : null}
     </div>
@@ -454,11 +527,13 @@ function CurrentGasCard({
 }
 
 function GasChartCard({
+  selectedChain,
   history,
   sample,
   state,
   heartbeat,
 }: {
+  selectedChain: GasTrackerChainConfig;
   history: readonly GasChartSample[];
   sample: GasApiResponse | null;
   state: LoadState;
@@ -472,8 +547,8 @@ function GasChartCard({
             Live Gas Chart
           </h3>
           <p className="mt-1 text-sm text-pulse-muted">
-            Recent PulseChain block samples in Gwei. The moving line shows the
-            app is still watching for the next block.
+            Recent {selectedChain.chainName} block samples in Gwei. The moving
+            line shows the app is still watching for the next block.
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
@@ -485,8 +560,8 @@ function GasChartCard({
       </div>
       <div className="mt-4 min-h-64 overflow-hidden rounded-xl border border-pulse-border/70 bg-pulse-bg/50 p-3">
         {state === "loading" && history.length === 0 ? (
-          <ChartEmptyState
-            label="Waiting for PulseChain gas data..."
+            <ChartEmptyState
+            label={`Waiting for ${selectedChain.chainName} gas data...`}
             heartbeat={heartbeat}
           />
         ) : history.length < 2 ? (
@@ -552,12 +627,18 @@ function GasAdvisoryCompact({
   );
 }
 
-function TypicalTransactionGrid({ sample }: { sample: GasApiResponse | null }) {
+function TypicalTransactionGrid({
+  sample,
+  selectedChain,
+}: {
+  sample: GasApiResponse | null;
+  selectedChain: GasTrackerChainConfig;
+}) {
   if (!sample?.available || sample.typicalTransactions.length === 0) {
     return (
       <div className="mt-4 rounded-2xl border border-pulse-border bg-pulse-bg/40 p-4 text-sm text-pulse-muted">
-        Typical PulseChain transaction costs will appear when gas data is
-        available.
+        Typical {selectedChain.chainName} transaction costs will appear when gas
+        data is available.
       </div>
     );
   }
@@ -615,7 +696,7 @@ function MiniGasSparkline({
       <svg
         viewBox="0 0 220 64"
         role="img"
-        aria-label="Compact PulseChain gas sparkline"
+        aria-label="Compact network gas sparkline"
         className="h-12 w-full"
         preserveAspectRatio="none"
       >
@@ -702,7 +783,7 @@ function MiniSparklineEmpty({
       <svg
         viewBox="0 0 220 56"
         role="img"
-        aria-label="Compact PulseChain gas sparkline"
+        aria-label="Compact network gas sparkline"
         className="h-12 min-w-0"
         preserveAspectRatio="none"
       >
@@ -742,7 +823,7 @@ function GasLineChart({ samples }: { samples: readonly GasChartSample[] }) {
       <svg
         viewBox="0 0 640 240"
         role="img"
-        aria-label="Recent PulseChain gas price samples"
+        aria-label="Recent network gas price samples"
         className="h-56 w-full"
         preserveAspectRatio="none"
       >
@@ -973,9 +1054,12 @@ function StatusPill({ status, label }: { status: GasStatus; label: string }) {
   );
 }
 
-function sourceLabel(source: GasApiResponse["source"] | undefined): string {
-  if (source === "rpc-fee-history") return "PulseChain RPC fee history";
-  if (source === "rpc-gas-price") return "PulseChain RPC gas price";
+function sourceLabel(
+  source: GasApiResponse["source"] | undefined,
+  chainName: string,
+): string {
+  if (source === "rpc-fee-history") return `${chainName} RPC fee history`;
+  if (source === "rpc-gas-price") return `${chainName} RPC gas price`;
   return "Unavailable";
 }
 
