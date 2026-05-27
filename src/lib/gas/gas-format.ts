@@ -14,6 +14,11 @@ export function weiToGweiString(valueWei: bigint, decimals = 2): string {
   return trimDecimal(formatUnits(valueWei, 9), decimals);
 }
 
+export function formatGweiNumber(value: number, decimals = 2): string {
+  if (!Number.isFinite(value) || value < 0) return "0";
+  return trimDecimal(value.toFixed(decimals), decimals);
+}
+
 export function gweiStringToWei(valueGwei: string): bigint {
   return parseUnits(valueGwei, 9);
 }

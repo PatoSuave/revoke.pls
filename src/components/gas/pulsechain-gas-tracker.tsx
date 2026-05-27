@@ -13,9 +13,15 @@ import {
 } from "@/lib/gas/gas-format";
 import {
   gasStatusCopy,
+  gasStatusChartColor,
   gasStatusLabel,
 } from "@/lib/gas/gas-status";
-import type { GasApiResponse, GasChartSample, GasStatus } from "@/lib/gas/gas-types";
+import type {
+  GasAdvisory,
+  GasApiResponse,
+  GasChartSample,
+  GasStatus,
+} from "@/lib/gas/gas-types";
 import { pulsechain } from "@/lib/chains";
 
 type LoadState = "loading" | "available" | "unavailable";
@@ -44,16 +50,20 @@ export function PulseChainGasTracker() {
   const [now, setNow] = useState(Date.now());
   const [heartbeat, setHeartbeat] = useState(0);
   const inFlightRef = useRef(false);
+  const abortRef = useRef<AbortController | null>(null);
   const latestWatchedBlockRef = useRef<bigint | null>(null);
 
   const loadGas = useCallback(async () => {
     if (inFlightRef.current) return;
     inFlightRef.current = true;
+    const controller = new AbortController();
+    abortRef.current = controller;
 
     try {
       const response = await fetch("/api/gas?chainId=369", {
         cache: "no-store",
         headers: { Accept: "application/json" },
+        signal: controller.signal,
       });
       const payload = (await response.json()) as GasApiResponse;
       setSample(payload);
@@ -68,7 +78,8 @@ export function PulseChainGasTracker() {
           }),
         );
       }
-    } catch {
+    } catch (error) {
+      if (error instanceof DOMException && error.name === "AbortError") return;
       setState("unavailable");
       setSample({
         chainId: 369,
@@ -87,6 +98,7 @@ export function PulseChainGasTracker() {
       });
     } finally {
       inFlightRef.current = false;
+      if (abortRef.current === controller) abortRef.current = null;
     }
   }, []);
 
@@ -125,6 +137,7 @@ export function PulseChainGasTracker() {
     document.addEventListener("visibilitychange", onVisibilityChange);
 
     return () => {
+      abortRef.current?.abort();
       unwatch();
       document.removeEventListener("visibilitychange", onVisibilityChange);
     };
@@ -263,6 +276,7 @@ export function PulseChainGasTrackerView({
               state={state}
               heartbeat={heartbeat}
             />
+            <GasAdvisoryCard advisory={sample?.advisory} />
           </div>
 
           <div className="border-t border-pulse-border/70 p-4 sm:p-5 lg:p-6">
@@ -342,7 +356,7 @@ function CurrentGasCard({
         </div>
       ) : null}
       {isStale ? (
-        <div className="mt-4 rounded-xl border border-pulse-pink/30 bg-pulse-pink/10 p-3 text-sm leading-6 text-pulse-muted">
+        <div className="mt-4 rounded-xl border border-pulse-yellow/30 bg-pulse-yellow/10 p-3 text-sm leading-6 text-pulse-muted">
           No fresh PulseChain block has been detected recently. The latest
           sample may be stale.
         </div>
@@ -400,6 +414,64 @@ function GasChartCard({
   );
 }
 
+function GasAdvisoryCard({ advisory }: { advisory: GasAdvisory | undefined }) {
+  return (
+    <div className="rounded-2xl border border-pulse-border bg-pulse-bg/45 p-4 sm:p-5">
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <h3 className="text-lg font-semibold text-pulse-text">
+            Advisory Tiers
+          </h3>
+          <p className="mt-1 text-sm leading-6 text-pulse-muted">
+            Supplemental Owlracle estimates from recent PulseChain blocks. Live
+            block samples still come from PulseChain RPC.
+          </p>
+        </div>
+        <span className="rounded-full border border-pulse-border bg-pulse-panel/70 px-3 py-1 text-xs text-pulse-muted">
+          Optional
+        </span>
+      </div>
+
+      {advisory?.tiers.length ? (
+        <div className="mt-4 grid gap-2">
+          {advisory.tiers.map((tier) => (
+            <div
+              key={tier.label}
+              className="flex items-center justify-between gap-3 rounded-xl border border-pulse-border/70 bg-pulse-bg/45 px-3 py-2 text-sm"
+            >
+              <span className="flex min-w-0 items-center gap-2 text-pulse-muted">
+                <span
+                  className={`h-2 w-2 rounded-full ${
+                    tier.label === "Low"
+                      ? "bg-pulse-green"
+                      : tier.label === "Medium"
+                        ? "bg-pulse-yellow"
+                        : "bg-pulse-red"
+                  }`}
+                  aria-hidden="true"
+                />
+                {tier.label} ({Math.round(tier.acceptance * 100)}%)
+              </span>
+              <span className="font-mono text-pulse-text">
+                {tier.gasPriceGwei} Gwei
+              </span>
+            </div>
+          ))}
+          <p className="text-xs leading-5 text-pulse-muted">
+            Updated {formatRelativeTime(advisory.updatedAt)}. Avg block time{" "}
+            {advisory.avgBlockTimeSeconds?.toFixed(1) ?? "--"}s.
+          </p>
+        </div>
+      ) : (
+        <div className="mt-4 rounded-xl border border-pulse-border/70 bg-pulse-bg/40 p-3 text-sm leading-6 text-pulse-muted">
+          Advisory data is unavailable. The live RPC gas sample above remains
+          the source of truth.
+        </div>
+      )}
+    </div>
+  );
+}
+
 function TypicalTransactionGrid({ sample }: { sample: GasApiResponse | null }) {
   if (!sample?.available || sample.typicalTransactions.length === 0) {
     return (
@@ -434,8 +506,11 @@ function TypicalTransactionGrid({ sample }: { sample: GasApiResponse | null }) {
 }
 
 function GasLineChart({ samples }: { samples: readonly GasChartSample[] }) {
-  const chart = useMemo(() => buildChart(samples), [samples]);
+  const prefersReducedMotion = usePrefersReducedMotion();
+  const animatedSamples = useAnimatedSamples(samples, prefersReducedMotion);
+  const chart = useMemo(() => buildChart(animatedSamples), [animatedSamples]);
   const latest = samples.at(-1);
+  const latestPoint = chart.points.at(-1);
 
   return (
     <div className="h-full min-h-56 w-full">
@@ -448,9 +523,16 @@ function GasLineChart({ samples }: { samples: readonly GasChartSample[] }) {
       >
         <defs>
           <linearGradient id="pulseGasArea" x1="0" x2="0" y1="0" y2="1">
-            <stop offset="0%" stopColor="#22d3ee" stopOpacity="0.28" />
-            <stop offset="100%" stopColor="#22d3ee" stopOpacity="0" />
+            <stop offset="0%" stopColor={chart.latestColor} stopOpacity="0.22" />
+            <stop offset="100%" stopColor={chart.latestColor} stopOpacity="0" />
           </linearGradient>
+          <filter id="pulseGasGlow" x="-20%" y="-20%" width="140%" height="140%">
+            <feGaussianBlur stdDeviation="4" result="blur" />
+            <feMerge>
+              <feMergeNode in="blur" />
+              <feMergeNode in="SourceGraphic" />
+            </feMerge>
+          </filter>
         </defs>
         {[0, 1, 2, 3].map((line) => {
           const y = 20 + line * 48;
@@ -473,72 +555,95 @@ function GasLineChart({ samples }: { samples: readonly GasChartSample[] }) {
           {chart.minLabel}
         </text>
         <path d={chart.areaPath} fill="url(#pulseGasArea)" />
-        <path
-          d={chart.linePath}
-          fill="none"
-          stroke="#22d3ee"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          strokeWidth="3"
-        />
+        {chart.segments.map((segment) => (
+          <path
+            key={segment.key}
+            d={segment.path}
+            fill="none"
+            stroke={segment.color}
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth="3"
+            filter={segment.isLatest ? "url(#pulseGasGlow)" : undefined}
+          />
+        ))}
         {chart.points.map((point, index) => (
           <circle
             key={`${point.x}-${point.y}-${index}`}
             cx={point.x}
             cy={point.y}
             r={index === chart.points.length - 1 ? 5 : 3}
-            fill={index === chart.points.length - 1 ? "#34d399" : "#22d3ee"}
+            fill={point.color}
             stroke="#07111f"
             strokeWidth="2"
+            opacity={index === chart.points.length - 1 ? 1 : 0.72}
           />
         ))}
-        <line
-          x1="42"
-          x2="42"
-          y1="18"
-          y2="208"
-          stroke="#34d399"
-          strokeOpacity="0.35"
-          strokeWidth="2"
-        >
-          <animate
-            attributeName="x1"
-            from="42"
-            to="620"
-            dur="2s"
-            repeatCount="indefinite"
-          />
-          <animate
-            attributeName="x2"
-            from="42"
-            to="620"
-            dur="2s"
-            repeatCount="indefinite"
-          />
-        </line>
-        <circle
-          cx="42"
-          cy="18"
-          r="4"
-          fill="#34d399"
-          opacity="0.85"
-        >
-          <animate
-            attributeName="cx"
-            from="42"
-            to="620"
-            dur="2s"
-            repeatCount="indefinite"
-          />
-        </circle>
+        {!prefersReducedMotion ? (
+          <>
+            <line
+              x1="42"
+              x2="42"
+              y1="18"
+              y2="208"
+              stroke={chart.latestColor}
+              strokeOpacity="0.35"
+              strokeWidth="2"
+            >
+              <animate
+                attributeName="x1"
+                from="42"
+                to="620"
+                dur="2s"
+                repeatCount="indefinite"
+              />
+              <animate
+                attributeName="x2"
+                from="42"
+                to="620"
+                dur="2s"
+                repeatCount="indefinite"
+              />
+            </line>
+            <circle
+              cx="42"
+              cy={latestPoint?.y ?? 18}
+              r="4"
+              fill={chart.latestColor}
+              opacity="0.9"
+            >
+              <animate
+                attributeName="cx"
+                from="42"
+                to="620"
+                dur="2s"
+                repeatCount="indefinite"
+              />
+            </circle>
+          </>
+        ) : null}
       </svg>
-      <div className="mt-2 flex items-center justify-between gap-3 text-xs text-pulse-muted">
+      <div className="mt-2 flex flex-col gap-2 text-xs text-pulse-muted sm:flex-row sm:items-center sm:justify-between">
         <span>Recent blocks</span>
-        <span className="font-mono text-pulse-text">
-          Latest {latest ? latest.gasPriceGwei.toFixed(2) : "--"} Gwei
-        </span>
+        <div className="flex flex-wrap items-center gap-3">
+          <ChartLegendItem color="bg-pulse-green" label="Low" />
+          <ChartLegendItem color="bg-pulse-yellow" label="Medium" />
+          <ChartLegendItem color="bg-pulse-red" label="High" />
+          <span className="font-mono text-pulse-text">
+            Latest {latest ? latest.gasPriceGwei.toFixed(2) : "--"} Gwei
+          </span>
+        </div>
       </div>
     </div>
+  );
+}
+
+function ChartLegendItem({ color, label }: { color: string; label: string }) {
+  return (
+    <span className="inline-flex items-center gap-1.5">
+      <span className={`h-2 w-2 rounded-full ${color}`} aria-hidden="true" />
+      {label}
+    </span>
   );
 }
 
@@ -597,7 +702,7 @@ function StatusPill({ status, label }: { status: GasStatus; label: string }) {
     status === "normal"
       ? "border-pulse-green/30 bg-pulse-green/15 text-pulse-green"
       : status === "elevated"
-        ? "border-pulse-pink/30 bg-pulse-pink/15 text-pulse-pink"
+        ? "border-pulse-yellow/30 bg-pulse-yellow/15 text-pulse-yellow"
         : status === "high"
           ? "border-pulse-red/30 bg-pulse-red/15 text-pulse-red"
           : "border-pulse-border bg-pulse-panel text-pulse-muted";
@@ -618,6 +723,78 @@ function sourceLabel(source: GasApiResponse["source"] | undefined): string {
   return "Unavailable";
 }
 
+function usePrefersReducedMotion(): boolean {
+  const [prefersReducedMotion, setPrefersReducedMotion] = useState(false);
+
+  useEffect(() => {
+    const media = window.matchMedia("(prefers-reduced-motion: reduce)");
+    setPrefersReducedMotion(media.matches);
+    const onChange = () => setPrefersReducedMotion(media.matches);
+    media.addEventListener("change", onChange);
+    return () => media.removeEventListener("change", onChange);
+  }, []);
+
+  return prefersReducedMotion;
+}
+
+function useAnimatedSamples(
+  samples: readonly GasChartSample[],
+  prefersReducedMotion: boolean,
+): readonly GasChartSample[] {
+  const [animatedSamples, setAnimatedSamples] =
+    useState<readonly GasChartSample[]>(samples);
+  const previousRef = useRef<readonly GasChartSample[]>(samples);
+
+  useEffect(() => {
+    if (prefersReducedMotion || samples.length < 2) {
+      previousRef.current = samples;
+      setAnimatedSamples(samples);
+      return;
+    }
+
+    const previous = previousRef.current;
+    const latestPrevious = previous.at(-1);
+    const startSamples = samples.map((sample) => {
+      const existing = previous.find(
+        (entry) => entry.blockNumber === sample.blockNumber,
+      );
+      return (
+        existing ?? {
+          ...sample,
+          gasPriceGwei:
+            latestPrevious?.gasPriceGwei ?? sample.gasPriceGwei,
+        }
+      );
+    });
+    const startedAt = performance.now();
+    const duration = 650;
+    let frame = 0;
+
+    const animate = (time: number) => {
+      const progress = Math.min(1, (time - startedAt) / duration);
+      const eased = 1 - Math.pow(1 - progress, 3);
+      setAnimatedSamples(
+        samples.map((sample, index) => ({
+          ...sample,
+          gasPriceGwei:
+            startSamples[index].gasPriceGwei +
+            (sample.gasPriceGwei - startSamples[index].gasPriceGwei) * eased,
+        })),
+      );
+      if (progress < 1) {
+        frame = requestAnimationFrame(animate);
+      } else {
+        previousRef.current = samples;
+      }
+    };
+
+    frame = requestAnimationFrame(animate);
+    return () => cancelAnimationFrame(frame);
+  }, [prefersReducedMotion, samples]);
+
+  return animatedSamples;
+}
+
 function buildChart(samples: readonly GasChartSample[]) {
   const values = samples.map((sample) => sample.gasPriceGwei);
   const min = Math.min(...values);
@@ -634,7 +811,7 @@ function buildChart(samples: readonly GasChartSample[]) {
   const points = samples.map((sample, index) => {
     const x = left + (index / denominator) * width;
     const y = top + height - ((sample.gasPriceGwei - low) / range) * height;
-    return { x, y };
+    return { x, y, color: gasStatusChartColor(sample.status) };
   });
   const linePath = points
     .map((point, index) => `${index === 0 ? "M" : "L"} ${point.x} ${point.y}`)
@@ -646,10 +823,23 @@ function buildChart(samples: readonly GasChartSample[]) {
       ? `${linePath} L ${last.x} ${top + height} L ${first.x} ${top + height} Z`
       : "";
 
+  const segments = points.slice(1).map((point, index) => {
+    const previous = points[index];
+    return {
+      key: `${samples[index + 1].blockNumber}-${index}`,
+      path: `M ${previous.x} ${previous.y} L ${point.x} ${point.y}`,
+      color: point.color,
+      isLatest: index === points.length - 2,
+    };
+  });
+  const latestColor = points.at(-1)?.color ?? gasStatusChartColor("unavailable");
+
   return {
     points,
+    segments,
     linePath,
     areaPath,
+    latestColor,
     minLabel: `${low.toFixed(2)} Gwei`,
     maxLabel: `${high.toFixed(2)} Gwei`,
   };

@@ -16,6 +16,7 @@ const config: Config = {
           purple: "rgb(var(--pulse-purple) / <alpha-value>)",
           cyan: "rgb(var(--pulse-cyan) / <alpha-value>)",
           green: "rgb(var(--pulse-green) / <alpha-value>)",
+          yellow: "rgb(var(--pulse-yellow) / <alpha-value>)",
           red: "rgb(var(--pulse-red) / <alpha-value>)",
           "on-gradient": "rgb(var(--pulse-on-gradient) / <alpha-value>)",
         },

@@ -1,6 +1,10 @@
 import { describe, expect, it } from "vitest";
 
-import { classifyGasStatus } from "@/lib/gas/gas-status";
+import {
+  classifyGasStatus,
+  gasStatusChartColor,
+  PULSECHAIN_GAS_STATUS_THRESHOLDS,
+} from "@/lib/gas/gas-status";
 
 describe("gas status classification", () => {
   it("classifies unavailable gas data", () => {
@@ -16,5 +20,22 @@ describe("gas status classification", () => {
       "elevated",
     );
     expect(classifyGasStatus({ gasPriceGwei: 300, thresholds })).toBe("high");
+  });
+
+  it("uses PulseChain fixed low, medium, and high bands", () => {
+    expect(PULSECHAIN_GAS_STATUS_THRESHOLDS).toEqual({
+      elevatedGwei: 750_000,
+      highGwei: 2_000_000,
+    });
+    expect(classifyGasStatus({ gasPriceGwei: 749_999 })).toBe("normal");
+    expect(classifyGasStatus({ gasPriceGwei: 750_000 })).toBe("elevated");
+    expect(classifyGasStatus({ gasPriceGwei: 2_000_000 })).toBe("high");
+  });
+
+  it("maps chart colors to low, medium, high, and unavailable states", () => {
+    expect(gasStatusChartColor("normal")).toBe("#00e5a0");
+    expect(gasStatusChartColor("elevated")).toBe("#fbbf24");
+    expect(gasStatusChartColor("high")).toBe("#ff4d6d");
+    expect(gasStatusChartColor("unavailable")).toBe("#8a8db8");
   });
 });

@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { GET } from "@/app/api/gas/route";
+import { resetOwlracleAdvisoryCacheForTests } from "@/lib/gas/owlracle-gas";
 
 function rpcResponse(result: unknown): Response {
   return new Response(JSON.stringify({ jsonrpc: "2.0", id: 1, result }), {
@@ -12,6 +13,9 @@ function rpcResponse(result: unknown): Response {
 describe("/api/gas", () => {
   afterEach(() => {
     vi.unstubAllGlobals();
+    resetOwlracleAdvisoryCacheForTests();
+    delete process.env.PULSECHAIN_RPC_URL;
+    delete process.env.OWLRACLE_API_KEY;
   });
 
   it("rejects unsupported chain IDs", async () => {
@@ -40,24 +44,47 @@ describe("/api/gas", () => {
     expect(payload.source).toBe("unavailable");
     expect(text).not.toContain("secret.example");
     expect(text).not.toContain("hidden");
-    delete process.env.PULSECHAIN_RPC_URL;
   });
 
-  it("returns PulseChain gas data from eth_gasPrice fallback", async () => {
+  it("returns PulseChain gas data from eth_gasPrice fallback with advisory data", async () => {
+    process.env.OWLRACLE_API_KEY = "hidden-owl-key";
     vi.stubGlobal(
       "fetch",
-      vi
-        .fn()
-        .mockResolvedValueOnce(rpcResponse("0x10"))
-        .mockRejectedValueOnce(new Error("fee history unavailable"))
-        .mockResolvedValueOnce(rpcResponse("0x11"))
-        .mockResolvedValueOnce(rpcResponse("0x174876e800")),
+      vi.fn<typeof fetch>(async (input, init) => {
+        const url = String(input);
+        if (url.includes("api.owlracle.info")) {
+          return new Response(
+            JSON.stringify({
+              timestamp: "2026-05-27T18:19:07.120Z",
+              avgTime: 10,
+              avgTx: 40,
+              speeds: [
+                { acceptance: 0.35, gasPrice: 625_000 },
+                { acceptance: 0.6, gasPrice: 750_000 },
+                { acceptance: 0.9, gasPrice: 2_000_000 },
+              ],
+            }),
+            { status: 200, headers: { "Content-Type": "application/json" } },
+          );
+        }
+
+        const body = JSON.parse(String(init?.body ?? "{}")) as {
+          method?: string;
+        };
+        if (body.method === "eth_blockNumber") return rpcResponse("0x11");
+        if (body.method === "eth_feeHistory") {
+          return new Response("method not found", { status: 500 });
+        }
+        if (body.method === "eth_gasPrice") return rpcResponse("0x174876e800");
+        return new Response("unknown method", { status: 400 });
+      }),
     );
 
     const response = await GET(
       new Request("https://example.test/api/gas?chainId=369"),
     );
-    const payload = await response.json();
+    const text = await response.text();
+    const payload = JSON.parse(text);
 
     expect(response.status).toBe(200);
     expect(payload.available).toBe(true);
@@ -66,5 +93,7 @@ describe("/api/gas", () => {
     expect(payload.gasPriceGwei).toBe("100");
     expect(payload.source).toBe("rpc-gas-price");
     expect(payload.typicalTransactions).toHaveLength(5);
+    expect(payload.advisory.tiers).toHaveLength(3);
+    expect(text).not.toContain("hidden-owl-key");
   });
 });

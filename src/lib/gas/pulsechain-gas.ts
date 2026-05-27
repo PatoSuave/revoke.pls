@@ -7,6 +7,7 @@ import {
 } from "@/lib/gas/gas-types";
 import { buildTypicalGasTransactions, weiToGweiString } from "@/lib/gas/gas-format";
 import { classifyGasStatus } from "@/lib/gas/gas-status";
+import { fetchOwlraclePulsechainAdvisory } from "@/lib/gas/owlracle-gas";
 
 const PULSECHAIN_RPC_DEFAULT = "https://rpc.pulsechain.com";
 const PULSECHAIN_GAS_REQUEST_TIMEOUT_MS = 4_000;
@@ -45,6 +46,8 @@ interface RpcOptions {
   signal?: AbortSignal;
   timeoutMs?: number;
   fetchFn?: typeof fetch;
+  includeAdvisory?: boolean;
+  advisoryFetchFn?: typeof fetch;
 }
 
 export async function fetchPulseChainGasData(
@@ -54,11 +57,19 @@ export async function fetchPulseChainGasData(
   const rpcUrl = options.rpcUrl ?? resolvePulseChainGasRpcUrl();
 
   try {
-    const sample = await fetchPulseChainGasSample({
-      ...options,
-      rpcUrl,
-    });
-    return buildGasApiResponse(sample, updatedAt);
+    const [sample, advisory] = await Promise.all([
+      fetchPulseChainGasSample({
+        ...options,
+        rpcUrl,
+      }),
+      options.includeAdvisory
+        ? fetchOwlraclePulsechainAdvisory({
+            signal: options.signal,
+            fetchFn: options.advisoryFetchFn,
+          })
+        : Promise.resolve(null),
+    ]);
+    return buildGasApiResponse(sample, updatedAt, advisory ?? undefined);
   } catch {
     return unavailableGasResponse(updatedAt, [
       "PulseChain gas data is unavailable from the configured RPC right now.",
@@ -121,6 +132,7 @@ export async function fetchPulseChainGasSample(
 function buildGasApiResponse(
   sample: PulseChainGasSample,
   updatedAt: string,
+  advisory?: GasApiResponse["advisory"],
 ): GasApiResponse {
   const gasPriceGwei = weiToGweiString(sample.gasPriceWei);
   const gasPriceGweiNumber = Number(gasPriceGwei);
@@ -145,6 +157,7 @@ function buildGasApiResponse(
       gasPriceWei: sample.gasPriceWei,
       nativeCurrency: PULSECHAIN_GAS_NATIVE_CURRENCY,
     }),
+    ...(advisory ? { advisory } : {}),
   };
 }
 
