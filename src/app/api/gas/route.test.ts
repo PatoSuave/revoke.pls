@@ -26,6 +26,50 @@ describe("/api/gas", () => {
     expect(payload.status).toBe("bad-request");
   });
 
+  it("dedupes simultaneous PulseChain sample requests", async () => {
+    const fetchMock = vi.fn<typeof fetch>(async (input, init) => {
+      const url = String(input);
+      if (url.includes("api.owlracle.info")) {
+        return new Response(
+          JSON.stringify({
+            timestamp: "2026-05-27T18:19:07.120Z",
+            speeds: [{ acceptance: 0.35, gasPrice: 100 }],
+          }),
+          { status: 200, headers: { "Content-Type": "application/json" } },
+        );
+      }
+
+      const body = JSON.parse(String(init?.body ?? "{}")) as {
+        method?: string;
+      };
+      if (body.method === "eth_blockNumber") return rpcResponse("0x20");
+      if (body.method === "eth_feeHistory") {
+        return rpcResponse({
+          oldestBlock: "0x20",
+          baseFeePerGas: ["0x174876e800", "0x174876e800"],
+          reward: [["0x0"]],
+        });
+      }
+      return new Response("unknown method", { status: 400 });
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    const [first, second] = await Promise.all([
+      GET(new Request("https://example.test/api/gas?chainId=369")),
+      GET(new Request("https://example.test/api/gas?chainId=369")),
+    ]);
+    const [firstPayload, secondPayload] = await Promise.all([
+      first.json(),
+      second.json(),
+    ]);
+
+    expect(first.status).toBe(200);
+    expect(second.status).toBe(200);
+    expect(firstPayload.blockNumber).toBe("32");
+    expect(secondPayload.blockNumber).toBe("32");
+    expect(fetchMock).toHaveBeenCalledTimes(3);
+  });
+
   it("returns unavailable state without leaking RPC URLs when RPC fails", async () => {
     process.env.PULSECHAIN_RPC_URL = "https://secret.example/rpc?key=hidden";
     vi.stubGlobal(
