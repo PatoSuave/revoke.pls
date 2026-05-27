@@ -33,7 +33,7 @@ export function calculateNativeCostWei({
   return gasPriceWei * BigInt(gasUnits);
 }
 
-export function formatNativeCost(valueWei: bigint, decimals = 6): string {
+export function formatNativeCost(valueWei: bigint, decimals = 9): string {
   return trimDecimal(formatUnits(valueWei, 18), decimals);
 }
 
