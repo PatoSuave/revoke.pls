@@ -33,6 +33,8 @@ describe("PulseChain gas tracker component source", () => {
     expect(SOURCE).toContain("Estimated revoke");
     expect(SOURCE).toContain("View live chart");
     expect(SOURCE).toContain("MiniGasSparkline");
+    expect(SOURCE).toContain("conditionLabel");
+    expect(SOURCE).toContain("Watching");
   });
 
   it("renders status-segmented chart UX with motion safety", () => {

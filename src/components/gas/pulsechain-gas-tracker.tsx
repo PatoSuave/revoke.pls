@@ -179,7 +179,11 @@ export function PulseChainGasTrackerView({
 }: TrackerViewProps) {
   const [detailsOpen, setDetailsOpen] = useState(false);
   const status = isStale ? "elevated" : sample?.status ?? "unavailable";
-  const liveLabel = isStale ? "Stale" : state === "loading" ? "Loading" : "Live";
+  const conditionLabel = isStale
+    ? "Stale"
+    : state === "loading"
+      ? "Loading"
+      : gasStatusLabel(status);
   const gasPriceLabel =
     sample?.gasPriceGwei ?? (state === "loading" ? "..." : "Unavailable");
   const revokeEstimate = getTransactionEstimate(
@@ -198,7 +202,7 @@ export function PulseChainGasTrackerView({
                 <p className="text-xs font-semibold uppercase tracking-[0.18em] text-pulse-cyan">
                   Network fee
                 </p>
-                <StatusPill status={status} label={liveLabel} />
+                <StatusPill status={status} label={conditionLabel} />
                 <LiveHeartbeat heartbeat={heartbeat} compact />
               </div>
               <h2 className="mt-2 text-xl font-bold text-pulse-text sm:text-2xl">
@@ -925,7 +929,7 @@ function LiveHeartbeat({
         }`}
         aria-hidden="true"
       />
-      {compact ? "Live" : "Watching"}
+      Watching
     </span>
   );
 }
