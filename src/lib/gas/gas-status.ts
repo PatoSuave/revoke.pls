@@ -6,8 +6,8 @@ export interface GasStatusThresholds {
 }
 
 export const PULSECHAIN_GAS_STATUS_THRESHOLDS: GasStatusThresholds = {
-  elevatedGwei: 250_000,
-  highGwei: 750_000,
+  elevatedGwei: 750_000,
+  highGwei: 2_000_000,
 };
 
 export function classifyGasStatus({
@@ -38,8 +38,15 @@ export function gasStatusLabel(status: GasStatus): string {
 }
 
 export function gasStatusCopy(status: GasStatus): string {
-  if (status === "normal") return "Gas is within the current PulseChain range.";
-  if (status === "elevated") return "Gas is higher than the PulseChain baseline.";
+  if (status === "normal") return "Gas is in the lower PulseChain range.";
+  if (status === "elevated") return "Gas is in the medium PulseChain range.";
   if (status === "high") return "Gas is unusually high for PulseChain.";
   return "PulseChain gas data is unavailable right now.";
+}
+
+export function gasStatusChartColor(status: GasStatus): string {
+  if (status === "normal") return "#00e5a0";
+  if (status === "elevated") return "#fbbf24";
+  if (status === "high") return "#ff4d6d";
+  return "#8a8db8";
 }

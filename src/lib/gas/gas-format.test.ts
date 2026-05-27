@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   buildTypicalGasTransactions,
   calculateNativeCostWei,
+  formatGweiNumber,
   formatNativeCost,
   gweiStringToWei,
   weiToGweiString,
@@ -12,6 +13,8 @@ describe("gas formatting", () => {
   it("formats wei values as Gwei strings", () => {
     expect(weiToGweiString(123_450_000_000n)).toBe("123.45");
     expect(weiToGweiString(1_000_000_000n)).toBe("1");
+    expect(formatGweiNumber(625_641.8319)).toBe("625641.83");
+    expect(formatGweiNumber(1_817_438.7)).toBe("1817438.7");
   });
 
   it("calculates native cost from gas price times gas units", () => {

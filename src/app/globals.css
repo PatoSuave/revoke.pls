@@ -13,6 +13,7 @@
   --pulse-purple: 124 58 237;
   --pulse-cyan: 34 211 238;
   --pulse-green: 0 229 160;
+  --pulse-yellow: 251 191 36;
   --pulse-red: 255 77 109;
   --pulse-on-gradient: 255 255 255;
   --pulse-mark-stroke: 7 7 11;
@@ -30,6 +31,7 @@ html[data-theme="dark"] {
   --pulse-purple: 124 58 237;
   --pulse-cyan: 34 211 238;
   --pulse-green: 0 229 160;
+  --pulse-yellow: 251 191 36;
   --pulse-red: 255 77 109;
   --pulse-on-gradient: 255 255 255;
   --pulse-mark-stroke: 7 7 11;
@@ -47,6 +49,7 @@ html[data-theme="dim"] {
   --pulse-purple: 139 92 246;
   --pulse-cyan: 45 212 191;
   --pulse-green: 52 211 153;
+  --pulse-yellow: 251 191 36;
   --pulse-red: 251 113 133;
   --pulse-on-gradient: 255 255 255;
   --pulse-mark-stroke: 18 22 31;
@@ -64,6 +67,7 @@ html[data-theme="light"] {
   --pulse-purple: 103 65 217;
   --pulse-cyan: 8 145 178;
   --pulse-green: 0 128 97;
+  --pulse-yellow: 202 138 4;
   --pulse-red: 220 38 70;
   --pulse-on-gradient: 255 255 255;
   --pulse-mark-stroke: 20 25 38;

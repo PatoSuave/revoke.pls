@@ -25,7 +25,10 @@ export async function GET(request: Request) {
   }
 
   try {
-    const result = await fetchPulseChainGasData({ signal: request.signal });
+    const result = await fetchPulseChainGasData({
+      signal: request.signal,
+      includeAdvisory: true,
+    });
     return NextResponse.json(result, {
       status: 200,
       headers: approvalApiNoStoreHeaders({

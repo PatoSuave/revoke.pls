@@ -26,4 +26,18 @@ describe("PulseChain gas tracker component source", () => {
     expect(SOURCE).toContain("<animate");
     expect(SOURCE).toContain('dur="2s"');
   });
+
+  it("renders status-segmented chart UX with motion safety", () => {
+    expect(SOURCE).toContain("gasStatusChartColor");
+    expect(SOURCE).toContain("segments.map");
+    expect(SOURCE).toContain("bg-pulse-yellow");
+    expect(SOURCE).toContain("prefers-reduced-motion");
+    expect(SOURCE).toContain("requestAnimationFrame");
+  });
+
+  it("labels Owlracle advisory data as supplemental", () => {
+    expect(SOURCE).toContain("Advisory Tiers");
+    expect(SOURCE).toContain("Supplemental Owlracle estimates");
+    expect(SOURCE).toContain("source of truth");
+  });
 });

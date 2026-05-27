@@ -71,6 +71,13 @@ fetches current gas data through the server-side `/api/gas?chainId=369` route,
 updates when new PulseChain blocks are detected, and keeps only a small
 in-memory chart history in the browser.
 
+The chart line is status-colored for recent PulseChain samples: green for the
+lower gas range, yellow for the medium range, and red for unusually high gas.
+When available, server-side Owlracle data is shown only as supplemental
+advisory tiers from recent blocks; RPC block samples remain the live source of
+truth. If an `OWLRACLE_API_KEY` is configured, it must stay server-side and must
+not use a `NEXT_PUBLIC_` prefix.
+
 Typical transaction costs are estimates in PLS based on current gas data. The
 tracker does not affect revoke transaction execution, wallet gas estimation,
 preflight checks, or transaction submission. Actual wallet estimates may vary

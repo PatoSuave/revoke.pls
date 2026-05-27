@@ -9,6 +9,20 @@ export type GasDataSource =
 
 export type GasStatus = "normal" | "elevated" | "high" | "unavailable";
 
+export interface GasAdvisoryTier {
+  label: "Low" | "Medium" | "High";
+  acceptance: number;
+  gasPriceGwei: string;
+}
+
+export interface GasAdvisory {
+  provider: "owlracle";
+  updatedAt: string;
+  avgBlockTimeSeconds: number | null;
+  avgTransactionsPerBlock: number | null;
+  tiers: GasAdvisoryTier[];
+}
+
 export interface TypicalGasTransaction {
   label: string;
   gasUnits: number;
@@ -29,6 +43,7 @@ export interface GasApiResponse {
   baseFeeGwei: string | null;
   priorityFeeGwei: string | null;
   typicalTransactions: TypicalGasTransaction[];
+  advisory?: GasAdvisory;
   errors?: string[];
 }
 
