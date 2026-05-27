@@ -47,6 +47,7 @@ import {
   HYPEREVM_CLIENT_CHAIN_ID,
   resolveHyperEVMReadOnlyChainId,
 } from "@/lib/hyperevm-approval-client";
+import { explorerAddressUrl } from "@/lib/explorer";
 import { shortenAddress } from "@/lib/format";
 import type { NftApproval } from "@/lib/nft-approvals";
 import {
@@ -72,6 +73,14 @@ import {
   type ScanMode,
   type ScanTarget,
 } from "@/lib/scan-target";
+import {
+  getPipelineHealthDisplay,
+  getScanPhaseDisplay,
+  getScannerModeDisplay,
+  type PipelineHealthDisplay,
+  type ScannerDisplayTone,
+  type ScannerModeDisplay,
+} from "@/lib/scanner-display";
 import { LIVE_SUPPORTED_CHAIN_COMPACT_LIST } from "@/lib/supported-chain-copy";
 import { tokenLogoAddressKey } from "@/lib/token-logos";
 
@@ -247,6 +256,16 @@ function AddressScanPanel({
         ? "Wallet mismatch"
         : "Connect matching wallet to revoke"
     : "No pasted address active";
+  const modeDisplay = getScannerModeDisplay({
+    scanMode: scanTarget.scanMode,
+    walletConnected: Boolean(scanTarget.connectedWalletAddress),
+    walletMatchesScanTarget: activeAddress
+      ? scanTarget.isConnectedWalletSameAsScanTarget
+      : scanTarget.connectedWalletAddress
+        ? true
+        : null,
+    walletMatchesActiveChain: null,
+  });
 
   return (
     <div className="mb-6 rounded-2xl border border-pulse-border/80 bg-pulse-bg/45 p-4">
@@ -263,7 +282,10 @@ function AddressScanPanel({
             connection is needed only when you choose a verified row to revoke.
           </p>
         </div>
-        <ScanStatusPill tone={statusTone}>{statusCopy}</ScanStatusPill>
+        <div className="flex flex-wrap items-center gap-2 lg:justify-end">
+          <ScannerModeBadge display={modeDisplay} />
+          <ScanStatusPill tone={statusTone}>{statusCopy}</ScanStatusPill>
+        </div>
       </div>
 
       <div className="mt-4 grid gap-3 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-end">
@@ -302,11 +324,16 @@ function AddressScanPanel({
           </button>
         </form>
         {activeAddress ? (
-          <div className="flex min-h-11 items-center rounded-xl border border-pulse-border bg-pulse-panel/45 px-3 py-2 text-xs text-pulse-muted">
-            <span className="mr-2 font-semibold uppercase tracking-[0.14em]">
+          <div className="flex min-h-11 flex-wrap items-center gap-2 rounded-xl border border-pulse-border bg-pulse-panel/45 px-3 py-2 text-xs text-pulse-muted">
+            <span className="font-semibold uppercase tracking-[0.14em]">
               Target
             </span>
             <span className="font-mono">{shortenAddress(activeAddress)}</span>
+            <AddressActions
+              address={activeAddress}
+              chainId={undefined}
+              explorerLabel="Explorer"
+            />
           </div>
         ) : null}
       </div>
@@ -648,6 +675,13 @@ function AddressOnlyScanResults({
     scanAllIndex,
   });
   const selectedOption = getAddressOnlyScanOption(selectedChainId);
+  const modeDisplay = getScannerModeDisplay({
+    scanMode,
+    walletConnected: Boolean(connectedAddress),
+    walletMatchesScanTarget,
+    walletMatchesActiveChain:
+      connectedAddress && walletMatchesOwner ? walletChainId === selectedChainId : null,
+  });
 
   const selectChain = useCallback((chainId: AddressOnlyScanChainId) => {
     setSelectedChainId(chainId);
@@ -676,18 +710,28 @@ function AddressOnlyScanResults({
   return (
     <div className="space-y-6">
       <div className="rounded-2xl border border-pulse-border bg-pulse-bg/55 p-4 text-sm">
-        <p className="text-xs font-semibold uppercase tracking-[0.18em] text-pulse-cyan">
-          Address-only scan
-        </p>
-        <p className="mt-2 leading-6 text-pulse-muted">
-          Approvals are public blockchain state. You do not need to connect a
-          wallet to scan. Revoke buttons stay disabled until the connected
-          wallet exactly matches the scanned address and the row chain.
-        </p>
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-pulse-cyan">
+              Address-only scan
+            </p>
+            <p className="mt-2 max-w-2xl leading-6 text-pulse-muted">
+              Approvals are public blockchain state. You do not need to connect
+              a wallet to scan. Revoke buttons stay disabled until the connected
+              wallet exactly matches the scanned address and the row chain.
+            </p>
+          </div>
+          <ScannerModeBadge display={modeDisplay} />
+        </div>
         <div className="mt-3 flex flex-wrap items-center gap-2 text-xs">
           <span className="rounded-full border border-pulse-border bg-pulse-panel/70 px-3 py-1 font-mono text-pulse-muted">
             {shortenAddress(owner)}
           </span>
+          <AddressActions
+            address={owner}
+            chainId={selectedChainId}
+            explorerLabel={selectedOption.shortName}
+          />
           <span
             className={`rounded-full border px-3 py-1 font-semibold ${
               walletMatchesOwner
@@ -964,6 +1008,10 @@ function ConnectedScanner({
     () => scored.filter((a) => a.risk.level === "high").length,
     [scored],
   );
+  const nftHighRiskCount = useMemo(
+    () => nft.approvals.filter((approval) => approval.risk.level === "high").length,
+    [nft.approvals],
+  );
 
   // Prune selections when the underlying scan loses an approval (e.g. after
   // a successful revoke triggers a rescan).
@@ -1047,14 +1095,37 @@ function ConnectedScanner({
       <ScannerSummary
         owner={owner}
         chainConfig={chainConfig}
-        activeCount={scan.stats.active}
-        candidateCount={scan.stats.candidates}
-        highRiskCount={highRiskCount}
+        erc20ActiveCount={scan.stats.active}
+        nftActiveCount={nft.stats.active}
+        candidateCount={scan.stats.candidates + nft.stats.candidates}
+        highRiskCount={highRiskCount + nftHighRiskCount}
         status={scan.status}
         isFetching={scan.isFetching}
         incomplete={Boolean(scanRevokeDisabledReason)}
         batchActive={batchActive}
+        scanMode={scanMode}
+        isConnected={isConnected}
+        walletMatchesScanTarget={walletMatchesScanTarget}
+        walletMatchesActiveChain={walletMatchesActiveChain}
+        completedAt={latestCompletedAt(
+          scan.diagnostics.timing.completedAt,
+          nft.diagnostics.timing.completedAt,
+        )}
+        elapsedMs={latestElapsedMs(
+          scan.diagnostics.timing.elapsedMs,
+          nft.diagnostics.timing.elapsedMs,
+        )}
         onRescan={scan.refetch}
+      />
+
+      <ScannerDataHealthStrip
+        scan={scan}
+        nft={nft}
+        chainConfig={chainConfig}
+        scanMode={scanMode}
+        isConnected={isConnected}
+        walletMatchesScanTarget={walletMatchesScanTarget}
+        walletMatchesActiveChain={walletMatchesActiveChain}
       />
 
       <ScanContent
@@ -1117,78 +1188,421 @@ function ConnectedScanner({
 function ScannerSummary({
   owner,
   chainConfig,
-  activeCount,
+  erc20ActiveCount,
+  nftActiveCount,
   candidateCount,
   highRiskCount,
   status,
   isFetching,
   incomplete,
   batchActive,
+  scanMode,
+  isConnected,
+  walletMatchesScanTarget,
+  walletMatchesActiveChain,
+  completedAt,
+  elapsedMs,
   onRescan,
 }: {
   owner: `0x${string}`;
   chainConfig: SupportedChainConfig;
-  activeCount: number;
+  erc20ActiveCount: number;
+  nftActiveCount: number;
   candidateCount: number;
   highRiskCount: number;
   status: ReturnType<typeof useApprovalDiscovery>["status"];
   isFetching: boolean;
   incomplete: boolean;
   batchActive: boolean;
+  scanMode: ScanMode;
+  isConnected: boolean;
+  walletMatchesScanTarget: boolean | null;
+  walletMatchesActiveChain: boolean | null;
+  completedAt: number | null;
+  elapsedMs: number | null;
   onRescan: () => void;
 }) {
+  const totalActiveCount = erc20ActiveCount + nftActiveCount;
+  const modeDisplay = getScannerModeDisplay({
+    scanMode,
+    walletConnected: isConnected,
+    walletMatchesScanTarget,
+    walletMatchesActiveChain,
+  });
   const summary =
     incomplete
-      ? activeCount > 0
-        ? `${activeCount} active / verification incomplete`
+      ? totalActiveCount > 0
+        ? `${totalActiveCount} active / verification incomplete`
         : "Verification incomplete"
       : candidateCount > 0
-      ? `${activeCount} active / ${candidateCount} checked`
+      ? `${totalActiveCount} active / ${candidateCount} checked`
       : status === "pending"
       ? "Searching wallet history"
-      : `No active ${chainConfig.standardLabels.fungible} approvals`;
+      : "No active approvals";
 
   return (
-    <div className="rounded-2xl border border-pulse-border bg-pulse-bg/55 p-4">
-      <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-        <div className="flex flex-wrap items-center gap-2">
-          <span className="inline-flex items-center gap-2 rounded-full border border-pulse-green/30 bg-pulse-green/10 px-3 py-1 text-xs font-semibold text-pulse-green">
-            <span
-              className="h-1.5 w-1.5 rounded-full bg-pulse-green"
-              aria-hidden
-            />
-            {chainConfig.displayName}
-          </span>
-          <span className="rounded-full border border-pulse-border bg-pulse-panel/70 px-3 py-1 font-mono text-xs text-pulse-muted">
-            {shortenAddress(owner)}
-          </span>
-          <span className="rounded-full border border-pulse-border bg-pulse-panel/70 px-3 py-1 text-xs font-medium text-pulse-muted">
-            {summary}
-          </span>
-          {highRiskCount > 0 ? (
-            <span className="inline-flex items-center gap-1.5 rounded-full border border-pulse-red/40 bg-pulse-red/10 px-3 py-1 text-xs font-semibold text-pulse-red">
-              <span
-                className="h-1.5 w-1.5 rounded-full bg-pulse-red"
-                aria-hidden
+    <div className="overflow-hidden rounded-2xl border border-pulse-border bg-pulse-bg/55">
+      <div className="border-b border-pulse-border/70 bg-pulse-panel/35 p-4">
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+          <div className="min-w-0">
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="inline-flex items-center gap-2 rounded-full border border-pulse-green/30 bg-pulse-green/10 px-3 py-1 text-xs font-semibold text-pulse-green">
+                <span
+                  className="h-1.5 w-1.5 rounded-full bg-pulse-green"
+                  aria-hidden
+                />
+                {chainConfig.displayName}
+              </span>
+              <ScannerModeBadge display={modeDisplay} />
+              <span className="rounded-full border border-pulse-border bg-pulse-panel/70 px-3 py-1 text-xs font-medium text-pulse-muted">
+                {summary}
+              </span>
+            </div>
+            <h3 className="mt-3 text-xl font-semibold text-pulse-text">
+              Scan summary
+            </h3>
+            <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-pulse-muted">
+              <span className="rounded-full border border-pulse-border bg-pulse-bg/60 px-3 py-1 font-mono">
+                {shortenAddress(owner)}
+              </span>
+              <AddressActions
+                address={owner}
+                chainId={chainConfig.chainId}
+                explorerLabel={chainConfig.explorer.name}
               />
-              {highRiskCount} high-risk
-            </span>
-          ) : null}
-        </div>
+            </div>
+            <p className="mt-2 max-w-2xl text-sm leading-6 text-pulse-muted">
+              {modeDisplay.body}
+            </p>
+          </div>
 
-        <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
           <button
             type="button"
             onClick={onRescan}
             disabled={isFetching || batchActive}
-            className="inline-flex items-center justify-center gap-2 rounded-xl border border-pulse-cyan/35 bg-pulse-cyan/10 px-3 py-2 text-xs font-semibold text-pulse-cyan transition hover:bg-pulse-cyan/15 disabled:cursor-not-allowed disabled:opacity-60"
+            className="inline-flex min-h-10 items-center justify-center gap-2 rounded-xl border border-pulse-cyan/35 bg-pulse-cyan/10 px-3 py-2 text-xs font-semibold text-pulse-cyan transition hover:bg-pulse-cyan/15 disabled:cursor-not-allowed disabled:opacity-60"
           >
             {isFetching ? "Scanning..." : "Rescan"}
           </button>
         </div>
       </div>
+
+      <div className="grid gap-3 p-4 sm:grid-cols-2 xl:grid-cols-4">
+        <SummaryMetric
+          label="Active approvals"
+          value={totalActiveCount.toString()}
+          detail={`${erc20ActiveCount} token / ${nftActiveCount} NFT`}
+          tone={totalActiveCount > 0 ? "warning" : "success"}
+        />
+        <SummaryMetric
+          label="Checked candidates"
+          value={candidateCount.toString()}
+          detail="Historical approvals re-read live"
+          tone="neutral"
+        />
+        <SummaryMetric
+          label="High-risk"
+          value={highRiskCount.toString()}
+          detail="Unlimited or broad permissions"
+          tone={highRiskCount > 0 ? "error" : "success"}
+        />
+        <SummaryMetric
+          label="Last scan"
+          value={isFetching ? "Scanning" : formatCompletedAt(completedAt)}
+          detail={formatElapsedMs(elapsedMs)}
+          tone={isFetching ? "info" : status === "error" ? "error" : "neutral"}
+        />
+      </div>
     </div>
   );
+}
+
+function ScannerDataHealthStrip({
+  scan,
+  nft,
+  chainConfig,
+  scanMode,
+  isConnected,
+  walletMatchesScanTarget,
+  walletMatchesActiveChain,
+}: {
+  scan: ReturnType<typeof useApprovalDiscovery>;
+  nft: ReturnType<typeof useNftApprovalDiscovery>;
+  chainConfig: SupportedChainConfig;
+  scanMode: ScanMode;
+  isConnected: boolean;
+  walletMatchesScanTarget: boolean | null;
+  walletMatchesActiveChain: boolean | null;
+}) {
+  const modeDisplay = getScannerModeDisplay({
+    scanMode,
+    walletConnected: isConnected,
+    walletMatchesScanTarget,
+    walletMatchesActiveChain,
+  });
+  const items: readonly {
+    title: string;
+    status: string;
+    detail: string;
+    tone: ScannerDisplayTone;
+  }[] = [
+    {
+      title: "Wallet authority",
+      status: modeDisplay.label,
+      detail: modeDisplay.body,
+      tone: modeDisplay.tone,
+    },
+    {
+      title: `${chainConfig.standardLabels.fungible} indexer`,
+      ...healthAsItem(
+        getPipelineHealthDisplay({
+          status: scan.status,
+          truncated: scan.truncated,
+          failureCount: 0,
+          error: scan.diagnostics.discoveryError,
+          successDetail: `${scan.sourceMeta?.name ?? chainConfig.discovery.name} returned approval history.`,
+        }),
+      ),
+    },
+    {
+      title: `${chainConfig.standardLabels.fungible} live reads`,
+      ...healthAsItem(
+        getPipelineHealthDisplay({
+          status: scan.status,
+          truncated: false,
+          failureCount: scan.diagnostics.liveReadFailureCount,
+          error: scan.diagnostics.liveReadError,
+          successDetail: "Allowance reads are confirming current state.",
+        }),
+      ),
+    },
+    {
+      title: "NFT pipeline",
+      ...healthAsItem(
+        getPipelineHealthDisplay({
+          status: nft.status,
+          truncated: nft.truncated,
+          failureCount: nft.diagnostics.liveReadFailureCount,
+          error: nft.diagnostics.discoveryError ?? nft.diagnostics.liveReadError,
+          successDetail: "NFT approval discovery and live reads are reporting normally.",
+        }),
+      ),
+    },
+  ];
+
+  return (
+    <section className="rounded-2xl border border-pulse-border bg-pulse-bg/45 p-4">
+      <div className="flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-pulse-cyan">
+            Data health
+          </p>
+          <p className="mt-1 text-sm leading-6 text-pulse-muted">
+            Live status for the scanner data paths used by this scan.
+          </p>
+        </div>
+      </div>
+      <div className="mt-3 grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
+        {items.map((item) => (
+          <HealthItemCard key={item.title} item={item} />
+        ))}
+      </div>
+    </section>
+  );
+}
+
+function healthAsItem(health: PipelineHealthDisplay) {
+  return {
+    status: health.label,
+    detail: health.detail,
+    tone: health.tone,
+  };
+}
+
+function HealthItemCard({
+  item,
+}: {
+  item: {
+    title: string;
+    status: string;
+    detail: string;
+    tone: ScannerDisplayTone;
+  };
+}) {
+  return (
+    <div className="rounded-xl border border-pulse-border/70 bg-pulse-panel/35 p-3">
+      <div className="flex items-start justify-between gap-2">
+        <p className="text-xs font-semibold uppercase tracking-[0.14em] text-pulse-muted">
+          {item.title}
+        </p>
+        <span
+          className={`mt-0.5 h-2 w-2 shrink-0 rounded-full ${toneDotClass(
+            item.tone,
+          )}`}
+          aria-hidden
+        />
+      </div>
+      <p className={`mt-2 text-sm font-semibold ${toneTextClass(item.tone)}`}>
+        {item.status}
+      </p>
+      <p className="mt-1 text-xs leading-5 text-pulse-muted">{item.detail}</p>
+    </div>
+  );
+}
+
+function SummaryMetric({
+  label,
+  value,
+  detail,
+  tone,
+}: {
+  label: string;
+  value: string;
+  detail: string;
+  tone: ScannerDisplayTone;
+}) {
+  return (
+    <div className="rounded-xl border border-pulse-border/70 bg-pulse-panel/35 p-3">
+      <p className="text-xs font-semibold uppercase tracking-[0.14em] text-pulse-muted">
+        {label}
+      </p>
+      <p className={`mt-2 font-mono text-2xl font-semibold ${toneTextClass(tone)}`}>
+        {value}
+      </p>
+      <p className="mt-1 text-xs leading-5 text-pulse-muted">{detail}</p>
+    </div>
+  );
+}
+
+function AddressActions({
+  address,
+  chainId,
+  explorerLabel,
+}: {
+  address: Address;
+  chainId: number | undefined;
+  explorerLabel: string;
+}) {
+  const [copied, setCopied] = useState(false);
+  const copiedTimerRef = useRef<number | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (copiedTimerRef.current !== null) {
+        window.clearTimeout(copiedTimerRef.current);
+      }
+    };
+  }, []);
+
+  const copyAddress = useCallback(async () => {
+    try {
+      await navigator.clipboard.writeText(address);
+      setCopied(true);
+      if (copiedTimerRef.current !== null) {
+        window.clearTimeout(copiedTimerRef.current);
+      }
+      copiedTimerRef.current = window.setTimeout(() => setCopied(false), 1800);
+    } catch {
+      setCopied(false);
+    }
+  }, [address]);
+
+  return (
+    <span className="inline-flex flex-wrap items-center gap-1.5">
+      <button
+        type="button"
+        onClick={copyAddress}
+        className="inline-flex min-h-7 items-center rounded-lg border border-pulse-border bg-pulse-text/5 px-2.5 py-1 text-[11px] font-semibold text-pulse-muted transition hover:bg-pulse-text/10 hover:text-pulse-text"
+        aria-label={`Copy ${address}`}
+      >
+        {copied ? "Copied" : "Copy"}
+      </button>
+      <a
+        href={explorerAddressUrl(chainId, address)}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="inline-flex min-h-7 items-center rounded-lg border border-pulse-border bg-pulse-text/5 px-2.5 py-1 text-[11px] font-semibold text-pulse-muted transition hover:bg-pulse-text/10 hover:text-pulse-cyan"
+      >
+        {explorerLabel}
+      </a>
+    </span>
+  );
+}
+
+function ScannerModeBadge({ display }: { display: ScannerModeDisplay }) {
+  return (
+    <span
+      className={`inline-flex max-w-full items-center gap-2 rounded-full border px-3 py-1 text-xs font-semibold ${tonePillClass(
+        display.tone,
+      )}`}
+      title={display.body}
+    >
+      <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-current" aria-hidden />
+      <span className="truncate">{display.label}</span>
+    </span>
+  );
+}
+
+function tonePillClass(tone: ScannerDisplayTone): string {
+  if (tone === "success") {
+    return "border-pulse-green/35 bg-pulse-green/10 text-pulse-green";
+  }
+  if (tone === "warning") {
+    return "border-amber-400/35 bg-amber-400/10 text-amber-200";
+  }
+  if (tone === "error") {
+    return "border-pulse-red/40 bg-pulse-red/10 text-pulse-red";
+  }
+  if (tone === "info") {
+    return "border-pulse-cyan/35 bg-pulse-cyan/10 text-pulse-cyan";
+  }
+  return "border-pulse-border bg-pulse-panel/55 text-pulse-muted";
+}
+
+function toneDotClass(tone: ScannerDisplayTone): string {
+  if (tone === "success") return "bg-pulse-green";
+  if (tone === "warning") return "bg-amber-300";
+  if (tone === "error") return "bg-pulse-red";
+  if (tone === "info") return "bg-pulse-cyan";
+  return "bg-pulse-muted";
+}
+
+function toneTextClass(tone: ScannerDisplayTone): string {
+  if (tone === "success") return "text-pulse-green";
+  if (tone === "warning") return "text-amber-200";
+  if (tone === "error") return "text-pulse-red";
+  if (tone === "info") return "text-pulse-cyan";
+  return "text-pulse-text";
+}
+
+function latestCompletedAt(
+  left: number | null,
+  right: number | null,
+): number | null {
+  if (left === null) return right;
+  if (right === null) return left;
+  return Math.max(left, right);
+}
+
+function latestElapsedMs(left: number | null, right: number | null): number | null {
+  if (left === null) return right;
+  if (right === null) return left;
+  return Math.max(left, right);
+}
+
+function formatCompletedAt(value: number | null): string {
+  if (value === null) return "Not finished";
+  return new Intl.DateTimeFormat("en-US", {
+    hour: "numeric",
+    minute: "2-digit",
+    second: "2-digit",
+  }).format(new Date(value));
+}
+
+function formatElapsedMs(value: number | null): string {
+  if (value === null) return "Elapsed time pending";
+  if (value < 1000) return `${value} ms`;
+  return `${(value / 1000).toFixed(1)} seconds`;
 }
 
 function NftSection({
@@ -1300,14 +1714,19 @@ function NftSectionBody({
 }) {
   if (nft.status === "pending") {
     return (
-      <div className="rounded-2xl border border-pulse-cyan/30 bg-pulse-cyan/5 p-4 text-xs text-pulse-muted">
-        <span className="inline-flex h-2 w-2 animate-pulse rounded-full bg-pulse-cyan" />{" "}
-        {nft.stats.candidates > 0
-          ? `Verifying ${nft.stats.candidates} NFT approval candidate${
-              nft.stats.candidates === 1 ? "" : "s"
-            } live on-chain...`
-          : "Searching NFT approval history..."}
-      </div>
+      <ScanProgressPanel
+        phase={getScanPhaseDisplay({
+          status: "pending",
+          candidateCount: nft.stats.candidates,
+          standardLabel: "NFT",
+        })}
+        chainName={chainConfig.displayName}
+        owner={owner}
+        sourceName={nft.sourceMeta?.name ?? chainConfig.discovery.name}
+        candidates={nft.stats.candidates}
+        windows={nft.stats.windows}
+        requests={nft.stats.requests}
+      />
     );
   }
 
@@ -1515,6 +1934,11 @@ function ScanContent({
       <ScannerSkeleton
         candidates={scan.stats.candidates}
         standardLabel={chainConfig.standardLabels.fungible}
+        chainName={chainConfig.displayName}
+        owner={owner}
+        sourceName={scan.sourceMeta?.name ?? chainConfig.discovery.name}
+        windows={scan.stats.windows}
+        requests={scan.stats.requests}
       />
     );
   }
@@ -1859,37 +2283,37 @@ function EmptyStateStep({ title, body }: { title: string; body: string }) {
 function ScannerSkeleton({
   candidates,
   standardLabel,
+  chainName,
+  owner,
+  sourceName,
+  windows,
+  requests,
 }: {
   candidates: number;
   standardLabel: string;
+  chainName: string;
+  owner: Address;
+  sourceName: string;
+  windows: number;
+  requests: number;
 }) {
-  const status =
-    candidates > 0
-      ? `Re-validating ${candidates} historical approval candidate${
-          candidates === 1 ? "" : "s"
-        } with live on-chain reads.`
-      : `Searching explorer logs for ${standardLabel} approval history.`;
+  const phase = getScanPhaseDisplay({
+    status: "pending",
+    candidateCount: candidates,
+    standardLabel,
+  });
 
   return (
     <div className="space-y-4">
-      <div className="rounded-2xl border border-pulse-cyan/30 bg-pulse-cyan/5 p-4">
-        <div className="flex items-start gap-3">
-          <span
-            className="mt-1 inline-flex h-2 w-2 animate-pulse rounded-full bg-pulse-cyan"
-            aria-hidden
-          />
-          <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-pulse-cyan">
-              Scan in progress
-            </p>
-            <p className="mt-1 text-sm text-pulse-muted">{status}</p>
-            <p className="mt-1 text-xs text-pulse-muted/80">
-              This step is read-only. Revoke transactions are requested only
-              after you choose an approval and confirm it.
-            </p>
-          </div>
-        </div>
-      </div>
+      <ScanProgressPanel
+        phase={phase}
+        chainName={chainName}
+        owner={owner}
+        sourceName={sourceName}
+        candidates={candidates}
+        windows={windows}
+        requests={requests}
+      />
       <div className="overflow-hidden rounded-2xl border border-pulse-border">
         {[0, 1, 2].map((i) => (
           <div
@@ -1906,6 +2330,84 @@ function ScannerSkeleton({
           </div>
         ))}
       </div>
+    </div>
+  );
+}
+
+function ScanProgressPanel({
+  phase,
+  chainName,
+  owner,
+  sourceName,
+  candidates,
+  windows,
+  requests,
+}: {
+  phase: PipelineHealthDisplay;
+  chainName: string;
+  owner: Address;
+  sourceName: string;
+  candidates: number;
+  windows: number;
+  requests: number;
+}) {
+  return (
+    <div className="overflow-hidden rounded-2xl border border-pulse-cyan/30 bg-pulse-cyan/5">
+      <div className="flex flex-col gap-4 p-4 sm:flex-row sm:items-start sm:justify-between">
+        <div className="flex items-start gap-3">
+          <span
+            className="mt-1 inline-flex h-2 w-2 animate-pulse rounded-full bg-pulse-cyan"
+            aria-hidden
+          />
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-pulse-cyan">
+              Scan in progress
+            </p>
+            <p className="mt-1 text-base font-semibold text-pulse-text">
+              {phase.label}
+            </p>
+            <p className="mt-1 max-w-2xl text-sm leading-6 text-pulse-muted">
+              {phase.detail}
+            </p>
+            <p className="mt-1 text-xs leading-5 text-pulse-muted/85">
+              This is read-only work. Wallet transactions are requested only
+              after you choose an approval and confirm it.
+            </p>
+          </div>
+        </div>
+        <div className="grid gap-1.5 rounded-xl border border-pulse-border/70 bg-pulse-bg/55 p-3 text-xs text-pulse-muted sm:min-w-56">
+          <ProgressRow label="Chain" value={chainName} />
+          <ProgressRow label="Target" value={shortenAddress(owner)} />
+          <ProgressRow label="Source" value={sourceName} />
+        </div>
+      </div>
+      <div className="grid gap-2 border-t border-pulse-border/70 bg-pulse-bg/35 p-3 text-xs sm:grid-cols-3">
+        <ProgressMetric label="Candidates" value={candidates.toString()} />
+        <ProgressMetric label="Windows" value={windows.toString()} />
+        <ProgressMetric label="Requests" value={requests.toString()} />
+      </div>
+    </div>
+  );
+}
+
+function ProgressRow({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="flex items-start justify-between gap-3">
+      <span>{label}</span>
+      <span className="break-words text-right font-mono text-pulse-text">
+        {value}
+      </span>
+    </div>
+  );
+}
+
+function ProgressMetric({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded-xl border border-pulse-border/60 bg-pulse-panel/40 p-3">
+      <p className="font-semibold uppercase tracking-[0.14em] text-pulse-muted">
+        {label}
+      </p>
+      <p className="mt-1 font-mono text-lg text-pulse-text">{value}</p>
     </div>
   );
 }
