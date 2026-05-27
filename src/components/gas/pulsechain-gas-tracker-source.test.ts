@@ -16,7 +16,7 @@ describe("PulseChain gas tracker component source", () => {
   it("keeps gas tracking informational and block-driven", () => {
     expect(SOURCE).toContain("watchBlockNumber");
     expect(SOURCE).toContain("/api/gas?chainId=369");
-    expect(SOURCE).toContain("Revoke.PLS does not add an extra revoke fee");
+    expect(SOURCE).toContain("does not add fees");
     expect(SOURCE).not.toMatch(/writeContract|sendTransaction|signTransaction/);
   });
 
