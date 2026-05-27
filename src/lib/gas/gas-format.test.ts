@@ -1,0 +1,50 @@
+import { describe, expect, it } from "vitest";
+
+import {
+  buildTypicalGasTransactions,
+  calculateNativeCostWei,
+  formatNativeCost,
+  gweiStringToWei,
+  weiToGweiString,
+} from "@/lib/gas/gas-format";
+
+describe("gas formatting", () => {
+  it("formats wei values as Gwei strings", () => {
+    expect(weiToGweiString(123_450_000_000n)).toBe("123.45");
+    expect(weiToGweiString(1_000_000_000n)).toBe("1");
+  });
+
+  it("calculates native cost from gas price times gas units", () => {
+    const cost = calculateNativeCostWei({
+      gasPriceWei: gweiStringToWei("123.45"),
+      gasUnits: 21_000,
+    });
+
+    expect(formatNativeCost(cost)).toBe("0.002592");
+  });
+
+  it("builds typical PulseChain transaction estimate rows", () => {
+    const estimates = buildTypicalGasTransactions({
+      gasPriceWei: gweiStringToWei("100"),
+      nativeCurrency: "PLS",
+    });
+
+    expect(estimates.map((estimate) => estimate.label)).toEqual([
+      "Native transfer",
+      "Token approval / revoke",
+      "Token transfer",
+      "NFT approval",
+      "Contract interaction",
+    ]);
+    expect(estimates[0]).toMatchObject({
+      gasUnits: 21_000,
+      costNative: "0.0021",
+      nativeCurrency: "PLS",
+    });
+    expect(estimates[1]).toMatchObject({
+      gasUnits: 65_000,
+      costNative: "0.0065",
+      nativeCurrency: "PLS",
+    });
+  });
+});

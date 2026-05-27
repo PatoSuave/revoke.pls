@@ -58,9 +58,23 @@ Solana is not supported by the current EVM approval scanner design.
 - Address-only scan mode for review before connecting a wallet
 - Chain-scoped token and spender labels for context
 - Token-logo lookup for PulseChain, BSC, and Polygon display only
+- PulseChain gas tracker with live block-based updates and native PLS cost
+  estimates
 - Revoke receipt status with post-revoke live verification
 - `/app?debug=1` diagnostics for scanner status, chain, source, and incomplete
   scan reasons
+
+## PulseChain Gas Tracker
+
+The `/app` workspace includes an informational PulseChain gas tracker. It
+fetches current gas data through the server-side `/api/gas?chainId=369` route,
+updates when new PulseChain blocks are detected, and keeps only a small
+in-memory chart history in the browser.
+
+Typical transaction costs are estimates in PLS based on current gas data. The
+tracker does not affect revoke transaction execution, wallet gas estimation,
+preflight checks, or transaction submission. Actual wallet estimates may vary
+by contract.
 
 ## Security Model
 
