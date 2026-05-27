@@ -26,6 +26,7 @@ interface TrackerViewProps {
   history: readonly GasChartSample[];
   isStale: boolean;
   watcherError: string | null;
+  heartbeat: number;
   now?: number;
 }
 
@@ -41,6 +42,7 @@ export function PulseChainGasTracker() {
   const [watcherError, setWatcherError] = useState<string | null>(null);
   const [lastBlockSeenAt, setLastBlockSeenAt] = useState<number | null>(null);
   const [now, setNow] = useState(Date.now());
+  const [heartbeat, setHeartbeat] = useState(0);
   const inFlightRef = useRef(false);
   const latestWatchedBlockRef = useRef<bigint | null>(null);
 
@@ -129,7 +131,11 @@ export function PulseChainGasTracker() {
   }, [loadGas]);
 
   useEffect(() => {
-    const interval = window.setInterval(() => setNow(Date.now()), 15_000);
+    const interval = window.setInterval(() => {
+      if (document.hidden) return;
+      setNow(Date.now());
+      setHeartbeat((current) => current + 1);
+    }, 3_000);
     return () => window.clearInterval(interval);
   }, []);
 
@@ -143,6 +149,7 @@ export function PulseChainGasTracker() {
       history={history}
       isStale={isStale}
       watcherError={watcherError}
+      heartbeat={heartbeat}
       now={now}
     />
   );
@@ -154,6 +161,7 @@ export function PulseChainGasTrackerView({
   history,
   isStale,
   watcherError,
+  heartbeat,
   now = Date.now(),
 }: TrackerViewProps) {
   const status = isStale ? "elevated" : sample?.status ?? "unavailable";
@@ -192,7 +200,7 @@ export function PulseChainGasTrackerView({
                 />
                 <InfoRow
                   label="Refresh mode"
-                  value="New PulseChain blocks"
+                  value="New blocks + 3s heartbeat"
                   valueClassName="text-pulse-green"
                 />
               </div>
@@ -249,7 +257,12 @@ export function PulseChainGasTrackerView({
               isStale={isStale}
               watcherError={watcherError}
             />
-            <GasChartCard history={history} sample={sample} state={state} />
+            <GasChartCard
+              history={history}
+              sample={sample}
+              state={state}
+              heartbeat={heartbeat}
+            />
           </div>
 
           <div className="border-t border-pulse-border/70 p-4 sm:p-5 lg:p-6">
@@ -342,10 +355,12 @@ function GasChartCard({
   history,
   sample,
   state,
+  heartbeat,
 }: {
   history: readonly GasChartSample[];
   sample: GasApiResponse | null;
   state: LoadState;
+  heartbeat: number;
 }) {
   return (
     <div className="rounded-2xl border border-pulse-border bg-pulse-bg/45 p-4 sm:p-5">
@@ -355,20 +370,30 @@ function GasChartCard({
             Live Gas Chart
           </h3>
           <p className="mt-1 text-sm text-pulse-muted">
-            Recent PulseChain block samples in Gwei.
+            Recent PulseChain block samples in Gwei. The pulse shows the app is
+            still watching for the next block.
           </p>
         </div>
-        <span className="rounded-full border border-pulse-border bg-pulse-panel/70 px-3 py-1 text-xs text-pulse-muted">
-          Latest block {formatBlockNumber(sample?.blockNumber ?? null)}
-        </span>
+        <div className="flex flex-wrap items-center gap-2">
+          <LiveHeartbeat heartbeat={heartbeat} />
+          <span className="rounded-full border border-pulse-border bg-pulse-panel/70 px-3 py-1 text-xs text-pulse-muted">
+            Latest block {formatBlockNumber(sample?.blockNumber ?? null)}
+          </span>
+        </div>
       </div>
       <div className="mt-4 min-h-64 overflow-hidden rounded-xl border border-pulse-border/70 bg-pulse-bg/50 p-3">
         {state === "loading" && history.length === 0 ? (
-          <ChartEmptyState label="Waiting for PulseChain gas data..." />
+          <ChartEmptyState
+            label="Waiting for PulseChain gas data..."
+            heartbeat={heartbeat}
+          />
         ) : history.length < 2 ? (
-          <ChartEmptyState label="Chart will fill as new blocks arrive." />
+          <ChartEmptyState
+            label="Chart will fill as new blocks arrive."
+            heartbeat={heartbeat}
+          />
         ) : (
-          <GasLineChart samples={history} />
+          <GasLineChart samples={history} heartbeat={heartbeat} />
         )}
       </div>
     </div>
@@ -408,9 +433,16 @@ function TypicalTransactionGrid({ sample }: { sample: GasApiResponse | null }) {
   );
 }
 
-function GasLineChart({ samples }: { samples: readonly GasChartSample[] }) {
+function GasLineChart({
+  samples,
+  heartbeat,
+}: {
+  samples: readonly GasChartSample[];
+  heartbeat: number;
+}) {
   const chart = useMemo(() => buildChart(samples), [samples]);
   const latest = samples.at(-1);
+  const scanX = 42 + ((heartbeat % 12) / 11) * 578;
 
   return (
     <div className="h-full min-h-56 w-full">
@@ -467,6 +499,22 @@ function GasLineChart({ samples }: { samples: readonly GasChartSample[] }) {
             strokeWidth="2"
           />
         ))}
+        <line
+          x1={scanX}
+          x2={scanX}
+          y1="18"
+          y2="208"
+          stroke="#34d399"
+          strokeOpacity="0.35"
+          strokeWidth="2"
+        />
+        <circle
+          cx={scanX}
+          cy="18"
+          r="4"
+          fill="#34d399"
+          opacity="0.85"
+        />
       </svg>
       <div className="mt-2 flex items-center justify-between gap-3 text-xs text-pulse-muted">
         <span>Recent blocks</span>
@@ -478,11 +526,34 @@ function GasLineChart({ samples }: { samples: readonly GasChartSample[] }) {
   );
 }
 
-function ChartEmptyState({ label }: { label: string }) {
+function ChartEmptyState({
+  label,
+  heartbeat,
+}: {
+  label: string;
+  heartbeat: number;
+}) {
   return (
-    <div className="flex min-h-56 items-center justify-center text-center text-sm text-pulse-muted">
-      {label}
+    <div className="flex min-h-56 flex-col items-center justify-center gap-3 text-center text-sm text-pulse-muted">
+      <LiveHeartbeat heartbeat={heartbeat} />
+      <span>{label}</span>
     </div>
+  );
+}
+
+function LiveHeartbeat({ heartbeat }: { heartbeat: number }) {
+  const active = heartbeat % 2 === 0;
+
+  return (
+    <span className="inline-flex items-center gap-2 rounded-full border border-pulse-green/30 bg-pulse-green/10 px-3 py-1 text-xs font-semibold text-pulse-green">
+      <span
+        className={`h-2 w-2 rounded-full bg-pulse-green transition ${
+          active ? "scale-110 opacity-100" : "scale-75 opacity-45"
+        }`}
+        aria-hidden="true"
+      />
+      Watching
+    </span>
   );
 }
 
