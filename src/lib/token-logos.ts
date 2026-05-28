@@ -1,18 +1,28 @@
 import { getAddress, isAddress, type Address } from "viem";
 
 import {
+  BASE_CHAIN_ID,
   BSC_CHAIN_ID,
   POLYGON_CHAIN_ID,
   PULSECHAIN_CHAIN_ID,
 } from "@/lib/chains";
 
+export const ETHEREUM_TOKEN_LOGO_CHAIN_ID = 1;
+export const OPTIMISM_TOKEN_LOGO_CHAIN_ID = 10;
+export const ARBITRUM_TOKEN_LOGO_CHAIN_ID = 42161;
+export const HYPEREVM_TOKEN_LOGO_CHAIN_ID = 999;
 export const TOKEN_LOGO_MAX_ADDRESSES = 30;
 export const TOKEN_LOGO_REQUEST_TIMEOUT_MS = 8_000;
 
 const DEXSCREENER_CHAIN_SLUG_BY_CHAIN_ID: Readonly<Record<number, string>> = {
+  [ETHEREUM_TOKEN_LOGO_CHAIN_ID]: "ethereum",
+  [OPTIMISM_TOKEN_LOGO_CHAIN_ID]: "optimism",
   [PULSECHAIN_CHAIN_ID]: "pulsechain",
   [BSC_CHAIN_ID]: "bsc",
+  [BASE_CHAIN_ID]: "base",
   [POLYGON_CHAIN_ID]: "polygon",
+  [ARBITRUM_TOKEN_LOGO_CHAIN_ID]: "arbitrum",
+  [HYPEREVM_TOKEN_LOGO_CHAIN_ID]: "hyperevm",
 };
 
 export type TokenLogoSource = "dexscreener";
@@ -35,6 +45,19 @@ export function getDexScreenerChainSlugForTokenLogos(
   chainId: number,
 ): string | null {
   return DEXSCREENER_CHAIN_SLUG_BY_CHAIN_ID[chainId] ?? null;
+}
+
+export function supportedTokenLogoChainSummary(): string {
+  return [
+    "Ethereum chainId=1",
+    "Optimism chainId=10",
+    "BSC chainId=56",
+    "Polygon chainId=137",
+    "PulseChain chainId=369",
+    "Base chainId=8453",
+    "Arbitrum chainId=42161",
+    "HyperEVM chainId=999",
+  ].join(", ");
 }
 
 export function normalizeLogoAddress(value: string | null | undefined) {

@@ -8,7 +8,9 @@ import {
   RevokeReceipt,
   type RevokeReceiptDetails,
 } from "@/components/approvals/revoke-receipt";
+import { TokenAvatar } from "@/components/tokens/token-avatar";
 import { useArbitrumApprovalScan } from "@/hooks/use-arbitrum-approval-scan";
+import { useTokenLogos } from "@/hooks/use-token-logos";
 import { useRevokeApproval } from "@/hooks/use-revoke-approval";
 import type { RevokeStatus } from "@/hooks/use-revoke-approval";
 import { useRevokeNftApproval } from "@/hooks/use-revoke-nft-approval";
@@ -33,6 +35,7 @@ import type { NftApproval } from "@/lib/nft-approvals";
 import type { Erc20PreflightResult, NftPreflightResult } from "@/lib/preflight";
 import { WALLET_PROMPT_SAFETY_COPY } from "@/lib/revoke-gas";
 import { addressesEqual } from "@/lib/scan-target";
+import { tokenLogoAddressKey } from "@/lib/token-logos";
 
 export function ArbitrumReadOnlyScanner({
   owner,
@@ -54,6 +57,14 @@ export function ArbitrumReadOnlyScanner({
     () => sortApprovals(scan.mapped?.approvals.erc20 ?? []),
     [scan.mapped?.approvals.erc20],
   );
+  const tokenLogoAddresses = useMemo(
+    () => erc20Approvals.map((approval) => approval.tokenAddress),
+    [erc20Approvals],
+  );
+  const tokenLogos = useTokenLogos({
+    chainId: ARBITRUM_ONE_CLIENT_CHAIN_ID,
+    tokenAddresses: tokenLogoAddresses,
+  });
   const nftApprovals = useMemo(
     () => sortNftApprovals(scan.mapped?.approvals.nft ?? []),
     [scan.mapped?.approvals.nft],
@@ -158,6 +169,10 @@ export function ArbitrumReadOnlyScanner({
                   <ArbitrumErc20Row
                     key={approval.key}
                     approval={approval}
+                    tokenLogoUrl={
+                      tokenLogos.logos[tokenLogoAddressKey(approval.tokenAddress)]
+                        ?.imageUrl
+                    }
                     owner={owner}
                     rowRevokeEnabled={erc20RowRevokeEnabled}
                     rowRevokeDisabledReason={erc20RowRevokeDisabledReason}
@@ -352,6 +367,7 @@ function StateCard({
 
 function ArbitrumErc20Row({
   approval,
+  tokenLogoUrl,
   owner,
   rowRevokeEnabled,
   rowRevokeDisabledReason,
@@ -359,6 +375,7 @@ function ArbitrumErc20Row({
   debugMode,
 }: {
   approval: Approval;
+  tokenLogoUrl?: string;
   owner: Address;
   rowRevokeEnabled: boolean;
   rowRevokeDisabledReason: string;
@@ -367,14 +384,20 @@ function ArbitrumErc20Row({
 }) {
   return (
     <li className="grid gap-3 px-4 py-4 md:grid-cols-[1.1fr_1.2fr_0.9fr_auto] md:items-center">
-      <div className="min-w-0">
-        <p className="truncate text-sm font-semibold text-pulse-text">
-          {approval.tokenSymbol}
-        </p>
-        <ExplorerLink
-          href={explorerTokenUrl(ARBITRUM_ONE_CLIENT_CHAIN_ID, approval.tokenAddress)}
-          label={approval.tokenName ?? approval.tokenAddress}
-        />
+      <div className="flex min-w-0 items-center gap-3">
+        <TokenAvatar symbol={approval.tokenSymbol} logoUrl={tokenLogoUrl} />
+        <div className="min-w-0">
+          <p className="truncate text-sm font-semibold text-pulse-text">
+            {approval.tokenSymbol}
+          </p>
+          <ExplorerLink
+            href={explorerTokenUrl(
+              ARBITRUM_ONE_CLIENT_CHAIN_ID,
+              approval.tokenAddress,
+            )}
+            label={approval.tokenName ?? approval.tokenAddress}
+          />
+        </div>
       </div>
       <div className="min-w-0">
         <p className="truncate text-sm font-medium text-pulse-text">

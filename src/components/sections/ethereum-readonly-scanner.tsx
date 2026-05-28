@@ -21,10 +21,13 @@ import {
   RevokeReceipt,
   type RevokeReceiptDetails,
 } from "@/components/approvals/revoke-receipt";
+import { TokenAvatar } from "@/components/tokens/token-avatar";
 import { useEthereumApprovalScan } from "@/hooks/use-ethereum-approval-scan";
+import { useTokenLogos } from "@/hooks/use-token-logos";
 import { useRevokeApproval } from "@/hooks/use-revoke-approval";
 import { useRevokeNftApproval } from "@/hooks/use-revoke-nft-approval";
 import {
+  ETHEREUM_MAINNET_CLIENT_CHAIN_ID,
   ETHEREUM_MAINNET_DISPLAY_NAME,
   ETHEREUM_MAINNET_EXPLORER_NAME,
   ETHEREUM_MAINNET_NATIVE_SYMBOL,
@@ -53,6 +56,7 @@ import {
 } from "@/lib/revoke-gas";
 import { scoreApprovals, type RiskAssessment, type ScoredApproval } from "@/lib/risk";
 import { addressesEqual } from "@/lib/scan-target";
+import { tokenLogoAddressKey } from "@/lib/token-logos";
 
 export function EthereumReadOnlyScanner({
   owner,
@@ -390,6 +394,15 @@ function ReadOnlyErc20Table({
   onRevoked: () => void;
   debugMode: boolean;
 }) {
+  const tokenLogoAddresses = useMemo(
+    () => approvals.map((approval) => approval.tokenAddress),
+    [approvals],
+  );
+  const tokenLogos = useTokenLogos({
+    chainId: ETHEREUM_MAINNET_CLIENT_CHAIN_ID,
+    tokenAddresses: tokenLogoAddresses,
+  });
+
   return (
     <section className="overflow-hidden rounded-2xl border border-pulse-border bg-pulse-bg/40">
       <div className="hidden grid-cols-[1.2fr_1.5fr_1fr_auto] gap-4 border-b border-pulse-border bg-pulse-bg/60 px-4 py-3 text-xs font-semibold uppercase tracking-wider text-pulse-muted sm:grid">
@@ -404,25 +417,34 @@ function ReadOnlyErc20Table({
             key={approval.key}
             className="grid grid-cols-1 gap-4 border-b border-pulse-border/60 px-4 py-4 last:border-b-0 sm:grid-cols-[1.2fr_1.5fr_1fr_auto] sm:items-center sm:gap-4"
           >
-            <div className="min-w-0">
-              <div className="flex min-w-0 flex-wrap items-center gap-2">
-                <p className="truncate text-sm font-semibold text-pulse-text">
-                  {ethereumTokenDisplaySymbol(approval.tokenSymbol)}
-                </p>
-                <RiskBadge risk={approval.risk} />
+            <div className="flex min-w-0 items-center gap-3">
+              <TokenAvatar
+                symbol={ethereumTokenDisplaySymbol(approval.tokenSymbol)}
+                logoUrl={
+                  tokenLogos.logos[tokenLogoAddressKey(approval.tokenAddress)]
+                    ?.imageUrl
+                }
+              />
+              <div className="min-w-0">
+                <div className="flex min-w-0 flex-wrap items-center gap-2">
+                  <p className="truncate text-sm font-semibold text-pulse-text">
+                    {ethereumTokenDisplaySymbol(approval.tokenSymbol)}
+                  </p>
+                  <RiskBadge risk={approval.risk} />
+                </div>
+                <a
+                  href={ethereumExplorerTokenUrl(approval.tokenAddress)}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="truncate text-xs text-pulse-muted underline-offset-2 hover:text-pulse-cyan hover:underline"
+                  title={approval.tokenAddress}
+                >
+                  {ethereumTokenDisplayDescription(
+                    approval.tokenName,
+                    approval.tokenAddress,
+                  )}
+                </a>
               </div>
-              <a
-                href={ethereumExplorerTokenUrl(approval.tokenAddress)}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="truncate text-xs text-pulse-muted underline-offset-2 hover:text-pulse-cyan hover:underline"
-                title={approval.tokenAddress}
-              >
-                {ethereumTokenDisplayDescription(
-                  approval.tokenName,
-                  approval.tokenAddress,
-                )}
-              </a>
             </div>
 
             <div className="min-w-0 rounded-xl border border-pulse-border/60 bg-pulse-panel/35 p-3 sm:border-0 sm:bg-transparent sm:p-0">
