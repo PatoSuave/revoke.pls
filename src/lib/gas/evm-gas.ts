@@ -3,9 +3,17 @@ import {
   getGasTrackerChainConfig,
   type GasTrackerChainId,
 } from "@/lib/gas/gas-chains";
-import { buildTypicalGasTransactions, weiToGweiString } from "@/lib/gas/gas-format";
+import {
+  buildTypicalGasTransactions,
+  formatUsdPrice,
+  weiToGweiString,
+} from "@/lib/gas/gas-format";
 import { classifyGasStatus } from "@/lib/gas/gas-status";
 import type { GasApiResponse, GasDataSource } from "@/lib/gas/gas-types";
+import {
+  fetchNativeUsdPrice,
+  type NativeUsdPrice,
+} from "@/lib/gas/native-price";
 import { fetchOwlraclePulsechainAdvisory } from "@/lib/gas/owlracle-gas";
 
 const GAS_REQUEST_TIMEOUT_MS = 4_000;
@@ -46,6 +54,8 @@ export interface GasRpcOptions {
   fetchFn?: typeof fetch;
   includeAdvisory?: boolean;
   advisoryFetchFn?: typeof fetch;
+  includeNativeUsdPrice?: boolean;
+  priceFetchFn?: typeof fetch;
 }
 
 export async function fetchGasDataForChain(
@@ -71,7 +81,7 @@ export async function fetchGasData(
   const rpcUrl = options.rpcUrl ?? resolveGasRpcUrl(chain);
 
   try {
-    const [sample, advisory] = await Promise.all([
+    const [sample, advisory, nativeUsdPrice] = await Promise.all([
       fetchEvmGasSample(chain, {
         ...options,
         rpcUrl,
@@ -82,8 +92,20 @@ export async function fetchGasData(
             fetchFn: options.advisoryFetchFn,
           })
         : Promise.resolve(null),
+      options.includeNativeUsdPrice === false
+        ? Promise.resolve(null)
+        : fetchNativeUsdPrice(chain, {
+            signal: options.signal,
+            fetchFn: options.priceFetchFn ?? options.fetchFn,
+          }),
     ]);
-    return buildGasApiResponse(chain, sample, updatedAt, advisory ?? undefined);
+    return buildGasApiResponse(
+      chain,
+      sample,
+      updatedAt,
+      advisory ?? undefined,
+      nativeUsdPrice ?? undefined,
+    );
   } catch {
     return unavailableGasResponseForChain(chain, updatedAt, [
       `${chain.chainName} gas data is unavailable from the configured RPC right now.`,
@@ -173,6 +195,9 @@ export function unavailableGasResponseForChain(
     gasPriceGwei: null,
     baseFeeGwei: null,
     priorityFeeGwei: null,
+    nativeTokenPriceUsd: null,
+    nativeTokenPriceSource: "unavailable",
+    nativeTokenPriceUpdatedAt: null,
     typicalTransactions: [],
     ...(chain.estimateNote ? { estimateNote: chain.estimateNote } : {}),
     errors,
@@ -184,9 +209,11 @@ function buildGasApiResponse(
   sample: EvmGasSample,
   updatedAt: string,
   advisory?: GasApiResponse["advisory"],
+  nativeUsdPrice?: NativeUsdPrice,
 ): GasApiResponse {
   const gasPriceGwei = weiToGweiString(sample.gasPriceWei);
   const gasPriceGweiNumber = Number(gasPriceGwei);
+  const nativeUsdPriceValue = nativeUsdPrice?.priceUsd;
 
   return {
     chainId: chain.chainId,
@@ -207,9 +234,18 @@ function buildGasApiResponse(
       sample.priorityFeeWei !== undefined
         ? weiToGweiString(sample.priorityFeeWei)
         : null,
+    nativeTokenPriceUsd:
+      nativeUsdPriceValue !== undefined
+        ? formatUsdPrice(nativeUsdPriceValue)
+        : null,
+    nativeTokenPriceSource: nativeUsdPrice
+      ? "coingecko-simple-price"
+      : "unavailable",
+    nativeTokenPriceUpdatedAt: nativeUsdPrice?.updatedAt ?? null,
     typicalTransactions: buildTypicalGasTransactions({
       gasPriceWei: sample.gasPriceWei,
       nativeCurrency: chain.nativeCurrency,
+      nativeTokenPriceUsd: nativeUsdPriceValue,
     }),
     ...(advisory ? { advisory } : {}),
     ...(chain.estimateNote ? { estimateNote: chain.estimateNote } : {}),

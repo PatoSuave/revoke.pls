@@ -29,4 +29,19 @@ describe("gas tracker chain registry", () => {
       highGwei: 75,
     });
   });
+
+  it("maps every supported chain to a native-token CoinGecko price ID", () => {
+    expect(
+      GAS_TRACKER_CHAINS.map((chain) => [chain.chainId, chain.coingeckoId]),
+    ).toEqual([
+      [369, "pulsechain"],
+      [56, "binancecoin"],
+      [8453, "ethereum"],
+      [137, "polygon-ecosystem-token"],
+      [1, "ethereum"],
+      [42161, "ethereum"],
+      [10, "ethereum"],
+      [999, "hyperliquid"],
+    ]);
+  });
 });

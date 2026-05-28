@@ -58,8 +58,8 @@ Solana is not supported by the current EVM approval scanner design.
 - Address-only scan mode for review before connecting a wallet
 - Chain-scoped token and spender labels for context
 - Token-logo lookup for PulseChain, BSC, and Polygon display only
-- Multi-chain gas tracker with live block-based updates and native-token cost
-  estimates
+- Multi-chain gas tracker with live block-based updates and native-token plus
+  approximate USD cost estimates
 - Revoke receipt status with post-revoke live verification
 - `/app?debug=1` diagnostics for scanner status, chain, source, and incomplete
   scan reasons
@@ -82,10 +82,13 @@ an `OWLRACLE_API_KEY` is configured, it must stay server-side and must not use a
 `NEXT_PUBLIC_` prefix.
 
 Typical transaction costs are estimates in the selected chain's native token
-based on current gas data. For L2 networks, wallet estimates may include L1 data
-fees beyond this gas-price estimate. The tracker does not affect revoke
-transaction execution, wallet gas estimation, preflight checks, or transaction
-submission. Actual wallet estimates may vary by contract.
+based on current gas data. When CoinGecko public price data is available, the
+same rows also show approximate USD estimates. Native gas data updates on new
+blocks; native-token USD prices are cached briefly server-side so the tracker
+does not hammer the public price feed. For L2 networks, wallet estimates may
+include L1 data fees beyond this gas-price estimate. The tracker does not affect
+revoke transaction execution, wallet gas estimation, preflight checks, or
+transaction submission. Actual wallet estimates may vary by contract.
 
 ## Security Model
 

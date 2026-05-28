@@ -31,6 +31,8 @@ describe("PulseChain gas tracker component source", () => {
     expect(SOURCE).toContain("Network fee");
     expect(SOURCE).toContain("fee monitor");
     expect(SOURCE).toContain("Estimated revoke");
+    expect(SOURCE).toContain("approximate USD");
+    expect(SOURCE).toContain("CoinGecko");
     expect(SOURCE).toContain("View live chart");
     expect(SOURCE).toContain("MiniGasSparkline");
     expect(SOURCE).toContain("conditionLabel");

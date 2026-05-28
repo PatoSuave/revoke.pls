@@ -58,6 +58,7 @@ export interface GasTrackerChainConfig {
   serverRpcEnvNames: readonly string[];
   publicRpcEnvNames: readonly string[];
   statusThresholds: GasStatusThresholds;
+  coingeckoId: string;
   advisoryProvider?: "owlracle-pulse";
   estimateNote?: string;
 }
@@ -179,6 +180,7 @@ export const GAS_TRACKER_CHAINS = [
     serverRpcEnvNames: ["PULSECHAIN_RPC_URL", "PULSECHAIN_MAINNET_RPC_URL"],
     publicRpcEnvNames: ["NEXT_PUBLIC_PULSECHAIN_RPC_URL"],
     statusThresholds: { elevatedGwei: 750_000, highGwei: 2_000_000 },
+    coingeckoId: "pulsechain",
     advisoryProvider: "owlracle-pulse",
   },
   {
@@ -193,6 +195,7 @@ export const GAS_TRACKER_CHAINS = [
     serverRpcEnvNames: ["BSC_RPC_URL", "BSC_MAINNET_RPC_URL"],
     publicRpcEnvNames: ["NEXT_PUBLIC_BSC_RPC_URL"],
     statusThresholds: { elevatedGwei: 3, highGwei: 10 },
+    coingeckoId: "binancecoin",
   },
   {
     chainId: BASE_CHAIN_ID,
@@ -206,6 +209,7 @@ export const GAS_TRACKER_CHAINS = [
     serverRpcEnvNames: ["BASE_RPC_URL", "BASE_MAINNET_RPC_URL"],
     publicRpcEnvNames: ["NEXT_PUBLIC_BASE_RPC_URL"],
     statusThresholds: { elevatedGwei: 0.05, highGwei: 0.5 },
+    coingeckoId: "ethereum",
     estimateNote:
       "Base wallet estimates may include L1 data fees beyond this gas-price estimate.",
   },
@@ -221,6 +225,7 @@ export const GAS_TRACKER_CHAINS = [
     serverRpcEnvNames: ["POLYGON_RPC_URL", "POLYGON_MAINNET_RPC_URL"],
     publicRpcEnvNames: ["NEXT_PUBLIC_POLYGON_RPC_URL"],
     statusThresholds: { elevatedGwei: 100, highGwei: 300 },
+    coingeckoId: "polygon-ecosystem-token",
   },
   {
     chainId: ETHEREUM_MAINNET_CLIENT_CHAIN_ID,
@@ -237,6 +242,7 @@ export const GAS_TRACKER_CHAINS = [
       "NEXT_PUBLIC_ETHEREUM_RPC_URL",
     ],
     statusThresholds: { elevatedGwei: 25, highGwei: 75 },
+    coingeckoId: "ethereum",
   },
   {
     chainId: ARBITRUM_ONE_CLIENT_CHAIN_ID,
@@ -250,6 +256,7 @@ export const GAS_TRACKER_CHAINS = [
     serverRpcEnvNames: ["ARBITRUM_ONE_RPC_URL", "ARBITRUM_RPC_URL"],
     publicRpcEnvNames: ["NEXT_PUBLIC_ARBITRUM_RPC_URL"],
     statusThresholds: { elevatedGwei: 0.1, highGwei: 1 },
+    coingeckoId: "ethereum",
     estimateNote:
       "Arbitrum wallet estimates may include L1 data fees beyond this gas-price estimate.",
   },
@@ -269,6 +276,7 @@ export const GAS_TRACKER_CHAINS = [
     ],
     publicRpcEnvNames: ["NEXT_PUBLIC_OPTIMISM_RPC_URL"],
     statusThresholds: { elevatedGwei: 0.1, highGwei: 1 },
+    coingeckoId: "ethereum",
     estimateNote:
       "Optimism wallet estimates may include L1 data fees beyond this gas-price estimate.",
   },
@@ -288,6 +296,7 @@ export const GAS_TRACKER_CHAINS = [
     ],
     publicRpcEnvNames: ["NEXT_PUBLIC_HYPEREVM_RPC_URL"],
     statusThresholds: { elevatedGwei: 2, highGwei: 10 },
+    coingeckoId: "hyperliquid",
   },
 ] as const satisfies readonly GasTrackerChainConfig[];
 
