@@ -3,6 +3,7 @@ import type { DiscoveryLimits } from "@/lib/discovery";
 export const OPTIMISM_APPROVAL_API_REQUEST_TIMEOUT_MS = 25_000;
 export const OPTIMISM_APPROVAL_API_LIVE_READ_CANDIDATE_CAP = 500;
 export const OPTIMISM_APPROVAL_API_RPC_READ_CONCURRENCY = 8;
+export const OPTIMISM_APPROVAL_API_EXPLORER_MIN_INTERVAL_MS = 350;
 
 export const OPTIMISM_APPROVAL_API_DISCOVERY_LIMITS: DiscoveryLimits = {
   maxRequests: 40,
@@ -12,6 +13,7 @@ export const OPTIMISM_APPROVAL_API_DISCOVERY_LIMITS: DiscoveryLimits = {
   minSplitSpan: 64,
   retryAttempts: 1,
   retryDelayMs: 500,
+  minRequestIntervalMs: OPTIMISM_APPROVAL_API_EXPLORER_MIN_INTERVAL_MS,
 };
 
 export const OPTIMISM_APPROVAL_API_RATE_LIMIT = {
