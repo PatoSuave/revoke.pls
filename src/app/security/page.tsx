@@ -71,7 +71,7 @@ function SecurityHero() {
           <p className="text-xs font-semibold uppercase tracking-[0.18em] text-pulse-cyan">
             Security &amp; Trust
           </p>
-          <h1 className="mt-4 text-4xl font-bold tracking-tight sm:text-6xl">
+          <h1 className="mt-4 text-4xl font-bold sm:text-6xl">
             Verify the site, then verify every transaction.
           </h1>
           <p className="mt-5 text-base leading-7 text-pulse-muted sm:text-lg">
@@ -156,7 +156,7 @@ function VerificationSection() {
       <div className="mx-auto grid max-w-6xl gap-8 px-4 sm:px-6 lg:grid-cols-[0.9fr_1.1fr] lg:items-start">
         <div>
           <SectionKicker>Before signing</SectionKicker>
-          <h2 className="mt-2 text-3xl font-bold tracking-tight sm:text-4xl">
+          <h2 className="mt-2 text-3xl font-bold sm:text-4xl">
             Your wallet prompt is the final checkpoint.
           </h2>
           <p className="mt-4 text-sm leading-7 text-pulse-muted">
@@ -218,14 +218,14 @@ function SupportedChainsSection() {
       <div className="mx-auto max-w-6xl px-4 sm:px-6">
         <div className="max-w-3xl">
           <SectionKicker>Supported chains and current status</SectionKicker>
-          <h2 className="mt-2 text-3xl font-bold tracking-tight sm:text-4xl">
+          <h2 className="mt-2 text-3xl font-bold sm:text-4xl">
             Current production scope, not future promises.
           </h2>
           <p className="mt-4 text-sm leading-7 text-pulse-muted">
-            The matrix reflects the scanner and revoke paths present in the
-            app today. It does not enable any new network, mark any spender as
-            safe, or imply support for chains that need separate approval
-            mechanics.
+            The matrix reflects the 8 live EVM networks and scanner/revoke
+            paths present in the app today. It does not enable any new network,
+            mark any spender as safe, or imply support for chains that need
+            separate approval mechanics.
           </p>
         </div>
         <div className="mt-8">
@@ -242,7 +242,7 @@ function AddressOnlySection() {
       <div className="mx-auto grid max-w-6xl gap-6 px-4 sm:px-6 lg:grid-cols-[1fr_1fr]">
         <div>
           <SectionKicker>Address-only scan</SectionKicker>
-          <h2 className="mt-2 text-3xl font-bold tracking-tight sm:text-4xl">
+          <h2 className="mt-2 text-3xl font-bold sm:text-4xl">
             Scan first, connect only when you are ready to revoke.
           </h2>
         </div>

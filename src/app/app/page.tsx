@@ -56,7 +56,7 @@ function AppWorkspaceIntro() {
             <p className="text-xs font-semibold uppercase tracking-[0.18em] text-pulse-cyan">
               Scanner workspace
             </p>
-            <h1 className="mt-2 text-3xl font-bold tracking-tight text-pulse-text sm:text-4xl">
+            <h1 className="mt-2 text-3xl font-bold text-pulse-text sm:text-4xl">
               Review active approvals
             </h1>
             <p className="mt-3 max-w-2xl text-sm leading-6 text-pulse-muted sm:text-base">
