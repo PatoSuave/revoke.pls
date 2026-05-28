@@ -49,6 +49,11 @@ contract addresses only, caps each request at `30` addresses, caches successful
 display metadata at the CDN, and falls back to symbol initials when no logo is
 returned.
 
+Gas tracker USD estimates use CoinGecko's public `/simple/price` endpoint for
+the selected chain's native token. No environment variable or API key is
+required. USD prices are optional, cached briefly server-side, and do not affect
+gas availability or revoke transaction execution.
+
 ## Variables
 
 ### `NEXT_PUBLIC_PULSECHAIN_RPC_URL`
@@ -69,6 +74,8 @@ fallbacks: `PULSECHAIN_RPC_URL`, `PULSECHAIN_MAINNET_RPC_URL`, `BSC_RPC_URL`,
 
 The gas tracker is informational only. It does not modify revoke transaction
 gas settings, wallet estimation, preflight checks, or transaction submission.
+Native-token estimates update from fresh block samples; approximate USD values
+use briefly cached CoinGecko native-token prices when available.
 
 ### `NEXT_PUBLIC_BSC_RPC_URL`
 

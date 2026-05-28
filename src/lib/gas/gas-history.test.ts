@@ -16,6 +16,9 @@ function sample(blockNumber: string, gasPriceGwei: string): GasApiResponse {
     gasPriceGwei,
     baseFeeGwei: null,
     priorityFeeGwei: null,
+    nativeTokenPriceUsd: null,
+    nativeTokenPriceSource: "unavailable",
+    nativeTokenPriceUpdatedAt: null,
     typicalTransactions: [],
   };
 }

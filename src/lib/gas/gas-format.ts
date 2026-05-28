@@ -41,24 +41,65 @@ export function formatNativeCost(valueWei: bigint, decimals = 9): string {
   return trimDecimal(formatUnits(valueWei, 18), decimals);
 }
 
+export function formatUsdPrice(valueUsd: number): string | null {
+  if (!Number.isFinite(valueUsd) || valueUsd < 0) return null;
+  if (valueUsd === 0) return "$0.00";
+  if (valueUsd < 0.000001) return "<$0.000001";
+  const maximumFractionDigits = valueUsd < 0.01 ? 8 : valueUsd < 1 ? 6 : 2;
+  return usdFormatter(maximumFractionDigits).format(valueUsd);
+}
+
+export function formatUsdCost(valueUsd: number): string | null {
+  if (!Number.isFinite(valueUsd) || valueUsd < 0) return null;
+  if (valueUsd === 0) return "$0.00";
+  if (valueUsd < 0.000001) return "<$0.000001";
+  const maximumFractionDigits = valueUsd < 0.01 ? 6 : valueUsd < 1 ? 4 : 2;
+  return usdFormatter(maximumFractionDigits).format(valueUsd);
+}
+
+export function formatNativeCostUsd({
+  valueWei,
+  nativeTokenPriceUsd,
+}: {
+  valueWei: bigint;
+  nativeTokenPriceUsd: number | null | undefined;
+}): string | null {
+  if (
+    nativeTokenPriceUsd === null ||
+    nativeTokenPriceUsd === undefined ||
+    !Number.isFinite(nativeTokenPriceUsd) ||
+    nativeTokenPriceUsd < 0
+  ) {
+    return null;
+  }
+  return formatUsdCost(Number(formatUnits(valueWei, 18)) * nativeTokenPriceUsd);
+}
+
 export function buildTypicalGasTransactions({
   gasPriceWei,
   nativeCurrency,
+  nativeTokenPriceUsd,
 }: {
   gasPriceWei: bigint;
   nativeCurrency: string;
+  nativeTokenPriceUsd?: number | null;
 }): TypicalGasTransaction[] {
-  return TYPICAL_GAS_TRANSACTIONS.map((transaction) => ({
-    label: transaction.label,
-    gasUnits: transaction.gasUnits,
-    costNative: formatNativeCost(
-      calculateNativeCostWei({
-        gasPriceWei,
-        gasUnits: transaction.gasUnits,
+  return TYPICAL_GAS_TRANSACTIONS.map((transaction) => {
+    const costWei = calculateNativeCostWei({
+      gasPriceWei,
+      gasUnits: transaction.gasUnits,
+    });
+    return {
+      label: transaction.label,
+      gasUnits: transaction.gasUnits,
+      costNative: formatNativeCost(costWei),
+      nativeCurrency,
+      costUsd: formatNativeCostUsd({
+        valueWei: costWei,
+        nativeTokenPriceUsd,
       }),
-    ),
-    nativeCurrency,
-  }));
+    };
+  });
 }
 
 export function formatBlockNumber(value: string | null): string {
@@ -83,4 +124,13 @@ function trimDecimal(value: string, decimals: number): string {
   if (decimals <= 0 || !fraction) return whole;
   const trimmed = fraction.slice(0, decimals).replace(/0+$/, "");
   return trimmed ? `${whole}.${trimmed}` : whole;
+}
+
+function usdFormatter(maximumFractionDigits: number): Intl.NumberFormat {
+  return new Intl.NumberFormat("en-US", {
+    style: "currency",
+    currency: "USD",
+    minimumFractionDigits: 2,
+    maximumFractionDigits,
+  });
 }

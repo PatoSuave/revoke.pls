@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { GET } from "@/app/api/gas/route";
+import { resetNativeUsdPriceCacheForTests } from "@/lib/gas/native-price";
 import { resetOwlracleAdvisoryCacheForTests } from "@/lib/gas/owlracle-gas";
 
 function rpcResponse(result: unknown): Response {
@@ -13,6 +14,7 @@ function rpcResponse(result: unknown): Response {
 describe("/api/gas", () => {
   afterEach(() => {
     vi.unstubAllGlobals();
+    resetNativeUsdPriceCacheForTests();
     resetOwlracleAdvisoryCacheForTests();
     delete process.env.PULSECHAIN_RPC_URL;
     delete process.env.MAINNET_RPC_URL;
@@ -43,6 +45,14 @@ describe("/api/gas", () => {
           { status: 200, headers: { "Content-Type": "application/json" } },
         );
       }
+      if (url.includes("api.coingecko.com")) {
+        return Response.json({
+          pulsechain: {
+            usd: 0.00000695,
+            last_updated_at: 1_779_927_849,
+          },
+        });
+      }
 
       const body = JSON.parse(String(init?.body ?? "{}")) as {
         method?: string;
@@ -72,11 +82,22 @@ describe("/api/gas", () => {
     expect(second.status).toBe(200);
     expect(firstPayload.blockNumber).toBe("32");
     expect(secondPayload.blockNumber).toBe("32");
-    expect(fetchMock).toHaveBeenCalledTimes(3);
+    expect(firstPayload.nativeTokenPriceUsd).toBe("$0.00000695");
+    expect(firstPayload.typicalTransactions[0].costUsd).toBe("<$0.000001");
+    expect(fetchMock).toHaveBeenCalledTimes(4);
   });
 
   it("returns gas data for Ethereum Mainnet without PulseChain advisory calls", async () => {
-    const fetchMock = vi.fn<typeof fetch>(async (_input, init) => {
+    const fetchMock = vi.fn<typeof fetch>(async (input, init) => {
+      const url = String(input);
+      if (url.includes("api.coingecko.com")) {
+        return Response.json({
+          ethereum: {
+            usd: 2020.8,
+            last_updated_at: 1_779_927_985,
+          },
+        });
+      }
       const body = JSON.parse(String(init?.body ?? "{}")) as {
         method?: string;
       };
@@ -104,7 +125,10 @@ describe("/api/gas", () => {
     expect(payload.nativeCurrency).toBe("ETH");
     expect(payload.gasPriceGwei).toBe("3");
     expect(payload.advisory).toBeUndefined();
-    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(payload.nativeTokenPriceUsd).toBe("$2,020.80");
+    expect(payload.nativeTokenPriceSource).toBe("coingecko-simple-price");
+    expect(payload.typicalTransactions[0].costUsd).toBe("$0.1273");
+    expect(fetchMock).toHaveBeenCalledTimes(3);
   });
 
   it("returns unavailable state without leaking RPC URLs when RPC fails", async () => {
@@ -148,6 +172,14 @@ describe("/api/gas", () => {
             { status: 200, headers: { "Content-Type": "application/json" } },
           );
         }
+        if (url.includes("api.coingecko.com")) {
+          return Response.json({
+            pulsechain: {
+              usd: 0.00000695,
+              last_updated_at: 1_779_927_849,
+            },
+          });
+        }
 
         const body = JSON.parse(String(init?.body ?? "{}")) as {
           method?: string;
@@ -174,6 +206,8 @@ describe("/api/gas", () => {
     expect(payload.gasPriceGwei).toBe("100");
     expect(payload.source).toBe("rpc-gas-price");
     expect(payload.typicalTransactions).toHaveLength(5);
+    expect(payload.nativeTokenPriceUsd).toBe("$0.00000695");
+    expect(payload.typicalTransactions[1].costUsd).toBe("<$0.000001");
     expect(payload.advisory.tiers).toHaveLength(3);
     expect(text).not.toContain("hidden-owl-key");
   });

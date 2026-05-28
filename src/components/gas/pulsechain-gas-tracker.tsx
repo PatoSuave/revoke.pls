@@ -112,6 +112,9 @@ export function PulseChainGasTracker() {
         gasPriceGwei: null,
         baseFeeGwei: null,
         priorityFeeGwei: null,
+        nativeTokenPriceUsd: null,
+        nativeTokenPriceSource: "unavailable",
+        nativeTokenPriceUpdatedAt: null,
         typicalTransactions: [],
         ...(selectedChain.estimateNote
           ? { estimateNote: selectedChain.estimateNote }
@@ -230,6 +233,7 @@ export function PulseChainGasTrackerView({
     sample,
     "Token approval / revoke",
   );
+  const revokeEstimateValue = revokeEstimate?.costNative ?? "Pending";
   const detailsId = "network-gas-details";
 
   return (
@@ -260,12 +264,13 @@ export function PulseChainGasTrackerView({
               <CompactMetric label="Current gas" value={gasPriceLabel} suffix="Gwei" />
               <CompactMetric
                 label="Estimated revoke"
-                value={revokeEstimate}
+                value={revokeEstimateValue}
                 suffix={
-                  revokeEstimate === "Pending"
+                  revokeEstimateValue === "Pending"
                     ? undefined
                     : selectedChain.nativeCurrency
                 }
+                subvalue={formatUsdEstimate(revokeEstimate?.costUsd)}
                 valueClassName="text-pulse-cyan"
               />
               <CompactMetric
@@ -339,9 +344,10 @@ export function PulseChainGasTrackerView({
                       Estimated Transaction Costs
                     </h3>
                   <p className="mt-1 text-sm leading-6 text-pulse-muted">
-                      Costs are estimated in {selectedChain.nativeCurrency} using
-                      current gas data. Actual wallet estimates may vary by
-                      contract.
+                      Costs are estimated in {selectedChain.nativeCurrency} and
+                      approximate USD using current gas data. Actual wallet
+                      estimates may vary by contract. USD values use CoinGecko
+                      native-token prices when available.
                       {sample?.estimateNote ? ` ${sample.estimateNote}` : ""}
                   </p>
                   </div>
@@ -362,22 +368,23 @@ export function PulseChainGasTrackerView({
 function getTransactionEstimate(
   sample: GasApiResponse | null,
   label: string,
-): string {
-  const transaction = sample?.typicalTransactions.find(
+): GasApiResponse["typicalTransactions"][number] | undefined {
+  return sample?.typicalTransactions.find(
     (entry) => entry.label === label,
   );
-  return transaction?.costNative ?? "Pending";
 }
 
 function CompactMetric({
   label,
   value,
   suffix,
+  subvalue,
   valueClassName = "text-pulse-text",
 }: {
   label: string;
   value: string;
   suffix?: string;
+  subvalue?: string | null;
   valueClassName?: string;
 }) {
   return (
@@ -393,6 +400,11 @@ function CompactMetric({
           </span>
         ) : null}
       </span>
+      {subvalue ? (
+        <span className="mt-1 block min-w-0 break-words font-mono text-[11px] font-semibold text-pulse-text">
+          {subvalue}
+        </span>
+      ) : null}
     </div>
   );
 }
@@ -504,6 +516,18 @@ function CurrentGasCard({
               ? `${sample.priorityFeeGwei} Gwei`
               : "Unavailable"
           }
+        />
+        <InfoRow
+          label={`${selectedChain.nativeCurrency} price`}
+          value={
+            sample?.nativeTokenPriceUsd
+              ? `${sample.nativeTokenPriceUsd} USD`
+              : "Unavailable"
+          }
+        />
+        <InfoRow
+          label="Price source"
+          value={priceSourceLabel(sample)}
         />
       </div>
 
@@ -656,6 +680,13 @@ function TypicalTransactionGrid({
           <p className="mt-2 font-mono text-xl text-pulse-cyan">
             {transaction.costNative}
           </p>
+          {transaction.costUsd ? (
+            <p className="mt-1 font-mono text-sm font-semibold text-pulse-text">
+              ~ {transaction.costUsd} USD
+            </p>
+          ) : (
+            <p className="mt-1 text-sm text-pulse-muted">USD unavailable</p>
+          )}
           <p className="text-sm text-pulse-muted">
             {transaction.nativeCurrency} -{" "}
             {transaction.gasUnits.toLocaleString("en-US")} gas
@@ -1061,6 +1092,19 @@ function sourceLabel(
   if (source === "rpc-fee-history") return `${chainName} RPC fee history`;
   if (source === "rpc-gas-price") return `${chainName} RPC gas price`;
   return "Unavailable";
+}
+
+function priceSourceLabel(sample: GasApiResponse | null): string {
+  if (sample?.nativeTokenPriceSource === "coingecko-simple-price") {
+    return sample.nativeTokenPriceUpdatedAt
+      ? `CoinGecko, ${formatRelativeTime(sample.nativeTokenPriceUpdatedAt)}`
+      : "CoinGecko";
+  }
+  return "Unavailable";
+}
+
+function formatUsdEstimate(value: string | null | undefined): string | null {
+  return value ? `~ ${value} USD` : null;
 }
 
 function usePrefersReducedMotion(): boolean {

@@ -8,6 +8,7 @@ export type GasDataSource =
   | "unavailable";
 
 export type GasStatus = "normal" | "elevated" | "high" | "unavailable";
+export type NativeTokenPriceSource = "coingecko-simple-price" | "unavailable";
 
 export interface GasAdvisoryTier {
   label: "Low" | "Medium" | "High";
@@ -28,6 +29,7 @@ export interface TypicalGasTransaction {
   gasUnits: number;
   costNative: string;
   nativeCurrency: string;
+  costUsd: string | null;
 }
 
 export interface GasApiResponse {
@@ -42,6 +44,9 @@ export interface GasApiResponse {
   gasPriceGwei: string | null;
   baseFeeGwei: string | null;
   priorityFeeGwei: string | null;
+  nativeTokenPriceUsd: string | null;
+  nativeTokenPriceSource: NativeTokenPriceSource;
+  nativeTokenPriceUpdatedAt: string | null;
   typicalTransactions: TypicalGasTransaction[];
   estimateNote?: string;
   advisory?: GasAdvisory;
