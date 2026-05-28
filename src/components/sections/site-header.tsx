@@ -15,7 +15,7 @@ export function SiteHeader() {
           aria-label={`${siteConfig.name} home`}
         >
           <PulseMark className="h-8 w-8 shrink-0" />
-          <span className="truncate text-base font-semibold tracking-tight sm:text-lg">
+          <span className="truncate text-base font-semibold sm:text-lg">
             Pulse<span className="text-gradient-pulse"> Revoke</span>
           </span>
         </Link>

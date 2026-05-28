@@ -1,6 +1,7 @@
 import { ImageResponse } from "next/og";
 
 import { siteConfig } from "@/lib/site";
+import { LIVE_SUPPORTED_CHAIN_COUNT } from "@/lib/supported-chain-copy";
 
 export const dynamic = "force-static";
 export const alt = `${siteConfig.name} — ${siteConfig.tagline}`;
@@ -134,7 +135,9 @@ export default function OpengraphImage() {
             color: muted,
           }}
         >
-          <span>Non-custodial | Open source | 6 live EVM networks</span>
+          <span>
+            {`Non-custodial | Open source | ${LIVE_SUPPORTED_CHAIN_COUNT} live EVM networks`}
+          </span>
           <span
             style={{
               background: gradient,
