@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 
+import { ChainLogo } from "@/components/chains/chain-logo";
 import { explorerName, explorerTxUrl } from "@/lib/explorer";
 import {
   getRevokeReceiptCopy,
@@ -66,7 +67,17 @@ export function RevokeReceipt({
       </div>
 
       <dl className="mt-3 grid gap-3 rounded-xl border border-current/15 bg-pulse-bg/35 p-3 text-pulse-muted sm:grid-cols-2 xl:grid-cols-3">
-        <ReceiptField label="Chain" value={details.chainName} />
+        <ReceiptField
+          label="Chain"
+          value={
+            <span className="inline-flex min-w-0 items-center gap-2">
+              <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full border border-current/20 bg-pulse-bg/45">
+                <ChainLogo chainId={details.chainId} className="h-4 w-4" />
+              </span>
+              <span className="truncate">{details.chainName}</span>
+            </span>
+          }
+        />
         <ReceiptField label={details.assetLabel} value={details.assetValue} />
         <ReceiptField
           label={details.counterpartyLabel}

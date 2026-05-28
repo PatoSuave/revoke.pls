@@ -1,14 +1,20 @@
 "use client";
 
+import { useMemo } from "react";
+
+import { ChainLogo } from "@/components/chains/chain-logo";
+import { TokenAvatar } from "@/components/tokens/token-avatar";
 import type {
   BatchItemResult,
   BatchItemStatus,
   UseBatchRevokeResult,
 } from "@/hooks/use-batch-revoke";
+import { useTokenLogos } from "@/hooks/use-token-logos";
 import { getChainConfig } from "@/lib/chains";
 import { explorerTxUrl } from "@/lib/explorer";
 import { BSC_GAS_CAP_TITLE, HIGH_GAS_WARNING_TITLE } from "@/lib/preflight";
 import type { ScoredApproval } from "@/lib/risk";
+import { tokenLogoAddressKey, type TokenLogoMap } from "@/lib/token-logos";
 
 /**
  * Sticky-ish action bar shown above the approval list when the user has
@@ -102,6 +108,8 @@ export function BatchActionBar({
  * Confirmation + progress + summary panel. Renders based on batch.state.
  */
 export function BatchRevokePanel({ batch }: { batch: UseBatchRevokeResult }) {
+  const tokenLogos = useBatchTokenLogos(batch.items);
+
   if (batch.state === "idle") return null;
 
   if (batch.state === "refreshing") {
@@ -109,14 +117,14 @@ export function BatchRevokePanel({ batch }: { batch: UseBatchRevokeResult }) {
   }
 
   if (batch.state === "confirming") {
-    return <ConfirmingCard batch={batch} />;
+    return <ConfirmingCard batch={batch} tokenLogos={tokenLogos} />;
   }
 
   if (batch.state === "running" || batch.state === "stopping") {
-    return <RunningCard batch={batch} />;
+    return <RunningCard batch={batch} tokenLogos={tokenLogos} />;
   }
 
-  return <CompleteCard batch={batch} />;
+  return <CompleteCard batch={batch} tokenLogos={tokenLogos} />;
 }
 
 function RefreshingCard({ batch }: { batch: UseBatchRevokeResult }) {
@@ -137,7 +145,13 @@ function RefreshingCard({ batch }: { batch: UseBatchRevokeResult }) {
   );
 }
 
-function ConfirmingCard({ batch }: { batch: UseBatchRevokeResult }) {
+function ConfirmingCard({
+  batch,
+  tokenLogos,
+}: {
+  batch: UseBatchRevokeResult;
+  tokenLogos: TokenLogoMap;
+}) {
   const highRisk = batch.items.filter((a) => {
     const approval = a as ScoredApproval;
     return approval.risk?.level === "high";
@@ -158,8 +172,15 @@ function ConfirmingCard({ batch }: { batch: UseBatchRevokeResult }) {
         Batch review
       </p>
       <h3 className="mt-1 text-lg font-semibold text-pulse-text">
-        Revoke {ready} active {ready === 1 ? "approval" : "approvals"}
-        {chainConfig ? ` on ${chainConfig.displayName}` : ""}
+        <span>Revoke {ready} active {ready === 1 ? "approval" : "approvals"}</span>
+        {chainConfig ? (
+          <span className="ml-2 inline-flex items-center gap-1.5 align-middle text-pulse-muted">
+            <span className="flex h-6 w-6 items-center justify-center rounded-full border border-pulse-border bg-pulse-bg/55">
+              <ChainLogo chainId={chainConfig.chainId} className="h-4 w-4" />
+            </span>
+            <span>{chainConfig.displayName}</span>
+          </span>
+        ) : null}
       </h3>
       <ul className="mt-3 flex flex-wrap gap-1.5 text-xs text-pulse-muted">
         <Pill tone="green">{ready} ready to revoke</Pill>
@@ -218,15 +239,22 @@ function ConfirmingCard({ batch }: { batch: UseBatchRevokeResult }) {
                 className="grid gap-1 px-3 py-2 text-xs sm:grid-cols-[1fr_auto_auto] sm:items-center sm:gap-3"
                 title={result?.error}
               >
-                <span className="flex min-w-0 items-baseline gap-2">
+                <span className="flex min-w-0 items-center gap-2">
                   <span className="font-mono text-pulse-muted">
                     {String(i + 1).padStart(2, "0")}
                   </span>
-                  <span className="font-semibold text-pulse-text">
-                    {item.tokenSymbol}
-                  </span>
-                  <span className="truncate text-pulse-muted">
-                    -&gt; {item.spenderLabel}
+                  <TokenAvatar
+                    symbol={item.tokenSymbol}
+                    logoUrl={tokenLogoUrl(tokenLogos, item.tokenAddress)}
+                    className="h-7 w-7 text-[9px]"
+                  />
+                  <span className="min-w-0">
+                    <span className="block truncate font-semibold text-pulse-text">
+                      {item.tokenSymbol}
+                    </span>
+                    <span className="block truncate text-pulse-muted">
+                      -&gt; {item.spenderLabel}
+                    </span>
                   </span>
                 </span>
                 <span className="font-mono text-[11px] text-pulse-muted">
@@ -262,7 +290,13 @@ function ConfirmingCard({ batch }: { batch: UseBatchRevokeResult }) {
   );
 }
 
-function RunningCard({ batch }: { batch: UseBatchRevokeResult }) {
+function RunningCard({
+  batch,
+  tokenLogos,
+}: {
+  batch: UseBatchRevokeResult;
+  tokenLogos: TokenLogoMap;
+}) {
   const stopping = batch.state === "stopping";
   const pct =
     batch.counts.total === 0
@@ -306,7 +340,9 @@ function RunningCard({ batch }: { batch: UseBatchRevokeResult }) {
             <BatchProgressRow
               key={item.key}
               index={i + 1}
-              label={`${item.tokenSymbol} -> ${item.spenderLabel}`}
+              tokenSymbol={item.tokenSymbol}
+              spenderLabel={item.spenderLabel}
+              tokenLogoUrl={tokenLogoUrl(tokenLogos, item.tokenAddress)}
               current={isCurrent}
               result={result}
               chainId={item.chainId}
@@ -318,7 +354,13 @@ function RunningCard({ batch }: { batch: UseBatchRevokeResult }) {
   );
 }
 
-function CompleteCard({ batch }: { batch: UseBatchRevokeResult }) {
+function CompleteCard({
+  batch,
+  tokenLogos,
+}: {
+  batch: UseBatchRevokeResult;
+  tokenLogos: TokenLogoMap;
+}) {
   const { success, failed, rejected, skipped, cleared, unverified, total } =
     batch.counts;
   const highGasWarning = batch.counts.highGasWarning;
@@ -361,7 +403,9 @@ function CompleteCard({ batch }: { batch: UseBatchRevokeResult }) {
           <BatchProgressRow
             key={item.key}
             index={i + 1}
-            label={`${item.tokenSymbol} -> ${item.spenderLabel}`}
+            tokenSymbol={item.tokenSymbol}
+            spenderLabel={item.spenderLabel}
+            tokenLogoUrl={tokenLogoUrl(tokenLogos, item.tokenAddress)}
             result={batch.results[item.key]}
             chainId={item.chainId}
           />
@@ -414,13 +458,17 @@ const STATUS_TONE: Record<
 
 function BatchProgressRow({
   index,
-  label,
+  tokenSymbol,
+  spenderLabel,
+  tokenLogoUrl,
   current,
   result,
   chainId,
 }: {
   index: number;
-  label: string;
+  tokenSymbol: string;
+  spenderLabel: string;
+  tokenLogoUrl?: string;
   current?: boolean;
   result?: BatchItemResult;
   chainId: number;
@@ -443,11 +491,23 @@ function BatchProgressRow({
           : "border-pulse-border/60 bg-pulse-bg/40"
       }`}
     >
-      <span className="flex min-w-0 items-baseline gap-2">
+      <span className="flex min-w-0 items-center gap-2">
         <span className="font-mono text-pulse-muted">
           {String(index).padStart(2, "0")}
         </span>
-        <span className="truncate text-pulse-text">{label}</span>
+        <TokenAvatar
+          symbol={tokenSymbol}
+          logoUrl={tokenLogoUrl}
+          className="h-7 w-7 text-[9px]"
+        />
+        <span className="min-w-0">
+          <span className="block truncate font-semibold text-pulse-text">
+            {tokenSymbol}
+          </span>
+          <span className="block truncate text-pulse-muted">
+            -&gt; {spenderLabel}
+          </span>
+        </span>
       </span>
       <span
         className={`flex shrink-0 items-center gap-2 font-semibold ${toneClass}`}
@@ -472,6 +532,23 @@ function BatchProgressRow({
       ) : null}
     </li>
   );
+}
+
+function useBatchTokenLogos(
+  items: readonly { chainId: number; tokenAddress: string }[],
+): TokenLogoMap {
+  const chainId = items[0]?.chainId;
+  const tokenAddresses = useMemo(
+    () => items.map((item) => item.tokenAddress),
+    [items],
+  );
+  const tokenLogos = useTokenLogos({ chainId, tokenAddresses });
+
+  return tokenLogos.logos;
+}
+
+function tokenLogoUrl(logos: TokenLogoMap, tokenAddress: string): string | undefined {
+  return logos[tokenLogoAddressKey(tokenAddress)]?.imageUrl;
 }
 
 function formatBatchPreflightDetail(
