@@ -34,10 +34,16 @@ export function PulseChainResourceLinks({
         <div className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
           {PULSECHAIN_RESOURCE_LINKS.map((resource) => {
             const cardStyle = {
-              "--resource-accent": resource.accentColor,
-              "--resource-accent-soft": resource.accentSoft,
-              "--resource-accent-border": resource.accentBorder,
+              "--accent-color": resource.accentColor,
+              "--accent-readable": resource.accentReadable,
+              "--accent-soft": resource.accentSoft,
+              "--accent-border": resource.accentBorder,
+              "--accent-shadow": `0 0 18px ${resource.accentColor}`,
             } as CSSProperties;
+            const logoPlateClass =
+              "logoPlate" in resource && resource.logoPlate === "dark"
+                ? "resource-logo-plate-dark"
+                : "border-[color:var(--accent-border)] bg-[color:var(--accent-soft)]";
 
             return (
               <a
@@ -46,17 +52,17 @@ export function PulseChainResourceLinks({
                 target="_blank"
                 rel="noopener noreferrer"
                 style={cardStyle}
-                className="group relative flex min-h-0 flex-col overflow-hidden rounded-xl border border-pulse-border bg-pulse-panel/55 p-4 transition hover:border-[color:var(--resource-accent-border)] hover:bg-pulse-panel/75 sm:min-h-48"
+                className="group relative flex min-h-0 flex-col overflow-hidden rounded-xl border border-pulse-border bg-pulse-panel/55 p-4 transition hover:border-[color:var(--accent-border)] hover:bg-pulse-panel/75 sm:min-h-48"
               >
                 <div
-                  className="pointer-events-none absolute -right-8 -top-8 h-24 w-24 rounded-full bg-[color:var(--resource-accent)] opacity-[0.08] blur-2xl transition group-hover:opacity-[0.13]"
+                  className="pointer-events-none absolute -right-8 -top-8 h-24 w-24 rounded-full bg-[color:var(--accent-color)] opacity-[0.08] blur-2xl transition group-hover:opacity-[0.13]"
                   aria-hidden
                 />
 
                 <div className="relative z-10 flex items-start justify-between gap-3">
                   <div className="flex min-w-0 items-start gap-3">
                     <span
-                      className="flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-[color:var(--resource-accent-border)] bg-[color:var(--resource-accent-soft)]"
+                      className={`flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-xl border ${logoPlateClass}`}
                       aria-hidden
                     >
                       <Image
@@ -72,7 +78,7 @@ export function PulseChainResourceLinks({
                       <p className="text-sm font-semibold text-pulse-text">
                         {resource.label}
                       </p>
-                      <p className="mt-1 text-[11px] font-semibold uppercase tracking-[0.14em] text-[color:var(--resource-accent)]">
+                      <p className="brand-accent-text mt-1 text-[11px] font-semibold uppercase tracking-[0.14em]">
                         {resource.category}
                       </p>
                     </div>
