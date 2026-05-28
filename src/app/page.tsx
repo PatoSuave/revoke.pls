@@ -1,7 +1,8 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import type { ReactNode } from "react";
+import type { CSSProperties, ReactNode } from "react";
 
+import { ChainLogo } from "@/components/chains/chain-logo";
 import { AntiPhishingBanner } from "@/components/sections/anti-phishing-banner";
 import { PulseChainResourceLinks } from "@/components/sections/pulsechain-resource-links";
 import { PulseMark } from "@/components/pulse-mark";
@@ -88,6 +89,65 @@ const CHAIN_CARD_COPY: Record<string, string> = {
     "Server-side discovery for OP Mainnet with verified row-level revoke.",
   HyperEVM:
     "Server-side discovery with verified ERC-20/NFT row-level revoke on chain ID 999.",
+};
+
+const CHAIN_CARD_VISUALS: Record<
+  string,
+  {
+    accent: string;
+    accentSoft: string;
+    accentBorder: string;
+    textShadow: string;
+  }
+> = {
+  PulseChain: {
+    accent: "#A78BFA",
+    accentSoft: "rgba(120, 57, 238, 0.16)",
+    accentBorder: "rgba(167, 139, 250, 0.46)",
+    textShadow: "0 0 22px rgba(120, 57, 238, 0.34)",
+  },
+  "BNB Smart Chain": {
+    accent: "#F3BA2F",
+    accentSoft: "rgba(243, 186, 47, 0.11)",
+    accentBorder: "rgba(243, 186, 47, 0.34)",
+    textShadow: "0 0 20px rgba(243, 186, 47, 0.25)",
+  },
+  Base: {
+    accent: "#4D8BFF",
+    accentSoft: "rgba(0, 82, 255, 0.12)",
+    accentBorder: "rgba(77, 139, 255, 0.36)",
+    textShadow: "0 0 20px rgba(0, 82, 255, 0.28)",
+  },
+  Polygon: {
+    accent: "#A56BFF",
+    accentSoft: "rgba(130, 71, 229, 0.13)",
+    accentBorder: "rgba(165, 107, 255, 0.36)",
+    textShadow: "0 0 20px rgba(130, 71, 229, 0.28)",
+  },
+  "Ethereum Mainnet": {
+    accent: "#8EA5FF",
+    accentSoft: "rgba(98, 126, 234, 0.13)",
+    accentBorder: "rgba(142, 165, 255, 0.35)",
+    textShadow: "0 0 20px rgba(98, 126, 234, 0.28)",
+  },
+  "Arbitrum One": {
+    accent: "#28A0F0",
+    accentSoft: "rgba(40, 160, 240, 0.12)",
+    accentBorder: "rgba(40, 160, 240, 0.34)",
+    textShadow: "0 0 20px rgba(40, 160, 240, 0.26)",
+  },
+  Optimism: {
+    accent: "#FF5A68",
+    accentSoft: "rgba(255, 4, 32, 0.11)",
+    accentBorder: "rgba(255, 90, 104, 0.34)",
+    textShadow: "0 0 20px rgba(255, 4, 32, 0.24)",
+  },
+  HyperEVM: {
+    accent: "#47E6A2",
+    accentSoft: "rgba(71, 230, 162, 0.12)",
+    accentBorder: "rgba(71, 230, 162, 0.34)",
+    textShadow: "0 0 20px rgba(71, 230, 162, 0.24)",
+  },
 };
 
 const SCANNER_PANEL_POINTS = [
@@ -367,40 +427,73 @@ function SupportedChainsSection() {
 function ChainCard({ row }: { row: (typeof LIVE_SUPPORTED_CHAIN_ROWS)[number] }) {
   const isPrimary = row.chain === "PulseChain";
   const supportLabel = formatRevokeSupport(row);
+  const visual = CHAIN_CARD_VISUALS[row.chain] ?? {
+    accent: "#31D6FF",
+    accentSoft: "rgba(49, 214, 255, 0.11)",
+    accentBorder: "rgba(49, 214, 255, 0.34)",
+    textShadow: "0 0 20px rgba(49, 214, 255, 0.24)",
+  };
+  const chainId = Number(row.chainId);
+  const cardStyle = {
+    "--chain-accent": visual.accent,
+    "--chain-accent-soft": visual.accentSoft,
+    "--chain-accent-border": visual.accentBorder,
+    "--chain-text-shadow": visual.textShadow,
+  } as CSSProperties;
 
   return (
     <article
-      className={`flex min-h-52 flex-col rounded-2xl border p-5 ${
+      style={cardStyle}
+      className={`group relative flex min-h-52 overflow-hidden rounded-2xl border p-5 transition duration-200 hover:-translate-y-0.5 hover:shadow-glow ${
         isPrimary
-          ? "border-pulse-cyan/45 bg-pulse-cyan/10"
-          : "border-pulse-border bg-pulse-panel/55"
+          ? "border-[color:var(--chain-accent-border)] bg-[linear-gradient(135deg,var(--chain-accent-soft),rgba(17,19,29,0.72))]"
+          : "border-[color:var(--chain-accent-border)] bg-[linear-gradient(135deg,var(--chain-accent-soft),rgba(17,19,29,0.56))]"
       }`}
     >
-      <div className="flex items-start justify-between gap-3">
-        <div className="min-w-0">
-          <h3 className="text-base font-semibold text-pulse-text">
-            {row.chain}
-          </h3>
-          <p className="mt-1 font-mono text-xs text-pulse-muted">
-            Chain ID {row.chainId}
-          </p>
+      <div
+        className="pointer-events-none absolute -right-6 -top-5 text-[color:var(--chain-accent)] opacity-[0.10] transition group-hover:opacity-[0.16]"
+        aria-hidden
+      >
+        <ChainLogo chainId={chainId} className="h-28 w-28" tone="muted" />
+      </div>
+
+      <div className="relative z-10 flex items-start justify-between gap-3">
+        <div className="flex min-w-0 items-start gap-3">
+          <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-[color:var(--chain-accent-border)] bg-pulse-bg/50 shadow-[0_0_22px_var(--chain-accent-soft)]">
+            <ChainLogo chainId={chainId} className="h-7 w-7" />
+          </span>
+          <div className="min-w-0">
+            <h3
+              className="text-base font-semibold"
+              style={{
+                color: visual.accent,
+                textShadow: "var(--chain-text-shadow)",
+              }}
+            >
+              {row.chain}
+            </h3>
+            <p className="mt-1 font-mono text-xs text-pulse-muted">
+              <span className="text-[color:var(--chain-accent)]">Chain ID</span>{" "}
+              {row.chainId}
+            </p>
+          </div>
         </div>
         {isPrimary ? (
-          <span className="shrink-0 rounded-full border border-pulse-cyan/45 bg-pulse-cyan/10 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wide text-pulse-cyan">
+          <span className="shrink-0 rounded-full border border-[color:var(--chain-accent-border)] bg-[color:var(--chain-accent-soft)] px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wide text-[color:var(--chain-accent)]">
             Primary
           </span>
         ) : null}
       </div>
 
-      <p className="mt-4 flex-1 text-sm leading-6 text-pulse-muted">
+      <p className="relative z-10 mt-4 flex-1 text-sm leading-6 text-pulse-muted">
         {CHAIN_CARD_COPY[row.chain] ?? row.note}
       </p>
 
-      <div className="mt-5 flex flex-wrap gap-2">
+      <div className="relative z-10 mt-5 flex flex-wrap gap-2">
         <span className="rounded-full border border-pulse-green/30 bg-pulse-green/10 px-2.5 py-1 text-[11px] font-semibold text-pulse-green">
           Scan live
         </span>
-        <span className="rounded-full border border-pulse-border bg-pulse-bg/55 px-2.5 py-1 text-[11px] font-semibold text-pulse-muted">
+        <span className="rounded-full border border-[color:var(--chain-accent-border)] bg-pulse-bg/55 px-2.5 py-1 text-[11px] font-semibold text-[color:var(--chain-accent)]">
           {supportLabel}
         </span>
       </div>
