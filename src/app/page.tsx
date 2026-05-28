@@ -443,7 +443,7 @@ function ChainCard({ row }: { row: (typeof LIVE_SUPPORTED_CHAIN_ROWS)[number] })
   return (
     <article
       style={cardStyle}
-      className={`group relative flex min-h-52 overflow-hidden rounded-2xl border p-5 transition duration-200 hover:-translate-y-0.5 hover:shadow-glow ${
+      className={`group relative flex min-h-52 flex-col overflow-hidden rounded-2xl border p-5 transition duration-200 hover:-translate-y-0.5 hover:shadow-glow ${
         isPrimary
           ? "border-[color:var(--chain-accent-border)] bg-[linear-gradient(135deg,var(--chain-accent-soft),rgba(17,19,29,0.72))]"
           : "border-[color:var(--chain-accent-border)] bg-[linear-gradient(135deg,var(--chain-accent-soft),rgba(17,19,29,0.56))]"
