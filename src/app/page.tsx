@@ -413,7 +413,6 @@ function SupportedChainsSection() {
       <SectionHeader
         eyebrow="Supported chains"
         title={`${LIVE_SUPPORTED_CHAIN_COUNT} live EVM networks`}
-        body="PulseChain stays first and visually primary. Every other live network remains visible with the same clean status language."
       />
       <div className="mx-auto mt-9 grid max-w-6xl gap-3 px-4 sm:grid-cols-2 sm:px-6 lg:grid-cols-4">
         {LIVE_SUPPORTED_CHAIN_ROWS.map((row) => (
@@ -855,7 +854,7 @@ function SectionHeader({
 }: {
   eyebrow: string;
   title: string;
-  body: string;
+  body?: string;
 }) {
   return (
     <div className="mx-auto max-w-3xl px-4 text-center sm:px-6">
@@ -863,7 +862,9 @@ function SectionHeader({
       <h2 className="mt-2 text-3xl font-bold sm:text-4xl">
         {title}
       </h2>
-      <p className="mt-3 text-sm leading-7 text-pulse-muted">{body}</p>
+      {body ? (
+        <p className="mt-3 text-sm leading-7 text-pulse-muted">{body}</p>
+      ) : null}
     </div>
   );
 }
