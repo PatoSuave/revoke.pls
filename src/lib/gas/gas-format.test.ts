@@ -60,6 +60,15 @@ describe("gas formatting", () => {
     expect(formatNativeCost(cost)).toBe("0.00000042");
   });
 
+  it("does not round very low native costs down to zero", () => {
+    const cost = calculateNativeCostWei({
+      gasPriceWei: gweiStringToWei("0.00002"),
+      gasUnits: 21_000,
+    });
+
+    expect(formatNativeCost(cost)).toBe("0.00000000042");
+  });
+
   it("builds typical PulseChain transaction estimate rows", () => {
     const estimates = buildTypicalGasTransactions({
       gasPriceWei: gweiStringToWei("100"),

@@ -37,8 +37,12 @@ export function calculateNativeCostWei({
   return gasPriceWei * BigInt(gasUnits);
 }
 
-export function formatNativeCost(valueWei: bigint, decimals = 9): string {
-  return trimDecimal(formatUnits(valueWei, 18), decimals);
+export function formatNativeCost(valueWei: bigint, decimals?: number): string {
+  const valueNative = formatUnits(valueWei, 18);
+  const numericValue = Number(valueNative);
+  const displayDecimals =
+    decimals ?? (numericValue > 0 && numericValue < 0.000001 ? 12 : 9);
+  return trimDecimal(valueNative, displayDecimals);
 }
 
 export function formatUsdPrice(valueUsd: number): string | null {
