@@ -10,6 +10,8 @@
     "start": "next start",
     "lint": "eslint . --max-warnings=0",
     "smoke:preview": "node scripts/preview-smoke.mjs",
+    "security:env": "node scripts/check-hosted-public-env.mjs",
+    "security:live": "node scripts/security-live.mjs",
     "test": "vitest run",
     "typecheck": "tsc --noEmit",
     "tauri": "tauri"
