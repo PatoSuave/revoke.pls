@@ -1,11 +1,13 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import type { ReactNode } from "react";
+import type { CSSProperties, ReactNode } from "react";
 
+import { ChainLogo } from "@/components/chains/chain-logo";
 import { AntiPhishingBanner } from "@/components/sections/anti-phishing-banner";
 import { PulseChainResourceLinks } from "@/components/sections/pulsechain-resource-links";
 import { PulseMark } from "@/components/pulse-mark";
 import { ThemeModeToggle } from "@/components/theme-mode-toggle";
+import { getChainVisual } from "@/lib/chain-visuals";
 import {
   currentRelease,
   isPlaceholderCid,
@@ -353,7 +355,6 @@ function SupportedChainsSection() {
       <SectionHeader
         eyebrow="Supported chains"
         title={`${LIVE_SUPPORTED_CHAIN_COUNT} live EVM networks`}
-        body="PulseChain stays first and visually primary. Every other live network remains visible with the same clean status language."
       />
       <div className="mx-auto mt-9 grid max-w-6xl gap-3 px-4 sm:grid-cols-2 sm:px-6 lg:grid-cols-4">
         {LIVE_SUPPORTED_CHAIN_ROWS.map((row) => (
@@ -367,40 +368,62 @@ function SupportedChainsSection() {
 function ChainCard({ row }: { row: (typeof LIVE_SUPPORTED_CHAIN_ROWS)[number] }) {
   const isPrimary = row.chain === "PulseChain";
   const supportLabel = formatRevokeSupport(row);
+  const visual = getChainVisual(row.chain);
+  const chainId = Number(row.chainId);
+  const cardStyle = {
+    "--accent-color": visual.accent,
+    "--accent-readable": visual.accentReadable,
+    "--accent-soft": visual.accentSoft,
+    "--accent-border": visual.accentBorder,
+    "--accent-shadow": visual.accentShadow,
+    "--chain-card-bg": isPrimary
+      ? "rgb(var(--pulse-panel) / 0.88)"
+      : "rgb(var(--pulse-panel) / 0.78)",
+  } as CSSProperties;
 
   return (
     <article
-      className={`flex min-h-52 flex-col rounded-2xl border p-5 ${
-        isPrimary
-          ? "border-pulse-cyan/45 bg-pulse-cyan/10"
-          : "border-pulse-border bg-pulse-panel/55"
-      }`}
+      style={cardStyle}
+      className="group relative flex min-h-52 flex-col overflow-hidden rounded-2xl border border-[color:var(--accent-border)] bg-[linear-gradient(135deg,var(--accent-soft),var(--chain-card-bg))] p-5 transition duration-200 hover:-translate-y-0.5 hover:shadow-glow"
     >
-      <div className="flex items-start justify-between gap-3">
-        <div className="min-w-0">
-          <h3 className="text-base font-semibold text-pulse-text">
-            {row.chain}
-          </h3>
-          <p className="mt-1 font-mono text-xs text-pulse-muted">
-            Chain ID {row.chainId}
-          </p>
+      <div
+        className="pointer-events-none absolute -right-6 -top-5 text-[color:var(--accent-color)] opacity-[0.10] transition group-hover:opacity-[0.16]"
+        aria-hidden
+      >
+        <ChainLogo chainId={chainId} className="h-28 w-28" tone="muted" />
+      </div>
+
+      <div className="relative z-10 flex items-start justify-between gap-3">
+        <div className="flex min-w-0 items-start gap-3">
+          <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-[color:var(--accent-border)] bg-pulse-bg/50 shadow-[0_0_22px_var(--accent-soft)]">
+            <ChainLogo chainId={chainId} className="h-7 w-7" />
+          </span>
+          <div className="min-w-0">
+            <h3 className="brand-accent-text text-base font-semibold">
+              {row.chain}
+            </h3>
+            <p className="mt-1 font-mono text-xs text-pulse-muted">
+              <span className="brand-accent-text">Chain ID</span>{" "}
+              {row.chainId}
+            </p>
+          </div>
         </div>
         {isPrimary ? (
-          <span className="shrink-0 rounded-full border border-pulse-cyan/45 bg-pulse-cyan/10 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wide text-pulse-cyan">
+          <span className="brand-accent-text shrink-0 rounded-full border border-[color:var(--accent-border)] bg-[color:var(--accent-soft)] px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wide">
             Primary
           </span>
         ) : null}
       </div>
 
-      <p className="mt-4 flex-1 text-sm leading-6 text-pulse-muted">
+      <p className="relative z-10 mt-4 flex-1 text-sm leading-6 text-pulse-muted">
         {CHAIN_CARD_COPY[row.chain] ?? row.note}
       </p>
 
-      <div className="mt-5 flex flex-wrap gap-2">
+      <div className="relative z-10 mt-5 flex flex-wrap gap-2">
         <span className="rounded-full border border-pulse-green/30 bg-pulse-green/10 px-2.5 py-1 text-[11px] font-semibold text-pulse-green">
           Scan live
         </span>
-        <span className="rounded-full border border-pulse-border bg-pulse-bg/55 px-2.5 py-1 text-[11px] font-semibold text-pulse-muted">
+        <span className="brand-accent-text rounded-full border border-[color:var(--accent-border)] bg-pulse-bg/55 px-2.5 py-1 text-[11px] font-semibold">
           {supportLabel}
         </span>
       </div>
@@ -762,7 +785,7 @@ function SectionHeader({
 }: {
   eyebrow: string;
   title: string;
-  body: string;
+  body?: string;
 }) {
   return (
     <div className="mx-auto max-w-3xl px-4 text-center sm:px-6">
@@ -770,7 +793,9 @@ function SectionHeader({
       <h2 className="mt-2 text-3xl font-bold sm:text-4xl">
         {title}
       </h2>
-      <p className="mt-3 text-sm leading-7 text-pulse-muted">{body}</p>
+      {body ? (
+        <p className="mt-3 text-sm leading-7 text-pulse-muted">{body}</p>
+      ) : null}
     </div>
   );
 }

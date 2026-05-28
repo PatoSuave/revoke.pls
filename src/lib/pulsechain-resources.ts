@@ -4,6 +4,12 @@ export interface PulsechainResourceLink {
   domain: string;
   category: string;
   description: string;
+  logoSrc: string;
+  accentColor: string;
+  accentReadable: string;
+  accentSoft: string;
+  accentBorder: string;
+  logoPlate?: "dark";
 }
 
 export const PULSECHAIN_RESOURCE_LINKS = [
@@ -13,6 +19,11 @@ export const PULSECHAIN_RESOURCE_LINKS = [
     domain: "pulsechain.com",
     category: "Network",
     description: "PulseChain network site and ecosystem entry point.",
+    logoSrc: "/protocol-logos/pulsechain.png",
+    accentColor: "#9B5CFF",
+    accentReadable: "#6D28D9",
+    accentSoft: "rgba(155, 92, 255, 0.13)",
+    accentBorder: "rgba(155, 92, 255, 0.36)",
   },
   {
     label: "PulseX",
@@ -20,6 +31,11 @@ export const PULSECHAIN_RESOURCE_LINKS = [
     domain: "pulsex.com",
     category: "DEX",
     description: "PulseChain decentralized exchange resource.",
+    logoSrc: "/protocol-logos/pulsex.png",
+    accentColor: "#24F28C",
+    accentReadable: "#008C5A",
+    accentSoft: "rgba(36, 242, 140, 0.11)",
+    accentBorder: "rgba(36, 242, 140, 0.32)",
   },
   {
     label: "LibertySwap",
@@ -27,6 +43,11 @@ export const PULSECHAIN_RESOURCE_LINKS = [
     domain: "libertyswap.finance",
     category: "DEX / bridge",
     description: "PulseChain swap and bridge resource.",
+    logoSrc: "/protocol-logos/libertyswap.png",
+    accentColor: "#FF7A1A",
+    accentReadable: "#C2410C",
+    accentSoft: "rgba(255, 122, 26, 0.11)",
+    accentBorder: "rgba(255, 122, 26, 0.34)",
   },
   {
     label: "9mm Pro",
@@ -34,6 +55,12 @@ export const PULSECHAIN_RESOURCE_LINKS = [
     domain: "9mm.pro",
     category: "DEX suite",
     description: "PulseChain-compatible DEX and protocol suite.",
+    logoSrc: "/protocol-logos/9mm-pro.png",
+    accentColor: "#E8F1FF",
+    accentReadable: "#334155",
+    accentSoft: "rgba(232, 241, 255, 0.08)",
+    accentBorder: "rgba(232, 241, 255, 0.26)",
+    logoPlate: "dark",
   },
   {
     label: "HEX",
@@ -41,6 +68,11 @@ export const PULSECHAIN_RESOURCE_LINKS = [
     domain: "hex.com",
     category: "Protocol",
     description: "HEX protocol resource.",
+    logoSrc: "/protocol-logos/hex.png",
+    accentColor: "#FF3AB6",
+    accentReadable: "#C0267B",
+    accentSoft: "rgba(255, 58, 182, 0.11)",
+    accentBorder: "rgba(255, 58, 182, 0.34)",
   },
 ] as const satisfies readonly PulsechainResourceLink[];
 

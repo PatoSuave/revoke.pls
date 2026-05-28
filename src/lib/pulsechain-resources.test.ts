@@ -32,6 +32,29 @@ describe("PulseChain resource links", () => {
     ]);
   });
 
+  it("keeps local logo assets for every curated destination", () => {
+    const logos = PULSECHAIN_RESOURCE_LINKS.map((link) => link.logoSrc);
+
+    expect(new Set(logos).size).toBe(logos.length);
+    expect(logos.every((logoSrc) => logoSrc.startsWith("/protocol-logos/"))).toBe(
+      true,
+    );
+    expect(logos.every((logoSrc) => logoSrc.endsWith(".png"))).toBe(true);
+  });
+
+  it("keeps accent colors readable in light mode", () => {
+    expect(PULSECHAIN_RESOURCE_LINKS.every((link) => link.accentReadable)).toBe(
+      true,
+    );
+    const nineMm = PULSECHAIN_RESOURCE_LINKS.find(
+      (link) => link.label === "9mm Pro",
+    );
+
+    expect(nineMm && "logoPlate" in nineMm ? nineMm.logoPlate : undefined).toBe(
+      "dark",
+    );
+  });
+
   it("does not frame the list as financial advice or a safety guarantee", () => {
     expect(PULSECHAIN_RESOURCE_NOTICE).toContain("not financial advice");
     expect(PULSECHAIN_RESOURCE_NOTICE).toContain("not");
