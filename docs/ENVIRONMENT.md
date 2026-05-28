@@ -2,9 +2,9 @@
 
 Pulse Revoke is primarily a wallet-side frontend app, with server-side BSC,
 Base, Polygon, Ethereum, Arbitrum, Optimism, and HyperEVM API routes for
-discovery. Variables prefixed with `NEXT_PUBLIC_` are embedded into the browser
-bundle and are visible to users. Do not store private secrets in these
-variables.
+discovery plus a server-side gas tracker route. Variables prefixed with
+`NEXT_PUBLIC_` are embedded into the browser bundle and are visible to users. Do
+not store private secrets in these variables.
 
 ## Production Requirements
 
@@ -17,26 +17,31 @@ HyperEVM product, configure:
 | `BSC_EXPLORER_API_URL` | Optional | Server-only BSC logs API. Defaults to `https://api.etherscan.io/v2/api`. |
 | `BSC_EXPLORER_CHAIN_ID` | Optional | Must be `56` for BNB Smart Chain Etherscan API V2 logs. Defaults to `56`. |
 | `BSC_EXPLORER_API_KEY` / `ETHERSCAN_API_KEY` | Required for reliable BSC discovery | Server-only Etherscan API V2 key with BNB Smart Chain access. |
-| `NEXT_PUBLIC_BSC_RPC_URL` | Recommended | Public fallback is available, but production should prefer a reliable RPC. |
+| `BSC_RPC_URL` / `BSC_MAINNET_RPC_URL` | Optional | Server-only BSC gas tracker RPC override for `/api/gas`. |
+| `NEXT_PUBLIC_BSC_RPC_URL` | Recommended | Public fallback is available, but production should prefer a reliable RPC for wallet reads and browser block watching. |
 | `BASE_EXPLORER_API_URL` | Optional | Server-only Base logs API. Defaults to `https://api.etherscan.io/v2/api`. |
 | `BASE_EXPLORER_CHAIN_ID` | Optional | Must be `8453` for Base Etherscan API V2 logs. Defaults to `8453`. |
 | `BASE_EXPLORER_API_KEY` / `ETHERSCAN_API_KEY` | Required for reliable Base discovery | Server-only Etherscan API V2 key with Base Mainnet access. |
-| `NEXT_PUBLIC_BASE_RPC_URL` | Recommended | Public fallback is available, but production should prefer a reliable RPC. |
+| `BASE_RPC_URL` / `BASE_MAINNET_RPC_URL` | Optional | Server-only Base gas tracker RPC override for `/api/gas`. |
+| `NEXT_PUBLIC_BASE_RPC_URL` | Recommended | Public fallback is available, but production should prefer a reliable RPC for wallet reads and browser block watching. |
 | `POLYGON_EXPLORER_API_URL` | Optional | Server-only Polygon logs API. Defaults to `https://api.etherscan.io/v2/api`. |
 | `POLYGON_EXPLORER_CHAIN_ID` | Optional | Must be `137` for Polygon Mainnet Etherscan API V2 logs. Defaults to `137`. |
 | `POLYGON_EXPLORER_API_KEY` / `ETHERSCAN_API_KEY` | Required for reliable Polygon discovery | Server-only Etherscan API V2 key with Polygon Mainnet access. |
-| `NEXT_PUBLIC_POLYGON_RPC_URL` | Recommended | Public fallback is available, but production should prefer a reliable RPC. |
-| `MAINNET_RPC_URL` / `ETHEREUM_RPC_URL` | Required for Ethereum scan | Server-only Ethereum RPC URL for `/api/ethereum/approvals`. |
+| `POLYGON_RPC_URL` / `POLYGON_MAINNET_RPC_URL` | Optional | Server-only Polygon gas tracker RPC override for `/api/gas`. |
+| `NEXT_PUBLIC_POLYGON_RPC_URL` | Recommended | Public fallback is available, but production should prefer a reliable RPC for wallet reads and browser block watching. |
+| `MAINNET_RPC_URL` / `ETHEREUM_RPC_URL` | Required for Ethereum scan | Server-only Ethereum RPC URL for `/api/ethereum/approvals` and `/api/gas`. |
 | `ETHERSCAN_API_KEY` | Required for Ethereum scan | Server-only Etherscan API key. Do not use a `NEXT_PUBLIC_` key for Ethereum server discovery. |
-| `ARBITRUM_ONE_RPC_URL` / `ARBITRUM_RPC_URL` | Required for Arbitrum scan | Server-only Arbitrum RPC URL for `/api/arbitrum/approvals`. |
+| `ARBITRUM_ONE_RPC_URL` / `ARBITRUM_RPC_URL` | Required for Arbitrum scan | Server-only Arbitrum RPC URL for `/api/arbitrum/approvals` and `/api/gas`. |
 | `ARBISCAN_API_KEY` | Required for Arbitrum scan | Server-only Arbiscan/Etherscan-compatible API key. Do not use a `NEXT_PUBLIC_` key for Arbitrum server discovery. |
-| `OPTIMISM_RPC_URL` / `OPTIMISM_MAINNET_RPC_URL` / `OP_MAINNET_RPC_URL` | Required for Optimism scan | Server-only OP Mainnet RPC URL for `/api/optimism/approvals`. |
+| `OPTIMISM_RPC_URL` / `OPTIMISM_MAINNET_RPC_URL` / `OP_MAINNET_RPC_URL` | Required for Optimism scan | Server-only OP Mainnet RPC URL for `/api/optimism/approvals` and `/api/gas`. |
 | `OPTIMISM_EXPLORER_API_KEY` / `OPTIMISTIC_ETHERSCAN_API_KEY` / `ETHERSCAN_API_KEY` | Required for Optimism scan | Server-only Etherscan API V2 key with OP Mainnet access. Do not use a `NEXT_PUBLIC_` key for Optimism server discovery. |
-| `HYPEREVM_RPC_URL` / `HYPEREVM_MAINNET_RPC_URL` / `HYPERLIQUID_EVM_RPC_URL` | Required for HyperEVM scan | Server-only HyperEVM RPC URL for `/api/hyperevm/approvals`. |
+| `HYPEREVM_RPC_URL` / `HYPEREVM_MAINNET_RPC_URL` / `HYPERLIQUID_EVM_RPC_URL` | Required for HyperEVM scan | Server-only HyperEVM RPC URL for `/api/hyperevm/approvals` and `/api/gas`. |
 | `HYPEREVM_EXPLORER_API_KEY` / `HYPEREVM_ETHERSCAN_API_KEY` / `ETHERSCAN_API_KEY` / `BSC_EXPLORER_API_KEY` | Required for HyperEVM scan | Server-only Etherscan API V2 key with HyperEVM access. `BSC_EXPLORER_API_KEY` is accepted as a shared paid-plan fallback. Do not use a `NEXT_PUBLIC_` key for HyperEVM server discovery. |
 
 PulseChain has defaults for RPC and explorer API, but hosted production can
-override them for reliability.
+override them for reliability. The gas tracker prefers unprefixed server RPC
+variables, then browser-safe `NEXT_PUBLIC_*` RPC values, then code defaults.
+Keep private RPC URLs server-only.
 
 PulseChain, BSC, and Polygon token logos use Dex Screener's public token lookup
 endpoint through `/api/token-logos`. No API key is required. The app sends token
@@ -44,12 +49,33 @@ contract addresses only, caps each request at `30` addresses, caches successful
 display metadata at the CDN, and falls back to symbol initials when no logo is
 returned.
 
+Gas tracker USD estimates use CoinGecko's public `/simple/price` endpoint for
+the selected chain's native token. No environment variable or API key is
+required. USD prices are optional, cached briefly server-side, and do not affect
+gas availability or revoke transaction execution.
+
 ## Variables
 
 ### `NEXT_PUBLIC_PULSECHAIN_RPC_URL`
 
 Optional. Overrides the PulseChain RPC used by wagmi/viem. If unset, the app
 uses `https://rpc.pulsechain.com`.
+
+### Gas tracker server RPC overrides
+
+Optional. `/api/gas` uses these unprefixed RPC variables before browser-visible
+fallbacks: `PULSECHAIN_RPC_URL`, `PULSECHAIN_MAINNET_RPC_URL`, `BSC_RPC_URL`,
+`BSC_MAINNET_RPC_URL`, `BASE_RPC_URL`, `BASE_MAINNET_RPC_URL`,
+`POLYGON_RPC_URL`, `POLYGON_MAINNET_RPC_URL`, `MAINNET_RPC_URL`,
+`ETHEREUM_RPC_URL`, `ARBITRUM_ONE_RPC_URL`, `ARBITRUM_RPC_URL`,
+`OPTIMISM_RPC_URL`, `OPTIMISM_MAINNET_RPC_URL`, `OP_MAINNET_RPC_URL`,
+`HYPEREVM_RPC_URL`, `HYPEREVM_MAINNET_RPC_URL`, and
+`HYPERLIQUID_EVM_RPC_URL`.
+
+The gas tracker is informational only. It does not modify revoke transaction
+gas settings, wallet estimation, preflight checks, or transaction submission.
+Native-token estimates update from fresh block samples; approximate USD values
+use briefly cached CoinGecko native-token prices when available.
 
 ### `NEXT_PUBLIC_BSC_RPC_URL`
 
@@ -87,6 +113,13 @@ Optional browser-visible Ethereum wallet transport overrides. These are used by
 wagmi for wallet-chain reads and should contain only public, browser-safe RPC
 URLs. They are not a substitute for the server-only `MAINNET_RPC_URL` or
 `ETHEREUM_RPC_URL` used by `/api/ethereum/approvals`.
+
+### `NEXT_PUBLIC_ARBITRUM_RPC_URL` / `NEXT_PUBLIC_OPTIMISM_RPC_URL` / `NEXT_PUBLIC_HYPEREVM_RPC_URL`
+
+Optional browser-visible gas watcher overrides for Arbitrum, Optimism, and
+HyperEVM. Use only public, browser-safe RPC URLs. Server-side approval discovery
+and `/api/gas` should use the unprefixed RPC variables above for private or
+authenticated RPCs.
 
 ### `NEXT_PUBLIC_PULSECHAIN_EXPLORER_API`
 
