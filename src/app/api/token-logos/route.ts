@@ -8,6 +8,7 @@ import {
   isTokenLogoSupportedChain,
   normalizeLogoAddress,
   normalizeLogoAddresses,
+  supportedTokenLogoChainSummary,
 } from "@/lib/token-logos";
 import {
   TOKEN_LOGO_API_RATE_LIMIT,
@@ -27,7 +28,7 @@ export async function GET(request: Request) {
         ok: false,
         status: "bad-request",
         errors: [
-          "Token logo lookup currently supports PulseChain chainId=369, BSC chainId=56, and Polygon chainId=137.",
+          `Token logo lookup currently supports ${supportedTokenLogoChainSummary()}.`,
         ],
       },
       { status: 400, headers: tokenLogoNoStoreHeaders() },

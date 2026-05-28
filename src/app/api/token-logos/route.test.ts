@@ -11,13 +11,20 @@ import {
   TOKEN_LOGO_API_RATE_LIMIT,
   resetTokenLogoApiRateLimitForTests,
 } from "@/lib/token-logo-api-controls";
-import { tokenLogoAddressKey } from "@/lib/token-logos";
+import {
+  ARBITRUM_TOKEN_LOGO_CHAIN_ID,
+  ETHEREUM_TOKEN_LOGO_CHAIN_ID,
+  HYPEREVM_TOKEN_LOGO_CHAIN_ID,
+  OPTIMISM_TOKEN_LOGO_CHAIN_ID,
+  tokenLogoAddressKey,
+} from "@/lib/token-logos";
 import { GET } from "./route";
 
 const WPLS = getAddress("0xA1077a294dDE1B09bB078844df40758a5D0f9a27");
 const PLSX = getAddress("0x95B303987A60C71504D99Aa1b13B4DA07b0790ab");
 const WBNB = getAddress("0xBB4CdB9CBd36B01bD1cBaEBF2De08d9173bc095c");
 const WPOL = getAddress("0x0d500B1d8E8eF31E21C99d1Db9A6444d3ADf1270");
+const WETH = getAddress("0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2");
 
 afterEach(() => {
   vi.unstubAllGlobals();
@@ -31,7 +38,7 @@ describe("token logo API route", () => {
 
     const response = await GET(
       new Request(
-        `https://pulserevoke.test/api/token-logos?chainId=${BASE_CHAIN_ID}&addresses=${WPLS}`,
+        `https://pulserevoke.test/api/token-logos?chainId=11155111&addresses=${WPLS}`,
       ),
     );
     const body = await response.json();
@@ -39,7 +46,7 @@ describe("token logo API route", () => {
     expect(response.status).toBe(400);
     expect(response.headers.get("Cache-Control")).toContain("no-store");
     expect(body.status).toBe("bad-request");
-    expect(body.errors.join(" ")).toContain("Polygon chainId=137");
+    expect(body.errors.join(" ")).toContain("Base chainId=8453");
     expect(fetch).not.toHaveBeenCalled();
   });
 
@@ -142,6 +149,49 @@ describe("token logo API route", () => {
       source: "dexscreener",
     });
   });
+
+  it.each([
+    [ETHEREUM_TOKEN_LOGO_CHAIN_ID, "ethereum", WETH],
+    [BASE_CHAIN_ID, "base", WETH],
+    [ARBITRUM_TOKEN_LOGO_CHAIN_ID, "arbitrum", WETH],
+    [OPTIMISM_TOKEN_LOGO_CHAIN_ID, "optimism", WETH],
+    [HYPEREVM_TOKEN_LOGO_CHAIN_ID, "hyperevm", WETH],
+  ])(
+    "fetches token logos through the %s Dex Screener slug",
+    async (chainId, slug, token) => {
+      const fetch = vi.fn(async (input: RequestInfo | URL) => {
+        const url = new URL(String(input));
+
+        expect(url.origin + url.pathname).toBe(
+          `https://api.dexscreener.com/tokens/v1/${slug}/${token}`,
+        );
+
+        return Response.json([
+          {
+            url: `https://dexscreener.com/${slug}/0xpair`,
+            baseToken: { address: token.toLowerCase() },
+            info: { imageUrl: `https://cdn.dexscreener.com/${slug}.png` },
+          },
+        ]);
+      });
+      vi.stubGlobal("fetch", fetch);
+
+      const response = await GET(
+        new Request(
+          `https://pulserevoke.test/api/token-logos?chainId=${chainId}&addresses=${token}`,
+        ),
+      );
+      const body = await response.json();
+
+      expect(response.status).toBe(200);
+      expect(body.status).toBe("complete");
+      expect(body.logos[tokenLogoAddressKey(token)]).toMatchObject({
+        tokenAddress: token,
+        imageUrl: `https://cdn.dexscreener.com/${slug}.png`,
+        source: "dexscreener",
+      });
+    },
+  );
 
   it("fetches Polygon token logos through the Dex Screener token endpoint", async () => {
     const fetch = vi.fn(async (input: RequestInfo | URL) => {

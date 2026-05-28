@@ -8,7 +8,9 @@ import {
   RevokeReceipt,
   type RevokeReceiptDetails,
 } from "@/components/approvals/revoke-receipt";
+import { TokenAvatar } from "@/components/tokens/token-avatar";
 import { useHyperEVMApprovalScan } from "@/hooks/use-hyperevm-approval-scan";
+import { useTokenLogos } from "@/hooks/use-token-logos";
 import { useRevokeApproval } from "@/hooks/use-revoke-approval";
 import type { RevokeStatus } from "@/hooks/use-revoke-approval";
 import { useRevokeNftApproval } from "@/hooks/use-revoke-nft-approval";
@@ -33,6 +35,7 @@ import {
   hyperevmExplorerTokenUrl,
   type HyperEVMApprovalClientMapping,
 } from "@/lib/hyperevm-approval-client";
+import { tokenLogoAddressKey } from "@/lib/token-logos";
 
 export function HyperEVMReadOnlyScanner({
   owner,
@@ -54,6 +57,14 @@ export function HyperEVMReadOnlyScanner({
     () => sortErc20(scan.mapped?.approvals.erc20 ?? []),
     [scan.mapped?.approvals.erc20],
   );
+  const tokenLogoAddresses = useMemo(
+    () => erc20Approvals.map((approval) => approval.tokenAddress),
+    [erc20Approvals],
+  );
+  const tokenLogos = useTokenLogos({
+    chainId: HYPEREVM_CLIENT_CHAIN_ID,
+    tokenAddresses: tokenLogoAddresses,
+  });
   const nftApprovals = useMemo(
     () => sortNft(scan.mapped?.approvals.nft ?? []),
     [scan.mapped?.approvals.nft],
@@ -164,6 +175,10 @@ export function HyperEVMReadOnlyScanner({
                   <HyperEVMErc20Row
                     key={approval.key}
                     approval={approval}
+                    tokenLogoUrl={
+                      tokenLogos.logos[tokenLogoAddressKey(approval.tokenAddress)]
+                        ?.imageUrl
+                    }
                     owner={owner}
                     rowRevokeEnabled={erc20RowRevokeEnabled}
                     rowRevokeDisabledReason={erc20RowRevokeDisabledReason}
@@ -300,6 +315,7 @@ function HyperEVMStatusPanel({
 
 function HyperEVMErc20Row({
   approval,
+  tokenLogoUrl,
   owner,
   rowRevokeEnabled,
   rowRevokeDisabledReason,
@@ -307,6 +323,7 @@ function HyperEVMErc20Row({
   debugMode,
 }: {
   approval: Approval;
+  tokenLogoUrl?: string;
   owner: Address;
   rowRevokeEnabled: boolean;
   rowRevokeDisabledReason: string;
@@ -315,17 +332,20 @@ function HyperEVMErc20Row({
 }) {
   return (
     <li className="grid gap-3 px-4 py-4 md:grid-cols-[1.1fr_1.2fr_0.9fr_auto] md:items-center">
-      <div className="min-w-0">
-        <p className="truncate text-sm font-semibold text-pulse-text">
-          {approval.tokenSymbol}
-        </p>
-        <p className="truncate text-xs text-pulse-muted">
-          {approval.tokenName ?? "Unnamed token"}
-        </p>
-        <ExplorerLink
-          href={hyperevmExplorerTokenUrl(approval.tokenAddress)}
-          label={approval.tokenAddress}
-        />
+      <div className="flex min-w-0 items-center gap-3">
+        <TokenAvatar symbol={approval.tokenSymbol} logoUrl={tokenLogoUrl} />
+        <div className="min-w-0">
+          <p className="truncate text-sm font-semibold text-pulse-text">
+            {approval.tokenSymbol}
+          </p>
+          <p className="truncate text-xs text-pulse-muted">
+            {approval.tokenName ?? "Unnamed token"}
+          </p>
+          <ExplorerLink
+            href={hyperevmExplorerTokenUrl(approval.tokenAddress)}
+            label={approval.tokenAddress}
+          />
+        </div>
       </div>
       <div className="min-w-0">
         <p className="truncate text-sm font-medium text-pulse-text">

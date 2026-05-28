@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createPublicClient, http } from "viem";
 
+import { ChainLogo, ChainLogoBackdrop } from "@/components/chains/chain-logo";
 import {
   appendGasHistorySample,
   DEFAULT_GAS_HISTORY_LIMIT,
@@ -425,31 +426,41 @@ function ChainSelectorCompact({
         {GAS_TRACKER_CHAINS.map((chain) => {
           const active = chain.chainId === selectedChainId;
           return (
-          <button
-            key={chain.chainId}
-            type="button"
-            onClick={() => onSelectChain(chain.chainId)}
-            className={`inline-flex min-h-11 shrink-0 items-center gap-3 rounded-xl border px-4 py-2 text-left transition ${
-              active
-                ? "border-pulse-cyan/70 bg-pulse-cyan/10 shadow-glow"
-                : "border-pulse-border/70 bg-pulse-bg/35 hover:border-pulse-cyan/40 hover:bg-pulse-panel/60"
-            }`}
-            aria-pressed={active}
-          >
-            <span>
-              <span className="block text-sm font-semibold text-pulse-text">
-                {chain.shortName}
+            <button
+              key={chain.chainId}
+              type="button"
+              onClick={() => onSelectChain(chain.chainId)}
+              className={`group relative inline-flex min-h-12 shrink-0 items-center gap-3 overflow-hidden rounded-xl border px-3 py-2 pr-4 text-left transition ${
+                active
+                  ? "border-pulse-cyan/70 bg-pulse-cyan/10 shadow-glow"
+                  : "border-pulse-border/70 bg-pulse-bg/35 hover:border-pulse-cyan/40 hover:bg-pulse-panel/60"
+              }`}
+              aria-pressed={active}
+            >
+              <ChainLogoBackdrop chainId={chain.chainId} />
+              <span
+                className={`relative z-10 flex h-8 w-8 shrink-0 items-center justify-center rounded-full border ${
+                  active
+                    ? "border-pulse-cyan/45 bg-pulse-cyan/15 text-pulse-cyan"
+                    : "border-pulse-border/70 bg-pulse-bg/60 text-pulse-muted"
+                }`}
+              >
+                <ChainLogo chainId={chain.chainId} className="h-5 w-5" />
               </span>
-              <span className="block text-xs text-pulse-muted">
-                {chain.nativeCurrency}
+              <span className="relative z-10 min-w-0">
+                <span className="block truncate text-sm font-semibold text-pulse-text">
+                  {chain.shortName}
+                </span>
+                <span className="block text-xs text-pulse-muted">
+                  {chain.nativeCurrency}
+                </span>
               </span>
-            </span>
-            {active ? (
-              <span className="rounded-full bg-pulse-green/15 px-2 py-1 text-[11px] font-semibold text-pulse-green">
-                Active
-              </span>
-            ) : null}
-          </button>
+              {active ? (
+                <span className="relative z-10 rounded-full bg-pulse-green/15 px-2 py-1 text-[11px] font-semibold text-pulse-green">
+                  Active
+                </span>
+              ) : null}
+            </button>
           );
         })}
       </div>
