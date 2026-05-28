@@ -2,11 +2,16 @@ import { describe, expect, it } from "vitest";
 import { getAddress } from "viem";
 
 import {
+  BASE_CHAIN_ID,
   BSC_CHAIN_ID,
   POLYGON_CHAIN_ID,
   PULSECHAIN_CHAIN_ID,
 } from "@/lib/chains";
 import {
+  ARBITRUM_TOKEN_LOGO_CHAIN_ID,
+  ETHEREUM_TOKEN_LOGO_CHAIN_ID,
+  HYPEREVM_TOKEN_LOGO_CHAIN_ID,
+  OPTIMISM_TOKEN_LOGO_CHAIN_ID,
   TOKEN_LOGO_MAX_ADDRESSES,
   extractTokenLogosFromDexScreenerPairs,
   getDexScreenerChainSlugForTokenLogos,
@@ -24,18 +29,36 @@ const WPOL = getAddress("0x0d500B1d8E8eF31E21C99d1Db9A6444d3ADf1270");
 
 describe("token logo helpers", () => {
   it("keeps logo lookup scoped to explicitly enabled chains", () => {
+    expect(isTokenLogoSupportedChain(ETHEREUM_TOKEN_LOGO_CHAIN_ID)).toBe(true);
+    expect(getDexScreenerChainSlugForTokenLogos(ETHEREUM_TOKEN_LOGO_CHAIN_ID)).toBe(
+      "ethereum",
+    );
+    expect(isTokenLogoSupportedChain(OPTIMISM_TOKEN_LOGO_CHAIN_ID)).toBe(true);
+    expect(getDexScreenerChainSlugForTokenLogos(OPTIMISM_TOKEN_LOGO_CHAIN_ID)).toBe(
+      "optimism",
+    );
     expect(isTokenLogoSupportedChain(PULSECHAIN_CHAIN_ID)).toBe(true);
     expect(getDexScreenerChainSlugForTokenLogos(PULSECHAIN_CHAIN_ID)).toBe(
       "pulsechain",
     );
     expect(isTokenLogoSupportedChain(BSC_CHAIN_ID)).toBe(true);
     expect(getDexScreenerChainSlugForTokenLogos(BSC_CHAIN_ID)).toBe("bsc");
+    expect(isTokenLogoSupportedChain(BASE_CHAIN_ID)).toBe(true);
+    expect(getDexScreenerChainSlugForTokenLogos(BASE_CHAIN_ID)).toBe("base");
     expect(isTokenLogoSupportedChain(POLYGON_CHAIN_ID)).toBe(true);
     expect(getDexScreenerChainSlugForTokenLogos(POLYGON_CHAIN_ID)).toBe(
       "polygon",
     );
-    expect(isTokenLogoSupportedChain(8453)).toBe(false);
-    expect(getDexScreenerChainSlugForTokenLogos(8453)).toBeNull();
+    expect(isTokenLogoSupportedChain(ARBITRUM_TOKEN_LOGO_CHAIN_ID)).toBe(true);
+    expect(getDexScreenerChainSlugForTokenLogos(ARBITRUM_TOKEN_LOGO_CHAIN_ID)).toBe(
+      "arbitrum",
+    );
+    expect(isTokenLogoSupportedChain(HYPEREVM_TOKEN_LOGO_CHAIN_ID)).toBe(true);
+    expect(getDexScreenerChainSlugForTokenLogos(HYPEREVM_TOKEN_LOGO_CHAIN_ID)).toBe(
+      "hyperevm",
+    );
+    expect(isTokenLogoSupportedChain(11155111)).toBe(false);
+    expect(getDexScreenerChainSlugForTokenLogos(11155111)).toBeNull();
   });
 
   it("normalizes, dedupes, and caps token addresses", () => {

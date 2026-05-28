@@ -10,6 +10,7 @@ import {
   BatchActionBar,
   BatchRevokePanel,
 } from "@/components/approvals/batch-revoke-panel";
+import { ChainLogo, ChainLogoBackdrop } from "@/components/chains/chain-logo";
 import { ArbitrumReadOnlyScanner } from "@/components/sections/arbitrum-readonly-scanner";
 import { EthereumReadOnlyScanner } from "@/components/sections/ethereum-readonly-scanner";
 import { HyperEVMReadOnlyScanner } from "@/components/sections/hyperevm-readonly-scanner";
@@ -825,14 +826,24 @@ function AddressOnlyChainSelector({
               key={option.chainId}
               type="button"
               onClick={() => onSelect(option.chainId)}
-              className={`inline-flex min-h-9 items-center rounded-xl border px-3 py-1.5 text-xs font-semibold transition ${
+              className={`group relative inline-flex min-h-10 items-center gap-2 overflow-hidden rounded-xl border px-2.5 py-1.5 pr-3 text-xs font-semibold transition ${
                 selected
                   ? "border-pulse-green/40 bg-pulse-green/10 text-pulse-green"
                   : "border-pulse-border bg-pulse-text/5 text-pulse-muted hover:bg-pulse-text/10"
               }`}
               aria-pressed={selected}
             >
-              {option.shortName}
+              <ChainLogoBackdrop chainId={option.chainId} className="h-14 w-14" />
+              <span
+                className={`relative z-10 flex h-6 w-6 shrink-0 items-center justify-center rounded-full border ${
+                  selected
+                    ? "border-pulse-green/40 bg-pulse-green/15"
+                    : "border-pulse-border/70 bg-pulse-bg/55"
+                }`}
+              >
+                <ChainLogo chainId={option.chainId} className="h-4 w-4" />
+              </span>
+              <span className="relative z-10">{option.shortName}</span>
             </button>
           );
         })}
