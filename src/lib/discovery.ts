@@ -188,6 +188,8 @@ export interface DiscoveryLimits {
   retryAttempts?: number;
   /** Delay between retry attempts for transient explorer failures. */
   retryDelayMs?: number;
+  /** Minimum delay between starts of explorer HTTP requests sharing a throttle key. */
+  minRequestIntervalMs?: number;
 }
 
 export const DEFAULT_DISCOVERY_LIMITS: DiscoveryLimits = {
@@ -200,6 +202,7 @@ export const DEFAULT_DISCOVERY_LIMITS: DiscoveryLimits = {
   minSplitSpan: 16,
   retryAttempts: 2,
   retryDelayMs: 750,
+  minRequestIntervalMs: 0,
 };
 
 const BIGINT_TWO = BigInt(2);
@@ -471,6 +474,8 @@ async function fetchLogsPage(
   timeoutMs: number,
   retryAttempts: number,
   retryDelayMs: number,
+  minRequestIntervalMs: number,
+  throttleKey: string | undefined,
   signal: AbortSignal | undefined,
   contractAddress?: Address,
 ): Promise<BlockscoutLogEntry[]> {
@@ -487,6 +492,8 @@ async function fetchLogsPage(
         page,
         offset,
         timeoutMs,
+        minRequestIntervalMs,
+        throttleKey,
         signal,
         contractAddress,
       );
@@ -514,6 +521,8 @@ async function fetchLogsPageOnce(
   page: number,
   offset: number,
   timeoutMs: number,
+  minRequestIntervalMs: number,
+  throttleKey: string | undefined,
   signal: AbortSignal | undefined,
   contractAddress?: Address,
 ): Promise<BlockscoutLogEntry[]> {
@@ -529,6 +538,7 @@ async function fetchLogsPageOnce(
     offset,
     contractAddress,
   );
+  await waitForDiscoveryThrottle(throttleKey, minRequestIntervalMs, signal);
   const res = await fetchDiscovery(url, signal, timeoutMs);
   if (!res.ok) {
     throw new Error(
@@ -605,11 +615,62 @@ function delayDiscoveryRetry(
   });
 }
 
+const discoveryThrottleNextAt = new Map<string, number>();
+const discoveryThrottleTails = new Map<string, Promise<void>>();
+
+// Best-effort per server instance. Route caps/timeouts still protect abuse,
+// while this smooths legitimate scans away from explorer per-second ceilings.
+async function waitForDiscoveryThrottle(
+  throttleKey: string | undefined,
+  minRequestIntervalMs: number,
+  signal: AbortSignal | undefined,
+): Promise<void> {
+  const interval = Math.max(0, Math.floor(minRequestIntervalMs));
+  if (!throttleKey || interval <= 0) return;
+  if (signal?.aborted) throw new Error("Discovery request aborted.");
+
+  const previous =
+    discoveryThrottleTails.get(throttleKey)?.catch(() => undefined) ??
+    Promise.resolve();
+  const ticket = previous.then(async () => {
+    const now = Date.now();
+    const nextAt = discoveryThrottleNextAt.get(throttleKey) ?? 0;
+    const waitMs = Math.max(0, nextAt - now);
+    await delayDiscoveryRetry(waitMs, signal);
+    discoveryThrottleNextAt.set(throttleKey, Date.now() + interval);
+  });
+
+  discoveryThrottleTails.set(throttleKey, ticket);
+
+  try {
+    await ticket;
+  } finally {
+    if (discoveryThrottleTails.get(throttleKey) === ticket) {
+      discoveryThrottleTails.delete(throttleKey);
+    }
+  }
+}
+
+function discoveryThrottleKey(
+  source: DiscoverySourceConfig,
+  apiUrl: string | undefined,
+): string | undefined {
+  if (source.apiProviderKind !== "etherscan-v2" || !apiUrl) return undefined;
+  try {
+    const parsed = new URL(apiUrl);
+    return `${source.apiProviderKind}:${parsed.origin}${parsed.pathname}`;
+  } catch {
+    return `${source.apiProviderKind}:${apiUrl}`;
+  }
+}
+
 async function fetchBlockTip(
   apiUrl: string,
   apiKey: string | undefined,
   queryParams: Record<string, string> | undefined,
   timeoutMs: number,
+  minRequestIntervalMs: number,
+  throttleKey: string | undefined,
   signal: AbortSignal | undefined,
 ): Promise<bigint | null> {
   const params = new URLSearchParams({
@@ -621,6 +682,7 @@ async function fetchBlockTip(
   }
   if (apiKey) params.set("apikey", apiKey);
   try {
+    await waitForDiscoveryThrottle(throttleKey, minRequestIntervalMs, signal);
     const res = await fetchDiscovery(
       `${apiUrl}?${params.toString()}`,
       signal,
@@ -657,6 +719,7 @@ async function windowedFetchLogs(
   topic0: string,
   limits: DiscoveryLimits,
   signal: AbortSignal | undefined,
+  throttleKey: string | undefined,
   contractAddress?: Address,
 ): Promise<{
   logs: BlockscoutLogEntry[];
@@ -666,6 +729,10 @@ async function windowedFetchLogs(
     limits.retryAttempts ?? DEFAULT_DISCOVERY_LIMITS.retryAttempts ?? 0;
   const retryDelayMs =
     limits.retryDelayMs ?? DEFAULT_DISCOVERY_LIMITS.retryDelayMs ?? 0;
+  const minRequestIntervalMs =
+    limits.minRequestIntervalMs ??
+    DEFAULT_DISCOVERY_LIMITS.minRequestIntervalMs ??
+    0;
   const initial = await fetchLogsPage(
     apiUrl,
     apiKey,
@@ -679,6 +746,8 @@ async function windowedFetchLogs(
     limits.requestTimeoutMs,
     retryAttempts,
     retryDelayMs,
+    minRequestIntervalMs,
+    throttleKey,
     signal,
     contractAddress,
   );
@@ -703,6 +772,8 @@ async function windowedFetchLogs(
     apiKey,
     queryParams,
     limits.requestTimeoutMs,
+    minRequestIntervalMs,
+    throttleKey,
     signal,
   );
   requests += 1;
@@ -755,6 +826,8 @@ async function windowedFetchLogs(
       limits.requestTimeoutMs,
       retryAttempts,
       retryDelayMs,
+      minRequestIntervalMs,
+      throttleKey,
       signal,
       contractAddress,
     );
@@ -788,6 +861,8 @@ async function windowedFetchLogs(
           limits.requestTimeoutMs,
           retryAttempts,
           retryDelayMs,
+          minRequestIntervalMs,
+          throttleKey,
           signal,
           contractAddress,
         );
@@ -1073,6 +1148,7 @@ export function createBlockscoutDiscoverySource({
   };
   const { apiUrl, apiKey } = source;
   const queryParams = buildEffectiveQueryParams(source, chainId);
+  const throttleKey = discoveryThrottleKey(source, apiUrl);
 
   const assertReady = () => {
     if (!apiUrl) {
@@ -1101,6 +1177,7 @@ export function createBlockscoutDiscoverySource({
         ERC20_APPROVAL_TOPIC0,
         limits,
         options?.signal,
+        throttleKey,
       );
       const parsed = extractErc20Pairs(logs, chainId);
       return {
@@ -1123,6 +1200,7 @@ export function createBlockscoutDiscoverySource({
           ERC_APPROVAL_FOR_ALL_TOPIC0,
           limits,
           options?.signal,
+          throttleKey,
         ),
         windowedFetchLogs(
           apiUrl,
@@ -1132,6 +1210,7 @@ export function createBlockscoutDiscoverySource({
           ERC20_APPROVAL_TOPIC0,
           limits,
           options?.signal,
+          throttleKey,
         ),
       ]);
 
@@ -1159,6 +1238,7 @@ export function createBlockscoutDiscoverySource({
           PERMIT2_APPROVAL_TOPIC0,
           limits,
           options?.signal,
+          throttleKey,
           PERMIT2_ADDRESS,
         ),
         windowedFetchLogs(
@@ -1169,6 +1249,7 @@ export function createBlockscoutDiscoverySource({
           PERMIT2_PERMIT_TOPIC0,
           limits,
           options?.signal,
+          throttleKey,
           PERMIT2_ADDRESS,
         ),
       ]);
