@@ -24,6 +24,7 @@ import {
 import { createBlockscoutDiscoverySource } from "@/lib/discovery";
 
 const SERVER_DISCOVERY_REQUEST_TIMEOUT_MS = 25_000;
+const SERVER_DISCOVERY_EXPLORER_MIN_INTERVAL_MS = 350;
 const SERVER_DISCOVERY_LIMITS = {
   maxRequests: 40,
   maxRawLogs: 20_000,
@@ -32,6 +33,7 @@ const SERVER_DISCOVERY_LIMITS = {
   minSplitSpan: 64,
   retryAttempts: 1,
   retryDelayMs: 500,
+  minRequestIntervalMs: SERVER_DISCOVERY_EXPLORER_MIN_INTERVAL_MS,
 } as const;
 
 const CHAIN_CONFIGS = {

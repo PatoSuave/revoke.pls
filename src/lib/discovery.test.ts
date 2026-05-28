@@ -58,6 +58,7 @@ function source(options?: {
   pageCap?: number;
   retryAttempts?: number;
   retryDelayMs?: number;
+  minRequestIntervalMs?: number;
 }) {
   return createBlockscoutDiscoverySource({
     chainId: options?.chainId ?? 369,
@@ -85,6 +86,7 @@ function source(options?: {
       requestTimeoutMs: 1000,
       retryAttempts: options?.retryAttempts ?? 0,
       retryDelayMs: options?.retryDelayMs ?? 0,
+      minRequestIntervalMs: options?.minRequestIntervalMs ?? 0,
     },
   });
 }
@@ -321,6 +323,45 @@ describe("createBlockscoutDiscoverySource", () => {
     expect(fetch).toHaveBeenCalledTimes(2);
     expect(result.pairs).toHaveLength(1);
     expect(result.truncated).toBe(false);
+  });
+
+  it("paces Etherscan V2 log requests that would otherwise start together", async () => {
+    const startedAt: number[] = [];
+    const fetch = vi.fn(async (input: RequestInfo | URL) => {
+      startedAt.push(Date.now());
+      const url = new URL(String(input));
+      const topic0 = url.searchParams.get("topic0");
+      if (topic0 === ERC_APPROVAL_FOR_ALL_TOPIC0) {
+        return jsonResponse({
+          status: "1",
+          message: "OK",
+          result: [
+            {
+              address: COLLECTION,
+              blockNumber: "0x1",
+              transactionHash: "0x2",
+              logIndex: "0x0",
+              topics: [ERC_APPROVAL_FOR_ALL_TOPIC0, pad(OWNER), pad(SPENDER)],
+            },
+          ],
+        });
+      }
+
+      return jsonResponse({ status: "0", message: "No logs found", result: [] });
+    });
+    vi.stubGlobal("fetch", fetch);
+
+    await source({
+      apiUrl: "https://throttled-etherscan.test/v2/api",
+      apiProviderKind: "etherscan-v2",
+      apiChainId: "1",
+      apiKey: "test-key",
+      queryParams: { chainid: "1" },
+      minRequestIntervalMs: 25,
+    }).discoverNftApprovals(OWNER);
+
+    expect(fetch).toHaveBeenCalledTimes(2);
+    expect(startedAt[1] - startedAt[0]).toBeGreaterThanOrEqual(20);
   });
 
   it("fails Base discovery fast when the Etherscan API key is missing", async () => {
