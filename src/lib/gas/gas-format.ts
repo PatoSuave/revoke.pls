@@ -10,8 +10,12 @@ export const TYPICAL_GAS_TRANSACTIONS = [
   { label: "Contract interaction", gasUnits: 150_000 },
 ] as const;
 
-export function weiToGweiString(valueWei: bigint, decimals = 2): string {
-  return trimDecimal(formatUnits(valueWei, 9), decimals);
+export function weiToGweiString(valueWei: bigint, decimals?: number): string {
+  const valueGwei = formatUnits(valueWei, 9);
+  const numericValue = Number(valueGwei);
+  const displayDecimals =
+    decimals ?? (numericValue > 0 && numericValue < 1 ? 6 : 2);
+  return trimDecimal(valueGwei, displayDecimals);
 }
 
 export function formatGweiNumber(value: number, decimals = 2): string {
