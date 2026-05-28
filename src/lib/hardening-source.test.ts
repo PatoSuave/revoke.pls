@@ -190,6 +190,41 @@ describe("hardening source invariants", () => {
     );
   });
 
+  it("keeps hosted hardening smoke checks wired", () => {
+    const packageJson = readFileSync(join(process.cwd(), "package.json"), "utf8");
+    const liveScript = readFileSync(
+      join(process.cwd(), "scripts", "security-live.mjs"),
+      "utf8",
+    );
+    const envScript = readFileSync(
+      join(process.cwd(), "scripts", "check-hosted-public-env.mjs"),
+      "utf8",
+    );
+    const hostedHardening = readFileSync(
+      join(process.cwd(), "docs", "HOSTED-HARDENING.md"),
+      "utf8",
+    );
+    const auditGuide = readFileSync(
+      join(process.cwd(), "docs", "AUDIT-GUIDE.md"),
+      "utf8",
+    );
+
+    expect(packageJson).toContain('"security:live"');
+    expect(packageJson).toContain('"security:env"');
+    expect(liveScript).toContain("content-security-policy");
+    expect(liveScript).toContain("/api/token-logos");
+    expect(liveScript).toContain("/api/gas?chainId=369");
+    expect(liveScript).toContain("assertNoApiKeyShapedLiteral");
+    expect(liveScript).toContain("_vercel_share");
+    expect(envScript).toContain("NEXT_PUBLIC_BSC_EXPLORER_API_KEY");
+    expect(envScript).toContain("NEXT_PUBLIC_BSCSCAN_API_KEY");
+    expect(envScript).toContain("NEXT_PUBLIC_ETHERSCAN_API_KEY");
+    expect(envScript).toContain("allow-desktop-public-keys");
+    expect(`${hostedHardening}\n${auditGuide}`).toContain("Vercel Firewall");
+    expect(hostedHardening).toContain("npm.cmd run security:live");
+    expect(hostedHardening).toContain("npm.cmd run security:env");
+  });
+
   it("keeps Arbitrum revoke limited to controlled row hooks", () => {
     const component = readFileSync(
       join(

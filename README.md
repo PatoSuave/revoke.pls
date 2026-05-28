@@ -180,6 +180,8 @@ npx.cmd tsc --noEmit
 npx.cmd vitest run
 npm.cmd run lint
 npm.cmd audit --omit=dev
+npm.cmd run security:env
+npm.cmd run security:live
 git diff --check
 ```
 
@@ -191,8 +193,30 @@ npx tsc --noEmit
 npx vitest run
 npm run lint
 npm audit --omit=dev
+npm run security:env
+npm run security:live
 git diff --check
 ```
+
+`security:live` defaults to `https://pulserevoke.com`. To check a preview,
+pass the preview origin:
+
+```powershell
+npm.cmd run security:live -- https://your-preview.vercel.app
+```
+
+For Vercel deployment-protected previews, pass the temporary share URL or its
+`_vercel_share` token:
+
+```powershell
+npm.cmd run security:live -- "https://your-preview.vercel.app/?_vercel_share=..."
+npm.cmd run security:live -- https://your-preview.vercel.app --vercel-share=...
+```
+
+For hosted web deployments, `security:env` fails if public
+`NEXT_PUBLIC_*` explorer/API-key variables are set. Desktop/static builds that
+intentionally need public fallback keys can opt out explicitly with
+`--allow-desktop-public-keys`.
 
 For documentation-only work, also check that sensitive runtime paths were not
 changed unexpectedly:
@@ -226,6 +250,7 @@ git diff -- src/hooks src/app/api src/lib/wagmi.ts src/lib/preflight.ts src/lib/
 - [Environment variables](docs/ENVIRONMENT.md)
 - [Security policy](SECURITY.md)
 - [Security notes](docs/SECURITY.md)
+- [Hosted hardening](docs/HOSTED-HARDENING.md)
 - [Transparency notes](docs/TRANSPARENCY.md)
 - [Audit guide](docs/AUDIT-GUIDE.md)
 - [Manual QA checklist](docs/MANUAL-QA-CHECKLIST.md)
