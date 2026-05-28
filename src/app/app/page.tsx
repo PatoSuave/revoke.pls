@@ -1,9 +1,12 @@
 import type { Metadata } from "next";
+import type { CSSProperties } from "react";
 
 import { AntiPhishingBanner } from "@/components/sections/anti-phishing-banner";
 import { ApprovalScanner } from "@/components/sections/approval-scanner";
+import { ChainLogo } from "@/components/chains/chain-logo";
 import { PulseChainGasTracker } from "@/components/gas/pulsechain-gas-tracker";
 import { PulseChainResourceLinks } from "@/components/sections/pulsechain-resource-links";
+import { getChainVisual } from "@/lib/chain-visuals";
 import { SiteFooter } from "@/components/sections/site-footer";
 import { SiteHeader } from "@/components/sections/site-header";
 import { absoluteUrl, siteConfig } from "@/lib/site";
@@ -74,18 +77,47 @@ function AppWorkspaceIntro() {
             </p>
             <div className="flex max-w-full flex-wrap gap-1.5 lg:justify-end">
               {LIVE_SUPPORTED_CHAIN_ROWS.map((row) => (
-                <span
-                  key={row.chain}
-                  className="inline-flex max-w-full items-center gap-1.5 rounded-full border border-pulse-border/70 bg-pulse-panel/40 px-2.5 py-1 font-medium text-pulse-muted"
-                >
-                  <span className="truncate text-pulse-text">{row.chain}</span>
-                  <span className="font-mono text-[10px]">ID {row.chainId}</span>
-                </span>
+                <LiveSupportedChainPill key={row.chain} row={row} />
               ))}
             </div>
           </div>
         </div>
       </div>
     </section>
+  );
+}
+
+function LiveSupportedChainPill({
+  row,
+}: {
+  row: (typeof LIVE_SUPPORTED_CHAIN_ROWS)[number];
+}) {
+  const visual = getChainVisual(row.chain);
+  const chainId = Number(row.chainId);
+  const pillStyle = {
+    "--accent-color": visual.accent,
+    "--accent-readable": visual.accentReadable,
+    "--accent-soft": visual.accentSoft,
+    "--accent-border": visual.accentBorder,
+    "--accent-shadow": visual.accentShadow,
+  } as CSSProperties;
+
+  return (
+    <span
+      style={pillStyle}
+      className="inline-flex max-w-full items-center gap-1.5 rounded-full border border-[color:var(--accent-border)] bg-[color:var(--accent-soft)] px-2.5 py-1 font-medium text-pulse-muted shadow-[0_0_18px_var(--accent-soft)] transition hover:border-[color:var(--accent-color)] hover:bg-pulse-panel/70"
+    >
+      <span
+        className="brand-live-dot h-1.5 w-1.5 shrink-0 rounded-full"
+        aria-hidden
+      />
+      <ChainLogo chainId={chainId} className="h-3.5 w-3.5 shrink-0" />
+      <span className="brand-accent-text truncate font-semibold">
+        {row.chain}
+      </span>
+      <span className="font-mono text-[10px] text-pulse-muted">
+        ID {row.chainId}
+      </span>
+    </span>
   );
 }
