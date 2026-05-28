@@ -15,8 +15,7 @@ import {
 } from "@/lib/release";
 import { absoluteUrl, siteConfig } from "@/lib/site";
 import {
-  HYPEREVM_LIVE_NETWORK_NOTE,
-  LIVE_SUPPORTED_CHAIN_COMPACT_LIST,
+  formatRevokeSupport,
   LIVE_SUPPORTED_CHAIN_COUNT,
   LIVE_SUPPORTED_CHAIN_LIST,
   LIVE_SUPPORTED_CHAIN_ROWS,
@@ -26,7 +25,7 @@ import {
 const productName = "Pulse Revoke";
 const launcherTitle = `${productName} - Scan, review, revoke`;
 const launcherDescription =
-  `Launch the Pulse Revoke scanner. Review and revoke token approvals on ${LIVE_SUPPORTED_CHAIN_LIST} without custody.`;
+  `Launch the Pulse Revoke scanner. Review and revoke token and NFT approvals on ${LIVE_SUPPORTED_CHAIN_LIST} without custody.`;
 
 export const metadata: Metadata = {
   title: launcherTitle,
@@ -49,47 +48,78 @@ export const metadata: Metadata = {
 
 const TRUST_POINTS = [
   {
-    title: "Non-custodial",
-    body: "Pulse Revoke never holds wallet funds.",
+    title: "No seed phrase",
+    body: "Pulse Revoke never asks for seed phrases, private keys, or mnemonics.",
   },
   {
-    title: "User-signed",
-    body: "Every revoke is confirmed in your wallet.",
+    title: "No custody",
+    body: "Funds stay in your wallet. The app reads public approval state.",
   },
   {
-    title: "No hidden writes",
-    body: "Write transactions appear only after you click revoke.",
+    title: "Wallet-confirmed revokes",
+    body: "Every revoke is an on-chain transaction you approve in your wallet.",
   },
   {
-    title: "Curated labels",
-    body: "Registry names help, but users should still verify.",
+    title: "Labels are context",
+    body: "Spender labels help review, but they are not guarantees of safety.",
   },
 ] as const;
 
-const HERO_STATS = [
+const HERO_TRUST_ITEMS = [
+  "No seed phrase",
+  "No custody",
+  "Wallet-confirmed revokes",
+  "Scan first, connect only when ready",
+] as const;
+
+const CHAIN_CARD_COPY: Record<string, string> = {
+  PulseChain:
+    "Primary Pulse Revoke lane for PRC-20, ERC-721-style, and ERC-1155-style approvals.",
+  "BNB Smart Chain":
+    "Shared scanner and wallet-side revoke flow with BSC gas guardrails.",
+  Base: "Shared scanner and wallet-side revoke flow using Base explorer discovery.",
+  Polygon:
+    "Shared scanner and wallet-side revoke flow using PolygonScan and live checks.",
+  "Ethereum Mainnet":
+    "Server-side discovery with wallet-side revoke only after row verification.",
+  "Arbitrum One":
+    "Server-side discovery with verified ERC-20/NFT row-level revoke.",
+  Optimism:
+    "Server-side discovery for OP Mainnet with verified row-level revoke.",
+  HyperEVM:
+    "Server-side discovery with verified ERC-20/NFT row-level revoke on chain ID 999.",
+};
+
+const SCANNER_PANEL_POINTS = [
   {
-    label: "Supported chains",
-    value: `${LIVE_SUPPORTED_CHAIN_COUNT} live EVM networks`,
+    title: "Address-only review",
+    body: "Start with a pasted EVM wallet address before connecting anything.",
   },
-  { label: "Scanner", value: "Live at /app" },
-  { label: "Desktop", value: "Pending release" },
+  {
+    title: "Live verification",
+    body: "Rows stay actionable only after current approval state is checked.",
+  },
+  {
+    title: "Wallet prompt is final",
+    body: "Revoke writes appear in your wallet only after you choose an action.",
+  },
 ] as const;
 
 const HOW_IT_WORKS = [
   {
     step: "01",
-    title: "Connect wallet",
-    body: "Use a browser wallet or WalletConnect. The scanner reads public chain data for your address.",
+    title: "Scan an address",
+    body: "Paste an EVM address or connect a wallet when ready. The scanner reads public approval history and current state.",
   },
   {
     step: "02",
     title: "Review approvals",
-    body: "See active token allowances and NFT operator approvals, with risk cues and spender labels.",
+    body: "Compare active token allowances and NFT operator approvals with chain, spender, and risk context.",
   },
   {
     step: "03",
-    title: "Revoke what you do not trust",
-    body: "Each revoke is a wallet-confirmed on-chain transaction that clears an approval.",
+    title: "Revoke with your wallet",
+    body: "Choose only the approvals you want to clear. Each revoke is wallet-confirmed and submitted on-chain.",
   },
 ] as const;
 
@@ -134,13 +164,14 @@ export default function LauncherPage() {
 
   return (
     <div className="min-h-dvh bg-pulse-bg text-pulse-text">
-      <SiteHeader desktopReady={desktopReady} />
+      <SiteHeader />
       <main>
-        <Hero desktopReady={desktopReady} />
+        <Hero />
+        <SupportedChainsSection />
+        <HowItWorks />
+        <TrustStrip />
         <AntiPhishingBanner />
         <PulseChainResourceLinks />
-        <TrustStrip />
-        <HowItWorks />
         <DesktopSection release={release} desktopReady={desktopReady} />
         <IpfsSection release={release} ipfsReady={ipfsReady} />
         <FAQSection />
@@ -150,7 +181,7 @@ export default function LauncherPage() {
   );
 }
 
-function SiteHeader({ desktopReady }: { desktopReady: boolean }) {
+function SiteHeader() {
   return (
     <header className="sticky top-0 z-40 border-b border-pulse-border/60 bg-pulse-bg/85 backdrop-blur">
       <div className="mx-auto flex min-h-16 max-w-6xl flex-wrap items-center justify-between gap-2 px-4 py-3 sm:flex-nowrap sm:gap-4 sm:px-6 sm:py-0">
@@ -160,20 +191,17 @@ function SiteHeader({ desktopReady }: { desktopReady: boolean }) {
           aria-label={`${productName} home`}
         >
           <PulseMark className="h-8 w-8 shrink-0" />
-          <span className="truncate text-sm font-semibold tracking-tight sm:text-base">
+          <span className="truncate text-sm font-semibold sm:text-base">
             Pulse <span className="text-gradient-pulse">Revoke</span>
           </span>
         </Link>
 
         <nav className="hidden items-center gap-6 text-sm text-pulse-muted md:flex">
+          <a href="#chains" className="transition hover:text-pulse-text">
+            Chains
+          </a>
           <a href="#how-it-works" className="transition hover:text-pulse-text">
             How it works
-          </a>
-          <a href="#desktop" className="transition hover:text-pulse-text">
-            Desktop
-          </a>
-          <a href="#ipfs" className="transition hover:text-pulse-text">
-            IPFS
           </a>
           <Link href="/security" className="transition hover:text-pulse-text">
             Security
@@ -194,12 +222,9 @@ function SiteHeader({ desktopReady }: { desktopReady: boolean }) {
 
         <div className="flex min-w-0 shrink-0 items-center gap-2">
           <ThemeModeToggle className="hidden sm:inline-grid" />
-          <StatusPill className="hidden sm:inline-flex">
-            {desktopReady ? "Desktop ready" : "Desktop pending"}
-          </StatusPill>
           <Link
             href="/app"
-            className="inline-flex items-center justify-center whitespace-nowrap rounded-xl bg-pulse-gradient px-3 py-2 text-xs font-semibold text-pulse-on-gradient shadow-glow transition hover:brightness-110 sm:px-4"
+            className="inline-flex items-center justify-center whitespace-nowrap rounded-xl bg-pulse-gradient px-3 py-2 text-xs font-semibold text-pulse-on-gradient transition hover:brightness-110 sm:px-4"
           >
             <span className="sm:hidden">Launch</span>
             <span className="hidden sm:inline">Launch Scanner</span>
@@ -210,7 +235,7 @@ function SiteHeader({ desktopReady }: { desktopReady: boolean }) {
   );
 }
 
-function Hero({ desktopReady }: { desktopReady: boolean }) {
+function Hero() {
   return (
     <section className="relative overflow-hidden border-b border-pulse-border/50">
       <div className="absolute inset-0 bg-pulse-radial opacity-90" aria-hidden />
@@ -219,38 +244,24 @@ function Hero({ desktopReady }: { desktopReady: boolean }) {
         aria-hidden
       />
 
-      <div className="relative mx-auto grid max-w-6xl gap-10 px-4 py-16 sm:px-6 sm:py-24 lg:grid-cols-[1.02fr_0.98fr] lg:items-center">
+      <div className="relative mx-auto grid max-w-6xl gap-10 px-4 py-14 sm:px-6 sm:py-20 lg:grid-cols-[1.02fr_0.98fr] lg:items-center">
         <div className="min-w-0">
-          <div className="flex w-full max-w-full flex-wrap items-center gap-2 rounded-full border border-pulse-cyan/35 bg-pulse-panel/75 px-3 py-1 text-xs font-semibold text-pulse-cyan sm:inline-flex sm:w-auto">
+          <div className="inline-flex max-w-full items-center gap-2 rounded-full border border-pulse-cyan/35 bg-pulse-panel/75 px-3 py-1 text-xs font-semibold text-pulse-cyan">
             <span
               className="h-1.5 w-1.5 rounded-full bg-pulse-green"
               aria-hidden
             />
-            <span className="min-w-0 break-words sm:hidden">
-              {LIVE_SUPPORTED_CHAIN_COUNT} live EVM networks
-            </span>
-            <span className="hidden sm:inline">
-              {LIVE_SUPPORTED_CHAIN_COMPACT_LIST} approval review
-            </span>
+            <span>{LIVE_SUPPORTED_CHAIN_COUNT} live EVM networks</span>
           </div>
 
-          <h1 className="mt-5 break-words text-5xl font-bold tracking-tight sm:text-7xl">
-            Pulse <span className="text-gradient-pulse">Revoke</span>
+          <h1 className="mt-5 max-w-3xl text-4xl font-bold leading-[1.08] sm:text-6xl">
+            Review risky approvals before they become a problem.
           </h1>
 
-          <p className="mt-5 max-w-2xl text-xl font-semibold leading-8 text-pulse-text sm:text-2xl">
-            Revoke what you do not trust across {LIVE_SUPPORTED_CHAIN_COUNT} live
-            EVM networks.
-          </p>
-
-          <p className="mt-4 max-w-2xl text-base leading-7 text-pulse-muted">
-            Review token allowances and NFT operator approvals on{" "}
-            {LIVE_SUPPORTED_CHAIN_LIST}, then clear the permissions you do not
-            trust. The app stays read-only until you choose a revoke action and
-            confirm it in your own wallet.
-          </p>
-          <p className="mt-3 max-w-2xl text-sm font-semibold leading-6 text-pulse-cyan">
-            {HYPEREVM_LIVE_NETWORK_NOTE}
+          <p className="mt-5 max-w-2xl text-base leading-7 text-pulse-muted sm:text-lg">
+            Scan token and NFT approvals across {LIVE_SUPPORTED_CHAIN_LIST}.
+            Revoke only after live verification confirms an approval is still
+            active.
           </p>
 
           <div className="mt-8 flex flex-col gap-3 sm:flex-row">
@@ -260,180 +271,173 @@ function Hero({ desktopReady }: { desktopReady: boolean }) {
             >
               Launch Scanner
             </Link>
-            <a
-              href="#desktop"
+            <Link
+              href="/security"
               className="inline-flex items-center justify-center rounded-xl border border-pulse-border bg-pulse-text/5 px-6 py-3 text-sm font-semibold text-pulse-text transition hover:bg-pulse-text/10"
             >
-              Desktop App {desktopReady ? "" : "/ Coming Soon"}
-            </a>
+              Security &amp; Trust
+            </Link>
           </div>
 
-          <LiveNetworksStrip />
-
-          <dl className="mt-8 grid max-w-2xl grid-cols-1 gap-3 sm:grid-cols-3">
-            {HERO_STATS.map((item) => (
-              <div
-                key={item.label}
-                className="rounded-xl border border-pulse-border bg-pulse-panel/55 p-4"
-              >
-                <dt className="text-[11px] font-semibold uppercase tracking-[0.16em] text-pulse-muted">
-                  {item.label}
-                </dt>
-                <dd className="mt-1 text-sm font-semibold text-pulse-text">
-                  {desktopReady && item.label === "Desktop"
-                    ? "Release ready"
-                    : item.value}
-                </dd>
-              </div>
-            ))}
-          </dl>
-
-          <p className="mt-5 max-w-xl text-xs leading-5 text-pulse-muted">
-            Always verify spender addresses on PulseScan, BscScan, BaseScan,
-            PolygonScan, Etherscan, Arbiscan, Optimistic Etherscan, or
-            Hyperevmscan before signing. Registry labels are context, not a
-            guarantee of safety.
-          </p>
+          <HeroTrustStrip />
         </div>
 
-        <LaunchChoicePanel desktopReady={desktopReady} />
+        <ScannerPathPanel />
       </div>
     </section>
   );
 }
 
-function LiveNetworksStrip() {
+function HeroTrustStrip() {
   return (
-    <div className="mt-5 max-w-2xl rounded-2xl border border-pulse-cyan/30 bg-pulse-panel/55 p-4">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <p className="text-xs font-semibold uppercase tracking-[0.18em] text-pulse-cyan">
-          Live supported chains
-        </p>
-        <p className="text-sm font-semibold text-pulse-text">
-          {LIVE_SUPPORTED_CHAIN_COUNT} live EVM networks
-        </p>
-      </div>
-      <div className="mt-3 flex max-w-full flex-wrap gap-2">
-        {LIVE_SUPPORTED_CHAIN_ROWS.map((row) => (
+    <ul className="mt-6 grid max-w-2xl gap-2 text-sm text-pulse-muted sm:grid-cols-2">
+      {HERO_TRUST_ITEMS.map((item) => (
+        <li
+          key={item}
+          className="flex min-w-0 items-center gap-2 rounded-xl border border-pulse-border/70 bg-pulse-panel/45 px-3 py-2"
+        >
           <span
-            key={row.chain}
-            className="inline-flex max-w-full items-center gap-2 rounded-full border border-pulse-border bg-pulse-bg/70 px-3 py-1 text-xs font-semibold text-pulse-text"
-          >
-            <span
-              className="h-1.5 w-1.5 rounded-full bg-pulse-green"
-              aria-hidden
-            />
-            <span className="truncate">{row.chain}</span>
-            <span className="font-mono text-[10px] font-medium text-pulse-muted">
-              ID {row.chainId}
-            </span>
-          </span>
-        ))}
-      </div>
-      <p className="mt-3 text-xs leading-5 text-pulse-muted">
-        {HYPEREVM_LIVE_NETWORK_NOTE}{" "}
-        {VERIFIED_ROW_SUPPORT_NOTE}
-      </p>
-    </div>
+            className="h-1.5 w-1.5 shrink-0 rounded-full bg-pulse-green"
+            aria-hidden
+          />
+          <span className="min-w-0">{item}</span>
+        </li>
+      ))}
+    </ul>
   );
 }
 
-function LaunchChoicePanel({ desktopReady }: { desktopReady: boolean }) {
+function ScannerPathPanel() {
   return (
-    <aside aria-label="Launch options" className="grid gap-3">
-      <div className="rounded-2xl border border-pulse-border bg-pulse-panel/70 p-5 shadow-glow">
+    <aside aria-label="Scanner workflow" className="grid gap-3">
+      <div className="rounded-2xl border border-pulse-cyan/30 bg-pulse-panel/70 p-5">
         <p className="text-xs font-semibold uppercase tracking-[0.18em] text-pulse-cyan">
-          Choose your path
+          Live scanner
         </p>
-        <p className="mt-2 text-2xl font-semibold text-pulse-text">
-          Scan now in the browser. Use desktop when a signed build is released.
+        <p className="mt-2 text-2xl font-semibold leading-8 text-pulse-text">
+          Scan first. Connect only when you are ready to revoke.
         </p>
         <p className="mt-3 text-sm leading-6 text-pulse-muted">
-          Both paths use the same wallet-confirmed revoke model. The desktop
-          download stays inactive until release artifacts are real.
+          PulseChain is the primary lane, and the same wallet-confirmed safety
+          model applies across every supported EVM network.
         </p>
       </div>
 
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-1">
-        <ChoiceCard
-          eyebrow="Web app"
-          status={<StatusPill tone="success">Available now</StatusPill>}
-          title="Launch web scanner"
-          body="Use the hosted scanner in your browser. Browser wallets and WalletConnect continue to work here."
-          action={
-            <Link
-              href="/app"
-              className="inline-flex items-center justify-center rounded-xl bg-pulse-gradient px-4 py-2.5 text-sm font-semibold text-pulse-on-gradient transition hover:brightness-110"
-            >
-              Open /app
-            </Link>
-          }
-        />
-
-        <ChoiceCard
-          eyebrow="Desktop app"
-          status={
-            <StatusPill tone={desktopReady ? "success" : "neutral"}>
-              {desktopReady ? "Ready" : "Coming soon"}
-            </StatusPill>
-          }
-          title="Download local desktop app"
-          body={
-            desktopReady
-              ? "Download a signed desktop build from the current release."
-              : "Desktop builds are planned for local use, but no public artifact is published in this repo yet."
-          }
-          action={
-            <a
-              href="#desktop"
-              className="inline-flex items-center justify-center rounded-xl border border-pulse-border bg-pulse-text/5 px-4 py-2.5 text-sm font-semibold text-pulse-text transition hover:bg-pulse-text/10"
-            >
-              View status
-            </a>
-          }
-        />
+      <div className="grid gap-3">
+        {SCANNER_PANEL_POINTS.map((item) => (
+          <div
+            key={item.title}
+            className="rounded-2xl border border-pulse-border bg-pulse-bg/60 p-4"
+          >
+            <p className="text-base font-semibold text-pulse-text">
+              {item.title}
+            </p>
+            <p className="mt-1 text-sm leading-6 text-pulse-muted">
+              {item.body}
+            </p>
+          </div>
+        ))}
       </div>
+
+      <p className="rounded-2xl border border-pulse-border bg-pulse-bg/55 p-4 text-xs leading-5 text-pulse-muted">
+        Desktop and IPFS releases are tracked below as roadmap status. The live
+        product action is the web scanner.
+      </p>
     </aside>
   );
 }
 
-function ChoiceCard({
-  eyebrow,
-  status,
-  title,
-  body,
-  action,
-}: {
-  eyebrow: string;
-  status: ReactNode;
-  title: string;
-  body: string;
-  action: ReactNode;
-}) {
+function SupportedChainsSection() {
   return (
-    <article className="rounded-2xl border border-pulse-border bg-pulse-bg/65 p-5 transition hover:border-pulse-cyan/45">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-pulse-cyan">
-          {eyebrow}
-        </p>
-        {status}
+    <section id="chains" className="border-b border-pulse-border/60 py-14 sm:py-20">
+      <SectionHeader
+        eyebrow="Supported chains"
+        title={`${LIVE_SUPPORTED_CHAIN_COUNT} live EVM networks`}
+        body="PulseChain stays first and visually primary. Every other live network remains visible with the same clean status language."
+      />
+      <div className="mx-auto mt-9 grid max-w-6xl gap-3 px-4 sm:grid-cols-2 sm:px-6 lg:grid-cols-4">
+        {LIVE_SUPPORTED_CHAIN_ROWS.map((row) => (
+          <ChainCard key={row.chain} row={row} />
+        ))}
       </div>
-      <h2 className="mt-2 text-xl font-semibold text-pulse-text">{title}</h2>
-      <p className="mt-2 text-sm leading-6 text-pulse-muted">{body}</p>
-      <div className="mt-4">{action}</div>
+    </section>
+  );
+}
+
+function ChainCard({ row }: { row: (typeof LIVE_SUPPORTED_CHAIN_ROWS)[number] }) {
+  const isPrimary = row.chain === "PulseChain";
+  const supportLabel = formatRevokeSupport(row);
+
+  return (
+    <article
+      className={`flex min-h-52 flex-col rounded-2xl border p-5 ${
+        isPrimary
+          ? "border-pulse-cyan/45 bg-pulse-cyan/10"
+          : "border-pulse-border bg-pulse-panel/55"
+      }`}
+    >
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <h3 className="text-base font-semibold text-pulse-text">
+            {row.chain}
+          </h3>
+          <p className="mt-1 font-mono text-xs text-pulse-muted">
+            Chain ID {row.chainId}
+          </p>
+        </div>
+        {isPrimary ? (
+          <span className="shrink-0 rounded-full border border-pulse-cyan/45 bg-pulse-cyan/10 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wide text-pulse-cyan">
+            Primary
+          </span>
+        ) : null}
+      </div>
+
+      <p className="mt-4 flex-1 text-sm leading-6 text-pulse-muted">
+        {CHAIN_CARD_COPY[row.chain] ?? row.note}
+      </p>
+
+      <div className="mt-5 flex flex-wrap gap-2">
+        <span className="rounded-full border border-pulse-green/30 bg-pulse-green/10 px-2.5 py-1 text-[11px] font-semibold text-pulse-green">
+          Scan live
+        </span>
+        <span className="rounded-full border border-pulse-border bg-pulse-bg/55 px-2.5 py-1 text-[11px] font-semibold text-pulse-muted">
+          {supportLabel}
+        </span>
+      </div>
     </article>
   );
 }
 
 function TrustStrip() {
   return (
-    <section className="border-b border-pulse-border/60 bg-pulse-bg py-8">
-      <div className="mx-auto max-w-6xl px-4 sm:px-6">
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+    <section
+      id="trust"
+      className="border-b border-pulse-border/60 bg-pulse-bg py-14 sm:py-20"
+    >
+      <div className="mx-auto grid max-w-6xl gap-8 px-4 sm:px-6 lg:grid-cols-[0.9fr_1.1fr] lg:items-start">
+        <div>
+          <SectionKicker>Trust model</SectionKicker>
+          <h2 className="mt-2 text-3xl font-bold sm:text-4xl">
+            Clear limits before every signature.
+          </h2>
+          <p className="mt-4 text-sm leading-7 text-pulse-muted">
+            Pulse Revoke is designed to make approvals easier to inspect, not
+            to replace wallet review. Verify spender addresses, chain context,
+            and wallet prompts before leaving access open or signing a revoke.
+          </p>
+          <Link
+            href="/security"
+            className="mt-5 inline-flex items-center justify-center rounded-xl border border-pulse-cyan/35 bg-pulse-cyan/10 px-4 py-2.5 text-sm font-semibold text-pulse-cyan transition hover:bg-pulse-cyan/15"
+          >
+            Security &amp; Trust
+          </Link>
+        </div>
+
+        <div className="grid gap-3 sm:grid-cols-2">
           {TRUST_POINTS.map((point) => (
             <div
               key={point.title}
-              className="rounded-2xl border border-pulse-border bg-pulse-panel/55 p-4"
+              className="rounded-2xl border border-pulse-border bg-pulse-panel/55 p-5"
             >
               <div className="flex items-center gap-2">
                 <span
@@ -450,18 +454,6 @@ function TrustStrip() {
             </div>
           ))}
         </div>
-        <div className="mt-4 flex flex-col gap-3 rounded-2xl border border-pulse-border bg-pulse-panel/45 p-4 text-sm text-pulse-muted sm:flex-row sm:items-center sm:justify-between">
-          <p>
-            Review official-domain, wallet-connection, revoke, privacy, and
-            supported-chain guidance before signing.
-          </p>
-          <Link
-            href="/security"
-            className="inline-flex shrink-0 items-center justify-center rounded-xl border border-pulse-cyan/35 bg-pulse-cyan/10 px-3 py-2 text-xs font-semibold text-pulse-cyan transition hover:bg-pulse-cyan/15"
-          >
-            Security &amp; Trust
-          </Link>
-        </div>
       </div>
     </section>
   );
@@ -472,8 +464,8 @@ function HowItWorks() {
     <section id="how-it-works" className="border-b border-pulse-border/60 py-16 sm:py-20">
       <SectionHeader
         eyebrow="How it works"
-        title="A narrow flow for approval review"
-        body="The product does three things: connect, review, and revoke. No account, no custody, and no third-party analytics SDK."
+        title="A narrow scan, review, revoke flow"
+        body="The product does three things with clear boundaries: read public approval data, verify active state, and prepare wallet-confirmed revoke transactions."
       />
       <div className="mx-auto mt-10 grid max-w-6xl gap-4 px-4 sm:px-6 lg:grid-cols-3">
         {HOW_IT_WORKS.map((item) => (
@@ -508,19 +500,18 @@ function DesktopSection({
     <section id="desktop" className="border-b border-pulse-border/60 py-16 sm:py-20">
       <div className="mx-auto grid max-w-6xl gap-8 px-4 sm:px-6 lg:grid-cols-[0.95fr_1.05fr] lg:items-start">
         <div>
-          <SectionKicker>Desktop app</SectionKicker>
-          <h2 className="mt-2 text-3xl font-bold tracking-tight sm:text-4xl">
-            A local app path for users who prefer not to rely on a hosted
-            frontend.
+          <SectionKicker>Roadmap status</SectionKicker>
+          <h2 className="mt-2 text-3xl font-bold sm:text-4xl">
+            Desktop builds are planned, not live yet.
           </h2>
           <p className="mt-4 text-sm leading-7 text-pulse-muted">
-            The desktop build is designed to run the same scanner locally in a
-            Tauri shell. It keeps the same wallet-confirmed revoke flow: every
-            write still appears in your wallet before you sign.
+            The live scanner is the hosted /app. The desktop path is scaffolded
+            for a future signed Tauri build, and no public artifact is linked
+            until release files and checksums are real.
           </p>
           <div className="mt-5 grid gap-2 text-sm text-pulse-muted">
-            <CheckLine>Run the interface locally after installation.</CheckLine>
-            <CheckLine>Use WalletConnect for desktop pairing.</CheckLine>
+            <CheckLine>Future local interface after installation.</CheckLine>
+            <CheckLine>WalletConnect pairing planned for desktop use.</CheckLine>
             <CheckLine>Same approval review and revoke model as /app.</CheckLine>
           </div>
         </div>
@@ -535,11 +526,11 @@ function DesktopSection({
                 <p className="mt-1 text-xs text-pulse-muted">
                   {desktopReady
                     ? `Artifacts listed for ${release.version}.`
-                    : "No public desktop artifact is published yet."}
+                    : "No public desktop artifact or checksum is published yet."}
                 </p>
               </div>
               <StatusPill tone={desktopReady ? "success" : "neutral"}>
-                {desktopReady ? release.version : "Coming soon"}
+                {desktopReady ? release.version : "Pending"}
               </StatusPill>
             </div>
           </div>
@@ -617,14 +608,14 @@ function IpfsSection({
     <section id="ipfs" className="border-b border-pulse-border/60 py-16 sm:py-20">
       <div className="mx-auto grid max-w-6xl gap-8 px-4 sm:px-6 lg:grid-cols-[0.9fr_1.1fr] lg:items-start">
         <div>
-          <SectionKicker>Decentralized distribution</SectionKicker>
-          <h2 className="mt-2 text-3xl font-bold tracking-tight sm:text-4xl">
-            IPFS-ready distribution path.
+          <SectionKicker>Roadmap status</SectionKicker>
+          <h2 className="mt-2 text-3xl font-bold sm:text-4xl">
+            IPFS publishing waits for a verified release artifact.
           </h2>
           <p className="mt-4 text-sm leading-7 text-pulse-muted">
-            The release manifest already models IPFS gateways and checksums so
-            builds can be pinned after release. The final CID is pending until a
-            real artifact is published and verified.
+            The release manifest models gateways and checksums so builds can be
+            pinned later. The final CID stays pending until a real artifact is
+            published and verified.
           </p>
         </div>
 
@@ -776,7 +767,7 @@ function SectionHeader({
   return (
     <div className="mx-auto max-w-3xl px-4 text-center sm:px-6">
       <SectionKicker>{eyebrow}</SectionKicker>
-      <h2 className="mt-2 text-3xl font-bold tracking-tight sm:text-4xl">
+      <h2 className="mt-2 text-3xl font-bold sm:text-4xl">
         {title}
       </h2>
       <p className="mt-3 text-sm leading-7 text-pulse-muted">{body}</p>

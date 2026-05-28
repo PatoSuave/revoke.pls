@@ -6,7 +6,7 @@ export function AntiPhishingBanner() {
   return (
     <aside className="border-b border-pulse-border/60 bg-pulse-bg">
       <div className="mx-auto max-w-6xl px-4 py-3 sm:px-6">
-        <div className="flex flex-col gap-3 rounded-2xl border border-pulse-cyan/25 bg-pulse-panel/70 px-4 py-3 text-sm shadow-glow sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex flex-col gap-3 rounded-2xl border border-pulse-border bg-pulse-panel/55 px-4 py-3 text-sm sm:flex-row sm:items-center sm:justify-between">
           <div className="flex min-w-0 items-start gap-3">
             <span
               className="mt-2 h-2 w-2 shrink-0 rounded-full bg-pulse-green"

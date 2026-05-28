@@ -14,7 +14,7 @@ export function SiteFooter() {
               {siteConfig.name}
             </p>
             <p className="text-xs text-pulse-muted">
-              {siteConfig.tagline}.
+              {siteConfig.tagline}
             </p>
             <p className="mt-1 font-mono text-[11px] text-pulse-muted/80">
               {siteConfig.domain}
@@ -51,83 +51,17 @@ export function SiteFooter() {
           >
             X
           </a>
-          <a
-            href={siteConfig.links.explorer}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="transition hover:text-pulse-text"
-          >
-            PulseScan
-          </a>
-          <a
-            href={siteConfig.links.bscscan}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="transition hover:text-pulse-text"
-          >
-            BscScan
-          </a>
-          <a
-            href={siteConfig.links.basescan}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="transition hover:text-pulse-text"
-          >
-            BaseScan
-          </a>
-          <a
-            href={siteConfig.links.polygonscan}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="transition hover:text-pulse-text"
-          >
-            PolygonScan
-          </a>
         </nav>
 
         <div className="flex flex-col gap-1 text-[11px] text-pulse-muted md:items-end">
           <p>Informational and transactional. Not financial advice.</p>
           <p>
-            Always verify spender addresses on{" "}
-            <a
-              href={siteConfig.links.explorer}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-pulse-text underline underline-offset-2 hover:text-pulse-cyan"
-            >
-              PulseScan
-            </a>
-            ,{" "}
-            <a
-              href={siteConfig.links.bscscan}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-pulse-text underline underline-offset-2 hover:text-pulse-cyan"
-            >
-              BscScan
-            </a>
-            ,{" "}
-            <a
-              href={siteConfig.links.basescan}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-pulse-text underline underline-offset-2 hover:text-pulse-cyan"
-            >
-              BaseScan
-            </a>
-            , or{" "}
-            <a
-              href={siteConfig.links.polygonscan}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-pulse-text underline underline-offset-2 hover:text-pulse-cyan"
-            >
-              PolygonScan
-            </a>{" "}
-            before signing.
+            Always verify spender addresses on the relevant explorer for
+            PulseChain, BSC, Base, Polygon, Ethereum, Arbitrum, Optimism, or
+            HyperEVM before signing.
           </p>
           <p className="mt-1">
-            © {year} {siteConfig.name} · {siteConfig.attribution}
+            Copyright {year} {siteConfig.name} - {siteConfig.attribution}
           </p>
         </div>
       </div>

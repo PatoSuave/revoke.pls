@@ -60,14 +60,6 @@ export const SECURITY_CHAIN_STATUS_ROWS: readonly ChainStatusRow[] = [
     note: "Shared scanner and wallet-side revoke flow for PRC-20, ERC-721, and ERC-1155-style approvals.",
   },
   {
-    chain: "Ethereum Mainnet",
-    chainId: "1",
-    scan: "Yes",
-    revoke: "Yes, for live-verified rows",
-    status: "Live",
-    note: "Uses the Ethereum read-only API plus live RPC validation. Revoke is wallet-side and available only after row verification, matching wallet, and correct chain checks pass.",
-  },
-  {
     chain: "BNB Smart Chain",
     chainId: "56",
     scan: "Yes",
@@ -90,6 +82,14 @@ export const SECURITY_CHAIN_STATUS_ROWS: readonly ChainStatusRow[] = [
     revoke: "Yes",
     status: "Live",
     note: "Shared scanner and wallet-side revoke flow using PolygonScan/Etherscan API V2 discovery and live verification.",
+  },
+  {
+    chain: "Ethereum Mainnet",
+    chainId: "1",
+    scan: "Yes",
+    revoke: "Yes, for live-verified rows",
+    status: "Live",
+    note: "Uses the Ethereum read-only API plus live RPC validation. Revoke is wallet-side and available only after row verification, matching wallet, and correct chain checks pass.",
   },
   {
     chain: "Arbitrum One",
