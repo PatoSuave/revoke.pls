@@ -21,13 +21,13 @@ export const LIFEBOAT_NEXT_STEPS = [
   "Verify important token, spender, NFT, and transaction details directly on the relevant explorer.",
 ] as const;
 
+export const LIFEBOAT_SWEEPER_DIAGNOSTIC_COPY = {
+  title: "Possible gas-sweeper activity",
+  activeStatus: "Read-only heuristic",
+  body: "This diagnostic checks recent normal native-token transfers for gas deposits followed quickly by outgoing native transfers. It does not confirm an attacker and does not rule out sweepers that use private relays, token transfers, internal calls, or unindexed activity.",
+} as const;
+
 export const LIFEBOAT_PLANNED_MODULES = [
-  {
-    id: "gas-sweeper",
-    title: "Possible gas-sweeper activity",
-    status: "Planned diagnostic",
-    body: "Future versions may check for native gas deposits followed quickly by outgoing transfers, repeated drain recipients, and other sweeper-like patterns. This first version does not confirm or rule out gas sweepers.",
-  },
   {
     id: "hex",
     title: "HEX Lifeboat",
@@ -54,11 +54,10 @@ export const LIFEBOAT_PLANNED_MODULES = [
   },
 ] as const;
 
-// Future Lifeboat phases stay read-only until separately reviewed: sweeper-like
-// activity heuristics, HEX stake reads, clean-wallet Good Accounting Assist,
-// Permit2 diagnostics, EIP-7702 diagnostics, and manual planning reports.
+// Future Lifeboat phases stay read-only until separately reviewed: HEX stake
+// reads, clean-wallet Good Accounting Assist, Permit2 diagnostics, EIP-7702
+// diagnostics, and manual planning reports.
 export const LIFEBOAT_FUTURE_PHASES = [
-  "Sweeper-like activity heuristic",
   "HEX stake reads",
   "Good Accounting Assist from a clean wallet",
   "Permit2 diagnostics",

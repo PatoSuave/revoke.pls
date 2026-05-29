@@ -3,7 +3,9 @@ import {
   LIFEBOAT_NEXT_STEPS,
   LIFEBOAT_NOT_TO_DO,
   LIFEBOAT_PLANNED_MODULES,
+  LIFEBOAT_SWEEPER_DIAGNOSTIC_COPY,
 } from "@/lib/lifeboat/copy";
+import { sweeperRiskLabel } from "@/lib/lifeboat/sweeper";
 import type { LifeboatReport } from "@/lib/lifeboat/types";
 
 export function buildWalletLifeboatReportMarkdown(
@@ -46,7 +48,7 @@ Review the NFT approval counts above. Collection-wide approvals can expose every
 
 ## Possible gas-sweeper activity
 
-${plannedDiagnosticCopy("gas-sweeper")}
+${formatSweeperSection(report)}
 
 ## HEX stake status
 
@@ -75,6 +77,30 @@ function plannedDiagnosticCopy(id: string): string {
     LIFEBOAT_PLANNED_MODULES.find((module) => module.id === id)?.body ??
     "This diagnostic is planned and not active in this version.";
   return `Status: Planned diagnostic. ${body}`;
+}
+
+function formatSweeperSection(report: LifeboatReport): string {
+  const rows = report.chains
+    .map((chain) => {
+      const evidence =
+        chain.sweeperEvidence.length > 0
+          ? chain.sweeperEvidence
+              .map(
+                (item) =>
+                  `  - Inbound ${item.inboundTxHash} then outbound ${item.outboundTxHash} after ${item.secondsBetween}s to ${item.possibleSweeperAddress} (${item.amountNative})`,
+              )
+              .join("\n")
+          : "  - No quick native-drain evidence in the bounded recent-history window.";
+      return `- ${chain.chainName}: ${formatModuleStatus(
+        chain.sweeperStatus,
+      )}; ${sweeperRiskLabel(chain.sweeperRiskLevel)}
+${evidence}`;
+    })
+    .join("\n");
+
+  return `${LIFEBOAT_SWEEPER_DIAGNOSTIC_COPY.body}
+
+${rows || "No network scan has been added to this report yet."}`;
 }
 
 function formatScanStatus(status: LifeboatReport["status"]): string {

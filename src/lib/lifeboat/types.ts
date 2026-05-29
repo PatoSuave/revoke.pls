@@ -1,6 +1,7 @@
 import type { Address } from "viem";
 
 import type { Approval } from "@/lib/approvals";
+import type { SweeperEvidence, SweeperRiskLevel } from "@/lib/lifeboat/sweeper";
 import type { NftApproval } from "@/lib/nft-approvals";
 
 export type LifeboatScanStatus =
@@ -45,6 +46,8 @@ export interface LifeboatChainReport {
   approvalsStatus: LifeboatModuleStatus;
   nftApprovalsStatus: LifeboatModuleStatus;
   sweeperStatus: LifeboatModuleStatus;
+  sweeperRiskLevel: SweeperRiskLevel;
+  sweeperEvidence: SweeperEvidence[];
   hexStatus: LifeboatModuleStatus;
   permit2Status: LifeboatModuleStatus;
   eip7702Status: LifeboatModuleStatus;
