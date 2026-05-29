@@ -27,6 +27,12 @@ export const LIFEBOAT_SWEEPER_DIAGNOSTIC_COPY = {
   body: "This diagnostic checks recent normal native-token transfers for gas deposits followed quickly by outgoing native transfers. It does not confirm an attacker and does not rule out sweepers that use private relays, token transfers, internal calls, or unindexed activity.",
 } as const;
 
+export const LIFEBOAT_PENDING_NONCE_DIAGNOSTIC_COPY = {
+  title: "Pending transaction activity",
+  activeStatus: "Read-only nonce check",
+  body: "This diagnostic compares the latest and pending nonce reported by the selected network RPC. A pending nonce gap can mean the wallet already has one or more transactions waiting, but this check cannot see every private, dropped, replaced, or unindexed transaction.",
+} as const;
+
 export const LIFEBOAT_PLANNED_MODULES = [
   {
     id: "hex",

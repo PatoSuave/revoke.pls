@@ -2,9 +2,11 @@ import {
   LIFEBOAT_CRITICAL_WARNINGS,
   LIFEBOAT_NEXT_STEPS,
   LIFEBOAT_NOT_TO_DO,
+  LIFEBOAT_PENDING_NONCE_DIAGNOSTIC_COPY,
   LIFEBOAT_PLANNED_MODULES,
   LIFEBOAT_SWEEPER_DIAGNOSTIC_COPY,
 } from "@/lib/lifeboat/copy";
+import { pendingNonceRiskLabel } from "@/lib/lifeboat/pending-nonce";
 import { sweeperRiskLabel } from "@/lib/lifeboat/sweeper";
 import type { LifeboatReport } from "@/lib/lifeboat/types";
 
@@ -49,6 +51,10 @@ Review the NFT approval counts above. Collection-wide approvals can expose every
 ## Possible gas-sweeper activity
 
 ${formatSweeperSection(report)}
+
+## Pending transaction / nonce activity
+
+${formatPendingNonceSection(report)}
 
 ## HEX stake status
 
@@ -99,6 +105,30 @@ ${evidence}`;
     .join("\n");
 
   return `${LIFEBOAT_SWEEPER_DIAGNOSTIC_COPY.body}
+
+${rows || "No network scan has been added to this report yet."}`;
+}
+
+function formatPendingNonceSection(report: LifeboatReport): string {
+  const rows = report.chains
+    .map((chain) => {
+      const evidence =
+        chain.pendingNonceEvidence.length > 0
+          ? chain.pendingNonceEvidence
+              .map(
+                (item) =>
+                  `  - Latest nonce ${item.latestNonce}; pending nonce ${item.pendingNonce}; pending gap ${item.pendingTransactionCount} at ${item.checkedAt}`,
+              )
+              .join("\n")
+          : "  - No pending nonce gap was reported by the selected RPC.";
+      return `- ${chain.chainName}: ${formatModuleStatus(
+        chain.pendingNonceStatus,
+      )}; ${pendingNonceRiskLabel(chain.pendingNonceRiskLevel)}
+${evidence}`;
+    })
+    .join("\n");
+
+  return `${LIFEBOAT_PENDING_NONCE_DIAGNOSTIC_COPY.body}
 
 ${rows || "No network scan has been added to this report yet."}`;
 }

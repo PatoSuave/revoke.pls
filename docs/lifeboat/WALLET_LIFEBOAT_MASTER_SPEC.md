@@ -11,10 +11,11 @@ can paste a wallet address and scan public or on-chain risk signals before
 connecting the wallet or adding gas.
 
 The feature should help users understand visible exposure, active approvals,
-NFT permissions, gas-sweeper-like activity, HEX stake status, Permit2 exposure,
-EIP-7702 delegation risk, suspicious timeline activity, address poisoning, scam
-token or NFT bait, spender contract risk, smart-wallet configuration risk,
-ERC-4337 account-abstraction risk, and future ERC-6909 approval risk.
+NFT permissions, gas-sweeper-like activity, pending transaction activity, HEX
+stake status, Permit2 exposure, EIP-7702 delegation risk, suspicious timeline
+activity, address poisoning, scam token or NFT bait, spender contract risk,
+smart-wallet configuration risk, ERC-4337 account-abstraction risk, and future
+ERC-6909 approval risk.
 
 Core product rule:
 
@@ -60,6 +61,7 @@ Scanable risks are signals this app can reasonably inspect from public data:
 - Active ERC-20, BEP-20, ERC-721, ERC-1155, and compatible approval state.
 - Permit2 delegated allowance state where the chain and data source support it.
 - Recent native-token transfer patterns.
+- Latest-vs-pending nonce differences reported by a configured RPC.
 - Approval and drain timelines from explorer data.
 - EIP-7702 delegation code where supported by RPC.
 - Smart wallet owner, threshold, module, and guard configuration where ABI and
@@ -143,6 +145,7 @@ The long-term module set is:
 - Existing approval and NFT approval integration.
 - Exportable rescue report.
 - Gas-sweeper pattern scanner.
+- Pending transaction / nonce scanner.
 - Approval-to-drain timeline scanner.
 - Address poisoning scanner.
 - Spender contract risk scanner.

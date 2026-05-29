@@ -9,6 +9,7 @@ import { useApprovalDiscovery } from "@/hooks/use-approval-discovery";
 import { useArbitrumApprovalScan } from "@/hooks/use-arbitrum-approval-scan";
 import { useEthereumApprovalScan } from "@/hooks/use-ethereum-approval-scan";
 import { useHyperEVMApprovalScan } from "@/hooks/use-hyperevm-approval-scan";
+import { useLifeboatPendingNonceScan } from "@/hooks/use-lifeboat-pending-nonce-scan";
 import { useLifeboatSweeperScan } from "@/hooks/use-lifeboat-sweeper-scan";
 import { useNftApprovalDiscovery } from "@/hooks/use-nft-approval-discovery";
 import { useOptimismApprovalScan } from "@/hooks/use-optimism-approval-scan";
@@ -25,9 +26,15 @@ import {
   LIFEBOAT_CRITICAL_WARNINGS,
   LIFEBOAT_NEXT_STEPS,
   LIFEBOAT_NOT_TO_DO,
+  LIFEBOAT_PENDING_NONCE_DIAGNOSTIC_COPY,
   LIFEBOAT_PLANNED_MODULES,
   LIFEBOAT_SWEEPER_DIAGNOSTIC_COPY,
 } from "@/lib/lifeboat/copy";
+import {
+  pendingNonceRiskLabel,
+  type LifeboatPendingNonceApiResponse,
+  type PendingNonceRiskLevel,
+} from "@/lib/lifeboat/pending-nonce";
 import { buildWalletLifeboatReportMarkdown } from "@/lib/lifeboat/report";
 import {
   sweeperRiskLabel,
@@ -60,6 +67,12 @@ export function WalletLifeboat() {
     selectedOption,
   });
   const sweeper = useLifeboatSweeperScan({
+    owner: owner ?? undefined,
+    chainId: selectedChainId,
+    chainName: selectedOption.displayName,
+    enabled: Boolean(owner),
+  });
+  const pendingNonce = useLifeboatPendingNonceScan({
     owner: owner ?? undefined,
     chainId: selectedChainId,
     chainName: selectedOption.displayName,
@@ -144,7 +157,12 @@ export function WalletLifeboat() {
           <SafetyPanel />
         </div>
 
-        <TriageSummary scan={scan} owner={owner} sweeper={sweeper.response} />
+        <TriageSummary
+          scan={scan}
+          owner={owner}
+          sweeper={sweeper.response}
+          pendingNonce={pendingNonce.response}
+        />
 
         <div className="mt-6 grid gap-6 xl:grid-cols-[minmax(0,1fr)_360px]">
           <div className="space-y-6">
@@ -168,12 +186,27 @@ export function WalletLifeboat() {
               option={selectedOption}
               isScanning={sweeper.status === "pending"}
             />
+            <PendingNonceActivitySection
+              pendingNonce={pendingNonce.response}
+              owner={owner}
+              option={selectedOption}
+              isScanning={pendingNonce.status === "pending"}
+            />
             <PlannedDiagnostics />
             <DetectionLimits />
           </div>
           <div className="space-y-6">
-            <CompletenessPanel scan={scan} sweeper={sweeper.response} />
-            <ReportExport scan={scan} owner={owner} sweeper={sweeper.response} />
+            <CompletenessPanel
+              scan={scan}
+              sweeper={sweeper.response}
+              pendingNonce={pendingNonce.response}
+            />
+            <ReportExport
+              scan={scan}
+              owner={owner}
+              sweeper={sweeper.response}
+              pendingNonce={pendingNonce.response}
+            />
           </div>
         </div>
       </div>
@@ -328,10 +361,12 @@ function TriageSummary({
   scan,
   owner,
   sweeper,
+  pendingNonce,
 }: {
   scan: LifeboatScanSnapshot;
   owner: Address | null;
   sweeper: LifeboatSweeperApiResponse;
+  pendingNonce: LifeboatPendingNonceApiResponse;
 }) {
   const cards: {
     label: string;
@@ -355,6 +390,11 @@ function TriageSummary({
       label: "Gas-sweeper pattern",
       value: statusLabelForSweeper(sweeper),
       tone: toneForSweeper(sweeper.riskLevel),
+    },
+    {
+      label: "Pending transaction activity",
+      value: statusLabelForPendingNonce(pendingNonce),
+      tone: toneForPendingNonce(pendingNonce.riskLevel),
     },
     {
       label: "HEX stake status",
@@ -868,6 +908,123 @@ function SweeperMetric({ label, value }: { label: string; value: string }) {
   );
 }
 
+function PendingNonceActivitySection({
+  pendingNonce,
+  owner,
+  option,
+  isScanning,
+}: {
+  pendingNonce: LifeboatPendingNonceApiResponse;
+  owner: Address | null;
+  option: AddressOnlyScanOption;
+  isScanning: boolean;
+}) {
+  const status = moduleStatusFromPendingNonceResponse(pendingNonce);
+  return (
+    <section className="rounded-2xl border border-pulse-border bg-pulse-panel/65 p-5">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-pulse-cyan">
+            {LIFEBOAT_PENDING_NONCE_DIAGNOSTIC_COPY.title}
+          </p>
+          <h2 className="mt-1 text-xl font-semibold text-pulse-text">
+            Latest vs pending nonce
+          </h2>
+          <p className="mt-2 text-sm leading-6 text-pulse-muted">
+            {owner
+              ? `${option.displayName} RPC nonce state is checked without connecting or signing.`
+              : "Paste a wallet address to check whether the selected RPC reports pending wallet activity."}
+          </p>
+        </div>
+        <span
+          className={`inline-flex w-fit rounded-full border px-3 py-1 text-xs font-semibold ${toneClassForPendingNonce(
+            pendingNonce.riskLevel,
+          )}`}
+        >
+          {isScanning
+            ? "Scanning"
+            : pendingNonceRiskLabel(pendingNonce.riskLevel)}
+        </span>
+      </div>
+
+      <p className="mt-4 rounded-xl border border-pulse-border/70 bg-pulse-bg/45 p-3 text-sm leading-6 text-pulse-muted">
+        {LIFEBOAT_PENDING_NONCE_DIAGNOSTIC_COPY.body}
+      </p>
+
+      {owner && (status === "partial" || status === "upstream_unavailable") ? (
+        <div className="mt-4 rounded-xl border border-amber-400/35 bg-amber-400/10 p-3 text-sm leading-6 text-amber-100">
+          This diagnostic is incomplete. Do not treat a missing pending nonce
+          result as proof that the wallet has no pending or private
+          transactions.
+        </div>
+      ) : null}
+
+      {owner && status === "complete" ? (
+        <PendingNonceSummary pendingNonce={pendingNonce} option={option} />
+      ) : null}
+
+      {owner && pendingNonce.evidence.length > 0 ? (
+        <div className="mt-4 rounded-2xl border border-amber-400/35 bg-amber-400/10 p-4 text-sm leading-6 text-amber-100">
+          <p className="font-semibold text-pulse-text">
+            Pending nonce gap detected
+          </p>
+          <p className="mt-2">
+            The selected RPC reported {pendingNonce.summary.pendingTransactionCount}{" "}
+            pending transaction
+            {pendingNonce.summary.pendingTransactionCount === 1 ? "" : "s"} for
+            this wallet. Review the wallet and explorer carefully before adding
+            gas or signing anything.
+          </p>
+        </div>
+      ) : null}
+
+      {owner && status === "complete" && pendingNonce.evidence.length === 0 ? (
+        <div className="mt-4 rounded-2xl border border-dashed border-pulse-border/80 bg-pulse-bg/40 p-4 text-sm leading-6 text-pulse-muted">
+          No pending nonce gap was reported by the selected RPC. This is not
+          proof that the wallet has no private, dropped, replaced, or unindexed
+          transactions.
+        </div>
+      ) : null}
+    </section>
+  );
+}
+
+function PendingNonceSummary({
+  pendingNonce,
+  option,
+}: {
+  pendingNonce: LifeboatPendingNonceApiResponse;
+  option: AddressOnlyScanOption;
+}) {
+  return (
+    <dl className="mt-4 grid gap-3 sm:grid-cols-3">
+      <SweeperMetric
+        label="Latest nonce"
+        value={pendingNonce.summary.latestNonce ?? "Unknown"}
+      />
+      <SweeperMetric
+        label="Pending nonce"
+        value={pendingNonce.summary.pendingNonce ?? "Unknown"}
+      />
+      <SweeperMetric
+        label="Pending gap"
+        value={pendingNonce.summary.pendingTransactionCount.toString()}
+      />
+      {pendingNonce.errors.length > 0 || pendingNonce.missingConfig.length > 0 ? (
+        <div className="rounded-xl border border-amber-400/35 bg-amber-400/10 p-3 text-xs leading-5 text-amber-100 sm:col-span-3">
+          {[...pendingNonce.errors, ...pendingNonce.missingConfig].join(" ")}
+        </div>
+      ) : null}
+      {pendingNonce.warnings.length > 0 ? (
+        <div className="rounded-xl border border-pulse-border/70 bg-pulse-bg/45 p-3 text-xs leading-5 text-pulse-muted sm:col-span-3">
+          {pendingNonce.warnings.join(" ")} Verify activity on{" "}
+          {option.displayName} before taking action.
+        </div>
+      ) : null}
+    </dl>
+  );
+}
+
 function PlannedDiagnostics() {
   return (
     <section className="rounded-2xl border border-pulse-border bg-pulse-panel/65 p-5">
@@ -944,9 +1101,11 @@ function Checklist({
 function CompletenessPanel({
   scan,
   sweeper,
+  pendingNonce,
 }: {
   scan: LifeboatScanSnapshot;
   sweeper: LifeboatSweeperApiResponse;
+  pendingNonce: LifeboatPendingNonceApiResponse;
 }) {
   return (
     <section className="rounded-2xl border border-pulse-border bg-pulse-panel/65 p-5">
@@ -971,6 +1130,10 @@ function CompletenessPanel({
         <CompletenessRow
           label="Gas-sweeper pattern"
           value={statusLabelForSweeper(sweeper)}
+        />
+        <CompletenessRow
+          label="Pending nonce"
+          value={statusLabelForPendingNonce(pendingNonce)}
         />
         <CompletenessRow label="HEX stake status" value="Planned diagnostic" />
         <CompletenessRow
@@ -1009,10 +1172,12 @@ function ReportExport({
   scan,
   owner,
   sweeper,
+  pendingNonce,
 }: {
   scan: LifeboatScanSnapshot;
   owner: Address | null;
   sweeper: LifeboatSweeperApiResponse;
+  pendingNonce: LifeboatPendingNonceApiResponse;
 }) {
   const [copyState, setCopyState] = useState<"idle" | "copied" | "failed">(
     "idle",
@@ -1022,7 +1187,13 @@ function ReportExport({
   function createMarkdown() {
     if (!owner) return "";
     return buildWalletLifeboatReportMarkdown(
-      buildReportFromSnapshot(scan, owner, new Date().toISOString(), sweeper),
+      buildReportFromSnapshot(
+        scan,
+        owner,
+        new Date().toISOString(),
+        sweeper,
+        pendingNonce,
+      ),
     );
   }
 
@@ -1320,6 +1491,7 @@ function buildReportFromSnapshot(
   owner: Address,
   generatedAt: string,
   sweeper: LifeboatSweeperApiResponse,
+  pendingNonce: LifeboatPendingNonceApiResponse,
 ): LifeboatReport {
   const chain: LifeboatChainReport = {
     chainId: scan.chainId,
@@ -1331,6 +1503,10 @@ function buildReportFromSnapshot(
     sweeperStatus: moduleStatusFromSweeperResponse(sweeper),
     sweeperRiskLevel: sweeper.riskLevel,
     sweeperEvidence: sweeper.evidence,
+    pendingNonceStatus: moduleStatusFromPendingNonceResponse(pendingNonce),
+    pendingNonceRiskLevel: pendingNonce.riskLevel,
+    pendingNonceEvidence: pendingNonce.evidence,
+    pendingNonceSummary: pendingNonce.summary,
     hexStatus: "planned",
     permit2Status: "planned",
     eip7702Status: "planned",
@@ -1348,6 +1524,7 @@ function buildReportFromSnapshot(
       approvalsComplete: scan.approvalsStatus === "complete",
       nftApprovalsComplete: scan.nftApprovalsStatus === "complete",
       sweeperCheckComplete: sweeper.status === "complete",
+      pendingNonceCheckComplete: pendingNonce.status === "complete",
       hexCheckComplete: false,
       permit2Complete: false,
       eip7702Complete: false,
@@ -1372,6 +1549,22 @@ function moduleStatusFromSweeperResponse(
   return "partial";
 }
 
+function moduleStatusFromPendingNonceResponse(
+  pendingNonce: LifeboatPendingNonceApiResponse,
+): LifeboatModuleStatus {
+  if (pendingNonce.status === "idle") return "not_scanned";
+  if (pendingNonce.status === "scanning") return "scanning";
+  if (pendingNonce.status === "complete") return "complete";
+  if (pendingNonce.status === "unsupported") return "unsupported";
+  if (
+    pendingNonce.status === "config-missing" ||
+    pendingNonce.status === "upstream-failure"
+  ) {
+    return "upstream_unavailable";
+  }
+  return "partial";
+}
+
 function statusLabelForApprovals(
   status: LifeboatModuleStatus,
   count: number,
@@ -1388,6 +1581,13 @@ function statusLabelForApprovals(
 function statusLabelForSweeper(sweeper: LifeboatSweeperApiResponse): string {
   if (sweeper.status === "scanning") return "Scanning";
   return sweeperRiskLabel(sweeper.riskLevel);
+}
+
+function statusLabelForPendingNonce(
+  pendingNonce: LifeboatPendingNonceApiResponse,
+): string {
+  if (pendingNonce.status === "scanning") return "Scanning";
+  return pendingNonceRiskLabel(pendingNonce.riskLevel);
 }
 
 function toneForModule(
@@ -1416,8 +1616,33 @@ function toneForSweeper(
   return "neutral";
 }
 
+function toneForPendingNonce(
+  riskLevel: PendingNonceRiskLevel,
+): "neutral" | "success" | "warning" | "danger" {
+  if (riskLevel === "elevated") return "danger";
+  if (riskLevel === "possible") return "warning";
+  if (riskLevel === "none_detected") return "success";
+  if (
+    riskLevel === "upstream_unavailable" ||
+    riskLevel === "unsupported"
+  ) {
+    return "warning";
+  }
+  return "neutral";
+}
+
 function toneClassForSweeper(riskLevel: SweeperRiskLevel): string {
   const tone = toneForSweeper(riskLevel);
+  return {
+    neutral: "border-pulse-border bg-pulse-bg/50 text-pulse-muted",
+    success: "border-pulse-green/35 bg-pulse-green/10 text-pulse-green",
+    warning: "border-amber-400/35 bg-amber-400/10 text-amber-200",
+    danger: "border-pulse-red/40 bg-pulse-red/10 text-pulse-red",
+  }[tone];
+}
+
+function toneClassForPendingNonce(riskLevel: PendingNonceRiskLevel): string {
+  const tone = toneForPendingNonce(riskLevel);
   return {
     neutral: "border-pulse-border bg-pulse-bg/50 text-pulse-muted",
     success: "border-pulse-green/35 bg-pulse-green/10 text-pulse-green",
