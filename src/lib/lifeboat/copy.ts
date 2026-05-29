@@ -33,6 +33,12 @@ export const LIFEBOAT_PENDING_NONCE_DIAGNOSTIC_COPY = {
   body: "This diagnostic compares the latest and pending nonce reported by the selected network RPC. A pending nonce gap can mean the wallet already has one or more transactions waiting, but this check cannot see every private, dropped, replaced, or unindexed transaction.",
 } as const;
 
+export const LIFEBOAT_TIMELINE_DIAGNOSTIC_COPY = {
+  title: "Approval-to-drain timeline",
+  activeStatus: "Read-only visible sequence",
+  body: "This diagnostic builds a bounded timeline from recent public explorer data, looking for approval-like calls followed by outbound native or token movement. It can show visible ordering, but it does not prove causation or identify an attacker.",
+} as const;
+
 export const LIFEBOAT_PLANNED_MODULES = [
   {
     id: "hex",

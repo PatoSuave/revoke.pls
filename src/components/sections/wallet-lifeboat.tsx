@@ -11,6 +11,7 @@ import { useEthereumApprovalScan } from "@/hooks/use-ethereum-approval-scan";
 import { useHyperEVMApprovalScan } from "@/hooks/use-hyperevm-approval-scan";
 import { useLifeboatPendingNonceScan } from "@/hooks/use-lifeboat-pending-nonce-scan";
 import { useLifeboatSweeperScan } from "@/hooks/use-lifeboat-sweeper-scan";
+import { useLifeboatTimelineScan } from "@/hooks/use-lifeboat-timeline-scan";
 import { useNftApprovalDiscovery } from "@/hooks/use-nft-approval-discovery";
 import { useOptimismApprovalScan } from "@/hooks/use-optimism-approval-scan";
 import {
@@ -29,6 +30,7 @@ import {
   LIFEBOAT_PENDING_NONCE_DIAGNOSTIC_COPY,
   LIFEBOAT_PLANNED_MODULES,
   LIFEBOAT_SWEEPER_DIAGNOSTIC_COPY,
+  LIFEBOAT_TIMELINE_DIAGNOSTIC_COPY,
 } from "@/lib/lifeboat/copy";
 import {
   pendingNonceRiskLabel,
@@ -41,6 +43,11 @@ import {
   type LifeboatSweeperApiResponse,
   type SweeperRiskLevel,
 } from "@/lib/lifeboat/sweeper";
+import {
+  timelineRiskLabel,
+  type LifeboatTimelineApiResponse,
+  type TimelineRiskLevel,
+} from "@/lib/lifeboat/timeline";
 import type {
   LifeboatChainReport,
   LifeboatModuleStatus,
@@ -73,6 +80,12 @@ export function WalletLifeboat() {
     enabled: Boolean(owner),
   });
   const pendingNonce = useLifeboatPendingNonceScan({
+    owner: owner ?? undefined,
+    chainId: selectedChainId,
+    chainName: selectedOption.displayName,
+    enabled: Boolean(owner),
+  });
+  const timeline = useLifeboatTimelineScan({
     owner: owner ?? undefined,
     chainId: selectedChainId,
     chainName: selectedOption.displayName,
@@ -119,9 +132,8 @@ export function WalletLifeboat() {
               </h1>
               <p className="mt-4 max-w-2xl text-sm leading-7 text-pulse-muted sm:text-base">
                 Paste a wallet address to scan visible approvals, NFT
-                permissions, HEX stake risk, and possible compromised-wallet
-                signals. This is read-only and never asks for your seed phrase
-                or private key.
+                permissions, and possible compromised-wallet signals. This is
+                read-only and never asks for your seed phrase or private key.
               </p>
             </div>
             <div className="rounded-2xl border border-pulse-red/35 bg-pulse-red/10 p-5 text-sm leading-6 text-pulse-muted">
@@ -162,6 +174,7 @@ export function WalletLifeboat() {
           owner={owner}
           sweeper={sweeper.response}
           pendingNonce={pendingNonce.response}
+          timeline={timeline.response}
         />
 
         <div className="mt-6 grid gap-6 xl:grid-cols-[minmax(0,1fr)_360px]">
@@ -192,6 +205,12 @@ export function WalletLifeboat() {
               option={selectedOption}
               isScanning={pendingNonce.status === "pending"}
             />
+            <TimelineActivitySection
+              timeline={timeline.response}
+              owner={owner}
+              option={selectedOption}
+              isScanning={timeline.status === "pending"}
+            />
             <PlannedDiagnostics />
             <DetectionLimits />
           </div>
@@ -200,12 +219,14 @@ export function WalletLifeboat() {
               scan={scan}
               sweeper={sweeper.response}
               pendingNonce={pendingNonce.response}
+              timeline={timeline.response}
             />
             <ReportExport
               scan={scan}
               owner={owner}
               sweeper={sweeper.response}
               pendingNonce={pendingNonce.response}
+              timeline={timeline.response}
             />
           </div>
         </div>
@@ -362,11 +383,13 @@ function TriageSummary({
   owner,
   sweeper,
   pendingNonce,
+  timeline,
 }: {
   scan: LifeboatScanSnapshot;
   owner: Address | null;
   sweeper: LifeboatSweeperApiResponse;
   pendingNonce: LifeboatPendingNonceApiResponse;
+  timeline: LifeboatTimelineApiResponse;
 }) {
   const cards: {
     label: string;
@@ -395,6 +418,11 @@ function TriageSummary({
       label: "Pending transaction activity",
       value: statusLabelForPendingNonce(pendingNonce),
       tone: toneForPendingNonce(pendingNonce.riskLevel),
+    },
+    {
+      label: "Approval-to-drain timeline",
+      value: statusLabelForTimeline(timeline),
+      tone: toneForTimeline(timeline.riskLevel),
     },
     {
       label: "HEX stake status",
@@ -1025,6 +1053,204 @@ function PendingNonceSummary({
   );
 }
 
+function TimelineActivitySection({
+  timeline,
+  owner,
+  option,
+  isScanning,
+}: {
+  timeline: LifeboatTimelineApiResponse;
+  owner: Address | null;
+  option: AddressOnlyScanOption;
+  isScanning: boolean;
+}) {
+  const status = moduleStatusFromTimelineResponse(timeline);
+  return (
+    <section className="rounded-2xl border border-pulse-border bg-pulse-panel/65 p-5">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-pulse-cyan">
+            {LIFEBOAT_TIMELINE_DIAGNOSTIC_COPY.title}
+          </p>
+          <h2 className="mt-1 text-xl font-semibold text-pulse-text">
+            Visible event ordering
+          </h2>
+          <p className="mt-2 text-sm leading-6 text-pulse-muted">
+            {owner
+              ? `${option.displayName} explorer history is checked without connecting, signing, or funding the wallet.`
+              : "Paste a wallet address to build a bounded read-only approval and movement timeline."}
+          </p>
+        </div>
+        <span
+          className={`inline-flex w-fit rounded-full border px-3 py-1 text-xs font-semibold ${toneClassForTimeline(
+            timeline.riskLevel,
+          )}`}
+        >
+          {isScanning ? "Scanning" : timelineRiskLabel(timeline.riskLevel)}
+        </span>
+      </div>
+
+      <p className="mt-4 rounded-xl border border-pulse-border/70 bg-pulse-bg/45 p-3 text-sm leading-6 text-pulse-muted">
+        {LIFEBOAT_TIMELINE_DIAGNOSTIC_COPY.body}
+      </p>
+
+      {owner && (status === "partial" || status === "upstream_unavailable") ? (
+        <div className="mt-4 rounded-xl border border-amber-400/35 bg-amber-400/10 p-3 text-sm leading-6 text-amber-100">
+          This diagnostic is incomplete. Do not treat missing timeline events
+          as proof that the wallet has no suspicious approval-to-movement
+          sequence.
+        </div>
+      ) : null}
+
+      {owner && (status === "complete" || status === "partial") ? (
+        <TimelineSummary timeline={timeline} option={option} />
+      ) : null}
+
+      {owner && timeline.evidence.length > 0 ? (
+        <div className="mt-4 overflow-hidden rounded-2xl border border-pulse-border bg-pulse-bg/40">
+          <ul>
+            {timeline.evidence.map((item) => (
+              <li
+                key={`${item.approvalTxHash}-${item.movementTxHash}`}
+                className="grid gap-4 border-b border-pulse-border/60 p-4 last:border-b-0 lg:grid-cols-[1fr_1fr_0.8fr]"
+              >
+                <div className="min-w-0">
+                  <p className="text-sm font-semibold text-pulse-text">
+                    Approval followed by outbound movement
+                  </p>
+                  <p className="mt-1 text-xs text-pulse-muted">
+                    {item.secondsAfterApproval}s after approval
+                  </p>
+                </div>
+                <div className="min-w-0">
+                  <a
+                    href={item.approvalExplorerUrl ?? txUrlFor(option, item.approvalTxHash)}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="block truncate font-mono text-xs text-pulse-muted underline-offset-2 hover:text-pulse-cyan hover:underline"
+                    title={item.approvalTxHash}
+                  >
+                    Approval: {shortHash(item.approvalTxHash)}
+                  </a>
+                  <a
+                    href={item.movementExplorerUrl ?? txUrlFor(option, item.movementTxHash)}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="mt-1 block truncate font-mono text-xs text-pulse-muted underline-offset-2 hover:text-pulse-cyan hover:underline"
+                    title={item.movementTxHash}
+                  >
+                    Move: {shortHash(item.movementTxHash)}
+                  </a>
+                </div>
+                <div className="min-w-0 lg:text-right">
+                  <p className="text-xs font-semibold text-pulse-text">
+                    {item.movementAmount ?? item.movementLabel}
+                  </p>
+                  {item.recipient ? (
+                    <a
+                      href={addressUrlFor(option, item.recipient)}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="mt-1 block truncate font-mono text-xs text-pulse-muted underline-offset-2 hover:text-pulse-cyan hover:underline"
+                      title={item.recipient}
+                    >
+                      {shortenAddress(item.recipient)}
+                    </a>
+                  ) : null}
+                </div>
+              </li>
+            ))}
+          </ul>
+        </div>
+      ) : null}
+
+      {owner && timeline.events.length > 0 ? (
+        <div className="mt-4 overflow-hidden rounded-2xl border border-pulse-border bg-pulse-bg/40">
+          <ul>
+            {timeline.events.slice(0, 6).map((item) => (
+              <li
+                key={item.id}
+                className="grid gap-3 border-b border-pulse-border/60 p-4 last:border-b-0 sm:grid-cols-[1fr_0.75fr]"
+              >
+                <div className="min-w-0">
+                  <p className="text-sm font-semibold text-pulse-text">
+                    {item.label}
+                  </p>
+                  <p className="mt-1 text-xs text-pulse-muted">
+                    {new Date(item.occurredAt).toLocaleString()}
+                  </p>
+                </div>
+                <div className="min-w-0 sm:text-right">
+                  <a
+                    href={item.explorerUrl ?? txUrlFor(option, item.txHash)}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="block truncate font-mono text-xs text-pulse-muted underline-offset-2 hover:text-pulse-cyan hover:underline"
+                    title={item.txHash}
+                  >
+                    {shortHash(item.txHash)}
+                  </a>
+                  <p className="mt-1 truncate text-xs text-pulse-muted">
+                    {item.amount ?? eventKindLabel(item.kind)}
+                  </p>
+                </div>
+              </li>
+            ))}
+          </ul>
+        </div>
+      ) : null}
+
+      {owner && status === "complete" && timeline.evidence.length === 0 ? (
+        <div className="mt-4 rounded-2xl border border-dashed border-pulse-border/80 bg-pulse-bg/40 p-4 text-sm leading-6 text-pulse-muted">
+          No approval-to-outbound-movement sequence was found in the bounded
+          recent-history window. This is not proof that the wallet is
+          uncompromised.
+        </div>
+      ) : null}
+    </section>
+  );
+}
+
+function TimelineSummary({
+  timeline,
+  option,
+}: {
+  timeline: LifeboatTimelineApiResponse;
+  option: AddressOnlyScanOption;
+}) {
+  return (
+    <dl className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+      <SweeperMetric
+        label="Checked"
+        value={`${timeline.summary.checkedEventCount} events`}
+      />
+      <SweeperMetric
+        label="Approvals"
+        value={timeline.summary.approvalEventCount.toString()}
+      />
+      <SweeperMetric
+        label="Outbound moves"
+        value={timeline.summary.outboundMovementCount.toString()}
+      />
+      <SweeperMetric
+        label="Sequences"
+        value={timeline.summary.possibleSequenceCount.toString()}
+      />
+      {timeline.errors.length > 0 || timeline.missingConfig.length > 0 ? (
+        <div className="rounded-xl border border-amber-400/35 bg-amber-400/10 p-3 text-xs leading-5 text-amber-100 sm:col-span-2 lg:col-span-4">
+          {[...timeline.errors, ...timeline.missingConfig].join(" ")}
+        </div>
+      ) : null}
+      {timeline.warnings.length > 0 ? (
+        <div className="rounded-xl border border-pulse-border/70 bg-pulse-bg/45 p-3 text-xs leading-5 text-pulse-muted sm:col-span-2 lg:col-span-4">
+          {timeline.warnings.join(" ")} Verify activity on {option.displayName}
+          {" "}before taking action.
+        </div>
+      ) : null}
+    </dl>
+  );
+}
+
 function PlannedDiagnostics() {
   return (
     <section className="rounded-2xl border border-pulse-border bg-pulse-panel/65 p-5">
@@ -1032,7 +1258,7 @@ function PlannedDiagnostics() {
         Planned diagnostics
       </p>
       <h2 className="mt-1 text-xl font-semibold text-pulse-text">
-        Safe Phase 1 placeholders
+        Future read-only modules
       </h2>
       <div className="mt-4 grid gap-3">
         {LIFEBOAT_PLANNED_MODULES.map((module) => (
@@ -1102,10 +1328,12 @@ function CompletenessPanel({
   scan,
   sweeper,
   pendingNonce,
+  timeline,
 }: {
   scan: LifeboatScanSnapshot;
   sweeper: LifeboatSweeperApiResponse;
   pendingNonce: LifeboatPendingNonceApiResponse;
+  timeline: LifeboatTimelineApiResponse;
 }) {
   return (
     <section className="rounded-2xl border border-pulse-border bg-pulse-panel/65 p-5">
@@ -1134,6 +1362,10 @@ function CompletenessPanel({
         <CompletenessRow
           label="Pending nonce"
           value={statusLabelForPendingNonce(pendingNonce)}
+        />
+        <CompletenessRow
+          label="Approval-to-drain timeline"
+          value={statusLabelForTimeline(timeline)}
         />
         <CompletenessRow label="HEX stake status" value="Planned diagnostic" />
         <CompletenessRow
@@ -1173,11 +1405,13 @@ function ReportExport({
   owner,
   sweeper,
   pendingNonce,
+  timeline,
 }: {
   scan: LifeboatScanSnapshot;
   owner: Address | null;
   sweeper: LifeboatSweeperApiResponse;
   pendingNonce: LifeboatPendingNonceApiResponse;
+  timeline: LifeboatTimelineApiResponse;
 }) {
   const [copyState, setCopyState] = useState<"idle" | "copied" | "failed">(
     "idle",
@@ -1193,6 +1427,7 @@ function ReportExport({
         new Date().toISOString(),
         sweeper,
         pendingNonce,
+        timeline,
       ),
     );
   }
@@ -1492,6 +1727,7 @@ function buildReportFromSnapshot(
   generatedAt: string,
   sweeper: LifeboatSweeperApiResponse,
   pendingNonce: LifeboatPendingNonceApiResponse,
+  timeline: LifeboatTimelineApiResponse,
 ): LifeboatReport {
   const chain: LifeboatChainReport = {
     chainId: scan.chainId,
@@ -1507,6 +1743,10 @@ function buildReportFromSnapshot(
     pendingNonceRiskLevel: pendingNonce.riskLevel,
     pendingNonceEvidence: pendingNonce.evidence,
     pendingNonceSummary: pendingNonce.summary,
+    timelineStatus: moduleStatusFromTimelineResponse(timeline),
+    timelineRiskLevel: timeline.riskLevel,
+    timelineEvents: timeline.events,
+    timelineEvidence: timeline.evidence,
     hexStatus: "planned",
     permit2Status: "planned",
     eip7702Status: "planned",
@@ -1525,6 +1765,7 @@ function buildReportFromSnapshot(
       nftApprovalsComplete: scan.nftApprovalsStatus === "complete",
       sweeperCheckComplete: sweeper.status === "complete",
       pendingNonceCheckComplete: pendingNonce.status === "complete",
+      timelineCheckComplete: timeline.status === "complete",
       hexCheckComplete: false,
       permit2Complete: false,
       eip7702Complete: false,
@@ -1565,6 +1806,23 @@ function moduleStatusFromPendingNonceResponse(
   return "partial";
 }
 
+function moduleStatusFromTimelineResponse(
+  timeline: LifeboatTimelineApiResponse,
+): LifeboatModuleStatus {
+  if (timeline.status === "idle") return "not_scanned";
+  if (timeline.status === "scanning") return "scanning";
+  if (timeline.status === "complete") return "complete";
+  if (timeline.status === "partial") return "partial";
+  if (timeline.status === "unsupported") return "unsupported";
+  if (
+    timeline.status === "config-missing" ||
+    timeline.status === "upstream-failure"
+  ) {
+    return "upstream_unavailable";
+  }
+  return "partial";
+}
+
 function statusLabelForApprovals(
   status: LifeboatModuleStatus,
   count: number,
@@ -1588,6 +1846,11 @@ function statusLabelForPendingNonce(
 ): string {
   if (pendingNonce.status === "scanning") return "Scanning";
   return pendingNonceRiskLabel(pendingNonce.riskLevel);
+}
+
+function statusLabelForTimeline(timeline: LifeboatTimelineApiResponse): string {
+  if (timeline.status === "scanning") return "Scanning";
+  return timelineRiskLabel(timeline.riskLevel);
 }
 
 function toneForModule(
@@ -1631,6 +1894,22 @@ function toneForPendingNonce(
   return "neutral";
 }
 
+function toneForTimeline(
+  riskLevel: TimelineRiskLevel,
+): "neutral" | "success" | "warning" | "danger" {
+  if (riskLevel === "elevated") return "danger";
+  if (riskLevel === "possible") return "warning";
+  if (riskLevel === "none_detected") return "success";
+  if (
+    riskLevel === "insufficient_data" ||
+    riskLevel === "upstream_unavailable" ||
+    riskLevel === "unsupported"
+  ) {
+    return "warning";
+  }
+  return "neutral";
+}
+
 function toneClassForSweeper(riskLevel: SweeperRiskLevel): string {
   const tone = toneForSweeper(riskLevel);
   return {
@@ -1643,6 +1922,16 @@ function toneClassForSweeper(riskLevel: SweeperRiskLevel): string {
 
 function toneClassForPendingNonce(riskLevel: PendingNonceRiskLevel): string {
   const tone = toneForPendingNonce(riskLevel);
+  return {
+    neutral: "border-pulse-border bg-pulse-bg/50 text-pulse-muted",
+    success: "border-pulse-green/35 bg-pulse-green/10 text-pulse-green",
+    warning: "border-amber-400/35 bg-amber-400/10 text-amber-200",
+    danger: "border-pulse-red/40 bg-pulse-red/10 text-pulse-red",
+  }[tone];
+}
+
+function toneClassForTimeline(riskLevel: TimelineRiskLevel): string {
+  const tone = toneForTimeline(riskLevel);
   return {
     neutral: "border-pulse-border bg-pulse-bg/50 text-pulse-muted",
     success: "border-pulse-green/35 bg-pulse-green/10 text-pulse-green",
@@ -1717,6 +2006,23 @@ function txUrlFor(option: AddressOnlyScanOption, hash: string): string {
 
 function shortHash(hash: string): string {
   return hash.length > 14 ? `${hash.slice(0, 8)}...${hash.slice(-6)}` : hash;
+}
+
+function eventKindLabel(kind: LifeboatTimelineApiResponse["events"][number]["kind"]): string {
+  switch (kind) {
+    case "approval":
+      return "Approval call";
+    case "native_in":
+      return "Native in";
+    case "native_out":
+      return "Native out";
+    case "token_in":
+      return "Token in";
+    case "token_out":
+      return "Token out";
+    default:
+      return "Timeline event";
+  }
 }
 
 function explorerBaseUrlFor(option: AddressOnlyScanOption): string {

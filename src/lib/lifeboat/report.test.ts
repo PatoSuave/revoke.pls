@@ -16,6 +16,7 @@ const REPORT: LifeboatReport = {
     nftApprovalsComplete: false,
     sweeperCheckComplete: false,
     pendingNonceCheckComplete: true,
+    timelineCheckComplete: true,
     hexCheckComplete: false,
     permit2Complete: false,
     eip7702Complete: false,
@@ -58,6 +59,43 @@ const REPORT: LifeboatReport = {
         pendingTransactionCount: 1,
         checkedAt: "2026-05-29T18:02:00.000Z",
       },
+      timelineStatus: "complete",
+      timelineRiskLevel: "elevated",
+      timelineEvents: [
+        {
+          id: "approval:0xapprove",
+          kind: "approval",
+          txHash: "0xapprove",
+          timestamp: 1_779_999_000,
+          occurredAt: "2026-05-29T18:03:00.000Z",
+          blockNumber: 123,
+          from: "0x1111111111111111111111111111111111111111",
+          to: "0x3333333333333333333333333333333333333333",
+          contractAddress: "0x3333333333333333333333333333333333333333",
+          label: "Approval call: approve",
+          amount: null,
+          methodId: "0x095ea7b3",
+          methodName: "approve",
+          spender: "0x2222222222222222222222222222222222222222",
+          explorerUrl: "https://scan.pulsechain.com/tx/0xapprove",
+        },
+      ],
+      timelineEvidence: [
+        {
+          approvalTxHash: "0xapprove",
+          movementTxHash: "0xmove",
+          approvalAt: "2026-05-29T18:03:00.000Z",
+          movementAt: "2026-05-29T18:04:00.000Z",
+          secondsAfterApproval: 60,
+          movementKind: "token_out",
+          movementLabel: "PLS transfer out",
+          movementAmount: "10 PLS",
+          spender: "0x2222222222222222222222222222222222222222",
+          recipient: "0x4444444444444444444444444444444444444444",
+          approvalExplorerUrl: "https://scan.pulsechain.com/tx/0xapprove",
+          movementExplorerUrl: "https://scan.pulsechain.com/tx/0xmove",
+        },
+      ],
       hexStatus: "planned",
       permit2Status: "planned",
       eip7702Status: "planned",
@@ -83,6 +121,9 @@ describe("Wallet Lifeboat report", () => {
     expect(markdown).toContain("0xout");
     expect(markdown).toContain("Pending nonce gap");
     expect(markdown).toContain("Latest nonce 10");
+    expect(markdown).toContain("Approval-to-drain timeline");
+    expect(markdown).toContain("0xapprove");
+    expect(markdown).toContain("0xmove");
     expect(markdown).toContain("1 NFT live read failed");
   });
 

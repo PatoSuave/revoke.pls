@@ -129,6 +129,21 @@ responses, report export.
 
 Validation commands: Full validation stack plus focused timeline tests.
 
+Current safe production pass:
+
+- Adds a read-only `/api/lifeboat/timeline` diagnostic.
+- Uses bounded recent explorer history only; callers cannot choose page, offset,
+  block range, module, action, or sort.
+- Parses recent normal transactions for approval-like calls and native
+  transfers.
+- Parses recent token transfers for visible inbound/outbound token movement.
+- Labels close approval-to-outbound-movement ordering as possible or elevated
+  context, not proof of theft, attacker control, or causation.
+- Keeps partial explorer data as incomplete and never treats missing timeline
+  evidence as an all-clear state.
+- Adds the diagnostic to the Wallet Lifeboat UI and exportable report without
+  adding any wallet write path.
+
 ## Phase 4: Address Poisoning Scanner
 
 Purpose: Identify recent lookalike inbound transfers or dust events that may be

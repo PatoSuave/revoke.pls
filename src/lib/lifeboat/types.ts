@@ -7,6 +7,11 @@ import type {
   PendingNonceAnalysis,
 } from "@/lib/lifeboat/pending-nonce";
 import type { SweeperEvidence, SweeperRiskLevel } from "@/lib/lifeboat/sweeper";
+import type {
+  TimelineEvidence,
+  TimelineHistoryEvent,
+  TimelineRiskLevel,
+} from "@/lib/lifeboat/timeline";
 import type { NftApproval } from "@/lib/nft-approvals";
 
 export type LifeboatScanStatus =
@@ -38,6 +43,7 @@ export interface LifeboatCompleteness {
   nftApprovalsComplete: boolean;
   sweeperCheckComplete: boolean;
   pendingNonceCheckComplete: boolean;
+  timelineCheckComplete: boolean;
   hexCheckComplete: boolean;
   permit2Complete: boolean;
   eip7702Complete: boolean;
@@ -58,6 +64,10 @@ export interface LifeboatChainReport {
   pendingNonceRiskLevel: PendingNonceRiskLevel;
   pendingNonceEvidence: PendingNonceEvidence[];
   pendingNonceSummary: PendingNonceAnalysis["summary"];
+  timelineStatus: LifeboatModuleStatus;
+  timelineRiskLevel: TimelineRiskLevel;
+  timelineEvents: TimelineHistoryEvent[];
+  timelineEvidence: TimelineEvidence[];
   hexStatus: LifeboatModuleStatus;
   permit2Status: LifeboatModuleStatus;
   eip7702Status: LifeboatModuleStatus;
