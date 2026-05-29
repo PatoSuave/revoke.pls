@@ -15,6 +15,7 @@ const REPORT: LifeboatReport = {
     approvalsComplete: true,
     nftApprovalsComplete: false,
     sweeperCheckComplete: false,
+    pendingNonceCheckComplete: true,
     hexCheckComplete: false,
     permit2Complete: false,
     eip7702Complete: false,
@@ -41,6 +42,22 @@ const REPORT: LifeboatReport = {
           possibleSweeperAddress: "0x2222222222222222222222222222222222222222",
         },
       ],
+      pendingNonceStatus: "complete",
+      pendingNonceRiskLevel: "possible",
+      pendingNonceEvidence: [
+        {
+          latestNonce: "10",
+          pendingNonce: "11",
+          pendingTransactionCount: 1,
+          checkedAt: "2026-05-29T18:02:00.000Z",
+        },
+      ],
+      pendingNonceSummary: {
+        latestNonce: "10",
+        pendingNonce: "11",
+        pendingTransactionCount: 1,
+        checkedAt: "2026-05-29T18:02:00.000Z",
+      },
       hexStatus: "planned",
       permit2Status: "planned",
       eip7702Status: "planned",
@@ -64,6 +81,8 @@ describe("Wallet Lifeboat report", () => {
     expect(markdown).toContain("Possible pattern");
     expect(markdown).toContain("0xin");
     expect(markdown).toContain("0xout");
+    expect(markdown).toContain("Pending nonce gap");
+    expect(markdown).toContain("Latest nonce 10");
     expect(markdown).toContain("1 NFT live read failed");
   });
 

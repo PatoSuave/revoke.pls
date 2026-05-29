@@ -1,6 +1,11 @@
 import type { Address } from "viem";
 
 import type { Approval } from "@/lib/approvals";
+import type {
+  PendingNonceEvidence,
+  PendingNonceRiskLevel,
+  PendingNonceAnalysis,
+} from "@/lib/lifeboat/pending-nonce";
 import type { SweeperEvidence, SweeperRiskLevel } from "@/lib/lifeboat/sweeper";
 import type { NftApproval } from "@/lib/nft-approvals";
 
@@ -32,6 +37,7 @@ export interface LifeboatCompleteness {
   approvalsComplete: boolean;
   nftApprovalsComplete: boolean;
   sweeperCheckComplete: boolean;
+  pendingNonceCheckComplete: boolean;
   hexCheckComplete: boolean;
   permit2Complete: boolean;
   eip7702Complete: boolean;
@@ -48,6 +54,10 @@ export interface LifeboatChainReport {
   sweeperStatus: LifeboatModuleStatus;
   sweeperRiskLevel: SweeperRiskLevel;
   sweeperEvidence: SweeperEvidence[];
+  pendingNonceStatus: LifeboatModuleStatus;
+  pendingNonceRiskLevel: PendingNonceRiskLevel;
+  pendingNonceEvidence: PendingNonceEvidence[];
+  pendingNonceSummary: PendingNonceAnalysis["summary"];
   hexStatus: LifeboatModuleStatus;
   permit2Status: LifeboatModuleStatus;
   eip7702Status: LifeboatModuleStatus;

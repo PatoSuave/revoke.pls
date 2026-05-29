@@ -75,6 +75,35 @@ rejection, config-missing handling, rate-limit headers.
 Validation commands: `git diff --check`, `npm run lint`, `npm run typecheck`,
 focused sweeper tests, `npm run test`, `npm run build`, preview smoke.
 
+## Phase 2A: Pending Transaction / Nonce Scanner
+
+Purpose: Compare the latest and pending nonce reported by a configured RPC for
+the pasted address. A pending nonce gap can indicate that the wallet already
+has one or more transactions waiting.
+
+Data sources: RPC `eth_getTransactionCount` reads for `latest` and `pending`.
+
+User-facing output: Latest nonce, pending nonce, pending gap, and a warning
+that this cannot see every private, dropped, replaced, or unindexed
+transaction.
+
+Safety constraints: Read-only only. Do not submit, replace, cancel, speed up,
+or bundle transactions.
+
+What must not be implemented: Transaction replacement, private mempool
+execution, relayers, automatic gas funding, rescue execution, or any wallet
+write path.
+
+Acceptance criteria: The module uses bounded RPC calls, timeout, rate limiting,
+no-store responses, tests for possible and elevated pending gaps, and no false
+"all clear" when RPC data is unavailable.
+
+Suggested tests: Heuristic unit tests, API validation, caller-controlled block
+tag rejection, upstream failure handling, rate-limit headers, report export.
+
+Validation commands: `git diff --check`, `npm run lint`, `npm run typecheck`,
+focused pending nonce tests, `npm run test`, `npm run build`, preview smoke.
+
 ## Phase 3: Approval-To-Drain Timeline
 
 Purpose: Correlate approval events, transfer events, and native-gas movement so
