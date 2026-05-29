@@ -1,0 +1,1248 @@
+"use client";
+
+import Link from "next/link";
+import { useMemo, useState } from "react";
+import type { Address } from "viem";
+
+import { ChainLogo } from "@/components/chains/chain-logo";
+import { useApprovalDiscovery } from "@/hooks/use-approval-discovery";
+import { useArbitrumApprovalScan } from "@/hooks/use-arbitrum-approval-scan";
+import { useEthereumApprovalScan } from "@/hooks/use-ethereum-approval-scan";
+import { useHyperEVMApprovalScan } from "@/hooks/use-hyperevm-approval-scan";
+import { useNftApprovalDiscovery } from "@/hooks/use-nft-approval-discovery";
+import { useOptimismApprovalScan } from "@/hooks/use-optimism-approval-scan";
+import {
+  addressOnlyScanOptions,
+  getAddressOnlyScanOption,
+  getSupportedAddressOnlyChainConfig,
+  type AddressOnlyScanChainId,
+  type AddressOnlyScanOption,
+} from "@/lib/address-only-scan";
+import { explorerAddressUrl, explorerTokenUrl } from "@/lib/explorer";
+import { shortenAddress } from "@/lib/format";
+import {
+  LIFEBOAT_CRITICAL_WARNINGS,
+  LIFEBOAT_NEXT_STEPS,
+  LIFEBOAT_NOT_TO_DO,
+  LIFEBOAT_PLANNED_MODULES,
+} from "@/lib/lifeboat/copy";
+import { buildWalletLifeboatReportMarkdown } from "@/lib/lifeboat/report";
+import type {
+  LifeboatChainReport,
+  LifeboatModuleStatus,
+  LifeboatReport,
+  LifeboatScanSnapshot,
+  LifeboatScanStatus,
+} from "@/lib/lifeboat/types";
+import type { NftApproval } from "@/lib/nft-approvals";
+import { scoreApprovals, type RiskLevel, type ScoredApproval } from "@/lib/risk";
+import { normalizeScanInputAddress } from "@/lib/scan-target";
+
+const INITIAL_CHAIN_ID = addressOnlyScanOptions[0].chainId;
+
+export function WalletLifeboat() {
+  const [inputAddress, setInputAddress] = useState("");
+  const [owner, setOwner] = useState<Address | null>(null);
+  const [inputError, setInputError] = useState<string | null>(null);
+  const [selectedChainId, setSelectedChainId] =
+    useState<AddressOnlyScanChainId>(INITIAL_CHAIN_ID);
+  const selectedOption = getAddressOnlyScanOption(selectedChainId);
+  const scan = useLifeboatScan({
+    owner,
+    selectedChainId,
+    selectedOption,
+  });
+  const scoredApprovals = useMemo(
+    () => sortScoredApprovals(scoreApprovals(scan.approvals)),
+    [scan.approvals],
+  );
+  const sortedNftApprovals = useMemo(
+    () => sortNftApprovals(scan.nftApprovals),
+    [scan.nftApprovals],
+  );
+
+  function scanAddress() {
+    const normalized = normalizeScanInputAddress(inputAddress);
+    if (!normalized) {
+      setOwner(null);
+      setInputError("Enter a valid EVM wallet address.");
+      return;
+    }
+    setInputAddress(normalized);
+    setOwner(normalized);
+    setInputError(null);
+  }
+
+  function clearScan() {
+    setInputAddress("");
+    setOwner(null);
+    setInputError(null);
+  }
+
+  return (
+    <section className="bg-pulse-bg">
+      <div className="border-b border-pulse-border/60 bg-pulse-bg">
+        <div className="mx-auto max-w-6xl px-4 py-8 sm:px-6 sm:py-10">
+          <div className="grid gap-6 lg:grid-cols-[1.05fr_0.95fr] lg:items-end">
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-pulse-cyan">
+                Wallet Lifeboat
+              </p>
+              <h1 className="mt-3 max-w-3xl text-3xl font-bold text-pulse-text sm:text-5xl">
+                Check a risky wallet before adding gas.
+              </h1>
+              <p className="mt-4 max-w-2xl text-sm leading-7 text-pulse-muted sm:text-base">
+                Paste a wallet address to scan visible approvals, NFT
+                permissions, HEX stake risk, and possible compromised-wallet
+                signals. This is read-only and never asks for your seed phrase
+                or private key.
+              </p>
+            </div>
+            <div className="rounded-2xl border border-pulse-red/35 bg-pulse-red/10 p-5 text-sm leading-6 text-pulse-muted">
+              <p className="font-semibold text-pulse-red">
+                Never enter your seed phrase or private key anywhere.
+              </p>
+              <p className="mt-2">
+                If a wallet&apos;s seed phrase or private key is compromised,
+                revoking approvals does not make the wallet safe again. This
+                tool helps you understand visible risks and possible next
+                steps.
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div className="mx-auto max-w-6xl px-4 py-8 sm:px-6 sm:py-10">
+        <div className="grid gap-6 lg:grid-cols-[0.95fr_1.05fr]">
+          <LifeboatControls
+            inputAddress={inputAddress}
+            selectedChainId={selectedChainId}
+            owner={owner}
+            inputError={inputError}
+            onInputAddressChange={(value) => {
+              setInputAddress(value);
+              setInputError(null);
+            }}
+            onSelectedChainIdChange={setSelectedChainId}
+            onScan={scanAddress}
+            onClear={clearScan}
+          />
+          <SafetyPanel />
+        </div>
+
+        <TriageSummary scan={scan} owner={owner} />
+
+        <div className="mt-6 grid gap-6 xl:grid-cols-[minmax(0,1fr)_360px]">
+          <div className="space-y-6">
+            <LifeboatApprovalsSection
+              approvals={scoredApprovals}
+              status={scan.approvalsStatus}
+              owner={owner}
+              option={selectedOption}
+              isScanning={scan.status === "scanning"}
+            />
+            <LifeboatNftApprovalsSection
+              approvals={sortedNftApprovals}
+              status={scan.nftApprovalsStatus}
+              owner={owner}
+              option={selectedOption}
+              isScanning={scan.status === "scanning"}
+            />
+            <PlannedDiagnostics />
+            <DetectionLimits />
+          </div>
+          <div className="space-y-6">
+            <CompletenessPanel scan={scan} />
+            <ReportExport scan={scan} owner={owner} />
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function LifeboatControls({
+  inputAddress,
+  selectedChainId,
+  owner,
+  inputError,
+  onInputAddressChange,
+  onSelectedChainIdChange,
+  onScan,
+  onClear,
+}: {
+  inputAddress: string;
+  selectedChainId: AddressOnlyScanChainId;
+  owner: Address | null;
+  inputError: string | null;
+  onInputAddressChange: (value: string) => void;
+  onSelectedChainIdChange: (chainId: AddressOnlyScanChainId) => void;
+  onScan: () => void;
+  onClear: () => void;
+}) {
+  const selectedOption = getAddressOnlyScanOption(selectedChainId);
+  return (
+    <section className="rounded-2xl border border-pulse-border bg-pulse-panel/70 p-5 shadow-glow">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-pulse-cyan">
+            Triage target
+          </p>
+          <h2 className="mt-1 text-xl font-semibold text-pulse-text">
+            Paste a wallet to inspect public risk.
+          </h2>
+        </div>
+        <span className="inline-flex w-fit rounded-full border border-pulse-cyan/35 bg-pulse-cyan/10 px-3 py-1 text-xs font-semibold text-pulse-cyan">
+          Read-only
+        </span>
+      </div>
+
+      <form
+        className="mt-5 grid gap-3"
+        onSubmit={(event) => {
+          event.preventDefault();
+          onScan();
+        }}
+      >
+        <label
+          className="text-xs font-semibold uppercase tracking-[0.14em] text-pulse-muted"
+          htmlFor="lifeboat-address-input"
+        >
+          Wallet address to inspect
+        </label>
+        <input
+          id="lifeboat-address-input"
+          value={inputAddress}
+          onChange={(event) => onInputAddressChange(event.target.value)}
+          placeholder="0x..."
+          autoComplete="off"
+          spellCheck={false}
+          className="min-h-12 rounded-xl border border-pulse-border bg-pulse-bg/80 px-3 py-2 font-mono text-sm text-pulse-text outline-none transition placeholder:text-pulse-muted/60 focus:border-pulse-cyan/60"
+        />
+        {inputError ? (
+          <p className="text-xs font-semibold text-pulse-red">{inputError}</p>
+        ) : null}
+
+        <label
+          className="text-xs font-semibold uppercase tracking-[0.14em] text-pulse-muted"
+          htmlFor="lifeboat-chain-select"
+        >
+          Network
+        </label>
+        <select
+          id="lifeboat-chain-select"
+          value={selectedChainId}
+          onChange={(event) =>
+            onSelectedChainIdChange(Number(event.target.value) as AddressOnlyScanChainId)
+          }
+          className="min-h-12 rounded-xl border border-pulse-border bg-pulse-bg/80 px-3 py-2 text-sm text-pulse-text outline-none transition focus:border-pulse-cyan/60"
+        >
+          {addressOnlyScanOptions.map((option) => (
+            <option key={option.chainId} value={option.chainId}>
+              {option.displayName} (ID {option.chainId})
+            </option>
+          ))}
+        </select>
+
+        <div className="flex flex-col gap-2 sm:flex-row">
+          <button
+            type="submit"
+            className="inline-flex min-h-11 items-center justify-center rounded-xl bg-pulse-gradient px-4 py-2 text-sm font-semibold text-pulse-on-gradient shadow-glow transition hover:brightness-110"
+          >
+            Scan wallet
+          </button>
+          <button
+            type="button"
+            onClick={onClear}
+            disabled={!owner && !inputAddress}
+            className="inline-flex min-h-11 items-center justify-center rounded-xl border border-pulse-border bg-pulse-text/5 px-4 py-2 text-sm font-semibold text-pulse-muted transition hover:bg-pulse-text/10 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            Clear
+          </button>
+        </div>
+      </form>
+
+      <div className="mt-5 rounded-xl border border-pulse-border/70 bg-pulse-bg/45 p-3 text-xs leading-5 text-pulse-muted">
+        <div className="flex items-center gap-2">
+          <ChainLogo chainId={selectedOption.chainId} className="h-4 w-4" />
+          <span className="font-semibold text-pulse-text">
+            {selectedOption.displayName}
+          </span>
+        </div>
+        <p className="mt-2">
+          Wallet Lifeboat scans one network at a time in this first pass. Use
+          the standard scanner for its full multi-network workflow when you are
+          ready to continue.
+        </p>
+      </div>
+    </section>
+  );
+}
+
+function SafetyPanel() {
+  return (
+    <section className="rounded-2xl border border-pulse-border bg-pulse-panel/70 p-5">
+      <p className="text-xs font-semibold uppercase tracking-[0.18em] text-pulse-cyan">
+        Before taking action
+      </p>
+      <div className="mt-4 grid gap-3">
+        {LIFEBOAT_CRITICAL_WARNINGS.map((warning) => (
+          <div
+            key={warning}
+            className="rounded-xl border border-pulse-border/70 bg-pulse-bg/45 p-3 text-sm leading-6 text-pulse-muted"
+          >
+            {warning}
+          </div>
+        ))}
+      </div>
+      <p className="mt-4 rounded-xl border border-amber-400/35 bg-amber-400/10 p-3 text-sm leading-6 text-amber-100">
+        Do not add gas to a wallet you believe is compromised until you review
+        the scan. Some compromised wallets use sweepers that automatically drain
+        native gas before you can move assets.
+      </p>
+    </section>
+  );
+}
+
+function TriageSummary({
+  scan,
+  owner,
+}: {
+  scan: LifeboatScanSnapshot;
+  owner: Address | null;
+}) {
+  const cards: {
+    label: string;
+    value: string;
+    tone: "neutral" | "success" | "warning" | "danger";
+  }[] = [
+    {
+      label: "Visible approval risk",
+      value: statusLabelForApprovals(scan.approvalsStatus, scan.approvals.length),
+      tone: toneForModule(scan.approvalsStatus, scan.approvals.length),
+    },
+    {
+      label: "NFT permission risk",
+      value: statusLabelForApprovals(
+        scan.nftApprovalsStatus,
+        scan.nftApprovals.length,
+      ),
+      tone: toneForModule(scan.nftApprovalsStatus, scan.nftApprovals.length),
+    },
+    {
+      label: "Gas-sweeper pattern",
+      value: "Planned diagnostic",
+      tone: "neutral" as const,
+    },
+    {
+      label: "HEX stake status",
+      value: "Planned diagnostic",
+      tone: "neutral" as const,
+    },
+    {
+      label: "Advanced authorization risk",
+      value: "Planned diagnostic",
+      tone: "neutral" as const,
+    },
+    {
+      label: "Report completeness",
+      value:
+        scan.status === "complete"
+          ? "Approval scan complete"
+          : scan.status === "partial"
+            ? "Incomplete diagnostics"
+            : scan.status === "failed"
+              ? "Upstream unavailable"
+              : scan.status === "scanning"
+                ? "Scanning"
+                : "Not scanned",
+      tone:
+        scan.status === "complete"
+          ? "success"
+          : scan.status === "partial" || scan.status === "failed"
+            ? "warning"
+            : "neutral",
+    },
+  ];
+
+  return (
+    <section className="mt-6">
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-pulse-cyan">
+            Incident dashboard
+          </p>
+          <h2 className="mt-1 text-2xl font-semibold text-pulse-text">
+            Triage summary
+          </h2>
+        </div>
+        <p className="font-mono text-xs text-pulse-muted">
+          {owner ? shortenAddress(owner) : "No wallet scanned"}
+        </p>
+      </div>
+      <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+        {cards.map((card) => (
+          <RiskCard key={card.label} {...card} />
+        ))}
+      </div>
+    </section>
+  );
+}
+
+function RiskCard({
+  label,
+  value,
+  tone,
+}: {
+  label: string;
+  value: string;
+  tone: "neutral" | "success" | "warning" | "danger";
+}) {
+  const toneClass = {
+    neutral: "border-pulse-border bg-pulse-panel/65 text-pulse-muted",
+    success: "border-pulse-green/35 bg-pulse-green/10 text-pulse-green",
+    warning: "border-amber-400/35 bg-amber-400/10 text-amber-200",
+    danger: "border-pulse-red/40 bg-pulse-red/10 text-pulse-red",
+  }[tone];
+  return (
+    <div className={`rounded-2xl border p-4 ${toneClass}`}>
+      <p className="text-xs font-semibold uppercase tracking-[0.14em]">
+        {label}
+      </p>
+      <p className="mt-2 text-lg font-semibold text-pulse-text">{value}</p>
+    </div>
+  );
+}
+
+function LifeboatApprovalsSection({
+  approvals,
+  status,
+  owner,
+  option,
+  isScanning,
+}: {
+  approvals: readonly ScoredApproval[];
+  status: LifeboatModuleStatus;
+  owner: Address | null;
+  option: AddressOnlyScanOption;
+  isScanning: boolean;
+}) {
+  return (
+    <ReportSection
+      title="Active token approvals"
+      eyebrow="Visible approval risk"
+      status={status}
+      count={approvals.length}
+      emptyCopy="No active rows found for this network scan."
+      owner={owner}
+      option={option}
+      isScanning={isScanning}
+    >
+      {approvals.length > 0 ? (
+        <div className="overflow-hidden rounded-2xl border border-pulse-border bg-pulse-bg/40">
+          <ul>
+            {approvals.map((approval) => (
+              <li
+                key={approval.key}
+                className="grid gap-4 border-b border-pulse-border/60 p-4 last:border-b-0 lg:grid-cols-[1fr_1fr_0.8fr]"
+              >
+                <div className="min-w-0">
+                  <p className="truncate text-sm font-semibold text-pulse-text">
+                    {approval.tokenSymbol}
+                  </p>
+                  <a
+                    href={tokenUrlFor(option, approval.tokenAddress)}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="mt-1 block truncate text-xs text-pulse-muted underline-offset-2 hover:text-pulse-cyan hover:underline"
+                    title={approval.tokenAddress}
+                  >
+                    {approval.tokenName ?? shortenAddress(approval.tokenAddress)}
+                  </a>
+                </div>
+                <div className="min-w-0">
+                  <p className="truncate text-sm font-medium text-pulse-text">
+                    {approval.spenderLabel}
+                  </p>
+                  <a
+                    href={addressUrlFor(option, approval.spenderAddress)}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="mt-1 block truncate font-mono text-xs text-pulse-muted underline-offset-2 hover:text-pulse-cyan hover:underline"
+                    title={approval.spenderAddress}
+                  >
+                    {shortenAddress(approval.spenderAddress)}
+                  </a>
+                  <p className="mt-1 text-[11px] text-pulse-muted">
+                    {approval.trusted ? "Known spender label" : "Unknown spender"}
+                  </p>
+                </div>
+                <div className="flex flex-wrap items-start gap-2 lg:justify-end">
+                  <RiskBadge level={approval.risk.level} />
+                  <span className="rounded-full border border-pulse-border bg-pulse-panel/60 px-2.5 py-1 text-xs font-semibold text-pulse-muted">
+                    {approval.unlimited
+                      ? "Unlimited"
+                      : approval.formattedAllowance}
+                  </span>
+                  <span className="rounded-full border border-pulse-border bg-pulse-panel/60 px-2.5 py-1 text-xs font-semibold text-pulse-muted">
+                    Read-only row
+                  </span>
+                </div>
+              </li>
+            ))}
+          </ul>
+        </div>
+      ) : null}
+    </ReportSection>
+  );
+}
+
+function LifeboatNftApprovalsSection({
+  approvals,
+  status,
+  owner,
+  option,
+  isScanning,
+}: {
+  approvals: readonly NftApproval[];
+  status: LifeboatModuleStatus;
+  owner: Address | null;
+  option: AddressOnlyScanOption;
+  isScanning: boolean;
+}) {
+  return (
+    <ReportSection
+      title="NFT approvals"
+      eyebrow="NFT permission risk"
+      status={status}
+      count={approvals.length}
+      emptyCopy="No active rows found for this network scan."
+      owner={owner}
+      option={option}
+      isScanning={isScanning}
+    >
+      {approvals.length > 0 ? (
+        <div className="overflow-hidden rounded-2xl border border-pulse-border bg-pulse-bg/40">
+          <ul>
+            {approvals.map((approval) => (
+              <li
+                key={approval.key}
+                className="grid gap-4 border-b border-pulse-border/60 p-4 last:border-b-0 lg:grid-cols-[1fr_1fr_0.8fr]"
+              >
+                <div className="min-w-0">
+                  <p className="truncate text-sm font-semibold text-pulse-text">
+                    {approval.collectionName ??
+                      shortenAddress(approval.collectionAddress)}
+                  </p>
+                  <a
+                    href={tokenUrlFor(option, approval.collectionAddress)}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="mt-1 block truncate font-mono text-xs text-pulse-muted underline-offset-2 hover:text-pulse-cyan hover:underline"
+                    title={approval.collectionAddress}
+                  >
+                    {shortenAddress(approval.collectionAddress)}
+                  </a>
+                </div>
+                <div className="min-w-0">
+                  <p className="truncate text-sm font-medium text-pulse-text">
+                    {approval.operatorLabel}
+                  </p>
+                  <a
+                    href={addressUrlFor(option, approval.operatorAddress)}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="mt-1 block truncate font-mono text-xs text-pulse-muted underline-offset-2 hover:text-pulse-cyan hover:underline"
+                    title={approval.operatorAddress}
+                  >
+                    {shortenAddress(approval.operatorAddress)}
+                  </a>
+                  <p className="mt-1 text-[11px] text-pulse-muted">
+                    {approval.trusted ? "Known operator label" : "Unknown operator"}
+                  </p>
+                </div>
+                <div className="flex flex-wrap items-start gap-2 lg:justify-end">
+                  <RiskBadge level={approval.risk.level} />
+                  <span className="rounded-full border border-pulse-border bg-pulse-panel/60 px-2.5 py-1 text-xs font-semibold text-pulse-muted">
+                    {approval.kind === "approvalForAll"
+                      ? "Collection-wide"
+                      : `Token ${approval.tokenId?.toString() ?? ""}`}
+                  </span>
+                  <span className="rounded-full border border-pulse-border bg-pulse-panel/60 px-2.5 py-1 text-xs font-semibold text-pulse-muted">
+                    Read-only row
+                  </span>
+                </div>
+              </li>
+            ))}
+          </ul>
+        </div>
+      ) : null}
+    </ReportSection>
+  );
+}
+
+function ReportSection({
+  title,
+  eyebrow,
+  status,
+  count,
+  emptyCopy,
+  owner,
+  option,
+  isScanning,
+  children,
+}: {
+  title: string;
+  eyebrow: string;
+  status: LifeboatModuleStatus;
+  count: number;
+  emptyCopy: string;
+  owner: Address | null;
+  option: AddressOnlyScanOption;
+  isScanning: boolean;
+  children: React.ReactNode;
+}) {
+  const showEmpty = owner && status === "complete" && count === 0;
+  return (
+    <section className="rounded-2xl border border-pulse-border bg-pulse-panel/65 p-5">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-pulse-cyan">
+            {eyebrow}
+          </p>
+          <h2 className="mt-1 text-xl font-semibold text-pulse-text">{title}</h2>
+          <p className="mt-2 text-sm leading-6 text-pulse-muted">
+            {owner
+              ? `${option.displayName} rows are shown without revoke controls.`
+              : "Paste a wallet address to start a read-only scan."}
+          </p>
+        </div>
+        <StatusPill status={status} count={count} isScanning={isScanning} />
+      </div>
+      <div className="mt-4">
+        {showEmpty ? (
+          <div className="rounded-2xl border border-dashed border-pulse-border/80 bg-pulse-bg/40 p-4 text-sm text-pulse-muted">
+            {emptyCopy}
+          </div>
+        ) : status === "partial" || status === "upstream_unavailable" ? (
+          <div className="rounded-2xl border border-amber-400/35 bg-amber-400/10 p-4 text-sm leading-6 text-amber-100">
+            This scan is incomplete. Do not treat missing rows as proof that
+            the wallet has no exposure.
+          </div>
+        ) : null}
+        {children}
+      </div>
+      {owner ? (
+        <div className="mt-4 rounded-xl border border-pulse-border/70 bg-pulse-bg/45 p-3 text-xs leading-5 text-pulse-muted">
+          Need to revoke later? Open the standard scanner and paste the same
+          address. Lifeboat does not render wallet write controls.{" "}
+          <Link
+            href="/app#scanner"
+            className="font-semibold text-pulse-cyan underline underline-offset-2 hover:text-pulse-text"
+          >
+            Go to scanner
+          </Link>
+        </div>
+      ) : null}
+    </section>
+  );
+}
+
+function StatusPill({
+  status,
+  count,
+  isScanning,
+}: {
+  status: LifeboatModuleStatus;
+  count: number;
+  isScanning: boolean;
+}) {
+  const label = isScanning
+    ? "Scanning"
+    : statusLabelForApprovals(status, count);
+  const tone = toneForModule(status, count);
+  const toneClass = {
+    neutral: "border-pulse-border bg-pulse-bg/50 text-pulse-muted",
+    success: "border-pulse-green/35 bg-pulse-green/10 text-pulse-green",
+    warning: "border-amber-400/35 bg-amber-400/10 text-amber-200",
+    danger: "border-pulse-red/40 bg-pulse-red/10 text-pulse-red",
+  }[tone];
+  return (
+    <span
+      className={`inline-flex w-fit rounded-full border px-3 py-1 text-xs font-semibold ${toneClass}`}
+    >
+      {label}
+    </span>
+  );
+}
+
+function PlannedDiagnostics() {
+  return (
+    <section className="rounded-2xl border border-pulse-border bg-pulse-panel/65 p-5">
+      <p className="text-xs font-semibold uppercase tracking-[0.18em] text-pulse-cyan">
+        Planned diagnostics
+      </p>
+      <h2 className="mt-1 text-xl font-semibold text-pulse-text">
+        Safe Phase 1 placeholders
+      </h2>
+      <div className="mt-4 grid gap-3">
+        {LIFEBOAT_PLANNED_MODULES.map((module) => (
+          <section
+            key={module.id}
+            className="rounded-xl border border-pulse-border/70 bg-pulse-bg/45 p-4"
+          >
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+              <h3 className="font-semibold text-pulse-text">{module.title}</h3>
+              <span className="inline-flex w-fit rounded-full border border-pulse-border bg-pulse-panel/60 px-2.5 py-1 text-xs font-semibold text-pulse-muted">
+                {module.status}
+              </span>
+            </div>
+            <p className="mt-2 text-sm leading-6 text-pulse-muted">
+              {module.body}
+            </p>
+          </section>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+function DetectionLimits() {
+  return (
+    <section className="rounded-2xl border border-pulse-border bg-pulse-panel/65 p-5">
+      <p className="text-xs font-semibold uppercase tracking-[0.18em] text-pulse-cyan">
+        Limits
+      </p>
+      <h2 className="mt-1 text-xl font-semibold text-pulse-text">
+        What this scan can and cannot detect
+      </h2>
+      <div className="mt-4 grid gap-4 md:grid-cols-2">
+        <Checklist title="Can help with" items={LIFEBOAT_NEXT_STEPS} />
+        <Checklist title="Do not do" items={LIFEBOAT_NOT_TO_DO} />
+      </div>
+    </section>
+  );
+}
+
+function Checklist({
+  title,
+  items,
+}: {
+  title: string;
+  items: readonly string[];
+}) {
+  return (
+    <div className="rounded-xl border border-pulse-border/70 bg-pulse-bg/45 p-4">
+      <h3 className="text-sm font-semibold text-pulse-text">{title}</h3>
+      <ul className="mt-3 grid gap-2 text-sm leading-6 text-pulse-muted">
+        {items.map((item) => (
+          <li key={item} className="flex gap-2">
+            <span
+              className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-pulse-cyan"
+              aria-hidden
+            />
+            <span>{item}</span>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
+function CompletenessPanel({ scan }: { scan: LifeboatScanSnapshot }) {
+  return (
+    <section className="rounded-2xl border border-pulse-border bg-pulse-panel/65 p-5">
+      <p className="text-xs font-semibold uppercase tracking-[0.18em] text-pulse-cyan">
+        Report completeness
+      </p>
+      <h2 className="mt-1 text-xl font-semibold text-pulse-text">
+        Current diagnostic coverage
+      </h2>
+      <dl className="mt-4 grid gap-2 text-sm">
+        <CompletenessRow
+          label="Token approvals"
+          value={statusLabelForApprovals(scan.approvalsStatus, scan.approvals.length)}
+        />
+        <CompletenessRow
+          label="NFT approvals"
+          value={statusLabelForApprovals(
+            scan.nftApprovalsStatus,
+            scan.nftApprovals.length,
+          )}
+        />
+        <CompletenessRow label="Gas-sweeper pattern" value="Planned diagnostic" />
+        <CompletenessRow label="HEX stake status" value="Planned diagnostic" />
+        <CompletenessRow
+          label="Permit2 / signatures"
+          value="Planned diagnostic"
+        />
+        <CompletenessRow label="EIP-7702 delegation" value="Planned diagnostic" />
+        <CompletenessRow label="Visible assets" value="Planned diagnostic" />
+      </dl>
+      {scan.incompleteReasons.length > 0 ? (
+        <div className="mt-4 rounded-xl border border-amber-400/35 bg-amber-400/10 p-3 text-xs leading-5 text-amber-100">
+          <p className="font-semibold">Known incomplete diagnostics</p>
+          <ul className="mt-2 grid gap-1">
+            {scan.incompleteReasons.map((reason) => (
+              <li key={reason}>{reason}</li>
+            ))}
+          </ul>
+        </div>
+      ) : null}
+    </section>
+  );
+}
+
+function CompletenessRow({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="grid gap-1 rounded-xl border border-pulse-border/70 bg-pulse-bg/45 p-3">
+      <dt className="text-xs font-semibold uppercase tracking-[0.12em] text-pulse-muted">
+        {label}
+      </dt>
+      <dd className="text-pulse-text">{value}</dd>
+    </div>
+  );
+}
+
+function ReportExport({
+  scan,
+  owner,
+}: {
+  scan: LifeboatScanSnapshot;
+  owner: Address | null;
+}) {
+  const [copyState, setCopyState] = useState<"idle" | "copied" | "failed">(
+    "idle",
+  );
+  const disabled = !owner;
+
+  function createMarkdown() {
+    if (!owner) return "";
+    return buildWalletLifeboatReportMarkdown(
+      buildReportFromSnapshot(scan, owner, new Date().toISOString()),
+    );
+  }
+
+  async function copyReport() {
+    const markdown = createMarkdown();
+    if (!markdown || !navigator.clipboard) {
+      setCopyState("failed");
+      return;
+    }
+    try {
+      await navigator.clipboard.writeText(markdown);
+      setCopyState("copied");
+    } catch {
+      setCopyState("failed");
+    }
+  }
+
+  function downloadReport() {
+    const markdown = createMarkdown();
+    if (!markdown) return;
+    const blob = new Blob([markdown], { type: "text/markdown;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `wallet-lifeboat-${owner?.slice(0, 10) ?? "report"}.md`;
+    link.click();
+    URL.revokeObjectURL(url);
+  }
+
+  return (
+    <section className="rounded-2xl border border-pulse-border bg-pulse-panel/65 p-5">
+      <p className="text-xs font-semibold uppercase tracking-[0.18em] text-pulse-cyan">
+        Export rescue report
+      </p>
+      <h2 className="mt-1 text-xl font-semibold text-pulse-text">
+        Save the read-only snapshot.
+      </h2>
+      <p className="mt-3 text-sm leading-6 text-pulse-muted">
+        Export this report before taking action. It can help you review visible
+        risks, approvals, stakes, and possible next steps without connecting the
+        compromised wallet.
+      </p>
+      <div className="mt-4 grid gap-2 sm:grid-cols-2">
+        <button
+          type="button"
+          onClick={copyReport}
+          disabled={disabled}
+          className="inline-flex min-h-11 items-center justify-center rounded-xl border border-pulse-cyan/35 bg-pulse-cyan/10 px-3 py-2 text-sm font-semibold text-pulse-cyan transition hover:bg-pulse-cyan/15 disabled:cursor-not-allowed disabled:opacity-50"
+        >
+          Copy Markdown
+        </button>
+        <button
+          type="button"
+          onClick={downloadReport}
+          disabled={disabled}
+          className="inline-flex min-h-11 items-center justify-center rounded-xl border border-pulse-border bg-pulse-text/5 px-3 py-2 text-sm font-semibold text-pulse-text transition hover:bg-pulse-text/10 disabled:cursor-not-allowed disabled:opacity-50"
+        >
+          Download .md
+        </button>
+      </div>
+      {copyState === "copied" ? (
+        <p className="mt-3 text-xs font-semibold text-pulse-green">
+          Report copied.
+        </p>
+      ) : copyState === "failed" ? (
+        <p className="mt-3 text-xs font-semibold text-pulse-red">
+          Copy failed. Use Download instead.
+        </p>
+      ) : null}
+    </section>
+  );
+}
+
+function useLifeboatScan({
+  owner,
+  selectedChainId,
+  selectedOption,
+}: {
+  owner: Address | null;
+  selectedChainId: AddressOnlyScanChainId;
+  selectedOption: AddressOnlyScanOption;
+}): LifeboatScanSnapshot {
+  const enabled = Boolean(owner);
+  const supportedConfig =
+    selectedOption.kind === "supported"
+      ? getSupportedAddressOnlyChainConfig(selectedChainId)
+      : undefined;
+  const genericApprovalScan = useApprovalDiscovery({
+    owner: owner ?? undefined,
+    chainId: supportedConfig?.chainId,
+    enabled: enabled && selectedOption.kind === "supported",
+  });
+  const genericNftScan = useNftApprovalDiscovery({
+    owner: owner ?? undefined,
+    chainId: supportedConfig?.chainId,
+    enabled: enabled && selectedOption.kind === "supported",
+  });
+  const ethereumScan = useEthereumApprovalScan({
+    owner: owner ?? undefined,
+    enabled: enabled && selectedOption.kind === "ethereum",
+  });
+  const arbitrumScan = useArbitrumApprovalScan({
+    owner: owner ?? undefined,
+    enabled: enabled && selectedOption.kind === "arbitrum",
+  });
+  const optimismScan = useOptimismApprovalScan({
+    owner: owner ?? undefined,
+    enabled: enabled && selectedOption.kind === "optimism",
+  });
+  const hyperevmScan = useHyperEVMApprovalScan({
+    owner: owner ?? undefined,
+    enabled: enabled && selectedOption.kind === "hyperevm",
+  });
+
+  if (!owner) {
+    return emptySnapshot(selectedOption);
+  }
+
+  if (selectedOption.kind === "supported") {
+    const approvalsStatus = moduleStatusFromDiscovery({
+      status: genericApprovalScan.status,
+      truncated: genericApprovalScan.truncated,
+      liveReadFailureCount: genericApprovalScan.diagnostics.liveReadFailureCount,
+      error: genericApprovalScan.error,
+    });
+    const nftApprovalsStatus = moduleStatusFromDiscovery({
+      status: genericNftScan.status,
+      truncated: genericNftScan.truncated,
+      liveReadFailureCount: genericNftScan.diagnostics.liveReadFailureCount,
+      error: genericNftScan.error,
+    });
+    return {
+      owner,
+      chainId: selectedOption.chainId,
+      chainName: selectedOption.displayName,
+      status: combineScanStatus(approvalsStatus, nftApprovalsStatus),
+      approvals: genericApprovalScan.approvals,
+      nftApprovals: genericNftScan.approvals,
+      approvalsStatus,
+      nftApprovalsStatus,
+      incompleteReasons: [
+        ...genericIncompleteReasons("Token approvals", {
+          truncated: genericApprovalScan.truncated,
+          liveReadFailureCount:
+            genericApprovalScan.diagnostics.liveReadFailureCount,
+          error:
+            genericApprovalScan.diagnostics.discoveryError ??
+            genericApprovalScan.diagnostics.liveReadError,
+        }),
+        ...genericIncompleteReasons("NFT approvals", {
+          truncated: genericNftScan.truncated,
+          liveReadFailureCount: genericNftScan.diagnostics.liveReadFailureCount,
+          error:
+            genericNftScan.diagnostics.discoveryError ??
+            genericNftScan.diagnostics.liveReadError,
+        }),
+      ],
+    };
+  }
+
+  const apiScan =
+    selectedOption.kind === "ethereum"
+      ? ethereumScan
+      : selectedOption.kind === "arbitrum"
+        ? arbitrumScan
+        : selectedOption.kind === "optimism"
+          ? optimismScan
+          : hyperevmScan;
+  const approvalsStatus = moduleStatusFromApi(apiScan.status, apiScan.mapped?.state);
+  const nftApprovalsStatus = approvalsStatus;
+  return {
+    owner,
+    chainId: selectedOption.chainId,
+    chainName: selectedOption.displayName,
+    status: combineScanStatus(approvalsStatus, nftApprovalsStatus),
+    approvals: apiScan.mapped?.approvals.erc20 ?? [],
+    nftApprovals: apiScan.mapped?.approvals.nft ?? [],
+    approvalsStatus,
+    nftApprovalsStatus,
+    incompleteReasons: apiIncompleteReasons(apiScan.response, apiScan.mapped?.warnings),
+  };
+}
+
+function emptySnapshot(option: AddressOnlyScanOption): LifeboatScanSnapshot {
+  return {
+    owner: null,
+    chainId: option.chainId,
+    chainName: option.displayName,
+    status: "idle",
+    approvals: [],
+    nftApprovals: [],
+    approvalsStatus: "not_scanned",
+    nftApprovalsStatus: "not_scanned",
+    incompleteReasons: [],
+  };
+}
+
+function moduleStatusFromDiscovery({
+  status,
+  truncated,
+  liveReadFailureCount,
+  error,
+}: {
+  status: "idle" | "pending" | "success" | "error";
+  truncated: boolean;
+  liveReadFailureCount: number;
+  error: Error | null;
+}): LifeboatModuleStatus {
+  if (status === "idle") return "not_scanned";
+  if (status === "pending") return "scanning";
+  if (status === "error" || error) return "upstream_unavailable";
+  if (truncated || liveReadFailureCount > 0) return "partial";
+  return "complete";
+}
+
+function moduleStatusFromApi(
+  status: "idle" | "pending" | "success" | "error",
+  state:
+    | "active"
+    | "complete-clear"
+    | "verification-incomplete"
+    | "config-missing"
+    | "upstream-failure"
+    | undefined,
+): LifeboatModuleStatus {
+  if (status === "idle") return "not_scanned";
+  if (status === "pending") return "scanning";
+  if (status === "error") return "upstream_unavailable";
+  if (state === "config-missing" || state === "upstream-failure") {
+    return "upstream_unavailable";
+  }
+  if (state === "verification-incomplete") return "partial";
+  return "complete";
+}
+
+function combineScanStatus(
+  approvalsStatus: LifeboatModuleStatus,
+  nftApprovalsStatus: LifeboatModuleStatus,
+): LifeboatScanStatus {
+  if (approvalsStatus === "not_scanned" && nftApprovalsStatus === "not_scanned") {
+    return "idle";
+  }
+  if (approvalsStatus === "scanning" || nftApprovalsStatus === "scanning") {
+    return "scanning";
+  }
+  if (
+    approvalsStatus === "upstream_unavailable" &&
+    nftApprovalsStatus === "upstream_unavailable"
+  ) {
+    return "failed";
+  }
+  if (
+    approvalsStatus === "partial" ||
+    nftApprovalsStatus === "partial" ||
+    approvalsStatus === "upstream_unavailable" ||
+    nftApprovalsStatus === "upstream_unavailable"
+  ) {
+    return "partial";
+  }
+  return "complete";
+}
+
+function genericIncompleteReasons(
+  label: string,
+  input: {
+    truncated: boolean;
+    liveReadFailureCount: number;
+    error: string | null;
+  },
+): string[] {
+  return [
+    input.truncated ? `${label}: discovery was truncated` : null,
+    input.liveReadFailureCount > 0
+      ? `${label}: ${input.liveReadFailureCount} live read check${
+          input.liveReadFailureCount === 1 ? "" : "s"
+        } failed`
+      : null,
+    input.error ? `${label}: ${input.error}` : null,
+  ].filter((reason): reason is string => Boolean(reason));
+}
+
+function apiIncompleteReasons(
+  response: { diagnostics?: { incompleteReasons?: string[] }; missingConfig?: string[] } | null,
+  warnings: readonly string[] | undefined,
+): string[] {
+  return [
+    ...(response?.diagnostics?.incompleteReasons ?? []),
+    ...(response?.missingConfig?.map((item) => `Missing config: ${item}`) ?? []),
+    ...(warnings ?? []),
+  ];
+}
+
+function buildReportFromSnapshot(
+  scan: LifeboatScanSnapshot,
+  owner: Address,
+  generatedAt: string,
+): LifeboatReport {
+  const chain: LifeboatChainReport = {
+    chainId: scan.chainId,
+    chainName: scan.chainName,
+    activeApprovalCount: scan.approvals.length,
+    activeNftApprovalCount: scan.nftApprovals.length,
+    approvalsStatus: scan.approvalsStatus,
+    nftApprovalsStatus: scan.nftApprovalsStatus,
+    sweeperStatus: "planned",
+    hexStatus: "planned",
+    permit2Status: "planned",
+    eip7702Status: "planned",
+    visibleAssetsStatus: "planned",
+    incompleteReasons: [...scan.incompleteReasons],
+  };
+
+  return {
+    owner,
+    chains: [chain],
+    generatedAt,
+    status: scan.status,
+    warnings: [...LIFEBOAT_CRITICAL_WARNINGS],
+    completeness: {
+      approvalsComplete: scan.approvalsStatus === "complete",
+      nftApprovalsComplete: scan.nftApprovalsStatus === "complete",
+      sweeperCheckComplete: false,
+      hexCheckComplete: false,
+      permit2Complete: false,
+      eip7702Complete: false,
+      visibleAssetsComplete: false,
+    },
+  };
+}
+
+function statusLabelForApprovals(
+  status: LifeboatModuleStatus,
+  count: number,
+): string {
+  if (status === "scanning") return "Scanning";
+  if (status === "partial") return "Incomplete verification";
+  if (status === "upstream_unavailable") return "Upstream unavailable";
+  if (status === "complete") {
+    return count > 0 ? "Active risk found" : "No active rows found";
+  }
+  return "Not scanned";
+}
+
+function toneForModule(
+  status: LifeboatModuleStatus,
+  count: number,
+): "neutral" | "success" | "warning" | "danger" {
+  if (status === "complete" && count > 0) return "danger";
+  if (status === "complete") return "success";
+  if (status === "partial" || status === "upstream_unavailable") return "warning";
+  return "neutral";
+}
+
+function RiskBadge({ level }: { level: RiskLevel }) {
+  const styles = {
+    low: "border-pulse-green/40 bg-pulse-green/10 text-pulse-green",
+    medium: "border-amber-400/40 bg-amber-400/10 text-amber-300",
+    high: "border-pulse-red/50 bg-pulse-red/15 text-pulse-red",
+  }[level];
+  return (
+    <span
+      className={`rounded-full border px-2.5 py-1 text-xs font-semibold uppercase tracking-wide ${styles}`}
+    >
+      {level} risk
+    </span>
+  );
+}
+
+function sortScoredApprovals(
+  approvals: readonly ScoredApproval[],
+): ScoredApproval[] {
+  return [...approvals].sort((a, b) => {
+    const risk = riskRank(b.risk.level) - riskRank(a.risk.level);
+    if (risk !== 0) return risk;
+    if (a.unlimited !== b.unlimited) return a.unlimited ? -1 : 1;
+    return a.tokenSymbol.localeCompare(b.tokenSymbol);
+  });
+}
+
+function sortNftApprovals(approvals: readonly NftApproval[]): NftApproval[] {
+  return [...approvals].sort((a, b) => {
+    const risk = riskRank(b.risk.level) - riskRank(a.risk.level);
+    if (risk !== 0) return risk;
+    if (a.kind !== b.kind) return a.kind === "approvalForAll" ? -1 : 1;
+    return (a.collectionName ?? a.collectionAddress).localeCompare(
+      b.collectionName ?? b.collectionAddress,
+    );
+  });
+}
+
+function riskRank(level: RiskLevel): number {
+  if (level === "high") return 3;
+  if (level === "medium") return 2;
+  return 1;
+}
+
+function addressUrlFor(option: AddressOnlyScanOption, address: Address): string {
+  if (option.kind === "hyperevm") {
+    return `${explorerBaseUrlFor(option)}/address/${address}`;
+  }
+  return explorerAddressUrl(option.chainId, address);
+}
+
+function tokenUrlFor(option: AddressOnlyScanOption, address: Address): string {
+  if (option.kind === "hyperevm") {
+    return `${explorerBaseUrlFor(option)}/token/${address}`;
+  }
+  return explorerTokenUrl(option.chainId, address);
+}
+
+function explorerBaseUrlFor(option: AddressOnlyScanOption): string {
+  switch (option.kind) {
+    case "ethereum":
+      return "https://etherscan.io";
+    case "arbitrum":
+      return "https://arbiscan.io";
+    case "optimism":
+      return "https://optimistic.etherscan.io";
+    case "hyperevm":
+      return "https://hyperevmscan.io";
+    case "supported":
+    default:
+      return "https://pulserevoke.com";
+  }
+}
