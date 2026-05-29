@@ -5,9 +5,11 @@ import {
   LIFEBOAT_PENDING_NONCE_DIAGNOSTIC_COPY,
   LIFEBOAT_PLANNED_MODULES,
   LIFEBOAT_SWEEPER_DIAGNOSTIC_COPY,
+  LIFEBOAT_TIMELINE_DIAGNOSTIC_COPY,
 } from "@/lib/lifeboat/copy";
 import { pendingNonceRiskLabel } from "@/lib/lifeboat/pending-nonce";
 import { sweeperRiskLabel } from "@/lib/lifeboat/sweeper";
+import { timelineRiskLabel } from "@/lib/lifeboat/timeline";
 import type { LifeboatReport } from "@/lib/lifeboat/types";
 
 export function buildWalletLifeboatReportMarkdown(
@@ -55,6 +57,10 @@ ${formatSweeperSection(report)}
 ## Pending transaction / nonce activity
 
 ${formatPendingNonceSection(report)}
+
+## Approval-to-drain timeline
+
+${formatTimelineSection(report)}
 
 ## HEX stake status
 
@@ -129,6 +135,42 @@ ${evidence}`;
     .join("\n");
 
   return `${LIFEBOAT_PENDING_NONCE_DIAGNOSTIC_COPY.body}
+
+${rows || "No network scan has been added to this report yet."}`;
+}
+
+function formatTimelineSection(report: LifeboatReport): string {
+  const rows = report.chains
+    .map((chain) => {
+      const evidence =
+        chain.timelineEvidence.length > 0
+          ? chain.timelineEvidence
+              .map(
+                (item) =>
+                  `  - Approval ${item.approvalTxHash} then ${item.movementLabel} ${item.movementTxHash} after ${item.secondsAfterApproval}s${item.movementAmount ? ` (${item.movementAmount})` : ""}`,
+              )
+              .join("\n")
+          : "  - No approval-to-outbound-movement sequence was found in the bounded recent-history window.";
+      const recentEvents =
+        chain.timelineEvents.length > 0
+          ? chain.timelineEvents
+              .slice(0, 5)
+              .map(
+                (item) =>
+                  `  - ${item.occurredAt}: ${item.label} (${item.txHash})`,
+              )
+              .join("\n")
+          : "  - No recent timeline events were available.";
+      return `- ${chain.chainName}: ${formatModuleStatus(
+        chain.timelineStatus,
+      )}; ${timelineRiskLabel(chain.timelineRiskLevel)}
+${evidence}
+  Recent visible events:
+${recentEvents}`;
+    })
+    .join("\n");
+
+  return `${LIFEBOAT_TIMELINE_DIAGNOSTIC_COPY.body}
 
 ${rows || "No network scan has been added to this report yet."}`;
 }

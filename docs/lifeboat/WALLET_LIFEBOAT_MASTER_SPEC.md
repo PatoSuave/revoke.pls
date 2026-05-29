@@ -159,6 +159,21 @@ The long-term module set is:
 - ERC-6909 multi-token approval diagnostics.
 - Known-risk recipient registry with careful, non-defamatory language.
 
+## Active Safe Production Passes
+
+The current Lifeboat branch implements these read-only modules:
+
+- Wallet Lifeboat shell with address input, chain selection, safety copy,
+  approval/NFT scan reuse, and report export.
+- Gas-sweeper pattern diagnostic from bounded recent normal native-transfer
+  history.
+- Pending transaction / nonce diagnostic from latest-vs-pending RPC reads.
+- Approval-to-drain timeline diagnostic from bounded recent explorer history.
+
+These modules do not add custody, server signing, relayers, rescue contracts,
+automatic gas funding, automatic transfer, HEX write execution, private bundle
+execution, or new wallet write paths.
+
 ## UX Requirements
 
 - Keep the first screen usable as a triage tool, not a marketing page.
