@@ -2,6 +2,11 @@ import type { Address } from "viem";
 
 import type { Approval } from "@/lib/approvals";
 import type {
+  AddressPoisoningEvidence,
+  AddressPoisoningHistoryEvent,
+  AddressPoisoningRiskLevel,
+} from "@/lib/lifeboat/address-poisoning";
+import type {
   PendingNonceEvidence,
   PendingNonceRiskLevel,
   PendingNonceAnalysis,
@@ -44,6 +49,7 @@ export interface LifeboatCompleteness {
   sweeperCheckComplete: boolean;
   pendingNonceCheckComplete: boolean;
   timelineCheckComplete: boolean;
+  addressPoisoningCheckComplete: boolean;
   hexCheckComplete: boolean;
   permit2Complete: boolean;
   eip7702Complete: boolean;
@@ -68,6 +74,10 @@ export interface LifeboatChainReport {
   timelineRiskLevel: TimelineRiskLevel;
   timelineEvents: TimelineHistoryEvent[];
   timelineEvidence: TimelineEvidence[];
+  addressPoisoningStatus: LifeboatModuleStatus;
+  addressPoisoningRiskLevel: AddressPoisoningRiskLevel;
+  addressPoisoningEvidence: AddressPoisoningEvidence[];
+  addressPoisoningEvents: AddressPoisoningHistoryEvent[];
   hexStatus: LifeboatModuleStatus;
   permit2Status: LifeboatModuleStatus;
   eip7702Status: LifeboatModuleStatus;

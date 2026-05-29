@@ -39,6 +39,12 @@ export const LIFEBOAT_TIMELINE_DIAGNOSTIC_COPY = {
   body: "This diagnostic builds a bounded timeline from recent public explorer data, looking for approval-like calls followed by outbound native or token movement. It can show visible ordering, but it does not prove causation or identify an attacker.",
 } as const;
 
+export const LIFEBOAT_ADDRESS_POISONING_DIAGNOSTIC_COPY = {
+  title: "Address poisoning signals",
+  activeStatus: "Read-only lookalike heuristic",
+  body: "This diagnostic compares recent inbound counterparties against outbound addresses from the bounded history window. Similar prefix and suffix matches can be address-poisoning context, but they are not proof of attacker control or intent.",
+} as const;
+
 export const LIFEBOAT_PLANNED_MODULES = [
   {
     id: "hex",
