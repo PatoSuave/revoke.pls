@@ -9,6 +9,7 @@ import { useApprovalDiscovery } from "@/hooks/use-approval-discovery";
 import { useArbitrumApprovalScan } from "@/hooks/use-arbitrum-approval-scan";
 import { useEthereumApprovalScan } from "@/hooks/use-ethereum-approval-scan";
 import { useHyperEVMApprovalScan } from "@/hooks/use-hyperevm-approval-scan";
+import { useLifeboatSweeperScan } from "@/hooks/use-lifeboat-sweeper-scan";
 import { useNftApprovalDiscovery } from "@/hooks/use-nft-approval-discovery";
 import { useOptimismApprovalScan } from "@/hooks/use-optimism-approval-scan";
 import {
@@ -18,15 +19,21 @@ import {
   type AddressOnlyScanChainId,
   type AddressOnlyScanOption,
 } from "@/lib/address-only-scan";
-import { explorerAddressUrl, explorerTokenUrl } from "@/lib/explorer";
+import { explorerAddressUrl, explorerTokenUrl, explorerTxUrl } from "@/lib/explorer";
 import { shortenAddress } from "@/lib/format";
 import {
   LIFEBOAT_CRITICAL_WARNINGS,
   LIFEBOAT_NEXT_STEPS,
   LIFEBOAT_NOT_TO_DO,
   LIFEBOAT_PLANNED_MODULES,
+  LIFEBOAT_SWEEPER_DIAGNOSTIC_COPY,
 } from "@/lib/lifeboat/copy";
 import { buildWalletLifeboatReportMarkdown } from "@/lib/lifeboat/report";
+import {
+  sweeperRiskLabel,
+  type LifeboatSweeperApiResponse,
+  type SweeperRiskLevel,
+} from "@/lib/lifeboat/sweeper";
 import type {
   LifeboatChainReport,
   LifeboatModuleStatus,
@@ -51,6 +58,12 @@ export function WalletLifeboat() {
     owner,
     selectedChainId,
     selectedOption,
+  });
+  const sweeper = useLifeboatSweeperScan({
+    owner: owner ?? undefined,
+    chainId: selectedChainId,
+    chainName: selectedOption.displayName,
+    enabled: Boolean(owner),
   });
   const scoredApprovals = useMemo(
     () => sortScoredApprovals(scoreApprovals(scan.approvals)),
@@ -131,7 +144,7 @@ export function WalletLifeboat() {
           <SafetyPanel />
         </div>
 
-        <TriageSummary scan={scan} owner={owner} />
+        <TriageSummary scan={scan} owner={owner} sweeper={sweeper.response} />
 
         <div className="mt-6 grid gap-6 xl:grid-cols-[minmax(0,1fr)_360px]">
           <div className="space-y-6">
@@ -149,12 +162,18 @@ export function WalletLifeboat() {
               option={selectedOption}
               isScanning={scan.status === "scanning"}
             />
+            <SweeperActivitySection
+              sweeper={sweeper.response}
+              owner={owner}
+              option={selectedOption}
+              isScanning={sweeper.status === "pending"}
+            />
             <PlannedDiagnostics />
             <DetectionLimits />
           </div>
           <div className="space-y-6">
-            <CompletenessPanel scan={scan} />
-            <ReportExport scan={scan} owner={owner} />
+            <CompletenessPanel scan={scan} sweeper={sweeper.response} />
+            <ReportExport scan={scan} owner={owner} sweeper={sweeper.response} />
           </div>
         </div>
       </div>
@@ -308,9 +327,11 @@ function SafetyPanel() {
 function TriageSummary({
   scan,
   owner,
+  sweeper,
 }: {
   scan: LifeboatScanSnapshot;
   owner: Address | null;
+  sweeper: LifeboatSweeperApiResponse;
 }) {
   const cards: {
     label: string;
@@ -332,8 +353,8 @@ function TriageSummary({
     },
     {
       label: "Gas-sweeper pattern",
-      value: "Planned diagnostic",
-      tone: "neutral" as const,
+      value: statusLabelForSweeper(sweeper),
+      tone: toneForSweeper(sweeper.riskLevel),
     },
     {
       label: "HEX stake status",
@@ -677,6 +698,176 @@ function StatusPill({
   );
 }
 
+function SweeperActivitySection({
+  sweeper,
+  owner,
+  option,
+  isScanning,
+}: {
+  sweeper: LifeboatSweeperApiResponse;
+  owner: Address | null;
+  option: AddressOnlyScanOption;
+  isScanning: boolean;
+}) {
+  const status = moduleStatusFromSweeperResponse(sweeper);
+  return (
+    <section className="rounded-2xl border border-pulse-border bg-pulse-panel/65 p-5">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-pulse-cyan">
+            {LIFEBOAT_SWEEPER_DIAGNOSTIC_COPY.title}
+          </p>
+          <h2 className="mt-1 text-xl font-semibold text-pulse-text">
+            Recent native-gas movement
+          </h2>
+          <p className="mt-2 text-sm leading-6 text-pulse-muted">
+            {owner
+              ? `${option.displayName} recent normal transactions are checked without connecting or funding the wallet.`
+              : "Paste a wallet address to check for a bounded sweeper-like activity pattern."}
+          </p>
+        </div>
+        <span
+          className={`inline-flex w-fit rounded-full border px-3 py-1 text-xs font-semibold ${toneClassForSweeper(
+            sweeper.riskLevel,
+          )}`}
+        >
+          {isScanning ? "Scanning" : sweeperRiskLabel(sweeper.riskLevel)}
+        </span>
+      </div>
+
+      <p className="mt-4 rounded-xl border border-pulse-border/70 bg-pulse-bg/45 p-3 text-sm leading-6 text-pulse-muted">
+        {LIFEBOAT_SWEEPER_DIAGNOSTIC_COPY.body}
+      </p>
+
+      {owner && (status === "partial" || status === "upstream_unavailable") ? (
+        <div className="mt-4 rounded-xl border border-amber-400/35 bg-amber-400/10 p-3 text-sm leading-6 text-amber-100">
+          This diagnostic is incomplete. Do not treat missing sweeper evidence
+          as proof that the wallet has no sweeper-like activity.
+        </div>
+      ) : null}
+
+      {owner && status === "complete" ? (
+        <SweeperSummary sweeper={sweeper} option={option} />
+      ) : null}
+
+      {owner && sweeper.evidence.length > 0 ? (
+        <div className="mt-4 overflow-hidden rounded-2xl border border-pulse-border bg-pulse-bg/40">
+          <ul>
+            {sweeper.evidence.map((item) => (
+              <li
+                key={`${item.inboundTxHash}-${item.outboundTxHash}`}
+                className="grid gap-4 border-b border-pulse-border/60 p-4 last:border-b-0 lg:grid-cols-[1fr_1fr_0.8fr]"
+              >
+                <div className="min-w-0">
+                  <p className="text-sm font-semibold text-pulse-text">
+                    Gas deposit then outbound transfer
+                  </p>
+                  <p className="mt-1 text-xs text-pulse-muted">
+                    {item.secondsBetween}s between transactions
+                  </p>
+                </div>
+                <div className="min-w-0">
+                  <a
+                    href={txUrlFor(option, item.inboundTxHash)}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="block truncate font-mono text-xs text-pulse-muted underline-offset-2 hover:text-pulse-cyan hover:underline"
+                    title={item.inboundTxHash}
+                  >
+                    In: {shortHash(item.inboundTxHash)}
+                  </a>
+                  <a
+                    href={txUrlFor(option, item.outboundTxHash)}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="mt-1 block truncate font-mono text-xs text-pulse-muted underline-offset-2 hover:text-pulse-cyan hover:underline"
+                    title={item.outboundTxHash}
+                  >
+                    Out: {shortHash(item.outboundTxHash)}
+                  </a>
+                </div>
+                <div className="min-w-0 lg:text-right">
+                  <p className="text-xs font-semibold text-pulse-text">
+                    {item.amountNative}
+                  </p>
+                  <a
+                    href={addressUrlFor(option, item.possibleSweeperAddress)}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="mt-1 block truncate font-mono text-xs text-pulse-muted underline-offset-2 hover:text-pulse-cyan hover:underline"
+                    title={item.possibleSweeperAddress}
+                  >
+                    {shortenAddress(item.possibleSweeperAddress)}
+                  </a>
+                </div>
+              </li>
+            ))}
+          </ul>
+        </div>
+      ) : null}
+
+      {owner && status === "complete" && sweeper.evidence.length === 0 ? (
+        <div className="mt-4 rounded-2xl border border-dashed border-pulse-border/80 bg-pulse-bg/40 p-4 text-sm leading-6 text-pulse-muted">
+          No quick native-gas drain pattern was found in the bounded recent
+          normal-transaction window. This is not proof that the wallet is
+          uncompromised.
+        </div>
+      ) : null}
+    </section>
+  );
+}
+
+function SweeperSummary({
+  sweeper,
+  option,
+}: {
+  sweeper: LifeboatSweeperApiResponse;
+  option: AddressOnlyScanOption;
+}) {
+  return (
+    <dl className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+      <SweeperMetric
+        label="Checked"
+        value={`${sweeper.summary.checkedTransactionCount} tx`}
+      />
+      <SweeperMetric
+        label="Inbound native"
+        value={sweeper.summary.inboundNativeTransferCount.toString()}
+      />
+      <SweeperMetric
+        label="Quick drains"
+        value={sweeper.summary.quickDrainCount.toString()}
+      />
+      <SweeperMetric
+        label="Window"
+        value={`${sweeper.summary.windowSeconds}s`}
+      />
+      {sweeper.errors.length > 0 || sweeper.missingConfig.length > 0 ? (
+        <div className="rounded-xl border border-amber-400/35 bg-amber-400/10 p-3 text-xs leading-5 text-amber-100 sm:col-span-2 lg:col-span-4">
+          {[...sweeper.errors, ...sweeper.missingConfig].join(" ")}
+        </div>
+      ) : null}
+      {sweeper.warnings.length > 0 ? (
+        <div className="rounded-xl border border-pulse-border/70 bg-pulse-bg/45 p-3 text-xs leading-5 text-pulse-muted sm:col-span-2 lg:col-span-4">
+          {sweeper.warnings.join(" ")} Verify activity on {option.displayName}
+          {" "}before taking action.
+        </div>
+      ) : null}
+    </dl>
+  );
+}
+
+function SweeperMetric({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded-xl border border-pulse-border/70 bg-pulse-bg/45 p-3">
+      <dt className="text-xs font-semibold uppercase tracking-[0.12em] text-pulse-muted">
+        {label}
+      </dt>
+      <dd className="mt-1 text-sm font-semibold text-pulse-text">{value}</dd>
+    </div>
+  );
+}
+
 function PlannedDiagnostics() {
   return (
     <section className="rounded-2xl border border-pulse-border bg-pulse-panel/65 p-5">
@@ -750,7 +941,13 @@ function Checklist({
   );
 }
 
-function CompletenessPanel({ scan }: { scan: LifeboatScanSnapshot }) {
+function CompletenessPanel({
+  scan,
+  sweeper,
+}: {
+  scan: LifeboatScanSnapshot;
+  sweeper: LifeboatSweeperApiResponse;
+}) {
   return (
     <section className="rounded-2xl border border-pulse-border bg-pulse-panel/65 p-5">
       <p className="text-xs font-semibold uppercase tracking-[0.18em] text-pulse-cyan">
@@ -771,7 +968,10 @@ function CompletenessPanel({ scan }: { scan: LifeboatScanSnapshot }) {
             scan.nftApprovals.length,
           )}
         />
-        <CompletenessRow label="Gas-sweeper pattern" value="Planned diagnostic" />
+        <CompletenessRow
+          label="Gas-sweeper pattern"
+          value={statusLabelForSweeper(sweeper)}
+        />
         <CompletenessRow label="HEX stake status" value="Planned diagnostic" />
         <CompletenessRow
           label="Permit2 / signatures"
@@ -808,9 +1008,11 @@ function CompletenessRow({ label, value }: { label: string; value: string }) {
 function ReportExport({
   scan,
   owner,
+  sweeper,
 }: {
   scan: LifeboatScanSnapshot;
   owner: Address | null;
+  sweeper: LifeboatSweeperApiResponse;
 }) {
   const [copyState, setCopyState] = useState<"idle" | "copied" | "failed">(
     "idle",
@@ -820,7 +1022,7 @@ function ReportExport({
   function createMarkdown() {
     if (!owner) return "";
     return buildWalletLifeboatReportMarkdown(
-      buildReportFromSnapshot(scan, owner, new Date().toISOString()),
+      buildReportFromSnapshot(scan, owner, new Date().toISOString(), sweeper),
     );
   }
 
@@ -1117,6 +1319,7 @@ function buildReportFromSnapshot(
   scan: LifeboatScanSnapshot,
   owner: Address,
   generatedAt: string,
+  sweeper: LifeboatSweeperApiResponse,
 ): LifeboatReport {
   const chain: LifeboatChainReport = {
     chainId: scan.chainId,
@@ -1125,7 +1328,9 @@ function buildReportFromSnapshot(
     activeNftApprovalCount: scan.nftApprovals.length,
     approvalsStatus: scan.approvalsStatus,
     nftApprovalsStatus: scan.nftApprovalsStatus,
-    sweeperStatus: "planned",
+    sweeperStatus: moduleStatusFromSweeperResponse(sweeper),
+    sweeperRiskLevel: sweeper.riskLevel,
+    sweeperEvidence: sweeper.evidence,
     hexStatus: "planned",
     permit2Status: "planned",
     eip7702Status: "planned",
@@ -1142,13 +1347,29 @@ function buildReportFromSnapshot(
     completeness: {
       approvalsComplete: scan.approvalsStatus === "complete",
       nftApprovalsComplete: scan.nftApprovalsStatus === "complete",
-      sweeperCheckComplete: false,
+      sweeperCheckComplete: sweeper.status === "complete",
       hexCheckComplete: false,
       permit2Complete: false,
       eip7702Complete: false,
       visibleAssetsComplete: false,
     },
   };
+}
+
+function moduleStatusFromSweeperResponse(
+  sweeper: LifeboatSweeperApiResponse,
+): LifeboatModuleStatus {
+  if (sweeper.status === "idle") return "not_scanned";
+  if (sweeper.status === "scanning") return "scanning";
+  if (sweeper.status === "complete") return "complete";
+  if (sweeper.status === "unsupported") return "unsupported";
+  if (
+    sweeper.status === "config-missing" ||
+    sweeper.status === "upstream-failure"
+  ) {
+    return "upstream_unavailable";
+  }
+  return "partial";
 }
 
 function statusLabelForApprovals(
@@ -1164,6 +1385,11 @@ function statusLabelForApprovals(
   return "Not scanned";
 }
 
+function statusLabelForSweeper(sweeper: LifeboatSweeperApiResponse): string {
+  if (sweeper.status === "scanning") return "Scanning";
+  return sweeperRiskLabel(sweeper.riskLevel);
+}
+
 function toneForModule(
   status: LifeboatModuleStatus,
   count: number,
@@ -1172,6 +1398,32 @@ function toneForModule(
   if (status === "complete") return "success";
   if (status === "partial" || status === "upstream_unavailable") return "warning";
   return "neutral";
+}
+
+function toneForSweeper(
+  riskLevel: SweeperRiskLevel,
+): "neutral" | "success" | "warning" | "danger" {
+  if (riskLevel === "strong") return "danger";
+  if (riskLevel === "possible") return "warning";
+  if (riskLevel === "none_detected") return "success";
+  if (
+    riskLevel === "insufficient_data" ||
+    riskLevel === "upstream_unavailable" ||
+    riskLevel === "unsupported"
+  ) {
+    return "warning";
+  }
+  return "neutral";
+}
+
+function toneClassForSweeper(riskLevel: SweeperRiskLevel): string {
+  const tone = toneForSweeper(riskLevel);
+  return {
+    neutral: "border-pulse-border bg-pulse-bg/50 text-pulse-muted",
+    success: "border-pulse-green/35 bg-pulse-green/10 text-pulse-green",
+    warning: "border-amber-400/35 bg-amber-400/10 text-amber-200",
+    danger: "border-pulse-red/40 bg-pulse-red/10 text-pulse-red",
+  }[tone];
 }
 
 function RiskBadge({ level }: { level: RiskLevel }) {
@@ -1229,6 +1481,17 @@ function tokenUrlFor(option: AddressOnlyScanOption, address: Address): string {
     return `${explorerBaseUrlFor(option)}/token/${address}`;
   }
   return explorerTokenUrl(option.chainId, address);
+}
+
+function txUrlFor(option: AddressOnlyScanOption, hash: string): string {
+  if (option.kind === "hyperevm") {
+    return `${explorerBaseUrlFor(option)}/tx/${hash}`;
+  }
+  return explorerTxUrl(option.chainId, hash);
+}
+
+function shortHash(hash: string): string {
+  return hash.length > 14 ? `${hash.slice(0, 8)}...${hash.slice(-6)}` : hash;
 }
 
 function explorerBaseUrlFor(option: AddressOnlyScanOption): string {

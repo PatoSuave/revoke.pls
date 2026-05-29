@@ -28,7 +28,19 @@ const REPORT: LifeboatReport = {
       activeNftApprovalCount: 1,
       approvalsStatus: "complete",
       nftApprovalsStatus: "partial",
-      sweeperStatus: "planned",
+      sweeperStatus: "complete",
+      sweeperRiskLevel: "possible",
+      sweeperEvidence: [
+        {
+          inboundTxHash: "0xin",
+          outboundTxHash: "0xout",
+          inboundAt: "2026-05-29T18:00:00.000Z",
+          outboundAt: "2026-05-29T18:01:00.000Z",
+          secondsBetween: 60,
+          amountNative: "1 PLS",
+          possibleSweeperAddress: "0x2222222222222222222222222222222222222222",
+        },
+      ],
       hexStatus: "planned",
       permit2Status: "planned",
       eip7702Status: "planned",
@@ -49,6 +61,9 @@ describe("Wallet Lifeboat report", () => {
     expect(markdown).toContain("Never enter your seed phrase or private key");
     expect(markdown).toContain("Do not add gas");
     expect(markdown).toContain("Planned diagnostic");
+    expect(markdown).toContain("Possible pattern");
+    expect(markdown).toContain("0xin");
+    expect(markdown).toContain("0xout");
     expect(markdown).toContain("1 NFT live read failed");
   });
 
