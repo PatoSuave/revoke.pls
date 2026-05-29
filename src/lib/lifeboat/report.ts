@@ -1,4 +1,5 @@
 import {
+  LIFEBOAT_ADDRESS_POISONING_DIAGNOSTIC_COPY,
   LIFEBOAT_CRITICAL_WARNINGS,
   LIFEBOAT_NEXT_STEPS,
   LIFEBOAT_NOT_TO_DO,
@@ -7,6 +8,7 @@ import {
   LIFEBOAT_SWEEPER_DIAGNOSTIC_COPY,
   LIFEBOAT_TIMELINE_DIAGNOSTIC_COPY,
 } from "@/lib/lifeboat/copy";
+import { addressPoisoningRiskLabel } from "@/lib/lifeboat/address-poisoning";
 import { pendingNonceRiskLabel } from "@/lib/lifeboat/pending-nonce";
 import { sweeperRiskLabel } from "@/lib/lifeboat/sweeper";
 import { timelineRiskLabel } from "@/lib/lifeboat/timeline";
@@ -61,6 +63,10 @@ ${formatPendingNonceSection(report)}
 ## Approval-to-drain timeline
 
 ${formatTimelineSection(report)}
+
+## Address poisoning signals
+
+${formatAddressPoisoningSection(report)}
 
 ## HEX stake status
 
@@ -171,6 +177,30 @@ ${recentEvents}`;
     .join("\n");
 
   return `${LIFEBOAT_TIMELINE_DIAGNOSTIC_COPY.body}
+
+${rows || "No network scan has been added to this report yet."}`;
+}
+
+function formatAddressPoisoningSection(report: LifeboatReport): string {
+  const rows = report.chains
+    .map((chain) => {
+      const evidence =
+        chain.addressPoisoningEvidence.length > 0
+          ? chain.addressPoisoningEvidence
+              .map(
+                (item) =>
+                  `  - Possible lookalike ${item.lookalikeAddress} resembles ${item.referenceAddress} in ${item.txHash} (${item.amount}; prefix ${item.comparedPrefix}, suffix ${item.comparedSuffix})`,
+              )
+              .join("\n")
+          : "  - No inbound lookalike signal was found in the bounded recent-history window.";
+      return `- ${chain.chainName}: ${formatModuleStatus(
+        chain.addressPoisoningStatus,
+      )}; ${addressPoisoningRiskLabel(chain.addressPoisoningRiskLevel)}
+${evidence}`;
+    })
+    .join("\n");
+
+  return `${LIFEBOAT_ADDRESS_POISONING_DIAGNOSTIC_COPY.body}
 
 ${rows || "No network scan has been added to this report yet."}`;
 }

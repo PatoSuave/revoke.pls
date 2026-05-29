@@ -9,6 +9,7 @@ import { useApprovalDiscovery } from "@/hooks/use-approval-discovery";
 import { useArbitrumApprovalScan } from "@/hooks/use-arbitrum-approval-scan";
 import { useEthereumApprovalScan } from "@/hooks/use-ethereum-approval-scan";
 import { useHyperEVMApprovalScan } from "@/hooks/use-hyperevm-approval-scan";
+import { useLifeboatAddressPoisoningScan } from "@/hooks/use-lifeboat-address-poisoning-scan";
 import { useLifeboatPendingNonceScan } from "@/hooks/use-lifeboat-pending-nonce-scan";
 import { useLifeboatSweeperScan } from "@/hooks/use-lifeboat-sweeper-scan";
 import { useLifeboatTimelineScan } from "@/hooks/use-lifeboat-timeline-scan";
@@ -24,6 +25,7 @@ import {
 import { explorerAddressUrl, explorerTokenUrl, explorerTxUrl } from "@/lib/explorer";
 import { shortenAddress } from "@/lib/format";
 import {
+  LIFEBOAT_ADDRESS_POISONING_DIAGNOSTIC_COPY,
   LIFEBOAT_CRITICAL_WARNINGS,
   LIFEBOAT_NEXT_STEPS,
   LIFEBOAT_NOT_TO_DO,
@@ -32,6 +34,11 @@ import {
   LIFEBOAT_SWEEPER_DIAGNOSTIC_COPY,
   LIFEBOAT_TIMELINE_DIAGNOSTIC_COPY,
 } from "@/lib/lifeboat/copy";
+import {
+  addressPoisoningRiskLabel,
+  type AddressPoisoningRiskLevel,
+  type LifeboatAddressPoisoningApiResponse,
+} from "@/lib/lifeboat/address-poisoning";
 import {
   pendingNonceRiskLabel,
   type LifeboatPendingNonceApiResponse,
@@ -86,6 +93,12 @@ export function WalletLifeboat() {
     enabled: Boolean(owner),
   });
   const timeline = useLifeboatTimelineScan({
+    owner: owner ?? undefined,
+    chainId: selectedChainId,
+    chainName: selectedOption.displayName,
+    enabled: Boolean(owner),
+  });
+  const addressPoisoning = useLifeboatAddressPoisoningScan({
     owner: owner ?? undefined,
     chainId: selectedChainId,
     chainName: selectedOption.displayName,
@@ -175,6 +188,7 @@ export function WalletLifeboat() {
           sweeper={sweeper.response}
           pendingNonce={pendingNonce.response}
           timeline={timeline.response}
+          addressPoisoning={addressPoisoning.response}
         />
 
         <div className="mt-6 grid gap-6 xl:grid-cols-[minmax(0,1fr)_360px]">
@@ -211,6 +225,12 @@ export function WalletLifeboat() {
               option={selectedOption}
               isScanning={timeline.status === "pending"}
             />
+            <AddressPoisoningSection
+              addressPoisoning={addressPoisoning.response}
+              owner={owner}
+              option={selectedOption}
+              isScanning={addressPoisoning.status === "pending"}
+            />
             <PlannedDiagnostics />
             <DetectionLimits />
           </div>
@@ -220,6 +240,7 @@ export function WalletLifeboat() {
               sweeper={sweeper.response}
               pendingNonce={pendingNonce.response}
               timeline={timeline.response}
+              addressPoisoning={addressPoisoning.response}
             />
             <ReportExport
               scan={scan}
@@ -227,6 +248,7 @@ export function WalletLifeboat() {
               sweeper={sweeper.response}
               pendingNonce={pendingNonce.response}
               timeline={timeline.response}
+              addressPoisoning={addressPoisoning.response}
             />
           </div>
         </div>
@@ -384,12 +406,14 @@ function TriageSummary({
   sweeper,
   pendingNonce,
   timeline,
+  addressPoisoning,
 }: {
   scan: LifeboatScanSnapshot;
   owner: Address | null;
   sweeper: LifeboatSweeperApiResponse;
   pendingNonce: LifeboatPendingNonceApiResponse;
   timeline: LifeboatTimelineApiResponse;
+  addressPoisoning: LifeboatAddressPoisoningApiResponse;
 }) {
   const cards: {
     label: string;
@@ -423,6 +447,11 @@ function TriageSummary({
       label: "Approval-to-drain timeline",
       value: statusLabelForTimeline(timeline),
       tone: toneForTimeline(timeline.riskLevel),
+    },
+    {
+      label: "Address poisoning signals",
+      value: statusLabelForAddressPoisoning(addressPoisoning),
+      tone: toneForAddressPoisoning(addressPoisoning.riskLevel),
     },
     {
       label: "HEX stake status",
@@ -1251,6 +1280,177 @@ function TimelineSummary({
   );
 }
 
+function AddressPoisoningSection({
+  addressPoisoning,
+  owner,
+  option,
+  isScanning,
+}: {
+  addressPoisoning: LifeboatAddressPoisoningApiResponse;
+  owner: Address | null;
+  option: AddressOnlyScanOption;
+  isScanning: boolean;
+}) {
+  const status = moduleStatusFromAddressPoisoningResponse(addressPoisoning);
+  return (
+    <section className="rounded-2xl border border-pulse-border bg-pulse-panel/65 p-5">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-pulse-cyan">
+            {LIFEBOAT_ADDRESS_POISONING_DIAGNOSTIC_COPY.title}
+          </p>
+          <h2 className="mt-1 text-xl font-semibold text-pulse-text">
+            Recent lookalike addresses
+          </h2>
+          <p className="mt-2 text-sm leading-6 text-pulse-muted">
+            {owner
+              ? `${option.displayName} recent inbound transfers are compared against outbound addresses without changing contacts or preparing transactions.`
+              : "Paste a wallet address to check for possible lookalike-address history poisoning."}
+          </p>
+        </div>
+        <span
+          className={`inline-flex w-fit rounded-full border px-3 py-1 text-xs font-semibold ${toneClassForAddressPoisoning(
+            addressPoisoning.riskLevel,
+          )}`}
+        >
+          {isScanning
+            ? "Scanning"
+            : addressPoisoningRiskLabel(addressPoisoning.riskLevel)}
+        </span>
+      </div>
+
+      <p className="mt-4 rounded-xl border border-pulse-border/70 bg-pulse-bg/45 p-3 text-sm leading-6 text-pulse-muted">
+        {LIFEBOAT_ADDRESS_POISONING_DIAGNOSTIC_COPY.body}
+      </p>
+
+      {owner && (status === "partial" || status === "upstream_unavailable") ? (
+        <div className="mt-4 rounded-xl border border-amber-400/35 bg-amber-400/10 p-3 text-sm leading-6 text-amber-100">
+          This diagnostic is incomplete. Do not treat missing lookalike signals
+          as proof that the wallet has no address-poisoning risk.
+        </div>
+      ) : null}
+
+      {owner && (status === "complete" || status === "partial") ? (
+        <AddressPoisoningSummary
+          addressPoisoning={addressPoisoning}
+          option={option}
+        />
+      ) : null}
+
+      {owner && addressPoisoning.evidence.length > 0 ? (
+        <div className="mt-4 overflow-hidden rounded-2xl border border-pulse-border bg-pulse-bg/40">
+          <ul>
+            {addressPoisoning.evidence.map((item) => (
+              <li
+                key={`${item.txHash}-${item.lookalikeAddress}-${item.referenceAddress}`}
+                className="grid gap-4 border-b border-pulse-border/60 p-4 last:border-b-0 lg:grid-cols-[1fr_1fr_0.8fr]"
+              >
+                <div className="min-w-0">
+                  <p className="text-sm font-semibold text-pulse-text">
+                    Possible lookalike transfer
+                  </p>
+                  <p className="mt-1 text-xs text-pulse-muted">
+                    Shares {item.sharedPrefixLength} prefix and{" "}
+                    {item.sharedSuffixLength} suffix characters.
+                  </p>
+                </div>
+                <div className="min-w-0">
+                  <a
+                    href={addressUrlFor(option, item.lookalikeAddress)}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="block truncate font-mono text-xs text-pulse-muted underline-offset-2 hover:text-pulse-cyan hover:underline"
+                    title={item.lookalikeAddress}
+                  >
+                    Lookalike: {shortenAddress(item.lookalikeAddress)}
+                  </a>
+                  <a
+                    href={addressUrlFor(option, item.referenceAddress)}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="mt-1 block truncate font-mono text-xs text-pulse-muted underline-offset-2 hover:text-pulse-cyan hover:underline"
+                    title={item.referenceAddress}
+                  >
+                    Compared with: {shortenAddress(item.referenceAddress)}
+                  </a>
+                  <p className="mt-1 text-[11px] text-pulse-muted">
+                    Prefix {item.comparedPrefix}; suffix {item.comparedSuffix}
+                  </p>
+                </div>
+                <div className="min-w-0 lg:text-right">
+                  <p className="text-xs font-semibold text-pulse-text">
+                    {item.amount}
+                  </p>
+                  <a
+                    href={item.explorerUrl ?? txUrlFor(option, item.txHash)}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="mt-1 block truncate font-mono text-xs text-pulse-muted underline-offset-2 hover:text-pulse-cyan hover:underline"
+                    title={item.txHash}
+                  >
+                    {shortHash(item.txHash)}
+                  </a>
+                </div>
+              </li>
+            ))}
+          </ul>
+        </div>
+      ) : null}
+
+      {owner && status === "complete" && addressPoisoning.evidence.length === 0 ? (
+        <div className="mt-4 rounded-2xl border border-dashed border-pulse-border/80 bg-pulse-bg/40 p-4 text-sm leading-6 text-pulse-muted">
+          No inbound lookalike signal was found in the bounded recent-history
+          window. This is not proof that the wallet is free of phishing or
+          address-poisoning attempts.
+        </div>
+      ) : null}
+    </section>
+  );
+}
+
+function AddressPoisoningSummary({
+  addressPoisoning,
+  option,
+}: {
+  addressPoisoning: LifeboatAddressPoisoningApiResponse;
+  option: AddressOnlyScanOption;
+}) {
+  return (
+    <dl className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+      <SweeperMetric
+        label="Checked"
+        value={`${addressPoisoning.summary.checkedEventCount} events`}
+      />
+      <SweeperMetric
+        label="Inbound"
+        value={addressPoisoning.summary.inboundEventCount.toString()}
+      />
+      <SweeperMetric
+        label="References"
+        value={addressPoisoning.summary.outboundReferenceCount.toString()}
+      />
+      <SweeperMetric
+        label="Lookalikes"
+        value={addressPoisoning.summary.possiblePoisoningCount.toString()}
+      />
+      {addressPoisoning.errors.length > 0 ||
+      addressPoisoning.missingConfig.length > 0 ? (
+        <div className="rounded-xl border border-amber-400/35 bg-amber-400/10 p-3 text-xs leading-5 text-amber-100 sm:col-span-2 lg:col-span-4">
+          {[...addressPoisoning.errors, ...addressPoisoning.missingConfig].join(
+            " ",
+          )}
+        </div>
+      ) : null}
+      {addressPoisoning.warnings.length > 0 ? (
+        <div className="rounded-xl border border-pulse-border/70 bg-pulse-bg/45 p-3 text-xs leading-5 text-pulse-muted sm:col-span-2 lg:col-span-4">
+          {addressPoisoning.warnings.join(" ")} Verify copied addresses on{" "}
+          {option.displayName} before taking action.
+        </div>
+      ) : null}
+    </dl>
+  );
+}
+
 function PlannedDiagnostics() {
   return (
     <section className="rounded-2xl border border-pulse-border bg-pulse-panel/65 p-5">
@@ -1329,11 +1529,13 @@ function CompletenessPanel({
   sweeper,
   pendingNonce,
   timeline,
+  addressPoisoning,
 }: {
   scan: LifeboatScanSnapshot;
   sweeper: LifeboatSweeperApiResponse;
   pendingNonce: LifeboatPendingNonceApiResponse;
   timeline: LifeboatTimelineApiResponse;
+  addressPoisoning: LifeboatAddressPoisoningApiResponse;
 }) {
   return (
     <section className="rounded-2xl border border-pulse-border bg-pulse-panel/65 p-5">
@@ -1366,6 +1568,10 @@ function CompletenessPanel({
         <CompletenessRow
           label="Approval-to-drain timeline"
           value={statusLabelForTimeline(timeline)}
+        />
+        <CompletenessRow
+          label="Address poisoning signals"
+          value={statusLabelForAddressPoisoning(addressPoisoning)}
         />
         <CompletenessRow label="HEX stake status" value="Planned diagnostic" />
         <CompletenessRow
@@ -1406,12 +1612,14 @@ function ReportExport({
   sweeper,
   pendingNonce,
   timeline,
+  addressPoisoning,
 }: {
   scan: LifeboatScanSnapshot;
   owner: Address | null;
   sweeper: LifeboatSweeperApiResponse;
   pendingNonce: LifeboatPendingNonceApiResponse;
   timeline: LifeboatTimelineApiResponse;
+  addressPoisoning: LifeboatAddressPoisoningApiResponse;
 }) {
   const [copyState, setCopyState] = useState<"idle" | "copied" | "failed">(
     "idle",
@@ -1428,6 +1636,7 @@ function ReportExport({
         sweeper,
         pendingNonce,
         timeline,
+        addressPoisoning,
       ),
     );
   }
@@ -1728,6 +1937,7 @@ function buildReportFromSnapshot(
   sweeper: LifeboatSweeperApiResponse,
   pendingNonce: LifeboatPendingNonceApiResponse,
   timeline: LifeboatTimelineApiResponse,
+  addressPoisoning: LifeboatAddressPoisoningApiResponse,
 ): LifeboatReport {
   const chain: LifeboatChainReport = {
     chainId: scan.chainId,
@@ -1747,6 +1957,11 @@ function buildReportFromSnapshot(
     timelineRiskLevel: timeline.riskLevel,
     timelineEvents: timeline.events,
     timelineEvidence: timeline.evidence,
+    addressPoisoningStatus:
+      moduleStatusFromAddressPoisoningResponse(addressPoisoning),
+    addressPoisoningRiskLevel: addressPoisoning.riskLevel,
+    addressPoisoningEvidence: addressPoisoning.evidence,
+    addressPoisoningEvents: addressPoisoning.events,
     hexStatus: "planned",
     permit2Status: "planned",
     eip7702Status: "planned",
@@ -1766,6 +1981,7 @@ function buildReportFromSnapshot(
       sweeperCheckComplete: sweeper.status === "complete",
       pendingNonceCheckComplete: pendingNonce.status === "complete",
       timelineCheckComplete: timeline.status === "complete",
+      addressPoisoningCheckComplete: addressPoisoning.status === "complete",
       hexCheckComplete: false,
       permit2Complete: false,
       eip7702Complete: false,
@@ -1823,6 +2039,23 @@ function moduleStatusFromTimelineResponse(
   return "partial";
 }
 
+function moduleStatusFromAddressPoisoningResponse(
+  addressPoisoning: LifeboatAddressPoisoningApiResponse,
+): LifeboatModuleStatus {
+  if (addressPoisoning.status === "idle") return "not_scanned";
+  if (addressPoisoning.status === "scanning") return "scanning";
+  if (addressPoisoning.status === "complete") return "complete";
+  if (addressPoisoning.status === "partial") return "partial";
+  if (addressPoisoning.status === "unsupported") return "unsupported";
+  if (
+    addressPoisoning.status === "config-missing" ||
+    addressPoisoning.status === "upstream-failure"
+  ) {
+    return "upstream_unavailable";
+  }
+  return "partial";
+}
+
 function statusLabelForApprovals(
   status: LifeboatModuleStatus,
   count: number,
@@ -1851,6 +2084,13 @@ function statusLabelForPendingNonce(
 function statusLabelForTimeline(timeline: LifeboatTimelineApiResponse): string {
   if (timeline.status === "scanning") return "Scanning";
   return timelineRiskLabel(timeline.riskLevel);
+}
+
+function statusLabelForAddressPoisoning(
+  addressPoisoning: LifeboatAddressPoisoningApiResponse,
+): string {
+  if (addressPoisoning.status === "scanning") return "Scanning";
+  return addressPoisoningRiskLabel(addressPoisoning.riskLevel);
 }
 
 function toneForModule(
@@ -1910,6 +2150,22 @@ function toneForTimeline(
   return "neutral";
 }
 
+function toneForAddressPoisoning(
+  riskLevel: AddressPoisoningRiskLevel,
+): "neutral" | "success" | "warning" | "danger" {
+  if (riskLevel === "elevated") return "danger";
+  if (riskLevel === "possible") return "warning";
+  if (riskLevel === "none_detected") return "success";
+  if (
+    riskLevel === "insufficient_data" ||
+    riskLevel === "upstream_unavailable" ||
+    riskLevel === "unsupported"
+  ) {
+    return "warning";
+  }
+  return "neutral";
+}
+
 function toneClassForSweeper(riskLevel: SweeperRiskLevel): string {
   const tone = toneForSweeper(riskLevel);
   return {
@@ -1932,6 +2188,18 @@ function toneClassForPendingNonce(riskLevel: PendingNonceRiskLevel): string {
 
 function toneClassForTimeline(riskLevel: TimelineRiskLevel): string {
   const tone = toneForTimeline(riskLevel);
+  return {
+    neutral: "border-pulse-border bg-pulse-bg/50 text-pulse-muted",
+    success: "border-pulse-green/35 bg-pulse-green/10 text-pulse-green",
+    warning: "border-amber-400/35 bg-amber-400/10 text-amber-200",
+    danger: "border-pulse-red/40 bg-pulse-red/10 text-pulse-red",
+  }[tone];
+}
+
+function toneClassForAddressPoisoning(
+  riskLevel: AddressPoisoningRiskLevel,
+): string {
+  const tone = toneForAddressPoisoning(riskLevel);
   return {
     neutral: "border-pulse-border bg-pulse-bg/50 text-pulse-muted",
     success: "border-pulse-green/35 bg-pulse-green/10 text-pulse-green",

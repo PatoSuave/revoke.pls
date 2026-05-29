@@ -169,6 +169,21 @@ transfers, report export.
 
 Validation commands: Full validation stack plus focused poisoning tests.
 
+Current safe production pass:
+
+- Adds a read-only `/api/lifeboat/address-poisoning` diagnostic.
+- Uses bounded recent normal-transfer and token-transfer history only; callers
+  cannot choose page, offset, block range, module, action, or sort.
+- Compares inbound counterparties against outbound reference addresses from the
+  same bounded scan window.
+- Flags similar prefix and suffix pairs as possible address-poisoning context,
+  not proof of attacker control, scam activity, or intent.
+- Treats missing outbound references, sparse history, upstream failures, and
+  partial data as incomplete or insufficient data instead of all-clear.
+- Adds the diagnostic to the Wallet Lifeboat UI and exportable report without
+  adding address blocking, contact mutation, transaction preparation, or any
+  wallet write path.
+
 ## Phase 5: Spender Contract Risk Scanner
 
 Purpose: Score approval spenders using public contract signals and curated

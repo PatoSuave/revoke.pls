@@ -17,6 +17,7 @@ const REPORT: LifeboatReport = {
     sweeperCheckComplete: false,
     pendingNonceCheckComplete: true,
     timelineCheckComplete: true,
+    addressPoisoningCheckComplete: true,
     hexCheckComplete: false,
     permit2Complete: false,
     eip7702Complete: false,
@@ -96,6 +97,25 @@ const REPORT: LifeboatReport = {
           movementExplorerUrl: "https://scan.pulsechain.com/tx/0xmove",
         },
       ],
+      addressPoisoningStatus: "complete",
+      addressPoisoningRiskLevel: "possible",
+      addressPoisoningEvidence: [
+        {
+          txHash: "0xpoison",
+          occurredAt: "2026-05-29T18:05:00.000Z",
+          lookalikeAddress: "0xabcdef99999999999999999999999999deadbeef",
+          referenceAddress: "0xabcdef12345678900000000000000000deadbeef",
+          comparedPrefix: "0xabcdef",
+          comparedSuffix: "deadbeef",
+          sharedPrefixLength: 6,
+          sharedSuffixLength: 8,
+          assetType: "token",
+          amount: "0 TEST",
+          tokenSymbol: "TEST",
+          explorerUrl: "https://scan.pulsechain.com/tx/0xpoison",
+        },
+      ],
+      addressPoisoningEvents: [],
       hexStatus: "planned",
       permit2Status: "planned",
       eip7702Status: "planned",
@@ -124,6 +144,9 @@ describe("Wallet Lifeboat report", () => {
     expect(markdown).toContain("Approval-to-drain timeline");
     expect(markdown).toContain("0xapprove");
     expect(markdown).toContain("0xmove");
+    expect(markdown).toContain("Address poisoning signals");
+    expect(markdown).toContain("0xpoison");
+    expect(markdown).toContain("Possible lookalike signal");
     expect(markdown).toContain("1 NFT live read failed");
   });
 
