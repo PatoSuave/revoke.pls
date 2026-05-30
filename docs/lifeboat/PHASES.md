@@ -489,6 +489,21 @@ partial data handling.
 
 Validation commands: Full validation stack plus ERC-4337 tests.
 
+Current safe production pass:
+
+- Adds a read-only `/api/lifeboat/erc4337` diagnostic.
+- Checks bounded recent EntryPoint `UserOperationEvent` logs for EntryPoint
+  v0.6, v0.7, and v0.8 addresses on explicitly configured networks.
+- Reads latest account code only as context so contract-account wallets are not
+  misrepresented as inactive when no recent UserOperation is found.
+- Shows recent UserOperation, paymaster, failure, checked EntryPoint count, and
+  checked block-window context in the Wallet Lifeboat UI and exportable report.
+- Keeps missing RPC config, unsupported networks, RPC failures, log gaps, and
+  partial reads as incomplete or limited states instead of all-clear.
+- Does not call bundlers, request UserOperation signatures, use paymasters,
+  clear session keys, submit transactions, relay transactions, prepare writes,
+  or add any wallet write path.
+
 ## Phase 13: ERC-6909 Multi-Token Approval Scanner
 
 Purpose: Prepare for ERC-6909-style multi-token approval exposure.

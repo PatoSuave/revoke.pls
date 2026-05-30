@@ -69,6 +69,12 @@ export const LIFEBOAT_SMART_WALLET_DIAGNOSTIC_COPY = {
   body: "This diagnostic reads latest account code and Safe-compatible owner, threshold, module, and nonce view methods where available. It does not change owners, disable modules, submit Safe transactions, use relayers, or claim that missing warnings prove the wallet is safe.",
 } as const;
 
+export const LIFEBOAT_ERC4337_DIAGNOSTIC_COPY = {
+  title: "ERC-4337 / session-key signals",
+  activeStatus: "Read-only EntryPoint event check",
+  body: "This diagnostic checks a bounded recent window of EntryPoint UserOperationEvent logs for the scanned address. It does not contact bundlers, request UserOperation signatures, use paymasters, submit transactions, or clear session keys.",
+} as const;
+
 export const LIFEBOAT_DUST_TRAP_DIAGNOSTIC_COPY = {
   title: "Token/NFT dust traps",
   activeStatus: "Read-only metadata safety check",

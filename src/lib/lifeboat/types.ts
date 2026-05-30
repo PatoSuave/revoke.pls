@@ -20,6 +20,11 @@ import type {
   SmartWalletRiskLevel,
 } from "@/lib/lifeboat/smart-wallet";
 import type {
+  Erc4337Evidence,
+  Erc4337RiskLevel,
+  Erc4337UserOperationEvent,
+} from "@/lib/lifeboat/erc4337";
+import type {
   DustTrapEvidence,
   DustTrapRiskLevel,
   DustTrapTransfer,
@@ -88,6 +93,7 @@ export interface LifeboatCompleteness {
   permit2Complete: boolean;
   eip7702Complete: boolean;
   smartWalletComplete: boolean;
+  erc4337Complete: boolean;
   dustTrapCheckComplete: boolean;
   visibleAssetsComplete: boolean;
 }
@@ -135,6 +141,10 @@ export interface LifeboatChainReport {
   smartWalletStatus: LifeboatModuleStatus;
   smartWalletRiskLevel: SmartWalletRiskLevel;
   smartWalletEvidence: SmartWalletEvidence[];
+  erc4337Status: LifeboatModuleStatus;
+  erc4337RiskLevel: Erc4337RiskLevel;
+  erc4337Evidence: Erc4337Evidence[];
+  erc4337Events: Erc4337UserOperationEvent[];
   dustTrapStatus: LifeboatModuleStatus;
   dustTrapRiskLevel: DustTrapRiskLevel;
   dustTrapEvidence: DustTrapEvidence[];
