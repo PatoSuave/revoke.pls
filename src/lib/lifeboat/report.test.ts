@@ -19,7 +19,7 @@ const REPORT: LifeboatReport = {
     timelineCheckComplete: true,
     addressPoisoningCheckComplete: true,
     spenderRiskCheckComplete: true,
-    hexCheckComplete: false,
+    hexStakeCheckComplete: true,
     permit2Complete: true,
     eip7702Complete: true,
     dustTrapCheckComplete: true,
@@ -145,7 +145,27 @@ const REPORT: LifeboatReport = {
           warnings: [],
         },
       ],
-      hexStatus: "planned",
+      hexStatus: "complete",
+      hexStakeRiskLevel: "possible",
+      hexStakeEvidence: [
+        {
+          stakeId: "123",
+          status: "mature",
+          title: "Mature stake at end day",
+          description:
+            "This visible open stake appears mature or recently past its end day. Lifeboat does not run or prepare End Stake.",
+          riskLevel: "possible",
+          stakedHex: "100 HEX",
+          lockedDay: 1000,
+          stakedDays: 100,
+          endDay: 1100,
+          daysRemaining: 0,
+          daysLate: 0,
+          explorerUrl:
+            "https://scan.pulsechain.com/token/0x2b591e99afE9f32eAA6214f7B7629768c40Eeb39",
+        },
+      ],
+      hexStakeRows: [],
       permit2Status: "complete",
       permit2RiskLevel: "possible",
       permit2Evidence: [
@@ -222,7 +242,6 @@ describe("Wallet Lifeboat report", () => {
     expect(markdown).toContain("PulseChain");
     expect(markdown).toContain("Never enter your seed phrase or private key");
     expect(markdown).toContain("Do not add gas");
-    expect(markdown).toContain("Planned diagnostic");
     expect(markdown).toContain("Possible pattern");
     expect(markdown).toContain("0xin");
     expect(markdown).toContain("0xout");
@@ -237,6 +256,9 @@ describe("Wallet Lifeboat report", () => {
     expect(markdown).toContain("Spender contract risk");
     expect(markdown).toContain("Verified source unavailable");
     expect(markdown).toContain("0x5555555555555555555555555555555555555555");
+    expect(markdown).toContain("HEX stake status");
+    expect(markdown).toContain("Mature stake context");
+    expect(markdown).toContain("stake 123");
     expect(markdown).toContain("Permit2 exposure");
     expect(markdown).toContain("Active Permit2 exposure");
     expect(markdown).toContain("0x7777777777777777777777777777777777777777");

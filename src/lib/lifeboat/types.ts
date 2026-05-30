@@ -21,6 +21,11 @@ import type {
   DustTrapTransfer,
 } from "@/lib/lifeboat/dust-trap";
 import type {
+  HexStakeEvidence,
+  HexStakeRiskLevel,
+  HexStakeRow,
+} from "@/lib/lifeboat/hex-stake";
+import type {
   Permit2ExposureEvidence,
   Permit2ExposureRiskLevel,
 } from "@/lib/lifeboat/permit2-exposure";
@@ -69,7 +74,7 @@ export interface LifeboatCompleteness {
   timelineCheckComplete: boolean;
   addressPoisoningCheckComplete: boolean;
   spenderRiskCheckComplete: boolean;
-  hexCheckComplete: boolean;
+  hexStakeCheckComplete: boolean;
   permit2Complete: boolean;
   eip7702Complete: boolean;
   dustTrapCheckComplete: boolean;
@@ -103,6 +108,9 @@ export interface LifeboatChainReport {
   spenderRiskEvidence: SpenderRiskEvidence[];
   spenderRiskSpenders: SpenderContractSignal[];
   hexStatus: LifeboatModuleStatus;
+  hexStakeRiskLevel: HexStakeRiskLevel;
+  hexStakeEvidence: HexStakeEvidence[];
+  hexStakeRows: HexStakeRow[];
   permit2Status: LifeboatModuleStatus;
   permit2RiskLevel: Permit2ExposureRiskLevel;
   permit2Evidence: Permit2ExposureEvidence[];

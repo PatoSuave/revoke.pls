@@ -370,6 +370,23 @@ read state, report export.
 
 Validation commands: Full validation stack plus HEX read tests.
 
+Current safe production pass:
+
+- Adds a read-only `/api/lifeboat/hex-stake` diagnostic.
+- Supports PulseChain HEX reads only in this first pass; other networks remain
+  unsupported rather than being shown as clear.
+- Reads `currentDay`, `stakeCount`, and a capped set of visible open
+  `stakeLists` rows from the HEX contract using bounded `eth_call` requests.
+- Classifies visible open stake rows as active, mature, late, or possible
+  clean-wallet Good Accounting candidate context.
+- Treats truncated stake lists, RPC failures, and unsupported networks as
+  incomplete states instead of all-clear.
+- Explains that ended or historical HEX stakes require event indexing and are
+  not fully inventoried in this pass.
+- Adds the diagnostic to the Wallet Lifeboat UI and exportable report without
+  preparing or submitting End Stake, Emergency End Stake, Good Accounting,
+  payout claims, rescue automation, relays, server signing, or wallet writes.
+
 ## Phase 10: Good Accounting Assist
 
 Purpose: Explain when Good Accounting may be relevant and how a clean wallet

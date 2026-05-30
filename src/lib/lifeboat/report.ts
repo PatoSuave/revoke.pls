@@ -3,11 +3,11 @@ import {
   LIFEBOAT_CRITICAL_WARNINGS,
   LIFEBOAT_DUST_TRAP_DIAGNOSTIC_COPY,
   LIFEBOAT_EIP7702_DIAGNOSTIC_COPY,
+  LIFEBOAT_HEX_STAKE_DIAGNOSTIC_COPY,
   LIFEBOAT_NEXT_STEPS,
   LIFEBOAT_NOT_TO_DO,
   LIFEBOAT_PENDING_NONCE_DIAGNOSTIC_COPY,
   LIFEBOAT_PERMIT2_DIAGNOSTIC_COPY,
-  LIFEBOAT_PLANNED_MODULES,
   LIFEBOAT_SPENDER_RISK_DIAGNOSTIC_COPY,
   LIFEBOAT_SWEEPER_DIAGNOSTIC_COPY,
   LIFEBOAT_TIMELINE_DIAGNOSTIC_COPY,
@@ -15,6 +15,7 @@ import {
 import { addressPoisoningRiskLabel } from "@/lib/lifeboat/address-poisoning";
 import { dustTrapRiskLabel } from "@/lib/lifeboat/dust-trap";
 import { eip7702RiskLabel } from "@/lib/lifeboat/eip7702";
+import { hexStakeRiskLabel } from "@/lib/lifeboat/hex-stake";
 import { pendingNonceRiskLabel } from "@/lib/lifeboat/pending-nonce";
 import { permit2ExposureRiskLabel } from "@/lib/lifeboat/permit2-exposure";
 import { spenderRiskLabel } from "@/lib/lifeboat/spender-risk";
@@ -82,7 +83,7 @@ ${formatSpenderRiskSection(report)}
 
 ## HEX stake status
 
-${plannedDiagnosticCopy("hex")}
+${formatHexStakeSection(report)}
 
 ## Permit2 exposure
 
@@ -104,13 +105,6 @@ ${LIFEBOAT_NOT_TO_DO.map((item) => `- ${item}`).join("\n")}
 
 ${LIFEBOAT_NEXT_STEPS.map((item) => `- ${item}`).join("\n")}
 `;
-}
-
-function plannedDiagnosticCopy(id: string): string {
-  const body =
-    LIFEBOAT_PLANNED_MODULES.find((module) => module.id === id)?.body ??
-    "This diagnostic is planned and not active in this version.";
-  return `Status: Planned diagnostic. ${body}`;
 }
 
 function formatSweeperSection(report: LifeboatReport): string {
@@ -268,6 +262,45 @@ ${spenderRows}`;
   return `${LIFEBOAT_SPENDER_RISK_DIAGNOSTIC_COPY.body}
 
 ${rows || "No network scan has been added to this report yet."}`;
+}
+
+function formatHexStakeSection(report: LifeboatReport): string {
+  const rows = report.chains
+    .map((chain) => {
+      const evidence =
+        chain.hexStakeEvidence.length > 0
+          ? chain.hexStakeEvidence
+              .map(
+                (item) =>
+                  `  - ${item.title}: stake ${item.stakeId}; ${item.stakedHex}; locked day ${item.lockedDay}; end day ${item.endDay}; days late ${item.daysLate}. ${item.description}`,
+              )
+              .join("\n")
+          : formatEmptyHexStakeEvidence(chain.hexStatus);
+      return `- ${chain.chainName}: ${formatModuleStatus(
+        chain.hexStatus,
+      )}; ${hexStakeRiskLabel(chain.hexStakeRiskLevel)}
+${evidence}`;
+    })
+    .join("\n");
+
+  return `${LIFEBOAT_HEX_STAKE_DIAGNOSTIC_COPY.body}
+
+${rows || "No network scan has been added to this report yet."}`;
+}
+
+function formatEmptyHexStakeEvidence(
+  status: LifeboatReport["chains"][number]["hexStatus"],
+): string {
+  if (status === "complete") {
+    return "  - No visible open HEX stake rows were found by the completed read. This is not a historical ended-stake inventory.";
+  }
+  if (status === "unsupported") {
+    return "  - This network is not marked supported for the HEX stake diagnostic.";
+  }
+  if (status === "upstream_unavailable" || status === "partial") {
+    return "  - The HEX stake check did not fully complete. Do not treat this as proof that no active, mature, late, or historical stakes exist.";
+  }
+  return "  - HEX stake status was not checked.";
 }
 
 function formatPermit2ExposureSection(report: LifeboatReport): string {
