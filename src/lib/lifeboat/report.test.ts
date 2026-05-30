@@ -20,7 +20,7 @@ const REPORT: LifeboatReport = {
     addressPoisoningCheckComplete: true,
     spenderRiskCheckComplete: true,
     hexCheckComplete: false,
-    permit2Complete: false,
+    permit2Complete: true,
     eip7702Complete: false,
     visibleAssetsComplete: false,
   },
@@ -145,7 +145,27 @@ const REPORT: LifeboatReport = {
         },
       ],
       hexStatus: "planned",
-      permit2Status: "planned",
+      permit2Status: "complete",
+      permit2RiskLevel: "possible",
+      permit2Evidence: [
+        {
+          tokenAddress: "0x6666666666666666666666666666666666666666",
+          tokenSymbol: "PRM",
+          tokenName: "Permit Token",
+          spenderAddress: "0x7777777777777777777777777777777777777777",
+          spenderLabel: "Permit spender",
+          approvalContractAddress:
+            "0x000000000022D473030F116dDEE9F6B43aC78BA3",
+          formattedAllowance: "5 PRM",
+          unlimited: false,
+          expiration: {
+            timestamp: 1_800_000_000,
+            iso: "2027-01-15T08:00:00.000Z",
+            status: "active",
+          },
+          nonce: 3,
+        },
+      ],
       eip7702Status: "planned",
       visibleAssetsStatus: "planned",
       incompleteReasons: ["1 NFT live read failed"],
@@ -178,6 +198,9 @@ describe("Wallet Lifeboat report", () => {
     expect(markdown).toContain("Spender contract risk");
     expect(markdown).toContain("Verified source unavailable");
     expect(markdown).toContain("0x5555555555555555555555555555555555555555");
+    expect(markdown).toContain("Permit2 exposure");
+    expect(markdown).toContain("Active Permit2 exposure");
+    expect(markdown).toContain("0x7777777777777777777777777777777777777777");
     expect(markdown).toContain("1 NFT live read failed");
   });
 

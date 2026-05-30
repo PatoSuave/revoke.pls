@@ -236,15 +236,15 @@ Purpose: Show Permit2 delegated allowance exposure for supported chains.
 Data sources: Permit2 contract reads, Permit2 approval events, existing token
 metadata and explorer links.
 
-User-facing output: Active Permit2 token/spender allowances, expiration context,
-and revoke routing through existing controlled Permit2 revoke behavior if
-already supported for that chain.
+User-facing output: Active Permit2 token/spender allowances and expiration
+context, derived from the existing live-read approval scan.
 
 Safety constraints: Preserve owner, chain, live-verification, preflight, and
 post-receipt gates.
 
 What must not be implemented: Signature requests for inspection, server-side
-Permit2 writes, or Permit2 revoke on unsupported chains.
+Permit2 writes, Lifeboat-specific Permit2 revoke buttons, or Permit2 revoke on
+unsupported chains.
 
 Acceptance criteria: Permit2 rows are live-read before display as active, chain
 support is explicit, unsupported chains are not shown as clear.
@@ -253,6 +253,16 @@ Suggested tests: Allowance reads, expiration states, unsupported chain state,
 wallet mismatch disablement.
 
 Validation commands: Full validation stack plus Permit2 tests.
+
+Current safe production pass:
+
+- Reuses existing live-read Permit2 approval rows from the approval scanner.
+- Adds read-only Permit2 exposure summary, evidence rows, and report export
+  coverage.
+- Keeps missing Permit2 rows separate from an all-clear state when the approval
+  scan is incomplete.
+- Does not add signature requests, write routing, server-side signing, relayers,
+  or new wallet write paths.
 
 ## Phase 7: EIP-7702 Delegation Scanner
 
