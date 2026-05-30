@@ -22,6 +22,7 @@ const REPORT: LifeboatReport = {
     hexCheckComplete: false,
     permit2Complete: true,
     eip7702Complete: true,
+    dustTrapCheckComplete: true,
     visibleAssetsComplete: false,
   },
   chains: [
@@ -183,6 +184,28 @@ const REPORT: LifeboatReport = {
             "The account code matches the EIP-7702 delegation designator format.",
         },
       ],
+      dustTrapStatus: "complete",
+      dustTrapRiskLevel: "elevated",
+      dustTrapEvidence: [
+        {
+          assetType: "token",
+          contractAddress: "0x9999999999999999999999999999999999999999",
+          tokenId: null,
+          txHash: "0xdust",
+          occurredAt: "2026-05-29T18:06:00.000Z",
+          amount: "0.000001 CLM",
+          displayName: "Claim [link removed]",
+          displaySymbol: "CLM",
+          title: "Metadata contained URL-like text",
+          description:
+            "URL-like text was stripped from this asset metadata. Treat token-provided links as phishing risk and verify only through trusted sources.",
+          riskLevel: "elevated",
+          tokenExplorerUrl:
+            "https://scan.pulsechain.com/token/0x9999999999999999999999999999999999999999",
+          txExplorerUrl: "https://scan.pulsechain.com/tx/0xdust",
+        },
+      ],
+      dustTrapTransfers: [],
       visibleAssetsStatus: "planned",
       incompleteReasons: ["1 NFT live read failed"],
     },
@@ -220,6 +243,10 @@ describe("Wallet Lifeboat report", () => {
     expect(markdown).toContain("EIP-7702 delegation");
     expect(markdown).toContain("Active EIP-7702 delegation");
     expect(markdown).toContain("0x8888888888888888888888888888888888888888");
+    expect(markdown).toContain("Token/NFT dust traps");
+    expect(markdown).toContain("Multiple dust/bait signals");
+    expect(markdown).toContain("Claim [link removed]");
+    expect(markdown).toContain("0xdust");
     expect(markdown).toContain("1 NFT live read failed");
   });
 

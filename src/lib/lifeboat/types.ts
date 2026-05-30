@@ -16,6 +16,11 @@ import type {
   Eip7702RiskLevel,
 } from "@/lib/lifeboat/eip7702";
 import type {
+  DustTrapEvidence,
+  DustTrapRiskLevel,
+  DustTrapTransfer,
+} from "@/lib/lifeboat/dust-trap";
+import type {
   Permit2ExposureEvidence,
   Permit2ExposureRiskLevel,
 } from "@/lib/lifeboat/permit2-exposure";
@@ -67,6 +72,7 @@ export interface LifeboatCompleteness {
   hexCheckComplete: boolean;
   permit2Complete: boolean;
   eip7702Complete: boolean;
+  dustTrapCheckComplete: boolean;
   visibleAssetsComplete: boolean;
 }
 
@@ -103,6 +109,10 @@ export interface LifeboatChainReport {
   eip7702Status: LifeboatModuleStatus;
   eip7702RiskLevel: Eip7702RiskLevel;
   eip7702Evidence: Eip7702Evidence[];
+  dustTrapStatus: LifeboatModuleStatus;
+  dustTrapRiskLevel: DustTrapRiskLevel;
+  dustTrapEvidence: DustTrapEvidence[];
+  dustTrapTransfers: DustTrapTransfer[];
   visibleAssetsStatus: LifeboatModuleStatus;
   incompleteReasons: string[];
 }

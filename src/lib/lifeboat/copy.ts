@@ -63,6 +63,12 @@ export const LIFEBOAT_EIP7702_DIAGNOSTIC_COPY = {
   body: "This diagnostic reads latest account code on supported networks and checks for the EIP-7702 delegation designator. It does not request signatures, clear delegation, repair accounts, or claim that no delegation means no compromise.",
 } as const;
 
+export const LIFEBOAT_DUST_TRAP_DIAGNOSTIC_COPY = {
+  title: "Token/NFT dust traps",
+  activeStatus: "Read-only metadata safety check",
+  body: "This diagnostic reviews bounded inbound token and NFT transfer history for dust or bait signals. It strips URL-like metadata, never fetches arbitrary token-provided websites, and treats suspicious metadata as context rather than proof that an asset is malicious.",
+} as const;
+
 export const LIFEBOAT_PLANNED_MODULES = [
   {
     id: "hex",

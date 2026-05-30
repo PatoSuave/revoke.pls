@@ -178,6 +178,9 @@ The current Lifeboat branch implements these read-only modules:
   were already live-read by the existing approval scanner.
 - EIP-7702 delegation diagnostic from latest account-code reads on explicitly
   supported networks.
+- Token/NFT dust-trap diagnostic from bounded inbound token and NFT transfer
+  history with sanitized metadata, URL-like text stripping, and no arbitrary
+  token-provided website fetches.
 
 These modules do not add custody, server signing, relayers, rescue contracts,
 automatic gas funding, automatic transfer, HEX write execution, private bundle

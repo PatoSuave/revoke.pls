@@ -324,6 +324,28 @@ unsupported chain state.
 
 Validation commands: Full validation stack plus metadata safety tests.
 
+Current safe production pass:
+
+- Adds a read-only `/api/lifeboat/dust-trap` diagnostic.
+- Uses bounded inbound token-transfer and NFT-transfer history only; callers
+  cannot choose page, offset, block range, calldata, transaction hash, metadata
+  URI, token URL, or website URL.
+- Sanitizes explorer-provided token and NFT metadata before display by
+  stripping HTML-like text and URL-like text.
+- Flags URL-like metadata, claim/reward wording, tiny inbound token amounts,
+  repeated inbound assets from one sender, and unsolicited inbound NFTs as
+  review signals.
+- Treats reviewed token registry matches as context that suppresses generic
+  dust warnings for known assets.
+- Labels findings as possible dust or bait context, not proof that an asset is
+  malicious or that a sender is an attacker.
+- Keeps partial explorer data, unsupported networks, missing config, and
+  upstream failures as incomplete states instead of all-clear.
+- Adds the diagnostic to the Wallet Lifeboat UI and exportable report without
+  fetching arbitrary token-provided websites, rendering untrusted HTML, hiding
+  assets, burning assets, transferring assets, approving assets, or adding any
+  wallet write path.
+
 ## Phase 9: HEX Lifeboat Read-Only Stake Diagnostics
 
 Purpose: Show read-only HEX stake status for the pasted address.

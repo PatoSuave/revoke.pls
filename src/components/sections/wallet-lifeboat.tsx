@@ -10,6 +10,7 @@ import { useArbitrumApprovalScan } from "@/hooks/use-arbitrum-approval-scan";
 import { useEthereumApprovalScan } from "@/hooks/use-ethereum-approval-scan";
 import { useHyperEVMApprovalScan } from "@/hooks/use-hyperevm-approval-scan";
 import { useLifeboatAddressPoisoningScan } from "@/hooks/use-lifeboat-address-poisoning-scan";
+import { useLifeboatDustTrapScan } from "@/hooks/use-lifeboat-dust-trap-scan";
 import { useLifeboatEip7702Scan } from "@/hooks/use-lifeboat-eip7702-scan";
 import { useLifeboatPendingNonceScan } from "@/hooks/use-lifeboat-pending-nonce-scan";
 import { useLifeboatSpenderRiskScan } from "@/hooks/use-lifeboat-spender-risk-scan";
@@ -29,6 +30,7 @@ import { shortenAddress } from "@/lib/format";
 import {
   LIFEBOAT_ADDRESS_POISONING_DIAGNOSTIC_COPY,
   LIFEBOAT_CRITICAL_WARNINGS,
+  LIFEBOAT_DUST_TRAP_DIAGNOSTIC_COPY,
   LIFEBOAT_EIP7702_DIAGNOSTIC_COPY,
   LIFEBOAT_NEXT_STEPS,
   LIFEBOAT_NOT_TO_DO,
@@ -44,6 +46,11 @@ import {
   type AddressPoisoningRiskLevel,
   type LifeboatAddressPoisoningApiResponse,
 } from "@/lib/lifeboat/address-poisoning";
+import {
+  dustTrapRiskLabel,
+  type DustTrapRiskLevel,
+  type LifeboatDustTrapApiResponse,
+} from "@/lib/lifeboat/dust-trap";
 import {
   eip7702RiskLabel,
   type Eip7702RiskLevel,
@@ -126,6 +133,12 @@ export function WalletLifeboat() {
     enabled: Boolean(owner),
   });
   const eip7702 = useLifeboatEip7702Scan({
+    owner: owner ?? undefined,
+    chainId: selectedChainId,
+    chainName: selectedOption.displayName,
+    enabled: Boolean(owner),
+  });
+  const dustTrap = useLifeboatDustTrapScan({
     owner: owner ?? undefined,
     chainId: selectedChainId,
     chainName: selectedOption.displayName,
@@ -237,6 +250,7 @@ export function WalletLifeboat() {
           spenderRisk={spenderRisk.response}
           permit2Exposure={permit2Exposure}
           eip7702={eip7702.response}
+          dustTrap={dustTrap.response}
         />
 
         <div className="mt-6 grid gap-6 xl:grid-cols-[minmax(0,1fr)_360px]">
@@ -298,6 +312,12 @@ export function WalletLifeboat() {
               option={selectedOption}
               isScanning={eip7702.status === "pending"}
             />
+            <DustTrapSection
+              dustTrap={dustTrap.response}
+              owner={owner}
+              option={selectedOption}
+              isScanning={dustTrap.status === "pending"}
+            />
             <PlannedDiagnostics />
             <DetectionLimits />
           </div>
@@ -312,6 +332,7 @@ export function WalletLifeboat() {
               permit2Exposure={permit2Exposure}
               permit2Status={moduleStatusFromPermit2Exposure(scan.approvalsStatus)}
               eip7702={eip7702.response}
+              dustTrap={dustTrap.response}
             />
             <ReportExport
               scan={scan}
@@ -323,6 +344,7 @@ export function WalletLifeboat() {
               spenderRisk={spenderRisk.response}
               permit2Exposure={permit2Exposure}
               eip7702={eip7702.response}
+              dustTrap={dustTrap.response}
             />
           </div>
         </div>
@@ -484,6 +506,7 @@ function TriageSummary({
   spenderRisk,
   permit2Exposure,
   eip7702,
+  dustTrap,
 }: {
   scan: LifeboatScanSnapshot;
   owner: Address | null;
@@ -494,6 +517,7 @@ function TriageSummary({
   spenderRisk: LifeboatSpenderRiskApiResponse;
   permit2Exposure: Permit2ExposureAnalysis;
   eip7702: LifeboatEip7702ApiResponse;
+  dustTrap: LifeboatDustTrapApiResponse;
 }) {
   const cards: {
     label: string;
@@ -552,6 +576,11 @@ function TriageSummary({
       label: "EIP-7702 delegation",
       value: statusLabelForEip7702(eip7702),
       tone: toneForEip7702(eip7702.riskLevel),
+    },
+    {
+      label: "Token/NFT dust traps",
+      value: statusLabelForDustTrap(dustTrap),
+      tone: toneForDustTrap(dustTrap.riskLevel),
     },
     {
       label: "Report completeness",
@@ -2040,6 +2069,158 @@ function Eip7702Summary({
   );
 }
 
+function DustTrapSection({
+  dustTrap,
+  owner,
+  option,
+  isScanning,
+}: {
+  dustTrap: LifeboatDustTrapApiResponse;
+  owner: Address | null;
+  option: AddressOnlyScanOption;
+  isScanning: boolean;
+}) {
+  const status = moduleStatusFromDustTrapResponse(dustTrap);
+  return (
+    <section className="rounded-2xl border border-pulse-border bg-pulse-panel/65 p-5">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-pulse-cyan">
+            {LIFEBOAT_DUST_TRAP_DIAGNOSTIC_COPY.title}
+          </p>
+          <h2 className="mt-1 text-xl font-semibold text-pulse-text">
+            Suspicious inbound assets
+          </h2>
+          <p className="mt-2 text-sm leading-6 text-pulse-muted">
+            {owner
+              ? `${option.displayName} inbound token and NFT history is checked for dust, bait wording, and URL-like metadata.`
+              : "Paste a wallet address to check bounded inbound token and NFT history for dust or bait signals."}
+          </p>
+        </div>
+        <span
+          className={`inline-flex w-fit rounded-full border px-3 py-1 text-xs font-semibold ${toneClassForDustTrap(
+            dustTrap.riskLevel,
+          )}`}
+        >
+          {isScanning ? "Scanning" : dustTrapRiskLabel(dustTrap.riskLevel)}
+        </span>
+      </div>
+
+      <p className="mt-4 rounded-xl border border-pulse-border/70 bg-pulse-bg/45 p-3 text-sm leading-6 text-pulse-muted">
+        {LIFEBOAT_DUST_TRAP_DIAGNOSTIC_COPY.body}
+      </p>
+
+      {owner && status === "unsupported" ? (
+        <div className="mt-4 rounded-xl border border-amber-400/35 bg-amber-400/10 p-3 text-sm leading-6 text-amber-100">
+          This network is not marked supported for the dust-trap diagnostic yet.
+        </div>
+      ) : null}
+
+      {owner && (status === "partial" || status === "upstream_unavailable") ? (
+        <div className="mt-4 rounded-xl border border-amber-400/35 bg-amber-400/10 p-3 text-sm leading-6 text-amber-100">
+          This diagnostic is incomplete. Do not treat missing dust or bait
+          evidence as proof that the wallet has no suspicious inbound assets.
+        </div>
+      ) : null}
+
+      {owner && (status === "complete" || status === "partial") ? (
+        <DustTrapSummary dustTrap={dustTrap} />
+      ) : null}
+
+      {owner && dustTrap.evidence.length > 0 ? (
+        <div className="mt-4 overflow-hidden rounded-2xl border border-pulse-border bg-pulse-bg/40">
+          <ul>
+            {dustTrap.evidence.map((item) => (
+              <li
+                key={`${item.txHash}-${item.contractAddress}-${item.title}-${item.tokenId ?? "none"}`}
+                className="grid gap-4 border-b border-pulse-border/60 p-4 last:border-b-0 lg:grid-cols-[1fr_1fr_0.8fr]"
+              >
+                <div className="min-w-0">
+                  <p className="text-sm font-semibold text-pulse-text">
+                    {item.title}
+                  </p>
+                  <p className="mt-1 truncate text-xs text-pulse-muted">
+                    {item.displayName}
+                    {item.displaySymbol ? ` (${item.displaySymbol})` : ""}
+                  </p>
+                </div>
+                <div className="min-w-0">
+                  <a
+                    href={item.tokenExplorerUrl ?? tokenUrlFor(option, item.contractAddress)}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="block truncate font-mono text-xs text-pulse-muted underline-offset-2 hover:text-pulse-cyan hover:underline"
+                    title={item.contractAddress}
+                  >
+                    {shortenAddress(item.contractAddress)}
+                  </a>
+                  <a
+                    href={item.txExplorerUrl ?? txUrlFor(option, item.txHash)}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="mt-1 block truncate font-mono text-xs text-pulse-muted underline-offset-2 hover:text-pulse-cyan hover:underline"
+                    title={item.txHash}
+                  >
+                    Tx {shortHash(item.txHash)}
+                  </a>
+                </div>
+                <div className="min-w-0 text-xs leading-5 text-pulse-muted lg:text-right">
+                  <p>{item.amount}</p>
+                  <p>{item.assetType === "nft" ? "NFT" : "Token"}</p>
+                  <p className="uppercase tracking-wide">{item.riskLevel} signal</p>
+                </div>
+                <p className="text-xs leading-5 text-pulse-muted lg:col-span-3">
+                  {item.description}
+                </p>
+              </li>
+            ))}
+          </ul>
+        </div>
+      ) : owner && status === "complete" ? (
+        <div className="mt-4 rounded-2xl border border-dashed border-pulse-border/80 bg-pulse-bg/40 p-4 text-sm leading-6 text-pulse-muted">
+          No dust/bait signal was found in the bounded inbound token/NFT
+          history. Do not treat this as a full asset inventory.
+        </div>
+      ) : null}
+    </section>
+  );
+}
+
+function DustTrapSummary({
+  dustTrap,
+}: {
+  dustTrap: LifeboatDustTrapApiResponse;
+}) {
+  return (
+    <dl className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+      <SweeperMetric
+        label="Checked"
+        value={`${dustTrap.summary.checkedTransferCount} transfers`}
+      />
+      <SweeperMetric
+        label="Tokens"
+        value={dustTrap.summary.inboundTokenCount.toString()}
+      />
+      <SweeperMetric
+        label="NFTs"
+        value={dustTrap.summary.inboundNftCount.toString()}
+      />
+      <SweeperMetric
+        label="URL metadata"
+        value={dustTrap.summary.urlMetadataCount.toString()}
+      />
+      {[...dustTrap.warnings, ...dustTrap.errors, ...dustTrap.missingConfig].length >
+      0 ? (
+        <div className="rounded-xl border border-pulse-border/70 bg-pulse-bg/45 p-3 text-xs leading-5 text-pulse-muted sm:col-span-2 lg:col-span-4">
+          {[...dustTrap.warnings, ...dustTrap.errors, ...dustTrap.missingConfig].join(
+            " ",
+          )}
+        </div>
+      ) : null}
+    </dl>
+  );
+}
+
 function PlannedDiagnostics() {
   return (
     <section className="rounded-2xl border border-pulse-border bg-pulse-panel/65 p-5">
@@ -2123,6 +2304,7 @@ function CompletenessPanel({
   permit2Exposure,
   permit2Status,
   eip7702,
+  dustTrap,
 }: {
   scan: LifeboatScanSnapshot;
   sweeper: LifeboatSweeperApiResponse;
@@ -2133,6 +2315,7 @@ function CompletenessPanel({
   permit2Exposure: Permit2ExposureAnalysis;
   permit2Status: LifeboatModuleStatus;
   eip7702: LifeboatEip7702ApiResponse;
+  dustTrap: LifeboatDustTrapApiResponse;
 }) {
   return (
     <section className="rounded-2xl border border-pulse-border bg-pulse-panel/65 p-5">
@@ -2183,6 +2366,10 @@ function CompletenessPanel({
           label="EIP-7702 delegation"
           value={statusLabelForEip7702(eip7702)}
         />
+        <CompletenessRow
+          label="Token/NFT dust traps"
+          value={statusLabelForDustTrap(dustTrap)}
+        />
         <CompletenessRow label="Visible assets" value="Planned diagnostic" />
       </dl>
       {scan.incompleteReasons.length > 0 ? (
@@ -2220,6 +2407,7 @@ function ReportExport({
   spenderRisk,
   permit2Exposure,
   eip7702,
+  dustTrap,
 }: {
   scan: LifeboatScanSnapshot;
   owner: Address | null;
@@ -2230,6 +2418,7 @@ function ReportExport({
   spenderRisk: LifeboatSpenderRiskApiResponse;
   permit2Exposure: Permit2ExposureAnalysis;
   eip7702: LifeboatEip7702ApiResponse;
+  dustTrap: LifeboatDustTrapApiResponse;
 }) {
   const [copyState, setCopyState] = useState<"idle" | "copied" | "failed">(
     "idle",
@@ -2250,6 +2439,7 @@ function ReportExport({
         spenderRisk,
         permit2Exposure,
         eip7702,
+        dustTrap,
       ),
     );
   }
@@ -2554,6 +2744,7 @@ function buildReportFromSnapshot(
   spenderRisk: LifeboatSpenderRiskApiResponse,
   permit2Exposure: Permit2ExposureAnalysis,
   eip7702: LifeboatEip7702ApiResponse,
+  dustTrap: LifeboatDustTrapApiResponse,
 ): LifeboatReport {
   const chain: LifeboatChainReport = {
     chainId: scan.chainId,
@@ -2589,6 +2780,10 @@ function buildReportFromSnapshot(
     eip7702Status: moduleStatusFromEip7702Response(eip7702),
     eip7702RiskLevel: eip7702.riskLevel,
     eip7702Evidence: eip7702.evidence,
+    dustTrapStatus: moduleStatusFromDustTrapResponse(dustTrap),
+    dustTrapRiskLevel: dustTrap.riskLevel,
+    dustTrapEvidence: dustTrap.evidence,
+    dustTrapTransfers: dustTrap.transfers,
     visibleAssetsStatus: "planned",
     incompleteReasons: [...scan.incompleteReasons],
   };
@@ -2610,6 +2805,7 @@ function buildReportFromSnapshot(
       hexCheckComplete: false,
       permit2Complete: scan.approvalsStatus === "complete",
       eip7702Complete: eip7702.status === "complete",
+      dustTrapCheckComplete: dustTrap.status === "complete",
       visibleAssetsComplete: false,
     },
   };
@@ -2711,6 +2907,23 @@ function moduleStatusFromEip7702Response(
   return "partial";
 }
 
+function moduleStatusFromDustTrapResponse(
+  dustTrap: LifeboatDustTrapApiResponse,
+): LifeboatModuleStatus {
+  if (dustTrap.status === "idle") return "not_scanned";
+  if (dustTrap.status === "scanning") return "scanning";
+  if (dustTrap.status === "complete") return "complete";
+  if (dustTrap.status === "partial") return "partial";
+  if (dustTrap.status === "unsupported") return "unsupported";
+  if (
+    dustTrap.status === "config-missing" ||
+    dustTrap.status === "upstream-failure"
+  ) {
+    return "upstream_unavailable";
+  }
+  return "partial";
+}
+
 function moduleStatusFromPermit2Exposure(
   approvalStatus: LifeboatModuleStatus,
 ): LifeboatModuleStatus {
@@ -2769,6 +2982,11 @@ function statusLabelForSpenderRisk(
 function statusLabelForEip7702(eip7702: LifeboatEip7702ApiResponse): string {
   if (eip7702.status === "scanning") return "Scanning";
   return eip7702RiskLabel(eip7702.riskLevel);
+}
+
+function statusLabelForDustTrap(dustTrap: LifeboatDustTrapApiResponse): string {
+  if (dustTrap.status === "scanning") return "Scanning";
+  return dustTrapRiskLabel(dustTrap.riskLevel);
 }
 
 function statusLabelForPermit2Exposure(
@@ -2903,6 +3121,23 @@ function toneForPermit2Exposure(
   return "neutral";
 }
 
+function toneForDustTrap(
+  riskLevel: DustTrapRiskLevel,
+): "neutral" | "success" | "warning" | "danger" {
+  if (riskLevel === "elevated") return "danger";
+  if (riskLevel === "possible") return "warning";
+  if (riskLevel === "none_detected") return "success";
+  if (riskLevel === "informational") return "neutral";
+  if (
+    riskLevel === "insufficient_data" ||
+    riskLevel === "upstream_unavailable" ||
+    riskLevel === "unsupported"
+  ) {
+    return "warning";
+  }
+  return "neutral";
+}
+
 function toneClassForSweeper(riskLevel: SweeperRiskLevel): string {
   const tone = toneForSweeper(riskLevel);
   return {
@@ -2967,6 +3202,16 @@ function toneClassForEip7702(riskLevel: Eip7702RiskLevel): string {
 
 function toneClassForPermit2Exposure(riskLevel: Permit2ExposureRiskLevel): string {
   const tone = toneForPermit2Exposure(riskLevel);
+  return {
+    neutral: "border-pulse-border bg-pulse-bg/50 text-pulse-muted",
+    success: "border-pulse-green/35 bg-pulse-green/10 text-pulse-green",
+    warning: "border-amber-400/35 bg-amber-400/10 text-amber-200",
+    danger: "border-pulse-red/40 bg-pulse-red/10 text-pulse-red",
+  }[tone];
+}
+
+function toneClassForDustTrap(riskLevel: DustTrapRiskLevel): string {
+  const tone = toneForDustTrap(riskLevel);
   return {
     neutral: "border-pulse-border bg-pulse-bg/50 text-pulse-muted",
     success: "border-pulse-green/35 bg-pulse-green/10 text-pulse-green",

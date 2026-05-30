@@ -1,6 +1,7 @@
 import {
   LIFEBOAT_ADDRESS_POISONING_DIAGNOSTIC_COPY,
   LIFEBOAT_CRITICAL_WARNINGS,
+  LIFEBOAT_DUST_TRAP_DIAGNOSTIC_COPY,
   LIFEBOAT_EIP7702_DIAGNOSTIC_COPY,
   LIFEBOAT_NEXT_STEPS,
   LIFEBOAT_NOT_TO_DO,
@@ -12,6 +13,7 @@ import {
   LIFEBOAT_TIMELINE_DIAGNOSTIC_COPY,
 } from "@/lib/lifeboat/copy";
 import { addressPoisoningRiskLabel } from "@/lib/lifeboat/address-poisoning";
+import { dustTrapRiskLabel } from "@/lib/lifeboat/dust-trap";
 import { eip7702RiskLabel } from "@/lib/lifeboat/eip7702";
 import { pendingNonceRiskLabel } from "@/lib/lifeboat/pending-nonce";
 import { permit2ExposureRiskLabel } from "@/lib/lifeboat/permit2-exposure";
@@ -89,6 +91,10 @@ ${formatPermit2ExposureSection(report)}
 ## EIP-7702 delegation
 
 ${formatEip7702Section(report)}
+
+## Token/NFT dust traps
+
+${formatDustTrapSection(report)}
 
 ## What not to do
 
@@ -317,6 +323,45 @@ ${evidence}`;
   return `${LIFEBOAT_EIP7702_DIAGNOSTIC_COPY.body}
 
 ${rows || "No network scan has been added to this report yet."}`;
+}
+
+function formatDustTrapSection(report: LifeboatReport): string {
+  const rows = report.chains
+    .map((chain) => {
+      const evidence =
+        chain.dustTrapEvidence.length > 0
+          ? chain.dustTrapEvidence
+              .map((item) => {
+                const tokenId = item.tokenId ? ` tokenId ${item.tokenId}` : "";
+                return `  - ${item.title}: ${item.displayName}${tokenId}; ${item.amount}; contract ${item.contractAddress}; tx ${item.txHash}. ${item.description}`;
+              })
+              .join("\n")
+          : formatEmptyDustTrapEvidence(chain.dustTrapStatus);
+      return `- ${chain.chainName}: ${formatModuleStatus(
+        chain.dustTrapStatus,
+      )}; ${dustTrapRiskLabel(chain.dustTrapRiskLevel)}
+${evidence}`;
+    })
+    .join("\n");
+
+  return `${LIFEBOAT_DUST_TRAP_DIAGNOSTIC_COPY.body}
+
+${rows || "No network scan has been added to this report yet."}`;
+}
+
+function formatEmptyDustTrapEvidence(
+  status: LifeboatReport["chains"][number]["dustTrapStatus"],
+): string {
+  if (status === "complete") {
+    return "  - No dust/bait signal was found in the bounded inbound token/NFT history. This is not a full asset inventory.";
+  }
+  if (status === "unsupported") {
+    return "  - This network is not marked supported for the dust-trap diagnostic.";
+  }
+  if (status === "upstream_unavailable" || status === "partial") {
+    return "  - The dust-trap check did not fully complete. Do not treat this as proof that no suspicious dust exists.";
+  }
+  return "  - Token/NFT dust traps were not checked.";
 }
 
 function formatEmptyEip7702Evidence(
