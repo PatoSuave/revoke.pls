@@ -45,6 +45,12 @@ export const LIFEBOAT_ADDRESS_POISONING_DIAGNOSTIC_COPY = {
   body: "This diagnostic compares recent inbound counterparties against outbound addresses from the bounded history window. Similar prefix and suffix matches can be address-poisoning context, but they are not proof of attacker control or intent.",
 } as const;
 
+export const LIFEBOAT_SPENDER_RISK_DIAGNOSTIC_COPY = {
+  title: "Spender contract risk",
+  activeStatus: "Read-only contract context",
+  body: "This diagnostic checks approval spenders for public contract context such as bytecode presence, verified-source availability, proxy-like metadata, and reviewed registry matches. Unknown or unverified spenders are review signals, not proof of malicious activity.",
+} as const;
+
 export const LIFEBOAT_PLANNED_MODULES = [
   {
     id: "hex",

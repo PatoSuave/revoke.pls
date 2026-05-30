@@ -11,6 +11,11 @@ import type {
   PendingNonceRiskLevel,
   PendingNonceAnalysis,
 } from "@/lib/lifeboat/pending-nonce";
+import type {
+  SpenderContractSignal,
+  SpenderRiskEvidence,
+  SpenderRiskLevel,
+} from "@/lib/lifeboat/spender-risk";
 import type { SweeperEvidence, SweeperRiskLevel } from "@/lib/lifeboat/sweeper";
 import type {
   TimelineEvidence,
@@ -50,6 +55,7 @@ export interface LifeboatCompleteness {
   pendingNonceCheckComplete: boolean;
   timelineCheckComplete: boolean;
   addressPoisoningCheckComplete: boolean;
+  spenderRiskCheckComplete: boolean;
   hexCheckComplete: boolean;
   permit2Complete: boolean;
   eip7702Complete: boolean;
@@ -78,6 +84,10 @@ export interface LifeboatChainReport {
   addressPoisoningRiskLevel: AddressPoisoningRiskLevel;
   addressPoisoningEvidence: AddressPoisoningEvidence[];
   addressPoisoningEvents: AddressPoisoningHistoryEvent[];
+  spenderRiskStatus: LifeboatModuleStatus;
+  spenderRiskLevel: SpenderRiskLevel;
+  spenderRiskEvidence: SpenderRiskEvidence[];
+  spenderRiskSpenders: SpenderContractSignal[];
   hexStatus: LifeboatModuleStatus;
   permit2Status: LifeboatModuleStatus;
   eip7702Status: LifeboatModuleStatus;

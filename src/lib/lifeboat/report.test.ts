@@ -18,6 +18,7 @@ const REPORT: LifeboatReport = {
     pendingNonceCheckComplete: true,
     timelineCheckComplete: true,
     addressPoisoningCheckComplete: true,
+    spenderRiskCheckComplete: true,
     hexCheckComplete: false,
     permit2Complete: false,
     eip7702Complete: false,
@@ -116,6 +117,33 @@ const REPORT: LifeboatReport = {
         },
       ],
       addressPoisoningEvents: [],
+      spenderRiskStatus: "complete",
+      spenderRiskLevel: "possible",
+      spenderRiskEvidence: [
+        {
+          address: "0x5555555555555555555555555555555555555555",
+          title: "Verified source unavailable",
+          description:
+            "The explorer did not report verified source code for this spender contract.",
+          riskLevel: "possible",
+          explorerUrl:
+            "https://scan.pulsechain.com/address/0x5555555555555555555555555555555555555555",
+        },
+      ],
+      spenderRiskSpenders: [
+        {
+          address: "0x5555555555555555555555555555555555555555",
+          hasBytecode: true,
+          verifiedSource: "unverified",
+          contractName: null,
+          isProxy: false,
+          implementationAddress: null,
+          registryContext: null,
+          explorerUrl:
+            "https://scan.pulsechain.com/address/0x5555555555555555555555555555555555555555",
+          warnings: [],
+        },
+      ],
       hexStatus: "planned",
       permit2Status: "planned",
       eip7702Status: "planned",
@@ -147,6 +175,9 @@ describe("Wallet Lifeboat report", () => {
     expect(markdown).toContain("Address poisoning signals");
     expect(markdown).toContain("0xpoison");
     expect(markdown).toContain("Possible lookalike signal");
+    expect(markdown).toContain("Spender contract risk");
+    expect(markdown).toContain("Verified source unavailable");
+    expect(markdown).toContain("0x5555555555555555555555555555555555555555");
     expect(markdown).toContain("1 NFT live read failed");
   });
 
