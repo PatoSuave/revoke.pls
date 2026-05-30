@@ -28,7 +28,7 @@ const REPORT: LifeboatReport = {
     erc4337Complete: true,
     erc6909Complete: true,
     dustTrapCheckComplete: true,
-    visibleAssetsComplete: false,
+    visibleAssetsComplete: true,
   },
   chains: [
     {
@@ -415,7 +415,34 @@ const REPORT: LifeboatReport = {
         },
       ],
       dustTrapTransfers: [],
-      visibleAssetsStatus: "planned",
+      visibleAssetsStatus: "complete",
+      visibleAssetsRiskLevel: "elevated",
+      visibleAssetsEvidence: [
+        {
+          assetType: "token",
+          exposureKind: "unlimited-token-allowance",
+          chainId: 369,
+          assetAddress: "0x6666666666666666666666666666666666666666",
+          assetLabel: "Permit Token",
+          assetSymbol: "PRM",
+          spenderAddress: "0x7777777777777777777777777777777777777777",
+          spenderLabel: "Permit spender",
+          amount: "unlimited PRM",
+          tokenId: null,
+          trustedSpender: false,
+          riskLevel: "elevated",
+        },
+      ],
+      visibleAssetsSummary: {
+        tokenApprovalCount: 1,
+        unlimitedTokenApprovalCount: 1,
+        permit2ApprovalCount: 0,
+        nftApprovalCount: 1,
+        collectionWideNftApprovalCount: 1,
+        singleNftApprovalCount: 0,
+        uniqueAssetCount: 2,
+        uniqueSpenderCount: 2,
+      },
       incompleteReasons: ["1 NFT live read failed"],
     },
   ],
@@ -431,6 +458,9 @@ describe("Wallet Lifeboat report", () => {
     expect(markdown).toContain("PulseChain");
     expect(markdown).toContain("Never enter your seed phrase or private key");
     expect(markdown).toContain("Do not add gas");
+    expect(markdown).toContain("Visible assets at risk");
+    expect(markdown).toContain("High exposure summary");
+    expect(markdown).toContain("unlimited-token-allowance");
     expect(markdown).toContain("Possible pattern");
     expect(markdown).toContain("0xin");
     expect(markdown).toContain("0xout");

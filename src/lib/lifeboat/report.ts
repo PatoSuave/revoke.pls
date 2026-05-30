@@ -16,6 +16,7 @@ import {
   LIFEBOAT_SPENDER_RISK_DIAGNOSTIC_COPY,
   LIFEBOAT_SWEEPER_DIAGNOSTIC_COPY,
   LIFEBOAT_TIMELINE_DIAGNOSTIC_COPY,
+  LIFEBOAT_VISIBLE_ASSETS_COPY,
 } from "@/lib/lifeboat/copy";
 import { addressPoisoningRiskLabel } from "@/lib/lifeboat/address-poisoning";
 import { dustTrapRiskLabel } from "@/lib/lifeboat/dust-trap";
@@ -31,6 +32,7 @@ import { smartWalletRiskLabel } from "@/lib/lifeboat/smart-wallet";
 import { spenderRiskLabel } from "@/lib/lifeboat/spender-risk";
 import { sweeperRiskLabel } from "@/lib/lifeboat/sweeper";
 import { timelineRiskLabel } from "@/lib/lifeboat/timeline";
+import { visibleAssetsRiskLabel } from "@/lib/lifeboat/visible-assets";
 import type { LifeboatReport } from "@/lib/lifeboat/types";
 
 export function buildWalletLifeboatReportMarkdown(
@@ -70,6 +72,10 @@ ${chainSections || "No network scan has been added to this report yet."}
 ## NFT permission risk
 
 Review the NFT approval counts above. Collection-wide approvals can expose every NFT in a collection if the operator remains active.
+
+## Visible assets at risk
+
+${formatVisibleAssetsSection(report)}
 
 ## Possible gas-sweeper activity
 
@@ -161,6 +167,31 @@ ${evidence}`;
 ${rows || "No network scan has been added to this report yet."}`;
 }
 
+function formatVisibleAssetsSection(report: LifeboatReport): string {
+  const rows = report.chains
+    .map((chain) => {
+      const evidence =
+        chain.visibleAssetsEvidence.length > 0
+          ? chain.visibleAssetsEvidence
+              .map((item) => {
+                const tokenId = item.tokenId ? ` token ID ${item.tokenId};` : "";
+                const amount = item.amount ? ` ${item.amount};` : "";
+                return `  - ${item.assetLabel}: ${item.exposureKind}; asset ${item.assetAddress}; spender ${item.spenderAddress};${tokenId}${amount} ${item.riskLevel} context`;
+              })
+              .join("\n")
+          : formatEmptyVisibleAssetsEvidence(chain.visibleAssetsStatus);
+      return `- ${chain.chainName}: ${formatModuleStatus(
+        chain.visibleAssetsStatus,
+      )}; ${visibleAssetsRiskLabel(chain.visibleAssetsRiskLevel)}
+${evidence}`;
+    })
+    .join("\n");
+
+  return `${LIFEBOAT_VISIBLE_ASSETS_COPY.body}
+
+${rows || "No network scan has been added to this report yet."}`;
+}
+
 function formatPendingNonceSection(report: LifeboatReport): string {
   const rows = report.chains
     .map((chain) => {
@@ -183,6 +214,18 @@ ${evidence}`;
   return `${LIFEBOAT_PENDING_NONCE_DIAGNOSTIC_COPY.body}
 
 ${rows || "No network scan has been added to this report yet."}`;
+}
+
+function formatEmptyVisibleAssetsEvidence(
+  status: LifeboatReport["chains"][number]["visibleAssetsStatus"],
+): string {
+  if (status === "complete") {
+    return "  - No asset exposure rows were found from the completed approval scans. This is not proof that the wallet has no assets or hidden/off-chain exposure.";
+  }
+  if (status === "partial" || status === "upstream_unavailable") {
+    return "  - Visible asset context is incomplete because one or more source approval scans did not fully complete.";
+  }
+  return "  - Visible assets at risk were not checked.";
 }
 
 function formatTimelineSection(report: LifeboatReport): string {

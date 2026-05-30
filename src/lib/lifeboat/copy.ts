@@ -21,6 +21,12 @@ export const LIFEBOAT_NEXT_STEPS = [
   "Verify important token, spender, NFT, and transaction details directly on the relevant explorer.",
 ] as const;
 
+export const LIFEBOAT_VISIBLE_ASSETS_COPY = {
+  title: "Visible assets at risk",
+  activeStatus: "Derived from approval rows",
+  body: "This module summarizes token and NFT assets exposed by active approval rows already found by the read-only scanner. It does not fetch balances, crawl wallets, move assets, or claim to show every asset in the wallet.",
+} as const;
+
 export const LIFEBOAT_SWEEPER_DIAGNOSTIC_COPY = {
   title: "Possible gas-sweeper activity",
   activeStatus: "Read-only heuristic",
@@ -105,14 +111,14 @@ export const LIFEBOAT_GOOD_ACCOUNTING_ASSIST_COPY = {
   body: "This assist layer explains when a visible late HEX stake may be relevant for manual Good Accounting review from a clean wallet. It does not prepare, sign, submit, relay, or simulate a Good Accounting transaction.",
 } as const;
 
-export const LIFEBOAT_PLANNED_MODULES = [
-  {
-    id: "visible-assets",
-    title: "Visible assets",
-    status: "Planned diagnostic",
-    body: "Future versions may summarize visible native, token, and NFT balances where reliable data is available. This version should not claim to show every asset.",
-  },
-] as const;
+export type LifeboatPlannedModule = {
+  id: string;
+  title: string;
+  status: string;
+  body: string;
+};
+
+export const LIFEBOAT_PLANNED_MODULES: readonly LifeboatPlannedModule[] = [];
 
 // Future Lifeboat phases stay read-only until separately reviewed: manual
 // planning reports and any later execution-adjacent education.

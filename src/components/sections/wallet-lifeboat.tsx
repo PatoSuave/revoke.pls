@@ -50,6 +50,7 @@ import {
   LIFEBOAT_SPENDER_RISK_DIAGNOSTIC_COPY,
   LIFEBOAT_SWEEPER_DIAGNOSTIC_COPY,
   LIFEBOAT_TIMELINE_DIAGNOSTIC_COPY,
+  LIFEBOAT_VISIBLE_ASSETS_COPY,
 } from "@/lib/lifeboat/copy";
 import {
   addressPoisoningRiskLabel,
@@ -127,6 +128,12 @@ import {
   type LifeboatTimelineApiResponse,
   type TimelineRiskLevel,
 } from "@/lib/lifeboat/timeline";
+import {
+  analyzeVisibleAssetsAtRisk,
+  visibleAssetsRiskLabel,
+  type VisibleAssetsAnalysis,
+  type VisibleAssetsRiskLevel,
+} from "@/lib/lifeboat/visible-assets";
 import type {
   LifeboatChainReport,
   LifeboatModuleStatus,
@@ -233,6 +240,21 @@ export function WalletLifeboat() {
         approvalStatus: scan.approvalsStatus,
       }),
     [scan.approvals, scan.approvalsStatus],
+  );
+  const visibleAssets = useMemo(
+    () =>
+      analyzeVisibleAssetsAtRisk({
+        approvals: scan.approvals,
+        nftApprovals: scan.nftApprovals,
+        approvalsStatus: scan.approvalsStatus,
+        nftApprovalsStatus: scan.nftApprovalsStatus,
+      }),
+    [
+      scan.approvals,
+      scan.nftApprovals,
+      scan.approvalsStatus,
+      scan.nftApprovalsStatus,
+    ],
   );
   const knownRiskRegistry = useMemo(
     () =>
@@ -355,6 +377,7 @@ export function WalletLifeboat() {
           addressPoisoning={addressPoisoning.response}
           spenderRisk={spenderRisk.response}
           permit2Exposure={permit2Exposure}
+          visibleAssets={visibleAssets}
           knownRiskRegistry={knownRiskRegistry}
           eip7702={eip7702.response}
           smartWallet={smartWallet.response}
@@ -380,6 +403,12 @@ export function WalletLifeboat() {
               owner={owner}
               option={selectedOption}
               isScanning={scan.status === "scanning"}
+            />
+            <VisibleAssetsSection
+              visibleAssets={visibleAssets}
+              owner={owner}
+              option={selectedOption}
+              status={moduleStatusFromVisibleAssets(scan)}
             />
             <SweeperActivitySection
               sweeper={sweeper.response}
@@ -477,6 +506,7 @@ export function WalletLifeboat() {
               addressPoisoning={addressPoisoning.response}
               spenderRisk={spenderRisk.response}
               permit2Exposure={permit2Exposure}
+              visibleAssets={visibleAssets}
               knownRiskRegistry={knownRiskRegistry}
               permit2Status={moduleStatusFromPermit2Exposure(scan.approvalsStatus)}
               eip7702={eip7702.response}
@@ -496,6 +526,7 @@ export function WalletLifeboat() {
               addressPoisoning={addressPoisoning.response}
               spenderRisk={spenderRisk.response}
               permit2Exposure={permit2Exposure}
+              visibleAssets={visibleAssets}
               knownRiskRegistry={knownRiskRegistry}
               eip7702={eip7702.response}
               smartWallet={smartWallet.response}
@@ -664,6 +695,7 @@ function TriageSummary({
   addressPoisoning,
   spenderRisk,
   permit2Exposure,
+  visibleAssets,
   knownRiskRegistry,
   eip7702,
   smartWallet,
@@ -681,6 +713,7 @@ function TriageSummary({
   addressPoisoning: LifeboatAddressPoisoningApiResponse;
   spenderRisk: LifeboatSpenderRiskApiResponse;
   permit2Exposure: Permit2ExposureAnalysis;
+  visibleAssets: VisibleAssetsAnalysis;
   knownRiskRegistry: KnownRiskRegistryAnalysis;
   eip7702: LifeboatEip7702ApiResponse;
   smartWallet: LifeboatSmartWalletApiResponse;
@@ -707,6 +740,11 @@ function TriageSummary({
         scan.nftApprovals.length,
       ),
       tone: toneForModule(scan.nftApprovalsStatus, scan.nftApprovals.length),
+    },
+    {
+      label: "Visible assets at risk",
+      value: statusLabelForVisibleAssets(visibleAssets),
+      tone: toneForVisibleAssets(visibleAssets.riskLevel),
     },
     {
       label: "Gas-sweeper pattern",
@@ -1012,6 +1050,154 @@ function LifeboatNftApprovalsSection({
         </div>
       ) : null}
     </ReportSection>
+  );
+}
+
+function VisibleAssetsSection({
+  visibleAssets,
+  owner,
+  option,
+  status,
+}: {
+  visibleAssets: VisibleAssetsAnalysis;
+  owner: Address | null;
+  option: AddressOnlyScanOption;
+  status: LifeboatModuleStatus;
+}) {
+  return (
+    <section className="rounded-2xl border border-pulse-border bg-pulse-panel/65 p-5">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-pulse-cyan">
+            {LIFEBOAT_VISIBLE_ASSETS_COPY.title}
+          </p>
+          <h2 className="mt-1 text-xl font-semibold text-pulse-text">
+            Assets exposed by active approvals
+          </h2>
+          <p className="mt-2 text-sm leading-6 text-pulse-muted">
+            {owner
+              ? `${option.displayName} token and NFT approval rows are grouped by exposed asset without fetching balances.`
+              : "Paste a wallet address to summarize assets exposed by active approval rows."}
+          </p>
+        </div>
+        <span
+          className={`inline-flex w-fit rounded-full border px-3 py-1 text-xs font-semibold ${toneClassForVisibleAssets(
+            visibleAssets.riskLevel,
+          )}`}
+        >
+          {visibleAssetsRiskLabel(visibleAssets.riskLevel)}
+        </span>
+      </div>
+
+      <p className="mt-4 rounded-xl border border-pulse-border/70 bg-pulse-bg/45 p-3 text-sm leading-6 text-pulse-muted">
+        {LIFEBOAT_VISIBLE_ASSETS_COPY.body}
+      </p>
+
+      {owner && (status === "complete" || status === "partial") ? (
+        <VisibleAssetsSummary visibleAssets={visibleAssets} />
+      ) : null}
+
+      {owner && (status === "partial" || status === "upstream_unavailable") ? (
+        <div className="mt-4 rounded-xl border border-amber-400/35 bg-amber-400/10 p-3 text-sm leading-6 text-amber-100">
+          This context is incomplete because one or more source approval scans
+          did not fully complete. Do not treat missing asset rows as proof that
+          the wallet has no exposure.
+        </div>
+      ) : null}
+
+      {owner && visibleAssets.evidence.length > 0 ? (
+        <div className="mt-4 overflow-hidden rounded-2xl border border-pulse-border bg-pulse-bg/40">
+          <ul>
+            {visibleAssets.evidence.map((item) => (
+              <li
+                key={`${item.assetAddress}-${item.spenderAddress}-${item.exposureKind}-${item.tokenId ?? "all"}`}
+                className="grid gap-4 border-b border-pulse-border/60 p-4 last:border-b-0 lg:grid-cols-[1fr_1fr_0.8fr]"
+              >
+                <div className="min-w-0">
+                  <a
+                    href={tokenUrlFor(option, item.assetAddress)}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="block truncate text-sm font-semibold text-pulse-text underline-offset-2 hover:text-pulse-cyan hover:underline"
+                    title={item.assetAddress}
+                  >
+                    {item.assetLabel}
+                  </a>
+                  <p className="mt-1 truncate font-mono text-xs text-pulse-muted">
+                    {shortenAddress(item.assetAddress)}
+                  </p>
+                </div>
+                <div className="min-w-0">
+                  <a
+                    href={addressUrlFor(option, item.spenderAddress)}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="block truncate font-mono text-xs text-pulse-muted underline-offset-2 hover:text-pulse-cyan hover:underline"
+                    title={item.spenderAddress}
+                  >
+                    {shortenAddress(item.spenderAddress)}
+                  </a>
+                  <p className="mt-1 text-sm font-semibold text-pulse-text">
+                    {item.spenderLabel}
+                  </p>
+                  <p className="mt-1 text-[11px] text-pulse-muted">
+                    {item.trustedSpender
+                      ? "Known spender label"
+                      : "Unknown spender"}
+                  </p>
+                </div>
+                <div className="min-w-0 text-xs leading-5 text-pulse-muted lg:text-right">
+                  <p>{visibleAssetExposureLabel(item.exposureKind)}</p>
+                  <p>{item.amount ?? "approval exposure"}</p>
+                  {item.tokenId ? <p>Token ID {item.tokenId}</p> : null}
+                  <p className="uppercase tracking-wide">
+                    {item.riskLevel} context
+                  </p>
+                </div>
+              </li>
+            ))}
+          </ul>
+        </div>
+      ) : owner && status === "complete" ? (
+        <div className="mt-4 rounded-2xl border border-dashed border-pulse-border/80 bg-pulse-bg/40 p-4 text-sm leading-6 text-pulse-muted">
+          No asset exposure rows were found from the completed approval scans.
+          This is not proof that the wallet has no assets, hidden approvals, or
+          off-chain authorization risk.
+        </div>
+      ) : null}
+    </section>
+  );
+}
+
+function VisibleAssetsSummary({
+  visibleAssets,
+}: {
+  visibleAssets: VisibleAssetsAnalysis;
+}) {
+  return (
+    <dl className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+      <SweeperMetric
+        label="Assets"
+        value={visibleAssets.summary.uniqueAssetCount.toString()}
+      />
+      <SweeperMetric
+        label="Spenders"
+        value={visibleAssets.summary.uniqueSpenderCount.toString()}
+      />
+      <SweeperMetric
+        label="Unlimited"
+        value={visibleAssets.summary.unlimitedTokenApprovalCount.toString()}
+      />
+      <SweeperMetric
+        label="NFT-wide"
+        value={visibleAssets.summary.collectionWideNftApprovalCount.toString()}
+      />
+      {visibleAssets.warnings.length > 0 ? (
+        <div className="rounded-xl border border-pulse-border/70 bg-pulse-bg/45 p-3 text-xs leading-5 text-pulse-muted sm:col-span-2 lg:col-span-4">
+          {visibleAssets.warnings.join(" ")}
+        </div>
+      ) : null}
+    </dl>
   );
 }
 
@@ -3271,6 +3457,8 @@ function DustTrapSummary({
 }
 
 function PlannedDiagnostics() {
+  if (LIFEBOAT_PLANNED_MODULES.length === 0) return null;
+
   return (
     <section className="rounded-2xl border border-pulse-border bg-pulse-panel/65 p-5">
       <p className="text-xs font-semibold uppercase tracking-[0.18em] text-pulse-cyan">
@@ -3351,6 +3539,7 @@ function CompletenessPanel({
   addressPoisoning,
   spenderRisk,
   permit2Exposure,
+  visibleAssets,
   knownRiskRegistry,
   permit2Status,
   eip7702,
@@ -3368,6 +3557,7 @@ function CompletenessPanel({
   addressPoisoning: LifeboatAddressPoisoningApiResponse;
   spenderRisk: LifeboatSpenderRiskApiResponse;
   permit2Exposure: Permit2ExposureAnalysis;
+  visibleAssets: VisibleAssetsAnalysis;
   knownRiskRegistry: KnownRiskRegistryAnalysis;
   permit2Status: LifeboatModuleStatus;
   eip7702: LifeboatEip7702ApiResponse;
@@ -3423,6 +3613,10 @@ function CompletenessPanel({
           value={statusLabelForPermit2Exposure(permit2Exposure, permit2Status)}
         />
         <CompletenessRow
+          label="Visible assets at risk"
+          value={statusLabelForVisibleAssets(visibleAssets)}
+        />
+        <CompletenessRow
           label="Known-risk registry"
           value={statusLabelForKnownRiskRegistry(knownRiskRegistry)}
         />
@@ -3454,7 +3648,6 @@ function CompletenessPanel({
           label="Token/NFT dust traps"
           value={statusLabelForDustTrap(dustTrap)}
         />
-        <CompletenessRow label="Visible assets" value="Planned diagnostic" />
       </dl>
       {scan.incompleteReasons.length > 0 ? (
         <div className="mt-4 rounded-xl border border-amber-400/35 bg-amber-400/10 p-3 text-xs leading-5 text-amber-100">
@@ -3490,6 +3683,7 @@ function ReportExport({
   addressPoisoning,
   spenderRisk,
   permit2Exposure,
+  visibleAssets,
   knownRiskRegistry,
   eip7702,
   smartWallet,
@@ -3507,6 +3701,7 @@ function ReportExport({
   addressPoisoning: LifeboatAddressPoisoningApiResponse;
   spenderRisk: LifeboatSpenderRiskApiResponse;
   permit2Exposure: Permit2ExposureAnalysis;
+  visibleAssets: VisibleAssetsAnalysis;
   knownRiskRegistry: KnownRiskRegistryAnalysis;
   eip7702: LifeboatEip7702ApiResponse;
   smartWallet: LifeboatSmartWalletApiResponse;
@@ -3534,6 +3729,7 @@ function ReportExport({
         addressPoisoning,
         spenderRisk,
         permit2Exposure,
+        visibleAssets,
         knownRiskRegistry,
         eip7702,
         smartWallet,
@@ -3845,6 +4041,7 @@ function buildReportFromSnapshot(
   addressPoisoning: LifeboatAddressPoisoningApiResponse,
   spenderRisk: LifeboatSpenderRiskApiResponse,
   permit2Exposure: Permit2ExposureAnalysis,
+  visibleAssets: VisibleAssetsAnalysis,
   knownRiskRegistry: KnownRiskRegistryAnalysis,
   eip7702: LifeboatEip7702ApiResponse,
   smartWallet: LifeboatSmartWalletApiResponse,
@@ -3916,7 +4113,10 @@ function buildReportFromSnapshot(
     dustTrapRiskLevel: dustTrap.riskLevel,
     dustTrapEvidence: dustTrap.evidence,
     dustTrapTransfers: dustTrap.transfers,
-    visibleAssetsStatus: "planned",
+    visibleAssetsStatus: moduleStatusFromVisibleAssets(scan),
+    visibleAssetsRiskLevel: visibleAssets.riskLevel,
+    visibleAssetsEvidence: visibleAssets.evidence,
+    visibleAssetsSummary: visibleAssets.summary,
     incompleteReasons: [...scan.incompleteReasons],
   };
 
@@ -3944,7 +4144,7 @@ function buildReportFromSnapshot(
       erc4337Complete: erc4337.status === "complete",
       erc6909Complete: erc6909.status === "complete",
       dustTrapCheckComplete: dustTrap.status === "complete",
-      visibleAssetsComplete: false,
+      visibleAssetsComplete: moduleStatusFromVisibleAssets(scan) === "complete",
     },
   };
 }
@@ -4153,6 +4353,29 @@ function moduleStatusFromPermit2Exposure(
   return "not_scanned";
 }
 
+function moduleStatusFromVisibleAssets(
+  scan: LifeboatScanSnapshot,
+): LifeboatModuleStatus {
+  const statuses = [scan.approvalsStatus, scan.nftApprovalsStatus];
+  if (statuses.every((status) => status === "not_scanned")) return "not_scanned";
+  if (statuses.some((status) => status === "scanning")) return "scanning";
+  if (statuses.every((status) => status === "unsupported")) return "unsupported";
+  if (statuses.every((status) => status === "upstream_unavailable")) {
+    return "upstream_unavailable";
+  }
+  if (
+    statuses.some(
+      (status) =>
+        status === "partial" ||
+        status === "upstream_unavailable" ||
+        status === "not_scanned",
+    )
+  ) {
+    return "partial";
+  }
+  return "complete";
+}
+
 function moduleStatusFromKnownRiskRegistry(
   knownRiskRegistry: KnownRiskRegistryAnalysis,
 ): LifeboatModuleStatus {
@@ -4252,6 +4475,12 @@ function statusLabelForPermit2Exposure(
 ): string {
   if (status === "scanning") return "Scanning";
   return permit2ExposureRiskLabel(permit2Exposure.riskLevel);
+}
+
+function statusLabelForVisibleAssets(
+  visibleAssets: VisibleAssetsAnalysis,
+): string {
+  return visibleAssetsRiskLabel(visibleAssets.riskLevel);
 }
 
 function statusLabelForKnownRiskRegistry(
@@ -4369,6 +4598,23 @@ function toneForEip7702(
 
 function toneForPermit2Exposure(
   riskLevel: Permit2ExposureRiskLevel,
+): "neutral" | "success" | "warning" | "danger" {
+  if (riskLevel === "elevated") return "danger";
+  if (riskLevel === "possible") return "warning";
+  if (riskLevel === "none_detected") return "success";
+  if (riskLevel === "informational") return "neutral";
+  if (
+    riskLevel === "insufficient_data" ||
+    riskLevel === "upstream_unavailable" ||
+    riskLevel === "unsupported"
+  ) {
+    return "warning";
+  }
+  return "neutral";
+}
+
+function toneForVisibleAssets(
+  riskLevel: VisibleAssetsRiskLevel,
 ): "neutral" | "success" | "warning" | "danger" {
   if (riskLevel === "elevated") return "danger";
   if (riskLevel === "possible") return "warning";
@@ -4590,6 +4836,16 @@ function toneClassForErc6909(riskLevel: Erc6909RiskLevel): string {
 
 function toneClassForPermit2Exposure(riskLevel: Permit2ExposureRiskLevel): string {
   const tone = toneForPermit2Exposure(riskLevel);
+  return {
+    neutral: "border-pulse-border bg-pulse-bg/50 text-pulse-muted",
+    success: "border-pulse-green/35 bg-pulse-green/10 text-pulse-green",
+    warning: "border-amber-400/35 bg-amber-400/10 text-amber-200",
+    danger: "border-pulse-red/40 bg-pulse-red/10 text-pulse-red",
+  }[tone];
+}
+
+function toneClassForVisibleAssets(riskLevel: VisibleAssetsRiskLevel): string {
+  const tone = toneForVisibleAssets(riskLevel);
   return {
     neutral: "border-pulse-border bg-pulse-bg/50 text-pulse-muted",
     success: "border-pulse-green/35 bg-pulse-green/10 text-pulse-green",
@@ -4955,6 +5211,23 @@ function formatReviewedDate(value: string): string {
 
 function registryRoleLabel(role: KnownRiskRegistrySubjectRole): string {
   return role.replaceAll("-", " ");
+}
+
+function visibleAssetExposureLabel(
+  exposureKind: VisibleAssetsAnalysis["evidence"][number]["exposureKind"],
+): string {
+  switch (exposureKind) {
+    case "unlimited-token-allowance":
+      return "Unlimited token allowance";
+    case "finite-token-allowance":
+      return "Token allowance";
+    case "permit2-token-allowance":
+      return "Permit2 allowance";
+    case "collection-wide-nft-approval":
+      return "Collection-wide NFT approval";
+    case "single-nft-approval":
+      return "Single NFT approval";
+  }
 }
 
 function shortCodePrefix(code: string): string {
