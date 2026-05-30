@@ -97,6 +97,12 @@ declare its source metadata and exact hostname list. The app derives the unique
 candidate hostname count and flattened registry entries from those packets, so
 future reviewed lists can be added without changing matching behavior.
 
+Use `extractCandidateSourceSnapshot` from
+`src/lib/security/candidate-source-extractor.ts` to turn a reviewed local
+HTML/OPML/raw snapshot into sorted URL and hostname candidates. The extractor is
+local text parsing only; it does not fetch remote pages, bypass browser
+challenges, crawl links, resolve DNS, or make registry entries official.
+
 ## Future Expansion Boundaries
 
 Possible later phases may add curated registries, reviewed ecosystem source
