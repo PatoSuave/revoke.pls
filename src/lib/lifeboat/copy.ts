@@ -57,18 +57,18 @@ export const LIFEBOAT_PERMIT2_DIAGNOSTIC_COPY = {
   body: "This diagnostic surfaces active Permit2 delegated allowances already live-read by the existing approval scanner. It does not request signatures, sign messages, submit transactions, or claim that missing rows prove the wallet is safe.",
 } as const;
 
+export const LIFEBOAT_EIP7702_DIAGNOSTIC_COPY = {
+  title: "EIP-7702 delegation",
+  activeStatus: "Read-only account-code check",
+  body: "This diagnostic reads latest account code on supported networks and checks for the EIP-7702 delegation designator. It does not request signatures, clear delegation, repair accounts, or claim that no delegation means no compromise.",
+} as const;
+
 export const LIFEBOAT_PLANNED_MODULES = [
   {
     id: "hex",
     title: "HEX Lifeboat",
     status: "Planned diagnostic",
     body: "Future versions may read HEX stake status for the scanned address, including active stakes, mature stakes, late stakes, and possible Good Accounting candidates. This version does not run End Stake, Emergency End Stake, or Good Accounting.",
-  },
-  {
-    id: "eip7702",
-    title: "EIP-7702 delegation",
-    status: "Planned diagnostic",
-    body: "Future versions may check whether an externally owned account has active delegation code on supported chains. This version does not confirm or clear EIP-7702 delegation risk.",
   },
   {
     id: "visible-assets",
@@ -79,11 +79,9 @@ export const LIFEBOAT_PLANNED_MODULES = [
 ] as const;
 
 // Future Lifeboat phases stay read-only until separately reviewed: HEX stake
-// reads, clean-wallet Good Accounting Assist, EIP-7702 diagnostics, and manual
-// planning reports.
+// reads, clean-wallet Good Accounting Assist, and manual planning reports.
 export const LIFEBOAT_FUTURE_PHASES = [
   "HEX stake reads",
   "Good Accounting Assist from a clean wallet",
-  "EIP-7702 diagnostics",
   "Manual rescue planning reports",
 ] as const;

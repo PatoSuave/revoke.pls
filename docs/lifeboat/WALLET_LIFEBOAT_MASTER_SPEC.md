@@ -176,6 +176,8 @@ The current Lifeboat branch implements these read-only modules:
   reviewed registry context.
 - Permit2 exposure diagnostic from active Permit2 delegated allowance rows that
   were already live-read by the existing approval scanner.
+- EIP-7702 delegation diagnostic from latest account-code reads on explicitly
+  supported networks.
 
 These modules do not add custody, server signing, relayers, rescue contracts,
 automatic gas funding, automatic transfer, HEX write execution, private bundle

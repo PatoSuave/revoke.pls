@@ -21,7 +21,7 @@ const REPORT: LifeboatReport = {
     spenderRiskCheckComplete: true,
     hexCheckComplete: false,
     permit2Complete: true,
-    eip7702Complete: false,
+    eip7702Complete: true,
     visibleAssetsComplete: false,
   },
   chains: [
@@ -166,7 +166,23 @@ const REPORT: LifeboatReport = {
           nonce: 3,
         },
       ],
-      eip7702Status: "planned",
+      eip7702Status: "complete",
+      eip7702RiskLevel: "elevated",
+      eip7702Evidence: [
+        {
+          accountAddress: "0x1111111111111111111111111111111111111111",
+          code: "0xef01008888888888888888888888888888888888888888",
+          codeLengthBytes: 23,
+          delegationAddress: "0x8888888888888888888888888888888888888888",
+          classification: "eip7702_delegation",
+          explorerUrl:
+            "https://scan.pulsechain.com/address/0x1111111111111111111111111111111111111111",
+          delegationExplorerUrl:
+            "https://scan.pulsechain.com/address/0x8888888888888888888888888888888888888888",
+          description:
+            "The account code matches the EIP-7702 delegation designator format.",
+        },
+      ],
       visibleAssetsStatus: "planned",
       incompleteReasons: ["1 NFT live read failed"],
     },
@@ -201,6 +217,9 @@ describe("Wallet Lifeboat report", () => {
     expect(markdown).toContain("Permit2 exposure");
     expect(markdown).toContain("Active Permit2 exposure");
     expect(markdown).toContain("0x7777777777777777777777777777777777777777");
+    expect(markdown).toContain("EIP-7702 delegation");
+    expect(markdown).toContain("Active EIP-7702 delegation");
+    expect(markdown).toContain("0x8888888888888888888888888888888888888888");
     expect(markdown).toContain("1 NFT live read failed");
   });
 

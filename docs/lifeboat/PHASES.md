@@ -288,6 +288,17 @@ report export.
 
 Validation commands: Full validation stack plus delegation tests.
 
+Current safe production pass:
+
+- Reads latest account code with one bounded `eth_getCode` call on networks
+  explicitly marked supported for this diagnostic.
+- Detects the EIP-7702 delegation designator format
+  `0xef0100 || delegateAddress` and shows the delegate address when present.
+- Separates empty code, valid delegation code, malformed delegation-prefixed
+  code, other account code, unsupported networks, and RPC failures.
+- Does not request signatures, clear delegation, repair accounts, relay
+  transactions, prepare writes, or claim that no delegation means no compromise.
+
 ## Phase 8: Scam Token And NFT Dust Trap Scanner
 
 Purpose: Flag suspicious token or NFT dust that may be bait for phishing sites
