@@ -63,6 +63,12 @@ export const LIFEBOAT_EIP7702_DIAGNOSTIC_COPY = {
   body: "This diagnostic reads latest account code on supported networks and checks for the EIP-7702 delegation designator. It does not request signatures, clear delegation, repair accounts, or claim that no delegation means no compromise.",
 } as const;
 
+export const LIFEBOAT_SMART_WALLET_DIAGNOSTIC_COPY = {
+  title: "Smart wallet / Safe configuration",
+  activeStatus: "Read-only account config check",
+  body: "This diagnostic reads latest account code and Safe-compatible owner, threshold, module, and nonce view methods where available. It does not change owners, disable modules, submit Safe transactions, use relayers, or claim that missing warnings prove the wallet is safe.",
+} as const;
+
 export const LIFEBOAT_DUST_TRAP_DIAGNOSTIC_COPY = {
   title: "Token/NFT dust traps",
   activeStatus: "Read-only metadata safety check",

@@ -16,6 +16,10 @@ import type {
   Eip7702RiskLevel,
 } from "@/lib/lifeboat/eip7702";
 import type {
+  SmartWalletEvidence,
+  SmartWalletRiskLevel,
+} from "@/lib/lifeboat/smart-wallet";
+import type {
   DustTrapEvidence,
   DustTrapRiskLevel,
   DustTrapTransfer,
@@ -83,6 +87,7 @@ export interface LifeboatCompleteness {
   goodAccountingAssistComplete: boolean;
   permit2Complete: boolean;
   eip7702Complete: boolean;
+  smartWalletComplete: boolean;
   dustTrapCheckComplete: boolean;
   visibleAssetsComplete: boolean;
 }
@@ -127,6 +132,9 @@ export interface LifeboatChainReport {
   eip7702Status: LifeboatModuleStatus;
   eip7702RiskLevel: Eip7702RiskLevel;
   eip7702Evidence: Eip7702Evidence[];
+  smartWalletStatus: LifeboatModuleStatus;
+  smartWalletRiskLevel: SmartWalletRiskLevel;
+  smartWalletEvidence: SmartWalletEvidence[];
   dustTrapStatus: LifeboatModuleStatus;
   dustTrapRiskLevel: DustTrapRiskLevel;
   dustTrapEvidence: DustTrapEvidence[];

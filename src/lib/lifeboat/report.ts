@@ -9,6 +9,7 @@ import {
   LIFEBOAT_NOT_TO_DO,
   LIFEBOAT_PENDING_NONCE_DIAGNOSTIC_COPY,
   LIFEBOAT_PERMIT2_DIAGNOSTIC_COPY,
+  LIFEBOAT_SMART_WALLET_DIAGNOSTIC_COPY,
   LIFEBOAT_SPENDER_RISK_DIAGNOSTIC_COPY,
   LIFEBOAT_SWEEPER_DIAGNOSTIC_COPY,
   LIFEBOAT_TIMELINE_DIAGNOSTIC_COPY,
@@ -20,6 +21,7 @@ import { goodAccountingAssistRiskLabel } from "@/lib/lifeboat/good-accounting";
 import { hexStakeRiskLabel } from "@/lib/lifeboat/hex-stake";
 import { pendingNonceRiskLabel } from "@/lib/lifeboat/pending-nonce";
 import { permit2ExposureRiskLabel } from "@/lib/lifeboat/permit2-exposure";
+import { smartWalletRiskLabel } from "@/lib/lifeboat/smart-wallet";
 import { spenderRiskLabel } from "@/lib/lifeboat/spender-risk";
 import { sweeperRiskLabel } from "@/lib/lifeboat/sweeper";
 import { timelineRiskLabel } from "@/lib/lifeboat/timeline";
@@ -98,6 +100,10 @@ ${formatPermit2ExposureSection(report)}
 ## EIP-7702 delegation
 
 ${formatEip7702Section(report)}
+
+## Smart wallet / Safe configuration
+
+${formatSmartWalletSection(report)}
 
 ## Token/NFT dust traps
 
@@ -403,6 +409,39 @@ ${evidence}`;
 ${rows || "No network scan has been added to this report yet."}`;
 }
 
+function formatSmartWalletSection(report: LifeboatReport): string {
+  const rows = report.chains
+    .map((chain) => {
+      const evidence =
+        chain.smartWalletEvidence.length > 0
+          ? chain.smartWalletEvidence
+              .map((item) => {
+                const owners = item.safeOwners.length
+                  ? ` owners ${item.safeOwners.join(", ")}`
+                  : "";
+                const modules = item.safeModules.length
+                  ? ` modules ${item.safeModules.join(", ")}`
+                  : "";
+                const threshold =
+                  item.safeThreshold === null
+                    ? ""
+                    : ` threshold ${item.safeThreshold}`;
+                return `  - ${item.title}: ${item.codeLengthBytes} code bytes${threshold}${owners}${modules}. ${item.description}`;
+              })
+              .join("\n")
+          : formatEmptySmartWalletEvidence(chain.smartWalletStatus);
+      return `- ${chain.chainName}: ${formatModuleStatus(
+        chain.smartWalletStatus,
+      )}; ${smartWalletRiskLabel(chain.smartWalletRiskLevel)}
+${evidence}`;
+    })
+    .join("\n");
+
+  return `${LIFEBOAT_SMART_WALLET_DIAGNOSTIC_COPY.body}
+
+${rows || "No network scan has been added to this report yet."}`;
+}
+
 function formatDustTrapSection(report: LifeboatReport): string {
   const rows = report.chains
     .map((chain) => {
@@ -425,6 +464,21 @@ ${evidence}`;
   return `${LIFEBOAT_DUST_TRAP_DIAGNOSTIC_COPY.body}
 
 ${rows || "No network scan has been added to this report yet."}`;
+}
+
+function formatEmptySmartWalletEvidence(
+  status: LifeboatReport["chains"][number]["smartWalletStatus"],
+): string {
+  if (status === "complete") {
+    return "  - No account code was found at latest block. This is not proof that the wallet secret is uncompromised.";
+  }
+  if (status === "unsupported") {
+    return "  - This network is not marked supported for smart-wallet configuration diagnostics.";
+  }
+  if (status === "upstream_unavailable" || status === "partial") {
+    return "  - The smart-wallet configuration check did not fully complete. Do not treat this as proof that no Safe, module, guard, or session-key risk exists.";
+  }
+  return "  - Smart wallet / Safe configuration was not checked.";
 }
 
 function formatEmptyDustTrapEvidence(
