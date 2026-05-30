@@ -40,6 +40,7 @@ import {
   LIFEBOAT_ERC6909_DIAGNOSTIC_COPY,
   LIFEBOAT_GOOD_ACCOUNTING_ASSIST_COPY,
   LIFEBOAT_HEX_STAKE_DIAGNOSTIC_COPY,
+  LIFEBOAT_KNOWN_RISK_REGISTRY_COPY,
   LIFEBOAT_NEXT_STEPS,
   LIFEBOAT_NOT_TO_DO,
   LIFEBOAT_PENDING_NONCE_DIAGNOSTIC_COPY,
@@ -97,6 +98,14 @@ import {
   type Permit2ExposureAnalysis,
   type Permit2ExposureRiskLevel,
 } from "@/lib/lifeboat/permit2-exposure";
+import {
+  analyzeKnownRiskRegistry,
+  knownRiskRegistryRiskLabel,
+  type KnownRiskRegistryAnalysis,
+  type KnownRiskRegistryRiskLevel,
+  type KnownRiskRegistrySubject,
+  type KnownRiskRegistrySubjectRole,
+} from "@/lib/lifeboat/known-risk-registry";
 import {
   smartWalletRiskLabel,
   type LifeboatSmartWalletApiResponse,
@@ -225,6 +234,40 @@ export function WalletLifeboat() {
       }),
     [scan.approvals, scan.approvalsStatus],
   );
+  const knownRiskRegistry = useMemo(
+    () =>
+      analyzeKnownRiskRegistry({
+        enabled: Boolean(owner),
+        chainId: selectedChainId,
+        subjects: collectKnownRiskRegistrySubjects({
+          owner,
+          approvals: scan.approvals,
+          nftApprovals: scan.nftApprovals,
+          timeline: timeline.response,
+          addressPoisoning: addressPoisoning.response,
+          spenderRisk: spenderRisk.response,
+          eip7702: eip7702.response,
+          smartWallet: smartWallet.response,
+          erc4337: erc4337.response,
+          erc6909: erc6909.response,
+          dustTrap: dustTrap.response,
+        }),
+      }),
+    [
+      owner,
+      selectedChainId,
+      scan.approvals,
+      scan.nftApprovals,
+      timeline.response,
+      addressPoisoning.response,
+      spenderRisk.response,
+      eip7702.response,
+      smartWallet.response,
+      erc4337.response,
+      erc6909.response,
+      dustTrap.response,
+    ],
+  );
   const scoredApprovals = useMemo(
     () => sortScoredApprovals(scoreApprovals(scan.approvals)),
     [scan.approvals],
@@ -312,6 +355,7 @@ export function WalletLifeboat() {
           addressPoisoning={addressPoisoning.response}
           spenderRisk={spenderRisk.response}
           permit2Exposure={permit2Exposure}
+          knownRiskRegistry={knownRiskRegistry}
           eip7702={eip7702.response}
           smartWallet={smartWallet.response}
           erc4337={erc4337.response}
@@ -374,6 +418,11 @@ export function WalletLifeboat() {
               option={selectedOption}
               status={moduleStatusFromPermit2Exposure(scan.approvalsStatus)}
             />
+            <KnownRiskRegistrySection
+              knownRiskRegistry={knownRiskRegistry}
+              owner={owner}
+              option={selectedOption}
+            />
             <Eip7702DelegationSection
               eip7702={eip7702.response}
               owner={owner}
@@ -428,6 +477,7 @@ export function WalletLifeboat() {
               addressPoisoning={addressPoisoning.response}
               spenderRisk={spenderRisk.response}
               permit2Exposure={permit2Exposure}
+              knownRiskRegistry={knownRiskRegistry}
               permit2Status={moduleStatusFromPermit2Exposure(scan.approvalsStatus)}
               eip7702={eip7702.response}
               smartWallet={smartWallet.response}
@@ -446,6 +496,7 @@ export function WalletLifeboat() {
               addressPoisoning={addressPoisoning.response}
               spenderRisk={spenderRisk.response}
               permit2Exposure={permit2Exposure}
+              knownRiskRegistry={knownRiskRegistry}
               eip7702={eip7702.response}
               smartWallet={smartWallet.response}
               erc4337={erc4337.response}
@@ -613,6 +664,7 @@ function TriageSummary({
   addressPoisoning,
   spenderRisk,
   permit2Exposure,
+  knownRiskRegistry,
   eip7702,
   smartWallet,
   erc4337,
@@ -629,6 +681,7 @@ function TriageSummary({
   addressPoisoning: LifeboatAddressPoisoningApiResponse;
   spenderRisk: LifeboatSpenderRiskApiResponse;
   permit2Exposure: Permit2ExposureAnalysis;
+  knownRiskRegistry: KnownRiskRegistryAnalysis;
   eip7702: LifeboatEip7702ApiResponse;
   smartWallet: LifeboatSmartWalletApiResponse;
   erc4337: LifeboatErc4337ApiResponse;
@@ -684,6 +737,11 @@ function TriageSummary({
       label: "Permit2 exposure",
       value: statusLabelForPermit2Exposure(permit2Exposure),
       tone: toneForPermit2Exposure(permit2Exposure.riskLevel),
+    },
+    {
+      label: "Known-risk registry",
+      value: statusLabelForKnownRiskRegistry(knownRiskRegistry),
+      tone: toneForKnownRiskRegistry(knownRiskRegistry.riskLevel),
     },
     {
       label: "HEX stake status",
@@ -2059,6 +2117,142 @@ function Permit2ExposureSummary({
   );
 }
 
+function KnownRiskRegistrySection({
+  knownRiskRegistry,
+  owner,
+  option,
+}: {
+  knownRiskRegistry: KnownRiskRegistryAnalysis;
+  owner: Address | null;
+  option: AddressOnlyScanOption;
+}) {
+  const status = moduleStatusFromKnownRiskRegistry(knownRiskRegistry);
+  return (
+    <section className="rounded-2xl border border-pulse-border bg-pulse-panel/65 p-5">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-pulse-cyan">
+            {LIFEBOAT_KNOWN_RISK_REGISTRY_COPY.title}
+          </p>
+          <h2 className="mt-1 text-xl font-semibold text-pulse-text">
+            Reviewed address context
+          </h2>
+          <p className="mt-2 text-sm leading-6 text-pulse-muted">
+            {owner
+              ? `${option.displayName} approval, event, and diagnostic addresses are compared against a local reviewed registry.`
+              : "Paste a wallet address to compare discovered counterparties against the reviewed local registry."}
+          </p>
+        </div>
+        <span
+          className={`inline-flex w-fit rounded-full border px-3 py-1 text-xs font-semibold ${toneClassForKnownRiskRegistry(
+            knownRiskRegistry.riskLevel,
+          )}`}
+        >
+          {knownRiskRegistryRiskLabel(knownRiskRegistry.riskLevel)}
+        </span>
+      </div>
+
+      <p className="mt-4 rounded-xl border border-pulse-border/70 bg-pulse-bg/45 p-3 text-sm leading-6 text-pulse-muted">
+        {LIFEBOAT_KNOWN_RISK_REGISTRY_COPY.body}
+      </p>
+
+      {owner && status === "complete" ? (
+        <KnownRiskRegistrySummary knownRiskRegistry={knownRiskRegistry} />
+      ) : null}
+
+      {owner && knownRiskRegistry.evidence.length > 0 ? (
+        <div className="mt-4 overflow-hidden rounded-2xl border border-pulse-border bg-pulse-bg/40">
+          <ul>
+            {knownRiskRegistry.evidence.map((item) => (
+              <li
+                key={`${item.entryId}-${item.address}-${item.subjectRole}-${item.sourceModule}`}
+                className="grid gap-4 border-b border-pulse-border/60 p-4 last:border-b-0 lg:grid-cols-[1fr_1fr_0.8fr]"
+              >
+                <div className="min-w-0">
+                  <p className="text-sm font-semibold text-pulse-text">
+                    {item.label}
+                  </p>
+                  <p className="mt-1 text-xs leading-5 text-pulse-muted">
+                    {item.summary}
+                  </p>
+                </div>
+                <div className="min-w-0">
+                  <a
+                    href={addressUrlFor(option, item.address)}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="block truncate font-mono text-xs text-pulse-muted underline-offset-2 hover:text-pulse-cyan hover:underline"
+                    title={item.address}
+                  >
+                    {shortenAddress(item.address)}
+                  </a>
+                  <p className="mt-1 text-xs leading-5 text-pulse-muted">
+                    {registryRoleLabel(item.subjectRole)} from{" "}
+                    {item.sourceModule}
+                  </p>
+                </div>
+                <div className="min-w-0 text-xs leading-5 text-pulse-muted lg:text-right">
+                  <p>{item.confidence} confidence</p>
+                  <p>Reviewed {formatReviewedDate(item.reviewedAt)}</p>
+                  <p>{item.expired ? "Expired entry" : "Current review"}</p>
+                  {item.sources[0] ? (
+                    <a
+                      href={item.sources[0].url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="underline-offset-2 hover:text-pulse-cyan hover:underline"
+                    >
+                      Source
+                    </a>
+                  ) : null}
+                </div>
+              </li>
+            ))}
+          </ul>
+        </div>
+      ) : owner && status === "complete" ? (
+        <div className="mt-4 rounded-2xl border border-dashed border-pulse-border/80 bg-pulse-bg/40 p-4 text-sm leading-6 text-pulse-muted">
+          No reviewed registry match was found for the checked address context.
+          This is not proof that the wallet, spenders, recipients, contracts, or
+          counterparties are safe.
+        </div>
+      ) : null}
+    </section>
+  );
+}
+
+function KnownRiskRegistrySummary({
+  knownRiskRegistry,
+}: {
+  knownRiskRegistry: KnownRiskRegistryAnalysis;
+}) {
+  return (
+    <dl className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+      <SweeperMetric
+        label="Checked"
+        value={`${knownRiskRegistry.summary.checkedSubjectCount} addresses`}
+      />
+      <SweeperMetric
+        label="Unique"
+        value={knownRiskRegistry.summary.uniqueAddressCount.toString()}
+      />
+      <SweeperMetric
+        label="Matches"
+        value={knownRiskRegistry.summary.matchCount.toString()}
+      />
+      <SweeperMetric
+        label="Sources"
+        value={knownRiskRegistry.summary.reviewedSourceCount.toString()}
+      />
+      {knownRiskRegistry.warnings.length > 0 ? (
+        <div className="rounded-xl border border-pulse-border/70 bg-pulse-bg/45 p-3 text-xs leading-5 text-pulse-muted sm:col-span-2 lg:col-span-4">
+          {knownRiskRegistry.warnings.join(" ")}
+        </div>
+      ) : null}
+    </dl>
+  );
+}
+
 function Eip7702DelegationSection({
   eip7702,
   owner,
@@ -3157,6 +3351,7 @@ function CompletenessPanel({
   addressPoisoning,
   spenderRisk,
   permit2Exposure,
+  knownRiskRegistry,
   permit2Status,
   eip7702,
   smartWallet,
@@ -3173,6 +3368,7 @@ function CompletenessPanel({
   addressPoisoning: LifeboatAddressPoisoningApiResponse;
   spenderRisk: LifeboatSpenderRiskApiResponse;
   permit2Exposure: Permit2ExposureAnalysis;
+  knownRiskRegistry: KnownRiskRegistryAnalysis;
   permit2Status: LifeboatModuleStatus;
   eip7702: LifeboatEip7702ApiResponse;
   smartWallet: LifeboatSmartWalletApiResponse;
@@ -3225,6 +3421,10 @@ function CompletenessPanel({
         <CompletenessRow
           label="Permit2 exposure"
           value={statusLabelForPermit2Exposure(permit2Exposure, permit2Status)}
+        />
+        <CompletenessRow
+          label="Known-risk registry"
+          value={statusLabelForKnownRiskRegistry(knownRiskRegistry)}
         />
         <CompletenessRow
           label="HEX stake status"
@@ -3290,6 +3490,7 @@ function ReportExport({
   addressPoisoning,
   spenderRisk,
   permit2Exposure,
+  knownRiskRegistry,
   eip7702,
   smartWallet,
   erc4337,
@@ -3306,6 +3507,7 @@ function ReportExport({
   addressPoisoning: LifeboatAddressPoisoningApiResponse;
   spenderRisk: LifeboatSpenderRiskApiResponse;
   permit2Exposure: Permit2ExposureAnalysis;
+  knownRiskRegistry: KnownRiskRegistryAnalysis;
   eip7702: LifeboatEip7702ApiResponse;
   smartWallet: LifeboatSmartWalletApiResponse;
   erc4337: LifeboatErc4337ApiResponse;
@@ -3332,6 +3534,7 @@ function ReportExport({
         addressPoisoning,
         spenderRisk,
         permit2Exposure,
+        knownRiskRegistry,
         eip7702,
         smartWallet,
         erc4337,
@@ -3642,6 +3845,7 @@ function buildReportFromSnapshot(
   addressPoisoning: LifeboatAddressPoisoningApiResponse,
   spenderRisk: LifeboatSpenderRiskApiResponse,
   permit2Exposure: Permit2ExposureAnalysis,
+  knownRiskRegistry: KnownRiskRegistryAnalysis,
   eip7702: LifeboatEip7702ApiResponse,
   smartWallet: LifeboatSmartWalletApiResponse,
   erc4337: LifeboatErc4337ApiResponse,
@@ -3689,6 +3893,11 @@ function buildReportFromSnapshot(
     permit2Status: moduleStatusFromPermit2Exposure(scan.approvalsStatus),
     permit2RiskLevel: permit2Exposure.riskLevel,
     permit2Evidence: permit2Exposure.evidence,
+    knownRiskRegistryStatus:
+      moduleStatusFromKnownRiskRegistry(knownRiskRegistry),
+    knownRiskRegistryRiskLevel: knownRiskRegistry.riskLevel,
+    knownRiskRegistryEvidence: knownRiskRegistry.evidence,
+    knownRiskRegistrySubjects: knownRiskRegistry.subjects,
     eip7702Status: moduleStatusFromEip7702Response(eip7702),
     eip7702RiskLevel: eip7702.riskLevel,
     eip7702Evidence: eip7702.evidence,
@@ -3728,6 +3937,7 @@ function buildReportFromSnapshot(
       hexStakeCheckComplete: hexStake.status === "complete",
       goodAccountingAssistComplete:
         goodAccountingAssist.summary.sourceComplete,
+      knownRiskRegistryComplete: knownRiskRegistry.status === "complete",
       permit2Complete: scan.approvalsStatus === "complete",
       eip7702Complete: eip7702.status === "complete",
       smartWalletComplete: smartWallet.status === "complete",
@@ -3943,6 +4153,12 @@ function moduleStatusFromPermit2Exposure(
   return "not_scanned";
 }
 
+function moduleStatusFromKnownRiskRegistry(
+  knownRiskRegistry: KnownRiskRegistryAnalysis,
+): LifeboatModuleStatus {
+  return knownRiskRegistry.status === "complete" ? "complete" : "not_scanned";
+}
+
 function statusLabelForApprovals(
   status: LifeboatModuleStatus,
   count: number,
@@ -4036,6 +4252,12 @@ function statusLabelForPermit2Exposure(
 ): string {
   if (status === "scanning") return "Scanning";
   return permit2ExposureRiskLabel(permit2Exposure.riskLevel);
+}
+
+function statusLabelForKnownRiskRegistry(
+  knownRiskRegistry: KnownRiskRegistryAnalysis,
+): string {
+  return knownRiskRegistryRiskLabel(knownRiskRegistry.riskLevel);
 }
 
 function toneForModule(
@@ -4159,6 +4381,16 @@ function toneForPermit2Exposure(
   ) {
     return "warning";
   }
+  return "neutral";
+}
+
+function toneForKnownRiskRegistry(
+  riskLevel: KnownRiskRegistryRiskLevel,
+): "neutral" | "success" | "warning" | "danger" {
+  if (riskLevel === "elevated") return "danger";
+  if (riskLevel === "possible") return "warning";
+  if (riskLevel === "none_detected") return "success";
+  if (riskLevel === "informational") return "neutral";
   return "neutral";
 }
 
@@ -4366,6 +4598,18 @@ function toneClassForPermit2Exposure(riskLevel: Permit2ExposureRiskLevel): strin
   }[tone];
 }
 
+function toneClassForKnownRiskRegistry(
+  riskLevel: KnownRiskRegistryRiskLevel,
+): string {
+  const tone = toneForKnownRiskRegistry(riskLevel);
+  return {
+    neutral: "border-pulse-border bg-pulse-bg/50 text-pulse-muted",
+    success: "border-pulse-green/35 bg-pulse-green/10 text-pulse-green",
+    warning: "border-amber-400/35 bg-amber-400/10 text-amber-200",
+    danger: "border-pulse-red/40 bg-pulse-red/10 text-pulse-red",
+  }[tone];
+}
+
 function toneClassForDustTrap(riskLevel: DustTrapRiskLevel): string {
   const tone = toneForDustTrap(riskLevel);
   return {
@@ -4445,6 +4689,222 @@ function collectApprovalSpenderAddresses(
   return addresses.sort((a, b) => a.localeCompare(b));
 }
 
+function collectKnownRiskRegistrySubjects({
+  owner,
+  approvals,
+  nftApprovals,
+  timeline,
+  addressPoisoning,
+  spenderRisk,
+  eip7702,
+  smartWallet,
+  erc4337,
+  erc6909,
+  dustTrap,
+}: {
+  owner: Address | null;
+  approvals: LifeboatScanSnapshot["approvals"];
+  nftApprovals: LifeboatScanSnapshot["nftApprovals"];
+  timeline: LifeboatTimelineApiResponse;
+  addressPoisoning: LifeboatAddressPoisoningApiResponse;
+  spenderRisk: LifeboatSpenderRiskApiResponse;
+  eip7702: LifeboatEip7702ApiResponse;
+  smartWallet: LifeboatSmartWalletApiResponse;
+  erc4337: LifeboatErc4337ApiResponse;
+  erc6909: LifeboatErc6909ApiResponse;
+  dustTrap: LifeboatDustTrapApiResponse;
+}): KnownRiskRegistrySubject[] {
+  const subjects: KnownRiskRegistrySubject[] = [];
+  const seen = new Set<string>();
+
+  for (const approval of approvals) {
+    addKnownRiskSubject(subjects, seen, owner, {
+      address: approval.spenderAddress,
+      role: "approval-spender",
+      label: approval.spenderLabel || "Approval spender",
+      sourceModule: "approval-scan",
+    });
+    addKnownRiskSubject(subjects, seen, owner, {
+      address: approval.tokenAddress,
+      role: "approval-token",
+      label: approval.tokenSymbol || "Approval token",
+      sourceModule: "approval-scan",
+    });
+  }
+
+  for (const approval of nftApprovals) {
+    addKnownRiskSubject(subjects, seen, owner, {
+      address: approval.operatorAddress,
+      role: "nft-operator",
+      label: approval.operatorLabel || "NFT operator",
+      sourceModule: "nft-approval-scan",
+    });
+    addKnownRiskSubject(subjects, seen, owner, {
+      address: approval.collectionAddress,
+      role: "nft-collection",
+      label: approval.collectionName || "NFT collection",
+      sourceModule: "nft-approval-scan",
+    });
+  }
+
+  for (const event of timeline.events) {
+    addKnownRiskSubject(subjects, seen, owner, {
+      address: event.spender,
+      role: "timeline-spender",
+      label: "Timeline approval spender",
+      sourceModule: "approval-to-drain-timeline",
+    });
+    addKnownRiskSubject(subjects, seen, owner, {
+      address: event.to,
+      role: "timeline-recipient",
+      label: "Timeline recipient",
+      sourceModule: "approval-to-drain-timeline",
+    });
+    addKnownRiskSubject(subjects, seen, owner, {
+      address: event.contractAddress,
+      role: "timeline-contract",
+      label: "Timeline contract",
+      sourceModule: "approval-to-drain-timeline",
+    });
+  }
+
+  for (const item of timeline.evidence) {
+    addKnownRiskSubject(subjects, seen, owner, {
+      address: item.spender,
+      role: "timeline-spender",
+      label: "Timeline approval spender",
+      sourceModule: "approval-to-drain-timeline",
+    });
+    addKnownRiskSubject(subjects, seen, owner, {
+      address: item.recipient,
+      role: "timeline-recipient",
+      label: "Timeline outbound recipient",
+      sourceModule: "approval-to-drain-timeline",
+    });
+  }
+
+  for (const item of addressPoisoning.evidence) {
+    addKnownRiskSubject(subjects, seen, owner, {
+      address: item.lookalikeAddress,
+      role: "address-poisoning-lookalike",
+      label: "Address-poisoning lookalike",
+      sourceModule: "address-poisoning",
+    });
+    addKnownRiskSubject(subjects, seen, owner, {
+      address: item.referenceAddress,
+      role: "address-poisoning-reference",
+      label: "Address-poisoning reference",
+      sourceModule: "address-poisoning",
+    });
+  }
+
+  for (const spender of spenderRisk.spenders) {
+    addKnownRiskSubject(subjects, seen, owner, {
+      address: spender.address,
+      role: "spender-risk-spender",
+      label: spender.registryContext?.label ?? spender.contractName ?? "Spender",
+      sourceModule: "spender-contract-risk",
+    });
+  }
+
+  for (const item of eip7702.evidence) {
+    addKnownRiskSubject(subjects, seen, owner, {
+      address: item.delegationAddress,
+      role: "eip7702-delegate",
+      label: "EIP-7702 delegate",
+      sourceModule: "eip7702",
+    });
+  }
+
+  for (const item of smartWallet.evidence) {
+    for (const safeOwner of item.safeOwners) {
+      addKnownRiskSubject(subjects, seen, owner, {
+        address: safeOwner,
+        role: "safe-owner",
+        label: "Safe owner",
+        sourceModule: "smart-wallet",
+      });
+    }
+    for (const safeModule of item.safeModules) {
+      addKnownRiskSubject(subjects, seen, owner, {
+        address: safeModule,
+        role: "safe-module",
+        label: "Safe module",
+        sourceModule: "smart-wallet",
+      });
+    }
+  }
+
+  for (const event of erc4337.events) {
+    addKnownRiskSubject(subjects, seen, owner, {
+      address: event.paymaster,
+      role: "erc4337-paymaster",
+      label: "ERC-4337 paymaster",
+      sourceModule: "erc4337",
+    });
+    addKnownRiskSubject(subjects, seen, owner, {
+      address: event.entryPointAddress,
+      role: "erc4337-entry-point",
+      label: "ERC-4337 EntryPoint",
+      sourceModule: "erc4337",
+    });
+  }
+
+  for (const event of erc6909.events) {
+    addKnownRiskSubject(subjects, seen, owner, {
+      address: event.contractAddress,
+      role: "erc6909-contract",
+      label: "ERC-6909 contract",
+      sourceModule: "erc6909",
+    });
+    addKnownRiskSubject(subjects, seen, owner, {
+      address: event.spender,
+      role: "erc6909-spender",
+      label: "ERC-6909 spender",
+      sourceModule: "erc6909",
+    });
+  }
+
+  for (const item of dustTrap.evidence) {
+    addKnownRiskSubject(subjects, seen, owner, {
+      address: item.contractAddress,
+      role: item.assetType === "nft" ? "dust-nft-collection" : "dust-token",
+      label: item.displayName,
+      sourceModule: "dust-trap",
+    });
+  }
+
+  return subjects;
+}
+
+function addKnownRiskSubject(
+  subjects: KnownRiskRegistrySubject[],
+  seen: Set<string>,
+  owner: Address | null,
+  subject: {
+    address: Address | null | undefined;
+    role: KnownRiskRegistrySubjectRole;
+    label: string;
+    sourceModule: string;
+  },
+) {
+  if (!subject.address) return;
+  if (owner && subject.address.toLowerCase() === owner.toLowerCase()) return;
+  const key = [
+    subject.address.toLowerCase(),
+    subject.role,
+    subject.sourceModule.toLowerCase(),
+  ].join(":");
+  if (seen.has(key)) return;
+  seen.add(key);
+  subjects.push({
+    address: subject.address,
+    role: subject.role,
+    label: subject.label,
+    sourceModule: subject.sourceModule,
+  });
+}
+
 function sortNftApprovals(approvals: readonly NftApproval[]): NftApproval[] {
   return [...approvals].sort((a, b) => {
     const risk = riskRank(b.risk.level) - riskRank(a.risk.level);
@@ -4485,6 +4945,16 @@ function txUrlFor(option: AddressOnlyScanOption, hash: string): string {
 
 function shortHash(hash: string): string {
   return hash.length > 14 ? `${hash.slice(0, 8)}...${hash.slice(-6)}` : hash;
+}
+
+function formatReviewedDate(value: string): string {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value;
+  return date.toISOString().slice(0, 10);
+}
+
+function registryRoleLabel(role: KnownRiskRegistrySubjectRole): string {
+  return role.replaceAll("-", " ");
 }
 
 function shortCodePrefix(code: string): string {

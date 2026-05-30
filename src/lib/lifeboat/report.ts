@@ -7,6 +7,7 @@ import {
   LIFEBOAT_ERC6909_DIAGNOSTIC_COPY,
   LIFEBOAT_GOOD_ACCOUNTING_ASSIST_COPY,
   LIFEBOAT_HEX_STAKE_DIAGNOSTIC_COPY,
+  LIFEBOAT_KNOWN_RISK_REGISTRY_COPY,
   LIFEBOAT_NEXT_STEPS,
   LIFEBOAT_NOT_TO_DO,
   LIFEBOAT_PENDING_NONCE_DIAGNOSTIC_COPY,
@@ -23,6 +24,7 @@ import { erc4337RiskLabel } from "@/lib/lifeboat/erc4337";
 import { erc6909RiskLabel } from "@/lib/lifeboat/erc6909";
 import { goodAccountingAssistRiskLabel } from "@/lib/lifeboat/good-accounting";
 import { hexStakeRiskLabel } from "@/lib/lifeboat/hex-stake";
+import { knownRiskRegistryRiskLabel } from "@/lib/lifeboat/known-risk-registry";
 import { pendingNonceRiskLabel } from "@/lib/lifeboat/pending-nonce";
 import { permit2ExposureRiskLabel } from "@/lib/lifeboat/permit2-exposure";
 import { smartWalletRiskLabel } from "@/lib/lifeboat/smart-wallet";
@@ -96,6 +98,10 @@ ${formatHexStakeSection(report)}
 ## Good Accounting Assist
 
 ${formatGoodAccountingSection(report)}
+
+## Known-risk registry context
+
+${formatKnownRiskRegistrySection(report)}
 
 ## Permit2 exposure
 
@@ -336,6 +342,36 @@ ${evidence}`;
 ${rows || "No network scan has been added to this report yet."}`;
 }
 
+function formatKnownRiskRegistrySection(report: LifeboatReport): string {
+  const rows = report.chains
+    .map((chain) => {
+      const evidence =
+        chain.knownRiskRegistryEvidence.length > 0
+          ? chain.knownRiskRegistryEvidence
+              .map((item) => {
+                const sourceCount = item.sources.length;
+                const sourceLabel =
+                  sourceCount === 1 ? "1 reviewed source" : `${sourceCount} reviewed sources`;
+                const expired = item.expired ? "; entry expired" : "";
+                return `  - ${item.label}: ${item.address} as ${item.subjectRole}; ${item.confidence} confidence; ${sourceLabel}; reviewed ${item.reviewedAt}${expired}. ${item.summary}`;
+              })
+              .join("\n")
+          : formatEmptyKnownRiskRegistryEvidence(
+              chain.knownRiskRegistryStatus,
+              chain.knownRiskRegistrySubjects.length,
+            );
+      return `- ${chain.chainName}: ${formatModuleStatus(
+        chain.knownRiskRegistryStatus,
+      )}; ${knownRiskRegistryRiskLabel(chain.knownRiskRegistryRiskLevel)}
+${evidence}`;
+    })
+    .join("\n");
+
+  return `${LIFEBOAT_KNOWN_RISK_REGISTRY_COPY.body}
+
+${rows || "No network scan has been added to this report yet."}`;
+}
+
 function formatEmptyGoodAccountingEvidence(
   status: LifeboatReport["chains"][number]["goodAccountingStatus"],
 ): string {
@@ -349,6 +385,18 @@ function formatEmptyGoodAccountingEvidence(
     return "  - Good Accounting Assist is incomplete because the HEX stake diagnostic did not fully complete.";
   }
   return "  - Good Accounting Assist was not checked.";
+}
+
+function formatEmptyKnownRiskRegistryEvidence(
+  status: LifeboatReport["chains"][number]["knownRiskRegistryStatus"],
+  checkedSubjectCount: number,
+): string {
+  if (status === "complete") {
+    return `  - No reviewed registry match was found for ${checkedSubjectCount} checked address context row${
+      checkedSubjectCount === 1 ? "" : "s"
+    }. This is not proof that the wallet or counterparties are safe.`;
+  }
+  return "  - Known-risk registry context was not checked.";
 }
 
 function formatEmptyHexStakeEvidence(
