@@ -3,9 +3,11 @@
 import { FormEvent, useMemo, useState } from "react";
 
 import { LinkCheckerResult } from "@/components/security/link-checker-result";
+import { CANDIDATE_DOMAIN_HOSTNAMES } from "@/lib/security/candidate-domain-registry";
 import { checkCryptoLink } from "@/lib/security/link-checker";
 
 const EXAMPLE_LINK = "https://pulserevoke.com/security";
+const CANDIDATE_EXAMPLE_LINK = "https://app.pulsex.com";
 
 export function LinkChecker() {
   const [input, setInput] = useState("");
@@ -42,7 +44,7 @@ export function LinkChecker() {
             onChange={(event) => setInput(event.target.value)}
             className="mt-3 w-full rounded-xl border border-pulse-border bg-pulse-bg px-4 py-3 font-mono text-sm text-pulse-text outline-none transition placeholder:text-pulse-muted/70 focus:border-pulse-cyan focus:ring-2 focus:ring-pulse-cyan/25"
           />
-          <div className="mt-4 flex flex-col gap-3 sm:flex-row">
+          <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:flex-wrap">
             <button
               type="submit"
               className="inline-flex items-center justify-center rounded-xl bg-pulse-gradient px-5 py-3 text-sm font-semibold text-pulse-on-gradient shadow-glow transition hover:brightness-110"
@@ -59,6 +61,16 @@ export function LinkChecker() {
             >
               Try official example
             </button>
+            <button
+              type="button"
+              onClick={() => {
+                setInput(CANDIDATE_EXAMPLE_LINK);
+                setSubmittedInput(CANDIDATE_EXAMPLE_LINK);
+              }}
+              className="inline-flex items-center justify-center rounded-xl border border-pulse-cyan/35 bg-pulse-cyan/10 px-5 py-3 text-sm font-semibold text-pulse-cyan transition hover:bg-pulse-cyan/15"
+            >
+              Try source-list example
+            </button>
           </div>
         </form>
 
@@ -71,6 +83,14 @@ export function LinkChecker() {
             matches, and common phishing clues. It does not open the link, fetch
             the site, crawl pages, resolve DNS, request screenshots, connect a
             wallet, or submit transactions.
+          </p>
+          <p className="mt-2">
+            Candidate source context currently covers{" "}
+            <span className="font-mono text-pulse-text">
+              {CANDIDATE_DOMAIN_HOSTNAMES.length}
+            </span>{" "}
+            hostnames from reviewed source packets. Those entries are not
+            official-domain matches.
           </p>
         </div>
 
