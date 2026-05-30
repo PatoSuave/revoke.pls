@@ -412,6 +412,23 @@ export.
 
 Validation commands: Full validation stack plus Good Accounting assist tests.
 
+Current safe production pass:
+
+- Adds a Good Accounting Assist layer derived only from the read-only HEX stake
+  diagnostic.
+- Shows visible late HEX stake rows that may be candidates for manual Good
+  Accounting review from a clean wallet.
+- Keeps the source HEX stake diagnostic status attached so unsupported,
+  incomplete, truncated, config-missing, and upstream-failure states do not
+  become false all-clear states.
+- Adds clean-wallet-only copy, candidate rows, completeness status, and report
+  export coverage.
+- Does not call the HEX contract, prepare calldata, request signatures, connect
+  a clean wallet, submit transactions, relay transactions, simulate execution,
+  or run Good Accounting.
+- Does not add End Stake, Emergency End Stake, Good Accounting, rescue,
+  funding, transfer, relayer, server signing, or wallet-write paths.
+
 ## Phase 11: Smart Wallet / Safe Configuration Scanner
 
 Purpose: Inspect known smart-wallet configuration risks such as Safe owners,
