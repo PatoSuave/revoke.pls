@@ -20,6 +20,7 @@ describe("candidate-domain-registry", () => {
       label: "plstart.me GitHub mirror",
       sourceUrl:
         "https://raw.githubusercontent.com/0xWhankFrite/plstart.eth.limo/6417ee6c6b86ab9fa79417e9cc532f70edc19446/index.html",
+      sourcePageUrl: "https://start.me/p/gGQ09M/plstart-me",
       sourceRepositoryUrl: "https://github.com/0xWhankFrite/plstart.eth.limo",
       sourcePacketPath: "docs/security/domain-source-packets/plstart-eth-limo.md",
       capturedAt: "2026-05-30",
@@ -113,11 +114,24 @@ describe("candidate-domain-registry", () => {
       );
 
       expect(sourcePacket).toContain(packet.source.sourceUrl);
-      expect(sourcePacket).toContain(packet.source.sourceRepositoryUrl);
+      if (packet.source.sourcePageUrl) {
+        expect(sourcePacket).toContain(packet.source.sourcePageUrl);
+      }
+      if (packet.source.sourceRepositoryUrl) {
+        expect(sourcePacket).toContain(packet.source.sourceRepositoryUrl);
+      }
       expect(sourcePacket).toContain(packet.source.capturedAt);
       expect(sourcePacket).toContain("Candidate source context only");
       expect(sourcePacket).toContain("Unique URLs observed");
       expect(sourcePacket).toContain(String(packet.hostnames.length));
+
+      expect(packet.source.sourceUrl).toMatch(/^https:\/\//);
+      if (packet.source.sourcePageUrl) {
+        expect(packet.source.sourcePageUrl).toMatch(/^https:\/\//);
+      }
+      if (packet.source.sourceRepositoryUrl) {
+        expect(packet.source.sourceRepositoryUrl).toMatch(/^https:\/\//);
+      }
     }
   });
 

@@ -11,8 +11,9 @@ link checker as source context beside the normal result status.
 ## Source
 
 - Source label: `TODO`
-- Repository: `TODO`
-- Pinned snapshot: `TODO`
+- Public/source page: `TODO`
+- Repository or mirror: `TODO, if available`
+- Reviewed snapshot: `TODO`
 - Captured: `YYYY-MM-DD`
 - Registry file: `src/lib/security/candidate-domain-registry.ts`
 
@@ -37,8 +38,10 @@ link checker as source context beside the normal result status.
 
 ## Review Checklist
 
-- Confirm the source URL is pinned to an immutable commit, exported snapshot, or
-  reviewed local artifact.
+- Confirm the reviewed snapshot is pinned to an immutable commit, exported
+  snapshot, or reviewed local artifact.
+- Confirm the public/source page or repository/mirror is recorded when
+  available.
 - Confirm the source packet records the captured date.
 - Confirm the imported hostnames are lowercase and contain no protocol, path,
   search, fragment, whitespace, or credentials.
