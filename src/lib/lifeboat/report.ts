@@ -3,6 +3,7 @@ import {
   LIFEBOAT_CRITICAL_WARNINGS,
   LIFEBOAT_DUST_TRAP_DIAGNOSTIC_COPY,
   LIFEBOAT_EIP7702_DIAGNOSTIC_COPY,
+  LIFEBOAT_ERC4337_DIAGNOSTIC_COPY,
   LIFEBOAT_GOOD_ACCOUNTING_ASSIST_COPY,
   LIFEBOAT_HEX_STAKE_DIAGNOSTIC_COPY,
   LIFEBOAT_NEXT_STEPS,
@@ -17,6 +18,7 @@ import {
 import { addressPoisoningRiskLabel } from "@/lib/lifeboat/address-poisoning";
 import { dustTrapRiskLabel } from "@/lib/lifeboat/dust-trap";
 import { eip7702RiskLabel } from "@/lib/lifeboat/eip7702";
+import { erc4337RiskLabel } from "@/lib/lifeboat/erc4337";
 import { goodAccountingAssistRiskLabel } from "@/lib/lifeboat/good-accounting";
 import { hexStakeRiskLabel } from "@/lib/lifeboat/hex-stake";
 import { pendingNonceRiskLabel } from "@/lib/lifeboat/pending-nonce";
@@ -104,6 +106,10 @@ ${formatEip7702Section(report)}
 ## Smart wallet / Safe configuration
 
 ${formatSmartWalletSection(report)}
+
+## ERC-4337 / session-key signals
+
+${formatErc4337Section(report)}
 
 ## Token/NFT dust traps
 
@@ -442,6 +448,33 @@ ${evidence}`;
 ${rows || "No network scan has been added to this report yet."}`;
 }
 
+function formatErc4337Section(report: LifeboatReport): string {
+  const rows = report.chains
+    .map((chain) => {
+      const evidence =
+        chain.erc4337Evidence.length > 0
+          ? chain.erc4337Evidence
+              .map((item) => {
+                const event = item.event;
+                const paymaster = event.paymaster
+                  ? `; paymaster ${event.paymaster}`
+                  : "";
+                return `  - ${item.title}: ${event.entryPointVersion} ${event.entryPointAddress}; tx ${event.transactionHash}; success ${event.success}; nonce ${event.nonce}${paymaster}. ${item.description}`;
+              })
+              .join("\n")
+          : formatEmptyErc4337Evidence(chain.erc4337Status);
+      return `- ${chain.chainName}: ${formatModuleStatus(
+        chain.erc4337Status,
+      )}; ${erc4337RiskLabel(chain.erc4337RiskLevel)}
+${evidence}`;
+    })
+    .join("\n");
+
+  return `${LIFEBOAT_ERC4337_DIAGNOSTIC_COPY.body}
+
+${rows || "No network scan has been added to this report yet."}`;
+}
+
 function formatDustTrapSection(report: LifeboatReport): string {
   const rows = report.chains
     .map((chain) => {
@@ -464,6 +497,21 @@ ${evidence}`;
   return `${LIFEBOAT_DUST_TRAP_DIAGNOSTIC_COPY.body}
 
 ${rows || "No network scan has been added to this report yet."}`;
+}
+
+function formatEmptyErc4337Evidence(
+  status: LifeboatReport["chains"][number]["erc4337Status"],
+): string {
+  if (status === "complete") {
+    return "  - No recent UserOperationEvent logs were found in the bounded EntryPoint window. This is not proof that no session keys, modules, delegations, or off-chain authorization risk exists.";
+  }
+  if (status === "unsupported") {
+    return "  - This network is not marked supported for ERC-4337 diagnostics.";
+  }
+  if (status === "upstream_unavailable" || status === "partial") {
+    return "  - The ERC-4337 check did not fully complete. Do not treat this as proof that no account-abstraction or session-key risk exists.";
+  }
+  return "  - ERC-4337 / session-key signals were not checked.";
 }
 
 function formatEmptySmartWalletEvidence(

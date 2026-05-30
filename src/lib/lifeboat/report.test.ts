@@ -24,6 +24,7 @@ const REPORT: LifeboatReport = {
     permit2Complete: true,
     eip7702Complete: true,
     smartWalletComplete: true,
+    erc4337Complete: true,
     dustTrapCheckComplete: true,
     visibleAssetsComplete: false,
   },
@@ -269,6 +270,52 @@ const REPORT: LifeboatReport = {
             "https://scan.pulsechain.com/address/0x1111111111111111111111111111111111111111",
         },
       ],
+      erc4337Status: "complete",
+      erc4337RiskLevel: "possible",
+      erc4337Evidence: [
+        {
+          title: "UserOperation used a paymaster",
+          description:
+            "A recent UserOperation for this account recorded a paymaster address. Review the linked event before adding gas or connecting the wallet.",
+          riskLevel: "possible",
+          event: {
+            entryPointVersion: "v0.7",
+            entryPointAddress: "0x0000000071727de22E5E9d8BAf0edAc6f37da032",
+            userOpHash:
+              "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            sender: "0x1111111111111111111111111111111111111111",
+            paymaster: "0x2222222222222222222222222222222222222222",
+            nonce: "7",
+            success: true,
+            actualGasCostWei: "100000",
+            actualGasUsed: "50000",
+            blockNumber: 123456,
+            transactionHash:
+              "0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+            explorerUrl:
+              "https://scan.pulsechain.com/tx/0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+          },
+        },
+      ],
+      erc4337Events: [
+        {
+          entryPointVersion: "v0.7",
+          entryPointAddress: "0x0000000071727de22E5E9d8BAf0edAc6f37da032",
+          userOpHash:
+            "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          sender: "0x1111111111111111111111111111111111111111",
+          paymaster: "0x2222222222222222222222222222222222222222",
+          nonce: "7",
+          success: true,
+          actualGasCostWei: "100000",
+          actualGasUsed: "50000",
+          blockNumber: 123456,
+          transactionHash:
+            "0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+          explorerUrl:
+            "https://scan.pulsechain.com/tx/0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+        },
+      ],
       dustTrapStatus: "complete",
       dustTrapRiskLevel: "elevated",
       dustTrapEvidence: [
@@ -333,6 +380,9 @@ describe("Wallet Lifeboat report", () => {
     expect(markdown).toContain("EIP-7702 delegation");
     expect(markdown).toContain("Active EIP-7702 delegation");
     expect(markdown).toContain("0x8888888888888888888888888888888888888888");
+    expect(markdown).toContain("ERC-4337 / session-key signals");
+    expect(markdown).toContain("UserOperation used a paymaster");
+    expect(markdown).toContain("0x2222222222222222222222222222222222222222");
     expect(markdown).toContain("Token/NFT dust traps");
     expect(markdown).toContain("Multiple dust/bait signals");
     expect(markdown).toContain("Claim [link removed]");
