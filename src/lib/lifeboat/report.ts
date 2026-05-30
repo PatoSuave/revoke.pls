@@ -1,6 +1,7 @@
 import {
   LIFEBOAT_ADDRESS_POISONING_DIAGNOSTIC_COPY,
   LIFEBOAT_CRITICAL_WARNINGS,
+  LIFEBOAT_EIP7702_DIAGNOSTIC_COPY,
   LIFEBOAT_NEXT_STEPS,
   LIFEBOAT_NOT_TO_DO,
   LIFEBOAT_PENDING_NONCE_DIAGNOSTIC_COPY,
@@ -11,6 +12,7 @@ import {
   LIFEBOAT_TIMELINE_DIAGNOSTIC_COPY,
 } from "@/lib/lifeboat/copy";
 import { addressPoisoningRiskLabel } from "@/lib/lifeboat/address-poisoning";
+import { eip7702RiskLabel } from "@/lib/lifeboat/eip7702";
 import { pendingNonceRiskLabel } from "@/lib/lifeboat/pending-nonce";
 import { permit2ExposureRiskLabel } from "@/lib/lifeboat/permit2-exposure";
 import { spenderRiskLabel } from "@/lib/lifeboat/spender-risk";
@@ -86,7 +88,7 @@ ${formatPermit2ExposureSection(report)}
 
 ## EIP-7702 delegation
 
-${plannedDiagnosticCopy("eip7702")}
+${formatEip7702Section(report)}
 
 ## What not to do
 
@@ -289,6 +291,47 @@ ${evidence}`;
   return `${LIFEBOAT_PERMIT2_DIAGNOSTIC_COPY.body}
 
 ${rows || "No network scan has been added to this report yet."}`;
+}
+
+function formatEip7702Section(report: LifeboatReport): string {
+  const rows = report.chains
+    .map((chain) => {
+      const evidence =
+        chain.eip7702Evidence.length > 0
+          ? chain.eip7702Evidence
+              .map((item) => {
+                const delegate = item.delegationAddress
+                  ? ` delegate ${item.delegationAddress}`
+                  : "";
+                return `  - ${item.classification}: ${item.codeLengthBytes} bytes${delegate}. ${item.description}`;
+              })
+              .join("\n")
+          : formatEmptyEip7702Evidence(chain.eip7702Status);
+      return `- ${chain.chainName}: ${formatModuleStatus(
+        chain.eip7702Status,
+      )}; ${eip7702RiskLabel(chain.eip7702RiskLevel)}
+${evidence}`;
+    })
+    .join("\n");
+
+  return `${LIFEBOAT_EIP7702_DIAGNOSTIC_COPY.body}
+
+${rows || "No network scan has been added to this report yet."}`;
+}
+
+function formatEmptyEip7702Evidence(
+  status: LifeboatReport["chains"][number]["eip7702Status"],
+): string {
+  if (status === "complete") {
+    return "  - No EIP-7702 delegation designator was found by the completed account-code check.";
+  }
+  if (status === "unsupported") {
+    return "  - This network is not marked supported for the EIP-7702 diagnostic.";
+  }
+  if (status === "upstream_unavailable" || status === "partial") {
+    return "  - The account-code check did not fully complete. Do not treat this as proof that no delegation exists.";
+  }
+  return "  - EIP-7702 delegation was not checked.";
 }
 
 function formatScanStatus(status: LifeboatReport["status"]): string {

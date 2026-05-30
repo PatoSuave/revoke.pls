@@ -12,6 +12,10 @@ import type {
   PendingNonceAnalysis,
 } from "@/lib/lifeboat/pending-nonce";
 import type {
+  Eip7702Evidence,
+  Eip7702RiskLevel,
+} from "@/lib/lifeboat/eip7702";
+import type {
   Permit2ExposureEvidence,
   Permit2ExposureRiskLevel,
 } from "@/lib/lifeboat/permit2-exposure";
@@ -97,6 +101,8 @@ export interface LifeboatChainReport {
   permit2RiskLevel: Permit2ExposureRiskLevel;
   permit2Evidence: Permit2ExposureEvidence[];
   eip7702Status: LifeboatModuleStatus;
+  eip7702RiskLevel: Eip7702RiskLevel;
+  eip7702Evidence: Eip7702Evidence[];
   visibleAssetsStatus: LifeboatModuleStatus;
   incompleteReasons: string[];
 }

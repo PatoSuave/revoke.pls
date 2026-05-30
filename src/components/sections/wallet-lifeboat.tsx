@@ -10,6 +10,7 @@ import { useArbitrumApprovalScan } from "@/hooks/use-arbitrum-approval-scan";
 import { useEthereumApprovalScan } from "@/hooks/use-ethereum-approval-scan";
 import { useHyperEVMApprovalScan } from "@/hooks/use-hyperevm-approval-scan";
 import { useLifeboatAddressPoisoningScan } from "@/hooks/use-lifeboat-address-poisoning-scan";
+import { useLifeboatEip7702Scan } from "@/hooks/use-lifeboat-eip7702-scan";
 import { useLifeboatPendingNonceScan } from "@/hooks/use-lifeboat-pending-nonce-scan";
 import { useLifeboatSpenderRiskScan } from "@/hooks/use-lifeboat-spender-risk-scan";
 import { useLifeboatSweeperScan } from "@/hooks/use-lifeboat-sweeper-scan";
@@ -28,6 +29,7 @@ import { shortenAddress } from "@/lib/format";
 import {
   LIFEBOAT_ADDRESS_POISONING_DIAGNOSTIC_COPY,
   LIFEBOAT_CRITICAL_WARNINGS,
+  LIFEBOAT_EIP7702_DIAGNOSTIC_COPY,
   LIFEBOAT_NEXT_STEPS,
   LIFEBOAT_NOT_TO_DO,
   LIFEBOAT_PENDING_NONCE_DIAGNOSTIC_COPY,
@@ -42,6 +44,11 @@ import {
   type AddressPoisoningRiskLevel,
   type LifeboatAddressPoisoningApiResponse,
 } from "@/lib/lifeboat/address-poisoning";
+import {
+  eip7702RiskLabel,
+  type Eip7702RiskLevel,
+  type LifeboatEip7702ApiResponse,
+} from "@/lib/lifeboat/eip7702";
 import {
   pendingNonceRiskLabel,
   type LifeboatPendingNonceApiResponse,
@@ -113,6 +120,12 @@ export function WalletLifeboat() {
     enabled: Boolean(owner),
   });
   const addressPoisoning = useLifeboatAddressPoisoningScan({
+    owner: owner ?? undefined,
+    chainId: selectedChainId,
+    chainName: selectedOption.displayName,
+    enabled: Boolean(owner),
+  });
+  const eip7702 = useLifeboatEip7702Scan({
     owner: owner ?? undefined,
     chainId: selectedChainId,
     chainName: selectedOption.displayName,
@@ -223,6 +236,7 @@ export function WalletLifeboat() {
           addressPoisoning={addressPoisoning.response}
           spenderRisk={spenderRisk.response}
           permit2Exposure={permit2Exposure}
+          eip7702={eip7702.response}
         />
 
         <div className="mt-6 grid gap-6 xl:grid-cols-[minmax(0,1fr)_360px]">
@@ -278,6 +292,12 @@ export function WalletLifeboat() {
               option={selectedOption}
               status={moduleStatusFromPermit2Exposure(scan.approvalsStatus)}
             />
+            <Eip7702DelegationSection
+              eip7702={eip7702.response}
+              owner={owner}
+              option={selectedOption}
+              isScanning={eip7702.status === "pending"}
+            />
             <PlannedDiagnostics />
             <DetectionLimits />
           </div>
@@ -291,6 +311,7 @@ export function WalletLifeboat() {
               spenderRisk={spenderRisk.response}
               permit2Exposure={permit2Exposure}
               permit2Status={moduleStatusFromPermit2Exposure(scan.approvalsStatus)}
+              eip7702={eip7702.response}
             />
             <ReportExport
               scan={scan}
@@ -301,6 +322,7 @@ export function WalletLifeboat() {
               addressPoisoning={addressPoisoning.response}
               spenderRisk={spenderRisk.response}
               permit2Exposure={permit2Exposure}
+              eip7702={eip7702.response}
             />
           </div>
         </div>
@@ -461,6 +483,7 @@ function TriageSummary({
   addressPoisoning,
   spenderRisk,
   permit2Exposure,
+  eip7702,
 }: {
   scan: LifeboatScanSnapshot;
   owner: Address | null;
@@ -470,6 +493,7 @@ function TriageSummary({
   addressPoisoning: LifeboatAddressPoisoningApiResponse;
   spenderRisk: LifeboatSpenderRiskApiResponse;
   permit2Exposure: Permit2ExposureAnalysis;
+  eip7702: LifeboatEip7702ApiResponse;
 }) {
   const cards: {
     label: string;
@@ -526,8 +550,8 @@ function TriageSummary({
     },
     {
       label: "EIP-7702 delegation",
-      value: "Planned diagnostic",
-      tone: "neutral" as const,
+      value: statusLabelForEip7702(eip7702),
+      tone: toneForEip7702(eip7702.riskLevel),
     },
     {
       label: "Report completeness",
@@ -1868,6 +1892,154 @@ function Permit2ExposureSummary({
   );
 }
 
+function Eip7702DelegationSection({
+  eip7702,
+  owner,
+  option,
+  isScanning,
+}: {
+  eip7702: LifeboatEip7702ApiResponse;
+  owner: Address | null;
+  option: AddressOnlyScanOption;
+  isScanning: boolean;
+}) {
+  const status = moduleStatusFromEip7702Response(eip7702);
+  return (
+    <section className="rounded-2xl border border-pulse-border bg-pulse-panel/65 p-5">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-pulse-cyan">
+            {LIFEBOAT_EIP7702_DIAGNOSTIC_COPY.title}
+          </p>
+          <h2 className="mt-1 text-xl font-semibold text-pulse-text">
+            Account-code delegation
+          </h2>
+          <p className="mt-2 text-sm leading-6 text-pulse-muted">
+            {owner
+              ? `${option.displayName} latest account code is checked for the EIP-7702 delegation designator where this diagnostic is supported.`
+              : "Paste a wallet address to check whether supported networks report EIP-7702 delegation code."}
+          </p>
+        </div>
+        <span
+          className={`inline-flex w-fit rounded-full border px-3 py-1 text-xs font-semibold ${toneClassForEip7702(
+            eip7702.riskLevel,
+          )}`}
+        >
+          {isScanning ? "Scanning" : eip7702RiskLabel(eip7702.riskLevel)}
+        </span>
+      </div>
+
+      <p className="mt-4 rounded-xl border border-pulse-border/70 bg-pulse-bg/45 p-3 text-sm leading-6 text-pulse-muted">
+        {LIFEBOAT_EIP7702_DIAGNOSTIC_COPY.body}
+      </p>
+
+      {owner && status === "unsupported" ? (
+        <div className="mt-4 rounded-xl border border-amber-400/35 bg-amber-400/10 p-3 text-sm leading-6 text-amber-100">
+          {eip7702.warnings[0] ??
+            "This network is not marked supported for this diagnostic yet."}
+        </div>
+      ) : null}
+
+      {owner && (status === "partial" || status === "upstream_unavailable") ? (
+        <div className="mt-4 rounded-xl border border-amber-400/35 bg-amber-400/10 p-3 text-sm leading-6 text-amber-100">
+          This diagnostic is incomplete. Do not treat missing EIP-7702 evidence
+          as proof that the wallet is safe or that no delegation exists.
+        </div>
+      ) : null}
+
+      {owner && (status === "complete" || status === "partial") ? (
+        <Eip7702Summary eip7702={eip7702} />
+      ) : null}
+
+      {owner && eip7702.evidence.length > 0 ? (
+        <div className="mt-4 overflow-hidden rounded-2xl border border-pulse-border bg-pulse-bg/40">
+          <ul>
+            {eip7702.evidence.map((item) => (
+              <li
+                key={`${item.accountAddress}-${item.classification}-${item.delegationAddress ?? "none"}`}
+                className="grid gap-4 border-b border-pulse-border/60 p-4 last:border-b-0 lg:grid-cols-[1fr_1fr_0.8fr]"
+              >
+                <div className="min-w-0">
+                  <p className="text-sm font-semibold text-pulse-text">
+                    {eip7702ClassificationLabel(item.classification)}
+                  </p>
+                  <a
+                    href={item.explorerUrl ?? addressUrlFor(option, item.accountAddress)}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="mt-1 block truncate font-mono text-xs text-pulse-muted underline-offset-2 hover:text-pulse-cyan hover:underline"
+                    title={item.accountAddress}
+                  >
+                    {shortenAddress(item.accountAddress)}
+                  </a>
+                </div>
+                <div className="min-w-0 text-xs leading-5 text-pulse-muted">
+                  <p>{item.description}</p>
+                  {item.delegationAddress ? (
+                    <a
+                      href={
+                        item.delegationExplorerUrl ??
+                        addressUrlFor(option, item.delegationAddress)
+                      }
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="mt-1 block truncate font-mono underline-offset-2 hover:text-pulse-cyan hover:underline"
+                      title={item.delegationAddress}
+                    >
+                      Delegate: {shortenAddress(item.delegationAddress)}
+                    </a>
+                  ) : null}
+                </div>
+                <div className="min-w-0 text-xs leading-5 text-pulse-muted lg:text-right">
+                  <p>Code bytes: {item.codeLengthBytes}</p>
+                  <p>Code prefix: {shortCodePrefix(item.code)}</p>
+                </div>
+              </li>
+            ))}
+          </ul>
+        </div>
+      ) : owner && status === "complete" ? (
+        <div className="mt-4 rounded-2xl border border-dashed border-pulse-border/80 bg-pulse-bg/40 p-4 text-sm leading-6 text-pulse-muted">
+          No EIP-7702 delegation designator was found at latest block on this
+          network. This is not an all-clear for other compromise paths.
+        </div>
+      ) : null}
+    </section>
+  );
+}
+
+function Eip7702Summary({
+  eip7702,
+}: {
+  eip7702: LifeboatEip7702ApiResponse;
+}) {
+  return (
+    <dl className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+      <SweeperMetric
+        label="Code"
+        value={eip7702.summary.hasCode ? "present" : "empty"}
+      />
+      <SweeperMetric
+        label="Bytes"
+        value={eip7702.summary.codeLengthBytes.toString()}
+      />
+      <SweeperMetric
+        label="Delegation"
+        value={eip7702.summary.hasDelegation ? "found" : "not found"}
+      />
+      <SweeperMetric
+        label="Support"
+        value={eip7702.supported ? "marked" : "unsupported"}
+      />
+      {[...eip7702.warnings, ...eip7702.supportNotes].length > 0 ? (
+        <div className="rounded-xl border border-pulse-border/70 bg-pulse-bg/45 p-3 text-xs leading-5 text-pulse-muted sm:col-span-2 lg:col-span-4">
+          {[...eip7702.warnings, ...eip7702.supportNotes].join(" ")}
+        </div>
+      ) : null}
+    </dl>
+  );
+}
+
 function PlannedDiagnostics() {
   return (
     <section className="rounded-2xl border border-pulse-border bg-pulse-panel/65 p-5">
@@ -1950,6 +2122,7 @@ function CompletenessPanel({
   spenderRisk,
   permit2Exposure,
   permit2Status,
+  eip7702,
 }: {
   scan: LifeboatScanSnapshot;
   sweeper: LifeboatSweeperApiResponse;
@@ -1959,6 +2132,7 @@ function CompletenessPanel({
   spenderRisk: LifeboatSpenderRiskApiResponse;
   permit2Exposure: Permit2ExposureAnalysis;
   permit2Status: LifeboatModuleStatus;
+  eip7702: LifeboatEip7702ApiResponse;
 }) {
   return (
     <section className="rounded-2xl border border-pulse-border bg-pulse-panel/65 p-5">
@@ -2005,7 +2179,10 @@ function CompletenessPanel({
           value={statusLabelForPermit2Exposure(permit2Exposure, permit2Status)}
         />
         <CompletenessRow label="HEX stake status" value="Planned diagnostic" />
-        <CompletenessRow label="EIP-7702 delegation" value="Planned diagnostic" />
+        <CompletenessRow
+          label="EIP-7702 delegation"
+          value={statusLabelForEip7702(eip7702)}
+        />
         <CompletenessRow label="Visible assets" value="Planned diagnostic" />
       </dl>
       {scan.incompleteReasons.length > 0 ? (
@@ -2042,6 +2219,7 @@ function ReportExport({
   addressPoisoning,
   spenderRisk,
   permit2Exposure,
+  eip7702,
 }: {
   scan: LifeboatScanSnapshot;
   owner: Address | null;
@@ -2051,6 +2229,7 @@ function ReportExport({
   addressPoisoning: LifeboatAddressPoisoningApiResponse;
   spenderRisk: LifeboatSpenderRiskApiResponse;
   permit2Exposure: Permit2ExposureAnalysis;
+  eip7702: LifeboatEip7702ApiResponse;
 }) {
   const [copyState, setCopyState] = useState<"idle" | "copied" | "failed">(
     "idle",
@@ -2070,6 +2249,7 @@ function ReportExport({
         addressPoisoning,
         spenderRisk,
         permit2Exposure,
+        eip7702,
       ),
     );
   }
@@ -2373,6 +2553,7 @@ function buildReportFromSnapshot(
   addressPoisoning: LifeboatAddressPoisoningApiResponse,
   spenderRisk: LifeboatSpenderRiskApiResponse,
   permit2Exposure: Permit2ExposureAnalysis,
+  eip7702: LifeboatEip7702ApiResponse,
 ): LifeboatReport {
   const chain: LifeboatChainReport = {
     chainId: scan.chainId,
@@ -2405,7 +2586,9 @@ function buildReportFromSnapshot(
     permit2Status: moduleStatusFromPermit2Exposure(scan.approvalsStatus),
     permit2RiskLevel: permit2Exposure.riskLevel,
     permit2Evidence: permit2Exposure.evidence,
-    eip7702Status: "planned",
+    eip7702Status: moduleStatusFromEip7702Response(eip7702),
+    eip7702RiskLevel: eip7702.riskLevel,
+    eip7702Evidence: eip7702.evidence,
     visibleAssetsStatus: "planned",
     incompleteReasons: [...scan.incompleteReasons],
   };
@@ -2426,7 +2609,7 @@ function buildReportFromSnapshot(
       spenderRiskCheckComplete: spenderRisk.status === "complete",
       hexCheckComplete: false,
       permit2Complete: scan.approvalsStatus === "complete",
-      eip7702Complete: false,
+      eip7702Complete: eip7702.status === "complete",
       visibleAssetsComplete: false,
     },
   };
@@ -2512,6 +2695,22 @@ function moduleStatusFromSpenderRiskResponse(
   return "partial";
 }
 
+function moduleStatusFromEip7702Response(
+  eip7702: LifeboatEip7702ApiResponse,
+): LifeboatModuleStatus {
+  if (eip7702.status === "idle") return "not_scanned";
+  if (eip7702.status === "scanning") return "scanning";
+  if (eip7702.status === "complete") return "complete";
+  if (eip7702.status === "unsupported") return "unsupported";
+  if (
+    eip7702.status === "config-missing" ||
+    eip7702.status === "upstream-failure"
+  ) {
+    return "upstream_unavailable";
+  }
+  return "partial";
+}
+
 function moduleStatusFromPermit2Exposure(
   approvalStatus: LifeboatModuleStatus,
 ): LifeboatModuleStatus {
@@ -2565,6 +2764,11 @@ function statusLabelForSpenderRisk(
 ): string {
   if (spenderRisk.status === "scanning") return "Scanning";
   return spenderRiskLabel(spenderRisk.riskLevel);
+}
+
+function statusLabelForEip7702(eip7702: LifeboatEip7702ApiResponse): string {
+  if (eip7702.status === "scanning") return "Scanning";
+  return eip7702RiskLabel(eip7702.riskLevel);
 }
 
 function statusLabelForPermit2Exposure(
@@ -2665,6 +2869,23 @@ function toneForSpenderRisk(
   return "neutral";
 }
 
+function toneForEip7702(
+  riskLevel: Eip7702RiskLevel,
+): "neutral" | "success" | "warning" | "danger" {
+  if (riskLevel === "elevated") return "danger";
+  if (riskLevel === "possible") return "warning";
+  if (riskLevel === "none_detected") return "success";
+  if (riskLevel === "informational") return "neutral";
+  if (
+    riskLevel === "insufficient_data" ||
+    riskLevel === "upstream_unavailable" ||
+    riskLevel === "unsupported"
+  ) {
+    return "warning";
+  }
+  return "neutral";
+}
+
 function toneForPermit2Exposure(
   riskLevel: Permit2ExposureRiskLevel,
 ): "neutral" | "success" | "warning" | "danger" {
@@ -2726,6 +2947,16 @@ function toneClassForAddressPoisoning(
 
 function toneClassForSpenderRisk(riskLevel: SpenderRiskLevel): string {
   const tone = toneForSpenderRisk(riskLevel);
+  return {
+    neutral: "border-pulse-border bg-pulse-bg/50 text-pulse-muted",
+    success: "border-pulse-green/35 bg-pulse-green/10 text-pulse-green",
+    warning: "border-amber-400/35 bg-amber-400/10 text-amber-200",
+    danger: "border-pulse-red/40 bg-pulse-red/10 text-pulse-red",
+  }[tone];
+}
+
+function toneClassForEip7702(riskLevel: Eip7702RiskLevel): string {
+  const tone = toneForEip7702(riskLevel);
   return {
     neutral: "border-pulse-border bg-pulse-bg/50 text-pulse-muted",
     success: "border-pulse-green/35 bg-pulse-green/10 text-pulse-green",
@@ -2831,6 +3062,26 @@ function txUrlFor(option: AddressOnlyScanOption, hash: string): string {
 
 function shortHash(hash: string): string {
   return hash.length > 14 ? `${hash.slice(0, 8)}...${hash.slice(-6)}` : hash;
+}
+
+function shortCodePrefix(code: string): string {
+  return code.length > 18 ? `${code.slice(0, 10)}...${code.slice(-6)}` : code;
+}
+
+function eip7702ClassificationLabel(
+  classification: LifeboatEip7702ApiResponse["evidence"][number]["classification"],
+): string {
+  switch (classification) {
+    case "eip7702_delegation":
+      return "Delegation designator";
+    case "invalid_delegation":
+      return "Malformed delegation prefix";
+    case "other_code":
+      return "Other account code";
+    case "empty":
+    default:
+      return "No account code";
+  }
 }
 
 function formatPermit2Expiration(iso: string | null): string {
