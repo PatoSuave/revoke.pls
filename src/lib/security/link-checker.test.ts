@@ -82,6 +82,20 @@ describe("checkCryptoLink", () => {
 
     expect(result.status).toBe("unknown-domain");
     expect(result.signals).toEqual([]);
+    expect(result.candidateDomainMatches).toEqual([]);
+  });
+
+  it("adds candidate source context without promoting a domain to official", () => {
+    const result = checkCryptoLink("https://app.pulsex.com");
+
+    expect(result.status).toBe("unknown-domain");
+    expect(result.matchedOfficialDomain).toBeUndefined();
+    expect(result.candidateDomainMatches).toHaveLength(1);
+    expect(result.candidateDomainMatches[0]).toMatchObject({
+      hostname: "app.pulsex.com",
+      confidence: "candidate-source",
+    });
+    expect(result.userMessage).toContain("candidate source list");
   });
 
   it("does not treat unapproved official-domain subdomains as official", () => {

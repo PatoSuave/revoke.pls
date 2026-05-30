@@ -18,6 +18,8 @@ The checker may:
 - Parse hostname, approximate registrable domain, protocol, path, and HTTPS
   state.
 - Compare the hostname against the official-domain registry.
+- Show candidate source-list context when a hostname appears in a reviewed
+  community source snapshot.
 - Flag local patterns such as non-HTTPS links, IP hostnames, punycode, long
   URLs, misleading `@` userinfo, deep subdomains, shorteners, suspicious
   path/subdomain keywords, and Pulse Revoke lookalikes.
@@ -63,6 +65,26 @@ an explicit reviewed entry or enabled through registry metadata.
 Future PulseChain ecosystem entries require a source packet before inclusion.
 Do not add third-party domains from memory, search snippets, social posts, or
 user submissions alone.
+
+## Candidate Source Registry
+
+Candidate source entries are separate from official-domain entries. They give
+users context that a hostname appeared in a reviewed source snapshot, but they
+do not prove the hostname is official, current, endorsed, or free of risk.
+
+The first candidate source is:
+
+- `0xWhankFrite/plstart.eth.limo`
+- Source snapshot:
+  `https://raw.githubusercontent.com/0xWhankFrite/plstart.eth.limo/6417ee6c6b86ab9fa79417e9cc532f70edc19446/index.html`
+- Captured on `2026-05-30`
+- Imported as exact hostnames in
+  `src/lib/security/candidate-domain-registry.ts`
+
+Candidate hostnames must not change the result to `official-match`. They may
+appear as source context beside the normal result status. If a candidate
+hostname also has suspicious static signals, the suspicious signals still take
+priority in the result.
 
 ## Future Expansion Boundaries
 

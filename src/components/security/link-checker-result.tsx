@@ -58,6 +58,29 @@ export function LinkCheckerResult({ result }: { result: LinkCheckResult }) {
         />
       </dl>
 
+      {result.candidateDomainMatches.length > 0 ? (
+        <div className="mt-5 rounded-2xl border border-pulse-cyan/25 bg-pulse-cyan/10 p-4 text-sm leading-7 text-pulse-muted">
+          <h3 className="font-semibold text-pulse-text">Source context</h3>
+          <p className="mt-2">
+            This hostname appears in a candidate source list. This is not an
+            official-domain verification, and it should not replace checking
+            the project&apos;s own channels before connecting a wallet.
+          </p>
+          <ul className="mt-3 grid gap-2">
+            {result.candidateDomainMatches.map((match) => (
+              <li key={`${match.source.id}:${match.hostname}`}>
+                <span className="font-mono text-pulse-text">
+                  {match.hostname}
+                </span>{" "}
+                <span>
+                  from {match.source.label}, captured {match.source.capturedAt}
+                </span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      ) : null}
+
       <div className="mt-5">
         <h3 className="text-sm font-semibold text-pulse-text">Signals</h3>
         {result.signals.length > 0 ? (
