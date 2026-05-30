@@ -64,6 +64,11 @@ import type {
   TimelineHistoryEvent,
   TimelineRiskLevel,
 } from "@/lib/lifeboat/timeline";
+import type {
+  VisibleAssetExposure,
+  VisibleAssetsRiskLevel,
+  VisibleAssetsAnalysis,
+} from "@/lib/lifeboat/visible-assets";
 import type { NftApproval } from "@/lib/nft-approvals";
 
 export type LifeboatScanStatus =
@@ -170,6 +175,9 @@ export interface LifeboatChainReport {
   dustTrapEvidence: DustTrapEvidence[];
   dustTrapTransfers: DustTrapTransfer[];
   visibleAssetsStatus: LifeboatModuleStatus;
+  visibleAssetsRiskLevel: VisibleAssetsRiskLevel;
+  visibleAssetsEvidence: VisibleAssetExposure[];
+  visibleAssetsSummary: VisibleAssetsAnalysis["summary"];
   incompleteReasons: string[];
 }
 

@@ -47,6 +47,46 @@ export, no wallet-write imports in Lifeboat-only code.
 Validation commands: `git diff --check`, `npm run lint`, `npm run typecheck`,
 focused Lifeboat tests, `npm run build`, preview smoke.
 
+## Phase 1A: Visible Assets At Risk Inventory
+
+Purpose: Summarize assets exposed by active token and NFT approval rows already
+found by the read-only scanner.
+
+Data sources: Existing active ERC-20, Permit2, ERC-721, and ERC-1155 approval
+rows.
+
+User-facing output: Token and NFT assets grouped with spender/operator,
+approval type, unlimited/finite or collection-wide/single-token context, and
+clear caveats that this is not a full wallet balance inventory.
+
+Safety constraints: Derived context only. Do not fetch balances, crawl wallet
+holdings, move assets, prepare transfers, or claim complete asset coverage.
+
+What must not be implemented: Balance crawling, rescue reports that imply
+recovery, automatic transfer, gas funding, wallet writes, or all-clear copy.
+
+Acceptance criteria: The module uses existing scanner results only, marks
+partial source scans as incomplete, exports to the Lifeboat report, and keeps
+the standard scanner as the only revoke path.
+
+Suggested tests: Unlimited token allowance, finite token allowance, Permit2
+row, collection-wide NFT approval, partial source scan, empty complete scan,
+report export.
+
+Validation commands: Full validation stack plus visible-assets tests.
+
+Current safe production pass:
+
+- Adds a pure derived analyzer for assets exposed by active approval rows.
+- Uses no new API route, no new dependency, no balance fetch, and no wallet
+  connection or write path.
+- Shows visible token/NFT exposure summary in the Wallet Lifeboat UI and
+  exportable report.
+- Keeps partial or unavailable source approval scans as incomplete context
+  instead of all-clear.
+- Removes the old visible-assets placeholder from planned modules once the
+  derived first pass is active.
+
 ## Phase 2: Gas-Sweeper Pattern Scanner
 
 Purpose: Detect bounded native-gas movement patterns where inbound native gas is

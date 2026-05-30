@@ -165,6 +165,8 @@ The current Lifeboat branch implements these read-only modules:
 
 - Wallet Lifeboat shell with address input, chain selection, safety copy,
   approval/NFT scan reuse, and report export.
+- Visible assets-at-risk summary derived from active approval and NFT approval
+  rows, with no balance crawling and no full-inventory claim.
 - Gas-sweeper pattern diagnostic from bounded recent normal native-transfer
   history.
 - Pending transaction / nonce diagnostic from latest-vs-pending RPC reads.
