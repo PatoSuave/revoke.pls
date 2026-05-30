@@ -16,6 +16,11 @@ export type CandidateDomainEntry = {
   confidence: "candidate-source";
 };
 
+export type CandidateDomainSourcePacket = {
+  source: CandidateDomainSource;
+  hostnames: readonly string[];
+};
+
 export const PLSTART_CANDIDATE_SOURCE: CandidateDomainSource = {
   id: "plstart-eth-limo",
   label: "plstart.me GitHub mirror",
@@ -26,7 +31,7 @@ export const PLSTART_CANDIDATE_SOURCE: CandidateDomainSource = {
   capturedAt: "2026-05-30",
 };
 
-export const CANDIDATE_DOMAIN_HOSTNAMES = [
+export const PLSTART_CANDIDATE_HOSTNAMES = [
   "0xbarista.io",
   "0xbistro.io",
   "0xcoast.com",
@@ -207,13 +212,30 @@ export const CANDIDATE_DOMAIN_HOSTNAMES = [
   "zkpulse.app",
 ] as const;
 
-export const CANDIDATE_DOMAIN_REGISTRY: readonly CandidateDomainEntry[] =
-  CANDIDATE_DOMAIN_HOSTNAMES.map((hostname) => ({
-    hostname,
+export const CANDIDATE_DOMAIN_SOURCE_PACKETS = [
+  {
     source: PLSTART_CANDIDATE_SOURCE,
-    lastReviewedAt: PLSTART_CANDIDATE_SOURCE.capturedAt,
-    confidence: "candidate-source",
-  }));
+    hostnames: PLSTART_CANDIDATE_HOSTNAMES,
+  },
+] as const satisfies readonly CandidateDomainSourcePacket[];
+
+export const CANDIDATE_DOMAIN_HOSTNAMES: readonly string[] = Object.freeze(
+  Array.from(
+    new Set(
+      CANDIDATE_DOMAIN_SOURCE_PACKETS.flatMap((packet) => packet.hostnames),
+    ),
+  ).sort(),
+);
+
+export const CANDIDATE_DOMAIN_REGISTRY: readonly CandidateDomainEntry[] =
+  CANDIDATE_DOMAIN_SOURCE_PACKETS.flatMap((packet) =>
+    packet.hostnames.map((hostname) => ({
+      hostname,
+      source: packet.source,
+      lastReviewedAt: packet.source.capturedAt,
+      confidence: "candidate-source" as const,
+    })),
+  );
 
 export function findCandidateDomainMatches(
   hostname: string,

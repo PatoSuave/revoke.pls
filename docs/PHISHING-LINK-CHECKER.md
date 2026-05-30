@@ -92,6 +92,11 @@ Candidate-source lookalikes may produce `likely-lookalike`, but the copy must
 say the pasted hostname resembles a candidate source-list hostname. It must not
 say or imply that the matched source-list hostname is official.
 
+Candidate source data is modeled as reviewed source packets. Each packet must
+declare its source metadata and exact hostname list. The app derives the unique
+candidate hostname count and flattened registry entries from those packets, so
+future reviewed lists can be added without changing matching behavior.
+
 ## Future Expansion Boundaries
 
 Possible later phases may add curated registries, reviewed ecosystem source
