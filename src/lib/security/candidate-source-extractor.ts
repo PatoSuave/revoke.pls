@@ -1,6 +1,6 @@
 import { normalizeRegistryHostname } from "@/lib/security/official-domain-registry";
 
-const URL_PATTERN = /https?:\/\/[^\s"'<>]+/gi;
+const URL_PATTERN = /https?:\/\/[^\s"'<>`]+/gi;
 
 export type CandidateSourceExtraction = {
   urls: string[];
@@ -42,7 +42,9 @@ function extractHostnames(urls: readonly string[]): string[] {
         continue;
       }
 
-      uniqueHostnames.add(normalizeRegistryHostname(parsed.hostname));
+      const hostname = normalizeRegistryHostname(parsed.hostname);
+      if (!isUsableHostname(hostname)) continue;
+      uniqueHostnames.add(hostname);
     } catch {
       continue;
     }
@@ -68,7 +70,7 @@ function normalizeSourceUrl(url: string): string | undefined {
 }
 
 function stripTrailingUrlPunctuation(url: string): string {
-  return url.replace(/[),.;\]]+$/g, "");
+  return url.replace(/[),.;\]`]+$/g, "");
 }
 
 function decodeCommonHtmlEntities(text: string): string {
@@ -78,4 +80,13 @@ function decodeCommonHtmlEntities(text: string): string {
     .replaceAll("&#34;", '"')
     .replaceAll("&#39;", "'")
     .replaceAll("&apos;", "'");
+}
+
+function isUsableHostname(hostname: string): boolean {
+  const labels = hostname.split(".");
+  if (labels.length < 2) return false;
+
+  return labels.every((label) =>
+    /^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$/i.test(label),
+  );
 }

@@ -9,6 +9,7 @@
     "build:desktop": "node scripts/build-desktop.mjs",
     "start": "next start",
     "lint": "eslint . --max-warnings=0",
+    "security:extract-source": "node scripts/extract-candidate-source.mjs",
     "smoke:preview": "node scripts/preview-smoke.mjs",
     "test": "vitest run",
     "typecheck": "tsc --noEmit",
