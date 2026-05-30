@@ -31,6 +31,7 @@ import {
   LIFEBOAT_NEXT_STEPS,
   LIFEBOAT_NOT_TO_DO,
   LIFEBOAT_PENDING_NONCE_DIAGNOSTIC_COPY,
+  LIFEBOAT_PERMIT2_DIAGNOSTIC_COPY,
   LIFEBOAT_PLANNED_MODULES,
   LIFEBOAT_SPENDER_RISK_DIAGNOSTIC_COPY,
   LIFEBOAT_SWEEPER_DIAGNOSTIC_COPY,
@@ -46,6 +47,12 @@ import {
   type LifeboatPendingNonceApiResponse,
   type PendingNonceRiskLevel,
 } from "@/lib/lifeboat/pending-nonce";
+import {
+  analyzePermit2Exposure,
+  permit2ExposureRiskLabel,
+  type Permit2ExposureAnalysis,
+  type Permit2ExposureRiskLevel,
+} from "@/lib/lifeboat/permit2-exposure";
 import { buildWalletLifeboatReportMarkdown } from "@/lib/lifeboat/report";
 import {
   spenderRiskLabel,
@@ -121,6 +128,14 @@ export function WalletLifeboat() {
     chainName: selectedOption.displayName,
     enabled: Boolean(owner) && approvalSpenderAddresses.length > 0,
   });
+  const permit2Exposure = useMemo(
+    () =>
+      analyzePermit2Exposure({
+        approvals: scan.approvals,
+        approvalStatus: scan.approvalsStatus,
+      }),
+    [scan.approvals, scan.approvalsStatus],
+  );
   const scoredApprovals = useMemo(
     () => sortScoredApprovals(scoreApprovals(scan.approvals)),
     [scan.approvals],
@@ -207,6 +222,7 @@ export function WalletLifeboat() {
           timeline={timeline.response}
           addressPoisoning={addressPoisoning.response}
           spenderRisk={spenderRisk.response}
+          permit2Exposure={permit2Exposure}
         />
 
         <div className="mt-6 grid gap-6 xl:grid-cols-[minmax(0,1fr)_360px]">
@@ -256,6 +272,12 @@ export function WalletLifeboat() {
               isScanning={spenderRisk.status === "pending"}
               activeSpenderCount={approvalSpenderAddresses.length}
             />
+            <Permit2ExposureSection
+              permit2Exposure={permit2Exposure}
+              owner={owner}
+              option={selectedOption}
+              status={moduleStatusFromPermit2Exposure(scan.approvalsStatus)}
+            />
             <PlannedDiagnostics />
             <DetectionLimits />
           </div>
@@ -267,6 +289,8 @@ export function WalletLifeboat() {
               timeline={timeline.response}
               addressPoisoning={addressPoisoning.response}
               spenderRisk={spenderRisk.response}
+              permit2Exposure={permit2Exposure}
+              permit2Status={moduleStatusFromPermit2Exposure(scan.approvalsStatus)}
             />
             <ReportExport
               scan={scan}
@@ -276,6 +300,7 @@ export function WalletLifeboat() {
               timeline={timeline.response}
               addressPoisoning={addressPoisoning.response}
               spenderRisk={spenderRisk.response}
+              permit2Exposure={permit2Exposure}
             />
           </div>
         </div>
@@ -435,6 +460,7 @@ function TriageSummary({
   timeline,
   addressPoisoning,
   spenderRisk,
+  permit2Exposure,
 }: {
   scan: LifeboatScanSnapshot;
   owner: Address | null;
@@ -443,6 +469,7 @@ function TriageSummary({
   timeline: LifeboatTimelineApiResponse;
   addressPoisoning: LifeboatAddressPoisoningApiResponse;
   spenderRisk: LifeboatSpenderRiskApiResponse;
+  permit2Exposure: Permit2ExposureAnalysis;
 }) {
   const cards: {
     label: string;
@@ -488,12 +515,17 @@ function TriageSummary({
       tone: toneForSpenderRisk(spenderRisk.riskLevel),
     },
     {
+      label: "Permit2 exposure",
+      value: statusLabelForPermit2Exposure(permit2Exposure),
+      tone: toneForPermit2Exposure(permit2Exposure.riskLevel),
+    },
+    {
       label: "HEX stake status",
       value: "Planned diagnostic",
       tone: "neutral" as const,
     },
     {
-      label: "Advanced authorization risk",
+      label: "EIP-7702 delegation",
       value: "Planned diagnostic",
       tone: "neutral" as const,
     },
@@ -1689,6 +1721,153 @@ function SpenderRiskSummary({
   );
 }
 
+function Permit2ExposureSection({
+  permit2Exposure,
+  owner,
+  option,
+  status,
+}: {
+  permit2Exposure: Permit2ExposureAnalysis;
+  owner: Address | null;
+  option: AddressOnlyScanOption;
+  status: LifeboatModuleStatus;
+}) {
+  return (
+    <section className="rounded-2xl border border-pulse-border bg-pulse-panel/65 p-5">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-pulse-cyan">
+            {LIFEBOAT_PERMIT2_DIAGNOSTIC_COPY.title}
+          </p>
+          <h2 className="mt-1 text-xl font-semibold text-pulse-text">
+            Delegated Permit2 allowances
+          </h2>
+          <p className="mt-2 text-sm leading-6 text-pulse-muted">
+            {owner
+              ? `${option.displayName} Permit2 rows are derived from the live-read approval scan for the pasted address.`
+              : "Paste a wallet address to check for active Permit2 delegated allowances where the selected scan supports them."}
+          </p>
+        </div>
+        <span
+          className={`inline-flex w-fit rounded-full border px-3 py-1 text-xs font-semibold ${toneClassForPermit2Exposure(
+            permit2Exposure.riskLevel,
+          )}`}
+        >
+          {status === "scanning"
+            ? "Scanning"
+            : permit2ExposureRiskLabel(permit2Exposure.riskLevel)}
+        </span>
+      </div>
+
+      <p className="mt-4 rounded-xl border border-pulse-border/70 bg-pulse-bg/45 p-3 text-sm leading-6 text-pulse-muted">
+        {LIFEBOAT_PERMIT2_DIAGNOSTIC_COPY.body}
+      </p>
+
+      {owner && (status === "partial" || status === "upstream_unavailable") ? (
+        <div className="mt-4 rounded-xl border border-amber-400/35 bg-amber-400/10 p-3 text-sm leading-6 text-amber-100">
+          This diagnostic is incomplete because the underlying approval scan did
+          not fully complete. Do not treat missing Permit2 rows as proof that no
+          Permit2 or signature-based exposure exists.
+        </div>
+      ) : null}
+
+      {owner && (status === "complete" || status === "partial") ? (
+        <Permit2ExposureSummary permit2Exposure={permit2Exposure} />
+      ) : null}
+
+      {owner && permit2Exposure.evidence.length > 0 ? (
+        <div className="mt-4 overflow-hidden rounded-2xl border border-pulse-border bg-pulse-bg/40">
+          <ul>
+            {permit2Exposure.evidence.map((item) => (
+              <li
+                key={`${item.tokenAddress}-${item.spenderAddress}-${item.nonce ?? "none"}`}
+                className="grid gap-4 border-b border-pulse-border/60 p-4 last:border-b-0 lg:grid-cols-[1fr_1fr_0.8fr]"
+              >
+                <div className="min-w-0">
+                  <a
+                    href={tokenUrlFor(option, item.tokenAddress)}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="block truncate text-sm font-semibold text-pulse-text underline-offset-2 hover:text-pulse-cyan hover:underline"
+                    title={item.tokenAddress}
+                  >
+                    {item.tokenSymbol}
+                  </a>
+                  <p className="mt-1 truncate font-mono text-xs text-pulse-muted">
+                    {shortenAddress(item.tokenAddress)}
+                  </p>
+                </div>
+                <div className="min-w-0">
+                  <a
+                    href={addressUrlFor(option, item.spenderAddress)}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="block truncate font-mono text-xs text-pulse-muted underline-offset-2 hover:text-pulse-cyan hover:underline"
+                    title={item.spenderAddress}
+                  >
+                    {shortenAddress(item.spenderAddress)}
+                  </a>
+                  <p className="mt-1 text-sm font-semibold text-pulse-text">
+                    {item.spenderLabel}
+                  </p>
+                </div>
+                <div className="min-w-0 text-xs leading-5 text-pulse-muted lg:text-right">
+                  <p>
+                    Allowance:{" "}
+                    {item.unlimited
+                      ? `unlimited ${item.tokenSymbol}`
+                      : item.formattedAllowance}
+                  </p>
+                  <p>Expires: {formatPermit2Expiration(item.expiration.iso)}</p>
+                  <p>Nonce: {item.nonce ?? "unknown"}</p>
+                </div>
+              </li>
+            ))}
+          </ul>
+        </div>
+      ) : owner && status === "complete" ? (
+        <div className="mt-4 rounded-2xl border border-dashed border-pulse-border/80 bg-pulse-bg/40 p-4 text-sm leading-6 text-pulse-muted">
+          No active Permit2 delegated allowance row was found by the completed
+          approval scan. This is not an all-clear for off-chain signatures or
+          unsupported data sources.
+        </div>
+      ) : null}
+    </section>
+  );
+}
+
+function Permit2ExposureSummary({
+  permit2Exposure,
+}: {
+  permit2Exposure: Permit2ExposureAnalysis;
+}) {
+  return (
+    <dl className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+      <SweeperMetric
+        label="Active rows"
+        value={permit2Exposure.summary.activePermit2Count.toString()}
+      />
+      <SweeperMetric
+        label="Unlimited"
+        value={permit2Exposure.summary.unlimitedPermit2Count.toString()}
+      />
+      <SweeperMetric
+        label="Expiring"
+        value={permit2Exposure.summary.expiringPermit2Count.toString()}
+      />
+      <SweeperMetric
+        label="Unknown expiry"
+        value={permit2Exposure.summary.unknownExpirationCount.toString()}
+      />
+      {permit2Exposure.warnings.length > 0 ? (
+        <div className="rounded-xl border border-pulse-border/70 bg-pulse-bg/45 p-3 text-xs leading-5 text-pulse-muted sm:col-span-2 lg:col-span-4">
+          {permit2Exposure.warnings.join(" ")}
+        </div>
+      ) : null}
+    </dl>
+  );
+}
+
 function PlannedDiagnostics() {
   return (
     <section className="rounded-2xl border border-pulse-border bg-pulse-panel/65 p-5">
@@ -1769,6 +1948,8 @@ function CompletenessPanel({
   timeline,
   addressPoisoning,
   spenderRisk,
+  permit2Exposure,
+  permit2Status,
 }: {
   scan: LifeboatScanSnapshot;
   sweeper: LifeboatSweeperApiResponse;
@@ -1776,6 +1957,8 @@ function CompletenessPanel({
   timeline: LifeboatTimelineApiResponse;
   addressPoisoning: LifeboatAddressPoisoningApiResponse;
   spenderRisk: LifeboatSpenderRiskApiResponse;
+  permit2Exposure: Permit2ExposureAnalysis;
+  permit2Status: LifeboatModuleStatus;
 }) {
   return (
     <section className="rounded-2xl border border-pulse-border bg-pulse-panel/65 p-5">
@@ -1817,11 +2000,11 @@ function CompletenessPanel({
           label="Spender contract risk"
           value={statusLabelForSpenderRisk(spenderRisk)}
         />
-        <CompletenessRow label="HEX stake status" value="Planned diagnostic" />
         <CompletenessRow
-          label="Permit2 / signatures"
-          value="Planned diagnostic"
+          label="Permit2 exposure"
+          value={statusLabelForPermit2Exposure(permit2Exposure, permit2Status)}
         />
+        <CompletenessRow label="HEX stake status" value="Planned diagnostic" />
         <CompletenessRow label="EIP-7702 delegation" value="Planned diagnostic" />
         <CompletenessRow label="Visible assets" value="Planned diagnostic" />
       </dl>
@@ -1858,6 +2041,7 @@ function ReportExport({
   timeline,
   addressPoisoning,
   spenderRisk,
+  permit2Exposure,
 }: {
   scan: LifeboatScanSnapshot;
   owner: Address | null;
@@ -1866,6 +2050,7 @@ function ReportExport({
   timeline: LifeboatTimelineApiResponse;
   addressPoisoning: LifeboatAddressPoisoningApiResponse;
   spenderRisk: LifeboatSpenderRiskApiResponse;
+  permit2Exposure: Permit2ExposureAnalysis;
 }) {
   const [copyState, setCopyState] = useState<"idle" | "copied" | "failed">(
     "idle",
@@ -1884,6 +2069,7 @@ function ReportExport({
         timeline,
         addressPoisoning,
         spenderRisk,
+        permit2Exposure,
       ),
     );
   }
@@ -2186,6 +2372,7 @@ function buildReportFromSnapshot(
   timeline: LifeboatTimelineApiResponse,
   addressPoisoning: LifeboatAddressPoisoningApiResponse,
   spenderRisk: LifeboatSpenderRiskApiResponse,
+  permit2Exposure: Permit2ExposureAnalysis,
 ): LifeboatReport {
   const chain: LifeboatChainReport = {
     chainId: scan.chainId,
@@ -2215,7 +2402,9 @@ function buildReportFromSnapshot(
     spenderRiskEvidence: spenderRisk.evidence,
     spenderRiskSpenders: spenderRisk.spenders,
     hexStatus: "planned",
-    permit2Status: "planned",
+    permit2Status: moduleStatusFromPermit2Exposure(scan.approvalsStatus),
+    permit2RiskLevel: permit2Exposure.riskLevel,
+    permit2Evidence: permit2Exposure.evidence,
     eip7702Status: "planned",
     visibleAssetsStatus: "planned",
     incompleteReasons: [...scan.incompleteReasons],
@@ -2236,7 +2425,7 @@ function buildReportFromSnapshot(
       addressPoisoningCheckComplete: addressPoisoning.status === "complete",
       spenderRiskCheckComplete: spenderRisk.status === "complete",
       hexCheckComplete: false,
-      permit2Complete: false,
+      permit2Complete: scan.approvalsStatus === "complete",
       eip7702Complete: false,
       visibleAssetsComplete: false,
     },
@@ -2323,6 +2512,17 @@ function moduleStatusFromSpenderRiskResponse(
   return "partial";
 }
 
+function moduleStatusFromPermit2Exposure(
+  approvalStatus: LifeboatModuleStatus,
+): LifeboatModuleStatus {
+  if (approvalStatus === "scanning") return "scanning";
+  if (approvalStatus === "complete") return "complete";
+  if (approvalStatus === "partial") return "partial";
+  if (approvalStatus === "unsupported") return "unsupported";
+  if (approvalStatus === "upstream_unavailable") return "upstream_unavailable";
+  return "not_scanned";
+}
+
 function statusLabelForApprovals(
   status: LifeboatModuleStatus,
   count: number,
@@ -2365,6 +2565,14 @@ function statusLabelForSpenderRisk(
 ): string {
   if (spenderRisk.status === "scanning") return "Scanning";
   return spenderRiskLabel(spenderRisk.riskLevel);
+}
+
+function statusLabelForPermit2Exposure(
+  permit2Exposure: Permit2ExposureAnalysis,
+  status?: LifeboatModuleStatus,
+): string {
+  if (status === "scanning") return "Scanning";
+  return permit2ExposureRiskLabel(permit2Exposure.riskLevel);
 }
 
 function toneForModule(
@@ -2457,6 +2665,23 @@ function toneForSpenderRisk(
   return "neutral";
 }
 
+function toneForPermit2Exposure(
+  riskLevel: Permit2ExposureRiskLevel,
+): "neutral" | "success" | "warning" | "danger" {
+  if (riskLevel === "elevated") return "danger";
+  if (riskLevel === "possible") return "warning";
+  if (riskLevel === "none_detected") return "success";
+  if (riskLevel === "informational") return "neutral";
+  if (
+    riskLevel === "insufficient_data" ||
+    riskLevel === "upstream_unavailable" ||
+    riskLevel === "unsupported"
+  ) {
+    return "warning";
+  }
+  return "neutral";
+}
+
 function toneClassForSweeper(riskLevel: SweeperRiskLevel): string {
   const tone = toneForSweeper(riskLevel);
   return {
@@ -2501,6 +2726,16 @@ function toneClassForAddressPoisoning(
 
 function toneClassForSpenderRisk(riskLevel: SpenderRiskLevel): string {
   const tone = toneForSpenderRisk(riskLevel);
+  return {
+    neutral: "border-pulse-border bg-pulse-bg/50 text-pulse-muted",
+    success: "border-pulse-green/35 bg-pulse-green/10 text-pulse-green",
+    warning: "border-amber-400/35 bg-amber-400/10 text-amber-200",
+    danger: "border-pulse-red/40 bg-pulse-red/10 text-pulse-red",
+  }[tone];
+}
+
+function toneClassForPermit2Exposure(riskLevel: Permit2ExposureRiskLevel): string {
+  const tone = toneForPermit2Exposure(riskLevel);
   return {
     neutral: "border-pulse-border bg-pulse-bg/50 text-pulse-muted",
     success: "border-pulse-green/35 bg-pulse-green/10 text-pulse-green",
@@ -2596,6 +2831,17 @@ function txUrlFor(option: AddressOnlyScanOption, hash: string): string {
 
 function shortHash(hash: string): string {
   return hash.length > 14 ? `${hash.slice(0, 8)}...${hash.slice(-6)}` : hash;
+}
+
+function formatPermit2Expiration(iso: string | null): string {
+  if (!iso) return "unknown";
+  return new Date(iso).toLocaleString(undefined, {
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
 }
 
 function eventKindLabel(kind: LifeboatTimelineApiResponse["events"][number]["kind"]): string {

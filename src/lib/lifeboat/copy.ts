@@ -51,18 +51,18 @@ export const LIFEBOAT_SPENDER_RISK_DIAGNOSTIC_COPY = {
   body: "This diagnostic checks approval spenders for public contract context such as bytecode presence, verified-source availability, proxy-like metadata, and reviewed registry matches. Unknown or unverified spenders are review signals, not proof of malicious activity.",
 } as const;
 
+export const LIFEBOAT_PERMIT2_DIAGNOSTIC_COPY = {
+  title: "Permit2 exposure",
+  activeStatus: "Read-only delegated allowance check",
+  body: "This diagnostic surfaces active Permit2 delegated allowances already live-read by the existing approval scanner. It does not request signatures, sign messages, submit transactions, or claim that missing rows prove the wallet is safe.",
+} as const;
+
 export const LIFEBOAT_PLANNED_MODULES = [
   {
     id: "hex",
     title: "HEX Lifeboat",
     status: "Planned diagnostic",
     body: "Future versions may read HEX stake status for the scanned address, including active stakes, mature stakes, late stakes, and possible Good Accounting candidates. This version does not run End Stake, Emergency End Stake, or Good Accounting.",
-  },
-  {
-    id: "permit2",
-    title: "Permit2 / signature approvals",
-    status: "Planned diagnostic",
-    body: "Signature-based or Permit2-style permissions may not appear in standard ERC-20 allowance scans. Future versions may add dedicated Permit2 diagnostics where supported.",
   },
   {
     id: "eip7702",
@@ -79,12 +79,11 @@ export const LIFEBOAT_PLANNED_MODULES = [
 ] as const;
 
 // Future Lifeboat phases stay read-only until separately reviewed: HEX stake
-// reads, clean-wallet Good Accounting Assist, Permit2 diagnostics, EIP-7702
-// diagnostics, and manual planning reports.
+// reads, clean-wallet Good Accounting Assist, EIP-7702 diagnostics, and manual
+// planning reports.
 export const LIFEBOAT_FUTURE_PHASES = [
   "HEX stake reads",
   "Good Accounting Assist from a clean wallet",
-  "Permit2 diagnostics",
   "EIP-7702 diagnostics",
   "Manual rescue planning reports",
 ] as const;

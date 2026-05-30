@@ -4,6 +4,7 @@ import {
   LIFEBOAT_NEXT_STEPS,
   LIFEBOAT_NOT_TO_DO,
   LIFEBOAT_PENDING_NONCE_DIAGNOSTIC_COPY,
+  LIFEBOAT_PERMIT2_DIAGNOSTIC_COPY,
   LIFEBOAT_PLANNED_MODULES,
   LIFEBOAT_SPENDER_RISK_DIAGNOSTIC_COPY,
   LIFEBOAT_SWEEPER_DIAGNOSTIC_COPY,
@@ -11,6 +12,7 @@ import {
 } from "@/lib/lifeboat/copy";
 import { addressPoisoningRiskLabel } from "@/lib/lifeboat/address-poisoning";
 import { pendingNonceRiskLabel } from "@/lib/lifeboat/pending-nonce";
+import { permit2ExposureRiskLabel } from "@/lib/lifeboat/permit2-exposure";
 import { spenderRiskLabel } from "@/lib/lifeboat/spender-risk";
 import { sweeperRiskLabel } from "@/lib/lifeboat/sweeper";
 import { timelineRiskLabel } from "@/lib/lifeboat/timeline";
@@ -78,9 +80,9 @@ ${formatSpenderRiskSection(report)}
 
 ${plannedDiagnosticCopy("hex")}
 
-## Permit2 / signature approvals
+## Permit2 exposure
 
-${plannedDiagnosticCopy("permit2")}
+${formatPermit2ExposureSection(report)}
 
 ## EIP-7702 delegation
 
@@ -256,6 +258,35 @@ ${spenderRows}`;
     .join("\n");
 
   return `${LIFEBOAT_SPENDER_RISK_DIAGNOSTIC_COPY.body}
+
+${rows || "No network scan has been added to this report yet."}`;
+}
+
+function formatPermit2ExposureSection(report: LifeboatReport): string {
+  const rows = report.chains
+    .map((chain) => {
+      const evidence =
+        chain.permit2Evidence.length > 0
+          ? chain.permit2Evidence
+              .map((item) => {
+                const expiration = item.expiration.iso
+                  ? `expires ${item.expiration.iso}`
+                  : "expiration unknown";
+                const allowance = item.unlimited
+                  ? `unlimited ${item.tokenSymbol}`
+                  : item.formattedAllowance;
+                return `  - ${item.tokenSymbol}: ${allowance} delegated to ${item.spenderAddress} (${expiration})`;
+              })
+              .join("\n")
+          : "  - No active Permit2 delegated allowance row was found by the completed approval scan.";
+      return `- ${chain.chainName}: ${formatModuleStatus(
+        chain.permit2Status,
+      )}; ${permit2ExposureRiskLabel(chain.permit2RiskLevel)}
+${evidence}`;
+    })
+    .join("\n");
+
+  return `${LIFEBOAT_PERMIT2_DIAGNOSTIC_COPY.body}
 
 ${rows || "No network scan has been added to this report yet."}`;
 }

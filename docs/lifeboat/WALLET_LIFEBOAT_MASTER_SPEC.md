@@ -174,6 +174,8 @@ The current Lifeboat branch implements these read-only modules:
 - Spender contract risk diagnostic from active approval spender addresses,
   bytecode presence, explorer source-code metadata, proxy-like metadata, and
   reviewed registry context.
+- Permit2 exposure diagnostic from active Permit2 delegated allowance rows that
+  were already live-read by the existing approval scanner.
 
 These modules do not add custody, server signing, relayers, rescue contracts,
 automatic gas funding, automatic transfer, HEX write execution, private bundle
