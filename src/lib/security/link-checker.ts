@@ -1,4 +1,5 @@
 import {
+  CANDIDATE_DOMAIN_REGISTRY,
   findCandidateDomainMatches,
   type CandidateDomainEntry,
 } from "@/lib/security/candidate-domain-registry";
@@ -35,6 +36,7 @@ export type LinkCheckResult = {
   status: LinkCheckStatus;
   matchedOfficialDomain?: OfficialDomainEntry;
   closestOfficialDomain?: OfficialDomainEntry;
+  closestCandidateDomain?: CandidateDomainEntry;
   candidateDomainMatches: CandidateDomainEntry[];
   signals: LinkRiskSignal[];
   userMessage: string;
@@ -107,10 +109,15 @@ export function checkCryptoLink(input: string): LinkCheckResult {
     registrableDomain,
   );
   const candidateDomainMatches = findCandidateDomainMatches(hostname);
+  const closestCandidateDomain =
+    candidateDomainMatches.length === 0
+      ? findClosestCandidateDomain(hostname, registrableDomain)
+      : undefined;
 
   const status = classifyResult({
     matchedOfficialDomain,
     closestOfficialDomain,
+    closestCandidateDomain,
     signals,
   });
 
@@ -125,9 +132,14 @@ export function checkCryptoLink(input: string): LinkCheckResult {
     status,
     matchedOfficialDomain,
     closestOfficialDomain,
+    closestCandidateDomain,
     candidateDomainMatches,
     signals,
-    userMessage: getUserMessage(status, candidateDomainMatches),
+    userMessage: getUserMessage({
+      status,
+      candidateDomainMatches,
+      closestCandidateDomain,
+    }),
   };
 }
 
@@ -164,10 +176,19 @@ function invalidResult(input: string): LinkCheckResult {
   };
 }
 
-function getUserMessage(
-  status: LinkCheckStatus,
-  candidateDomainMatches: readonly CandidateDomainEntry[],
-): string {
+function getUserMessage({
+  status,
+  candidateDomainMatches,
+  closestCandidateDomain,
+}: {
+  status: LinkCheckStatus;
+  candidateDomainMatches: readonly CandidateDomainEntry[];
+  closestCandidateDomain?: CandidateDomainEntry;
+}): string {
+  if (status === "likely-lookalike" && closestCandidateDomain) {
+    return "This domain looks similar to a domain in a candidate source list. Treat it as high risk unless you can verify it from the project's own channels.";
+  }
+
   if (status === "unknown-domain" && candidateDomainMatches.length > 0) {
     return "This domain is not in the official registry. It appears in a candidate source list, which is context only and still needs independent verification before connecting a wallet.";
   }
@@ -296,14 +317,16 @@ function collectSignals(
 function classifyResult({
   matchedOfficialDomain,
   closestOfficialDomain,
+  closestCandidateDomain,
   signals,
 }: {
   matchedOfficialDomain?: OfficialDomainEntry;
   closestOfficialDomain?: OfficialDomainEntry;
+  closestCandidateDomain?: CandidateDomainEntry;
   signals: readonly LinkRiskSignal[];
 }): LinkCheckStatus {
   if (matchedOfficialDomain) return "official-match";
-  if (closestOfficialDomain) return "likely-lookalike";
+  if (closestOfficialDomain || closestCandidateDomain) return "likely-lookalike";
   if (signals.length > 0) return "suspicious-patterns";
   return "unknown-domain";
 }
@@ -334,6 +357,57 @@ function findClosestOfficialDomain(
 
     return levenshteinDistance(foldedCandidate, foldedOfficial) <= 2;
   });
+}
+
+function findClosestCandidateDomain(
+  hostname: string,
+  registrableDomain: string,
+): CandidateDomainEntry | undefined {
+  const hostCandidate = stripCommonPrefix(hostname);
+  const domainCandidate = stripCommonPrefix(registrableDomain);
+  const inputBase = domainCandidate.split(".")[0] ?? domainCandidate;
+  const inputTld = domainCandidate.split(".").at(-1);
+  const foldedInput = foldDomainForComparison(inputBase);
+  const scoredCandidates = CANDIDATE_DOMAIN_REGISTRY.flatMap((entry) => {
+    const candidateHostname = normalizeRegistryHostname(entry.hostname);
+    const comparableCandidateHostname = stripCommonPrefix(candidateHostname);
+    const candidateRegistrableDomain = getApproximateRegistrableDomain(
+      comparableCandidateHostname,
+    );
+    const candidateBase =
+      candidateRegistrableDomain.split(".")[0] ?? candidateRegistrableDomain;
+    const candidateTld = candidateRegistrableDomain.split(".").at(-1);
+
+    if (hostCandidate === comparableCandidateHostname) return [];
+    if (domainCandidate === candidateRegistrableDomain) return [];
+
+    const foldedCandidateBase = foldDomainForComparison(candidateBase);
+    const minLength = Math.min(foldedCandidateBase.length, foldedInput.length);
+    const maxDistance = minLength >= 5 ? 2 : 1;
+    const distance = levenshteinDistance(foldedInput, foldedCandidateBase);
+    const isTldSwap =
+      foldedCandidateBase === foldedInput && candidateTld !== inputTld;
+
+    if (!isTldSwap && (minLength < 4 || distance > maxDistance)) return [];
+
+    return [
+      {
+        entry,
+        distance,
+        isTldSwap,
+        lengthDelta: Math.abs(foldedCandidateBase.length - foldedInput.length),
+      },
+    ];
+  });
+
+  return scoredCandidates.sort((left, right) => {
+    if (left.isTldSwap !== right.isTldSwap) {
+      return left.isTldSwap ? -1 : 1;
+    }
+
+    if (left.distance !== right.distance) return left.distance - right.distance;
+    return left.lengthDelta - right.lengthDelta;
+  })[0]?.entry;
 }
 
 function getApproximateRegistrableDomain(hostname: string): string {

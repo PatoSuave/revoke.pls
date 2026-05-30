@@ -81,6 +81,27 @@ export function LinkCheckerResult({ result }: { result: LinkCheckResult }) {
         </div>
       ) : null}
 
+      {result.closestCandidateDomain ? (
+        <div className="mt-5 rounded-2xl border border-red-400/40 bg-red-500/10 p-4 text-sm leading-7 text-red-100">
+          <h3 className="font-semibold text-red-50">
+            Source-list lookalike context
+          </h3>
+          <p className="mt-2">
+            This hostname resembles a candidate source-list hostname. That does
+            not make either domain official, and the pasted hostname should be
+            treated as high risk unless verified through the project&apos;s own
+            channels.
+          </p>
+          <p className="mt-3">
+            Similar source-list hostname:{" "}
+            <span className="font-mono text-red-50">
+              {result.closestCandidateDomain.hostname}
+            </span>{" "}
+            from {result.closestCandidateDomain.source.label}
+          </p>
+        </div>
+      ) : null}
+
       <div className="mt-5">
         <h3 className="text-sm font-semibold text-pulse-text">Signals</h3>
         {result.signals.length > 0 ? (

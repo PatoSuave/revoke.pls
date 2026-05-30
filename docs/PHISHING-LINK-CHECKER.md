@@ -88,6 +88,10 @@ appear as source context beside the normal result status. If a candidate
 hostname also has suspicious static signals, the suspicious signals still take
 priority in the result.
 
+Candidate-source lookalikes may produce `likely-lookalike`, but the copy must
+say the pasted hostname resembles a candidate source-list hostname. It must not
+say or imply that the matched source-list hostname is official.
+
 ## Future Expansion Boundaries
 
 Possible later phases may add curated registries, reviewed ecosystem source
