@@ -12,6 +12,7 @@ import { useHyperEVMApprovalScan } from "@/hooks/use-hyperevm-approval-scan";
 import { useLifeboatAddressPoisoningScan } from "@/hooks/use-lifeboat-address-poisoning-scan";
 import { useLifeboatDustTrapScan } from "@/hooks/use-lifeboat-dust-trap-scan";
 import { useLifeboatEip7702Scan } from "@/hooks/use-lifeboat-eip7702-scan";
+import { useLifeboatHexStakeScan } from "@/hooks/use-lifeboat-hex-stake-scan";
 import { useLifeboatPendingNonceScan } from "@/hooks/use-lifeboat-pending-nonce-scan";
 import { useLifeboatSpenderRiskScan } from "@/hooks/use-lifeboat-spender-risk-scan";
 import { useLifeboatSweeperScan } from "@/hooks/use-lifeboat-sweeper-scan";
@@ -32,6 +33,7 @@ import {
   LIFEBOAT_CRITICAL_WARNINGS,
   LIFEBOAT_DUST_TRAP_DIAGNOSTIC_COPY,
   LIFEBOAT_EIP7702_DIAGNOSTIC_COPY,
+  LIFEBOAT_HEX_STAKE_DIAGNOSTIC_COPY,
   LIFEBOAT_NEXT_STEPS,
   LIFEBOAT_NOT_TO_DO,
   LIFEBOAT_PENDING_NONCE_DIAGNOSTIC_COPY,
@@ -61,6 +63,11 @@ import {
   type LifeboatPendingNonceApiResponse,
   type PendingNonceRiskLevel,
 } from "@/lib/lifeboat/pending-nonce";
+import {
+  hexStakeRiskLabel,
+  type HexStakeRiskLevel,
+  type LifeboatHexStakeApiResponse,
+} from "@/lib/lifeboat/hex-stake";
 import {
   analyzePermit2Exposure,
   permit2ExposureRiskLabel,
@@ -139,6 +146,12 @@ export function WalletLifeboat() {
     enabled: Boolean(owner),
   });
   const dustTrap = useLifeboatDustTrapScan({
+    owner: owner ?? undefined,
+    chainId: selectedChainId,
+    chainName: selectedOption.displayName,
+    enabled: Boolean(owner),
+  });
+  const hexStake = useLifeboatHexStakeScan({
     owner: owner ?? undefined,
     chainId: selectedChainId,
     chainName: selectedOption.displayName,
@@ -251,6 +264,7 @@ export function WalletLifeboat() {
           permit2Exposure={permit2Exposure}
           eip7702={eip7702.response}
           dustTrap={dustTrap.response}
+          hexStake={hexStake.response}
         />
 
         <div className="mt-6 grid gap-6 xl:grid-cols-[minmax(0,1fr)_360px]">
@@ -312,6 +326,12 @@ export function WalletLifeboat() {
               option={selectedOption}
               isScanning={eip7702.status === "pending"}
             />
+            <HexStakeSection
+              hexStake={hexStake.response}
+              owner={owner}
+              option={selectedOption}
+              isScanning={hexStake.status === "pending"}
+            />
             <DustTrapSection
               dustTrap={dustTrap.response}
               owner={owner}
@@ -333,6 +353,7 @@ export function WalletLifeboat() {
               permit2Status={moduleStatusFromPermit2Exposure(scan.approvalsStatus)}
               eip7702={eip7702.response}
               dustTrap={dustTrap.response}
+              hexStake={hexStake.response}
             />
             <ReportExport
               scan={scan}
@@ -345,6 +366,7 @@ export function WalletLifeboat() {
               permit2Exposure={permit2Exposure}
               eip7702={eip7702.response}
               dustTrap={dustTrap.response}
+              hexStake={hexStake.response}
             />
           </div>
         </div>
@@ -507,6 +529,7 @@ function TriageSummary({
   permit2Exposure,
   eip7702,
   dustTrap,
+  hexStake,
 }: {
   scan: LifeboatScanSnapshot;
   owner: Address | null;
@@ -518,6 +541,7 @@ function TriageSummary({
   permit2Exposure: Permit2ExposureAnalysis;
   eip7702: LifeboatEip7702ApiResponse;
   dustTrap: LifeboatDustTrapApiResponse;
+  hexStake: LifeboatHexStakeApiResponse;
 }) {
   const cards: {
     label: string;
@@ -569,8 +593,8 @@ function TriageSummary({
     },
     {
       label: "HEX stake status",
-      value: "Planned diagnostic",
-      tone: "neutral" as const,
+      value: statusLabelForHexStake(hexStake),
+      tone: toneForHexStake(hexStake.riskLevel),
     },
     {
       label: "EIP-7702 delegation",
@@ -2069,6 +2093,158 @@ function Eip7702Summary({
   );
 }
 
+function HexStakeSection({
+  hexStake,
+  owner,
+  option,
+  isScanning,
+}: {
+  hexStake: LifeboatHexStakeApiResponse;
+  owner: Address | null;
+  option: AddressOnlyScanOption;
+  isScanning: boolean;
+}) {
+  const status = moduleStatusFromHexStakeResponse(hexStake);
+  return (
+    <section className="rounded-2xl border border-pulse-border bg-pulse-panel/65 p-5">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-pulse-cyan">
+            {LIFEBOAT_HEX_STAKE_DIAGNOSTIC_COPY.title}
+          </p>
+          <h2 className="mt-1 text-xl font-semibold text-pulse-text">
+            Visible open stake rows
+          </h2>
+          <p className="mt-2 text-sm leading-6 text-pulse-muted">
+            {owner
+              ? `${option.displayName} HEX stake reads are checked where this diagnostic is supported.`
+              : "Paste a wallet address to check visible open HEX stake rows on supported networks."}
+          </p>
+        </div>
+        <span
+          className={`inline-flex w-fit rounded-full border px-3 py-1 text-xs font-semibold ${toneClassForHexStake(
+            hexStake.riskLevel,
+          )}`}
+        >
+          {isScanning ? "Scanning" : hexStakeRiskLabel(hexStake.riskLevel)}
+        </span>
+      </div>
+
+      <p className="mt-4 rounded-xl border border-pulse-border/70 bg-pulse-bg/45 p-3 text-sm leading-6 text-pulse-muted">
+        {LIFEBOAT_HEX_STAKE_DIAGNOSTIC_COPY.body}
+      </p>
+
+      {owner && status === "unsupported" ? (
+        <div className="mt-4 rounded-xl border border-amber-400/35 bg-amber-400/10 p-3 text-sm leading-6 text-amber-100">
+          HEX stake diagnostics are currently enabled for PulseChain only. Do
+          not treat unsupported networks as proof that no stake exists.
+        </div>
+      ) : null}
+
+      {owner && (status === "partial" || status === "upstream_unavailable") ? (
+        <div className="mt-4 rounded-xl border border-amber-400/35 bg-amber-400/10 p-3 text-sm leading-6 text-amber-100">
+          This diagnostic is incomplete. Do not treat missing HEX stake rows as
+          proof that the wallet has no active, mature, late, or historical
+          stakes.
+        </div>
+      ) : null}
+
+      {owner && (status === "complete" || status === "partial") ? (
+        <HexStakeSummary hexStake={hexStake} />
+      ) : null}
+
+      {owner && hexStake.evidence.length > 0 ? (
+        <div className="mt-4 overflow-hidden rounded-2xl border border-pulse-border bg-pulse-bg/40">
+          <ul>
+            {hexStake.evidence.map((item) => (
+              <li
+                key={`${item.stakeId}-${item.status}`}
+                className="grid gap-4 border-b border-pulse-border/60 p-4 last:border-b-0 lg:grid-cols-[1fr_1fr_0.8fr]"
+              >
+                <div className="min-w-0">
+                  <p className="text-sm font-semibold text-pulse-text">
+                    {item.title}
+                  </p>
+                  <p className="mt-1 truncate font-mono text-xs text-pulse-muted">
+                    Stake {item.stakeId}
+                  </p>
+                </div>
+                <div className="min-w-0 text-xs leading-5 text-pulse-muted">
+                  <p>{item.stakedHex}</p>
+                  <p>
+                    Day {item.lockedDay} to {item.endDay}
+                  </p>
+                  {item.explorerUrl ? (
+                    <a
+                      href={item.explorerUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="block truncate underline-offset-2 hover:text-pulse-cyan hover:underline"
+                    >
+                      HEX contract
+                    </a>
+                  ) : null}
+                </div>
+                <div className="min-w-0 text-xs leading-5 text-pulse-muted lg:text-right">
+                  <p>{item.daysRemaining} days remaining</p>
+                  <p>{item.daysLate} days late</p>
+                  <p className="uppercase tracking-wide">{item.riskLevel} signal</p>
+                </div>
+                <p className="text-xs leading-5 text-pulse-muted lg:col-span-3">
+                  {item.description}
+                </p>
+              </li>
+            ))}
+          </ul>
+        </div>
+      ) : owner && status === "complete" ? (
+        <div className="mt-4 rounded-2xl border border-dashed border-pulse-border/80 bg-pulse-bg/40 p-4 text-sm leading-6 text-pulse-muted">
+          No visible open HEX stake rows were found by the completed read. This
+          is not a historical ended-stake inventory.
+        </div>
+      ) : null}
+    </section>
+  );
+}
+
+function HexStakeSummary({
+  hexStake,
+}: {
+  hexStake: LifeboatHexStakeApiResponse;
+}) {
+  return (
+    <dl className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+      <SweeperMetric
+        label="Open rows"
+        value={`${hexStake.summary.checkedStakeCount}/${hexStake.summary.totalOpenStakeCount}`}
+      />
+      <SweeperMetric
+        label="Active"
+        value={hexStake.summary.activeStakeCount.toString()}
+      />
+      <SweeperMetric
+        label="Mature"
+        value={hexStake.summary.matureStakeCount.toString()}
+      />
+      <SweeperMetric
+        label="Late"
+        value={(
+          hexStake.summary.lateStakeCount +
+          hexStake.summary.goodAccountingCandidateCount
+        ).toString()}
+      />
+      {[...hexStake.warnings, ...hexStake.errors, ...hexStake.missingConfig].length >
+      0 ? (
+        <div className="rounded-xl border border-pulse-border/70 bg-pulse-bg/45 p-3 text-xs leading-5 text-pulse-muted sm:col-span-2 lg:col-span-4">
+          {[...hexStake.warnings, ...hexStake.errors, ...hexStake.missingConfig].join(
+            " ",
+          )}
+        </div>
+      ) : null}
+    </dl>
+  );
+}
+
 function DustTrapSection({
   dustTrap,
   owner,
@@ -2305,6 +2481,7 @@ function CompletenessPanel({
   permit2Status,
   eip7702,
   dustTrap,
+  hexStake,
 }: {
   scan: LifeboatScanSnapshot;
   sweeper: LifeboatSweeperApiResponse;
@@ -2316,6 +2493,7 @@ function CompletenessPanel({
   permit2Status: LifeboatModuleStatus;
   eip7702: LifeboatEip7702ApiResponse;
   dustTrap: LifeboatDustTrapApiResponse;
+  hexStake: LifeboatHexStakeApiResponse;
 }) {
   return (
     <section className="rounded-2xl border border-pulse-border bg-pulse-panel/65 p-5">
@@ -2361,7 +2539,10 @@ function CompletenessPanel({
           label="Permit2 exposure"
           value={statusLabelForPermit2Exposure(permit2Exposure, permit2Status)}
         />
-        <CompletenessRow label="HEX stake status" value="Planned diagnostic" />
+        <CompletenessRow
+          label="HEX stake status"
+          value={statusLabelForHexStake(hexStake)}
+        />
         <CompletenessRow
           label="EIP-7702 delegation"
           value={statusLabelForEip7702(eip7702)}
@@ -2408,6 +2589,7 @@ function ReportExport({
   permit2Exposure,
   eip7702,
   dustTrap,
+  hexStake,
 }: {
   scan: LifeboatScanSnapshot;
   owner: Address | null;
@@ -2419,6 +2601,7 @@ function ReportExport({
   permit2Exposure: Permit2ExposureAnalysis;
   eip7702: LifeboatEip7702ApiResponse;
   dustTrap: LifeboatDustTrapApiResponse;
+  hexStake: LifeboatHexStakeApiResponse;
 }) {
   const [copyState, setCopyState] = useState<"idle" | "copied" | "failed">(
     "idle",
@@ -2440,6 +2623,7 @@ function ReportExport({
         permit2Exposure,
         eip7702,
         dustTrap,
+        hexStake,
       ),
     );
   }
@@ -2745,6 +2929,7 @@ function buildReportFromSnapshot(
   permit2Exposure: Permit2ExposureAnalysis,
   eip7702: LifeboatEip7702ApiResponse,
   dustTrap: LifeboatDustTrapApiResponse,
+  hexStake: LifeboatHexStakeApiResponse,
 ): LifeboatReport {
   const chain: LifeboatChainReport = {
     chainId: scan.chainId,
@@ -2773,7 +2958,10 @@ function buildReportFromSnapshot(
     spenderRiskLevel: spenderRisk.riskLevel,
     spenderRiskEvidence: spenderRisk.evidence,
     spenderRiskSpenders: spenderRisk.spenders,
-    hexStatus: "planned",
+    hexStatus: moduleStatusFromHexStakeResponse(hexStake),
+    hexStakeRiskLevel: hexStake.riskLevel,
+    hexStakeEvidence: hexStake.evidence,
+    hexStakeRows: hexStake.stakes,
     permit2Status: moduleStatusFromPermit2Exposure(scan.approvalsStatus),
     permit2RiskLevel: permit2Exposure.riskLevel,
     permit2Evidence: permit2Exposure.evidence,
@@ -2802,7 +2990,7 @@ function buildReportFromSnapshot(
       timelineCheckComplete: timeline.status === "complete",
       addressPoisoningCheckComplete: addressPoisoning.status === "complete",
       spenderRiskCheckComplete: spenderRisk.status === "complete",
-      hexCheckComplete: false,
+      hexStakeCheckComplete: hexStake.status === "complete",
       permit2Complete: scan.approvalsStatus === "complete",
       eip7702Complete: eip7702.status === "complete",
       dustTrapCheckComplete: dustTrap.status === "complete",
@@ -2924,6 +3112,23 @@ function moduleStatusFromDustTrapResponse(
   return "partial";
 }
 
+function moduleStatusFromHexStakeResponse(
+  hexStake: LifeboatHexStakeApiResponse,
+): LifeboatModuleStatus {
+  if (hexStake.status === "idle") return "not_scanned";
+  if (hexStake.status === "scanning") return "scanning";
+  if (hexStake.status === "complete") return "complete";
+  if (hexStake.status === "partial") return "partial";
+  if (hexStake.status === "unsupported") return "unsupported";
+  if (
+    hexStake.status === "config-missing" ||
+    hexStake.status === "upstream-failure"
+  ) {
+    return "upstream_unavailable";
+  }
+  return "partial";
+}
+
 function moduleStatusFromPermit2Exposure(
   approvalStatus: LifeboatModuleStatus,
 ): LifeboatModuleStatus {
@@ -2987,6 +3192,11 @@ function statusLabelForEip7702(eip7702: LifeboatEip7702ApiResponse): string {
 function statusLabelForDustTrap(dustTrap: LifeboatDustTrapApiResponse): string {
   if (dustTrap.status === "scanning") return "Scanning";
   return dustTrapRiskLabel(dustTrap.riskLevel);
+}
+
+function statusLabelForHexStake(hexStake: LifeboatHexStakeApiResponse): string {
+  if (hexStake.status === "scanning") return "Scanning";
+  return hexStakeRiskLabel(hexStake.riskLevel);
 }
 
 function statusLabelForPermit2Exposure(
@@ -3138,6 +3348,23 @@ function toneForDustTrap(
   return "neutral";
 }
 
+function toneForHexStake(
+  riskLevel: HexStakeRiskLevel,
+): "neutral" | "success" | "warning" | "danger" {
+  if (riskLevel === "elevated") return "danger";
+  if (riskLevel === "possible") return "warning";
+  if (riskLevel === "none_detected") return "success";
+  if (riskLevel === "informational") return "neutral";
+  if (
+    riskLevel === "insufficient_data" ||
+    riskLevel === "upstream_unavailable" ||
+    riskLevel === "unsupported"
+  ) {
+    return "warning";
+  }
+  return "neutral";
+}
+
 function toneClassForSweeper(riskLevel: SweeperRiskLevel): string {
   const tone = toneForSweeper(riskLevel);
   return {
@@ -3212,6 +3439,16 @@ function toneClassForPermit2Exposure(riskLevel: Permit2ExposureRiskLevel): strin
 
 function toneClassForDustTrap(riskLevel: DustTrapRiskLevel): string {
   const tone = toneForDustTrap(riskLevel);
+  return {
+    neutral: "border-pulse-border bg-pulse-bg/50 text-pulse-muted",
+    success: "border-pulse-green/35 bg-pulse-green/10 text-pulse-green",
+    warning: "border-amber-400/35 bg-amber-400/10 text-amber-200",
+    danger: "border-pulse-red/40 bg-pulse-red/10 text-pulse-red",
+  }[tone];
+}
+
+function toneClassForHexStake(riskLevel: HexStakeRiskLevel): string {
+  const tone = toneForHexStake(riskLevel);
   return {
     neutral: "border-pulse-border bg-pulse-bg/50 text-pulse-muted",
     success: "border-pulse-green/35 bg-pulse-green/10 text-pulse-green",

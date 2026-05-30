@@ -181,6 +181,9 @@ The current Lifeboat branch implements these read-only modules:
 - Token/NFT dust-trap diagnostic from bounded inbound token and NFT transfer
   history with sanitized metadata, URL-like text stripping, and no arbitrary
   token-provided website fetches.
+- HEX stake diagnostic from PulseChain read-only contract calls for visible
+  open stake rows, with mature/late/Good Accounting candidate context but no
+  stake-ending or Good Accounting execution.
 
 These modules do not add custody, server signing, relayers, rescue contracts,
 automatic gas funding, automatic transfer, HEX write execution, private bundle
