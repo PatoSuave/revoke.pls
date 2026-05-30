@@ -9,7 +9,8 @@ endorsed, current, or free of risk.
 ## Add a Reviewed Source
 
 1. Save the reviewed snapshot locally. Prefer immutable raw files, exported
-   OPML, or a pinned repository commit.
+   OPML, or a pinned repository commit. Record the public/source page separately
+   when the reviewed snapshot is an export or mirror.
 2. Run the local extractor:
 
    ```bash
@@ -41,3 +42,5 @@ endorsed, current, or free of risk.
 - Do not promote candidate hostnames to official-domain entries.
 - Do not label candidate sources as safe, trusted, verified, or guaranteed.
 - Do not bypass browser challenges; use durable exported or mirrored snapshots.
+- Repository URLs are optional. A source packet may use a reviewed exported
+  snapshot when no repository mirror exists.

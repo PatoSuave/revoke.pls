@@ -93,9 +93,11 @@ say the pasted hostname resembles a candidate source-list hostname. It must not
 say or imply that the matched source-list hostname is official.
 
 Candidate source data is modeled as reviewed source packets. Each packet must
-declare its source metadata and exact hostname list. The app derives the unique
-candidate hostname count and flattened registry entries from those packets, so
-future reviewed lists can be added without changing matching behavior.
+declare its source metadata, reviewed snapshot, and exact hostname list. A
+repository mirror is useful but not required when the packet is based on a
+reviewed export or local artifact. The app derives the unique candidate hostname
+count and flattened registry entries from those packets, so future reviewed
+lists can be added without changing matching behavior.
 
 Use `extractCandidateSourceSnapshot` from
 `src/lib/security/candidate-source-extractor.ts` to turn a reviewed local

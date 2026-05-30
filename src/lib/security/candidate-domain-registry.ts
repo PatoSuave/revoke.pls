@@ -4,7 +4,8 @@ export type CandidateDomainSource = {
   id: string;
   label: string;
   sourceUrl: string;
-  sourceRepositoryUrl: string;
+  sourcePageUrl?: string;
+  sourceRepositoryUrl?: string;
   sourcePacketPath: string;
   capturedAt: string;
 };
@@ -26,6 +27,7 @@ export const PLSTART_CANDIDATE_SOURCE: CandidateDomainSource = {
   label: "plstart.me GitHub mirror",
   sourceUrl:
     "https://raw.githubusercontent.com/0xWhankFrite/plstart.eth.limo/6417ee6c6b86ab9fa79417e9cc532f70edc19446/index.html",
+  sourcePageUrl: "https://start.me/p/gGQ09M/plstart-me",
   sourceRepositoryUrl: "https://github.com/0xWhankFrite/plstart.eth.limo",
   sourcePacketPath: "docs/security/domain-source-packets/plstart-eth-limo.md",
   capturedAt: "2026-05-30",
