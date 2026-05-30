@@ -121,6 +121,18 @@ describe("checkCryptoLink", () => {
     expect(source).not.toMatch(/\b(safe|trusted|guaranteed)\b/i);
   });
 
+  it("keeps source-list example copy distinct from official-match copy", () => {
+    const source = readFileSync(
+      join(process.cwd(), "src/components/security/link-checker.tsx"),
+      "utf8",
+    );
+
+    expect(source).toContain("Try source-list example");
+    expect(source).toContain("https://app.pulsex.com");
+    expect(source).toContain("not");
+    expect(source).toContain("official-domain matches");
+  });
+
   it("does not add wallet write paths or secret-request inputs", () => {
     const source = [
       "src/components/security/link-checker.tsx",
