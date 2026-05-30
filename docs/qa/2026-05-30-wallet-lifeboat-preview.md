@@ -6,11 +6,14 @@ Wallet Lifeboat modules and Lifeboat-specific preview smoke command were added.
 ## Branch And Preview
 
 - Branch: `Lifeboat`
-- Code checkpoint under test: `87e34ae Add Lifeboat preview smoke check`
+- Code checkpoint under test: `7953eef Document Lifeboat preview QA`
 - Preview alias:
   `https://revoke-pls-git-lifeboat-squikyus-8256s-projects.vercel.app`
 - Unique Vercel preview URL:
-  `https://revoke-h7wcp2zv0-squikyus-8256s-projects.vercel.app`
+  `https://revoke-dt3rzm8pe-squikyus-8256s-projects.vercel.app`
+- Temporary share URL:
+  `https://revoke-pls-git-lifeboat-squikyus-8256s-projects.vercel.app/app/wallet-lifeboat?_vercel_share=iFqC6cjiLQKZZiSZA0BjZO6dNPZJ8M6g`
+- Share URL expiry: May 31, 2026, 10:40 PM Eastern.
 - Production URL: not used for this branch QA pass.
 - Main merge status: not merged.
 
@@ -25,6 +28,8 @@ npm.cmd run typecheck
 git diff --check
 npm.cmd run smoke:preview -- https://revoke-h7wcp2zv0-squikyus-8256s-projects.vercel.app
 npm.cmd run smoke:lifeboat -- https://revoke-h7wcp2zv0-squikyus-8256s-projects.vercel.app
+npm.cmd run smoke:preview -- https://revoke-pls-git-lifeboat-squikyus-8256s-projects.vercel.app
+npm.cmd run smoke:lifeboat -- https://revoke-pls-git-lifeboat-squikyus-8256s-projects.vercel.app
 ```
 
 Results:
@@ -38,6 +43,30 @@ Results:
   approval APIs.
 - Wallet Lifeboat preview smoke passed for `/app/wallet-lifeboat` markers and
   the hosted Lifeboat diagnostic APIs.
+- The same general and Wallet Lifeboat smoke checks passed again against the
+  `Lifeboat` branch alias after the QA documentation checkpoint.
+- `vercel inspect` showed the branch alias resolving to the ready preview
+  deployment `revoke-dt3rzm8pe-squikyus-8256s-projects.vercel.app`.
+
+## Authenticated Preview Fetch
+
+The preview branch is protected by Vercel Authentication. A plain unauthenticated
+fetch returns the Vercel authentication page, which is expected. A fresh
+temporary share URL was generated and fetched successfully:
+
+```powershell
+vercel inspect https://revoke-pls-git-lifeboat-squikyus-8256s-projects.vercel.app
+```
+
+Authenticated fetch evidence for `/app/wallet-lifeboat`:
+
+- HTTP status `200 OK`.
+- Page title rendered as `Wallet Lifeboat | Pulse Revoke`.
+- The preview HTML includes the read-only Wallet Lifeboat form, the network
+  selector, the "Scan wallet" button, and the safety copy warning users never to
+  enter a seed phrase or private key.
+- Response security headers include a content security policy, `X-Frame-Options:
+  DENY`, `X-Content-Type-Options: nosniff`, and `X-Robots-Tag: noindex`.
 
 ## Lifeboat Smoke Matrix
 
