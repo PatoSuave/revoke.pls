@@ -103,6 +103,15 @@ HTML/OPML/raw snapshot into sorted URL and hostname candidates. The extractor is
 local text parsing only; it does not fetch remote pages, bypass browser
 challenges, crawl links, resolve DNS, or make registry entries official.
 
+For reviewed local files, run:
+
+```bash
+npm run security:extract-source -- path/to/reviewed-snapshot.html --json
+```
+
+The command reads only the local snapshot file and prints sorted URLs and
+hostnames for source-packet review.
+
 ## Future Expansion Boundaries
 
 Possible later phases may add curated registries, reviewed ecosystem source

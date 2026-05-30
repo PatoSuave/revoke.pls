@@ -1,3 +1,8 @@
+import { execFileSync } from "node:child_process";
+import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+
 import { describe, expect, it } from "vitest";
 
 import { extractCandidateSourceSnapshot } from "@/lib/security/candidate-source-extractor";
@@ -52,10 +57,42 @@ describe("candidate-source-extractor", () => {
       mailto:security@example.com
       javascript:alert(1)
       https://
+      https://...
+      \`https://raw.githubusercontent.com/example/repo/main/index.html\`
       https://valid.example.com/path
     `);
 
-    expect(result.hostnames).toEqual(["valid.example.com"]);
-    expect(result.urls).toEqual(["https://valid.example.com/path"]);
+    expect(result.hostnames).toEqual([
+      "raw.githubusercontent.com",
+      "valid.example.com",
+    ]);
+    expect(result.urls).toEqual([
+      "https://raw.githubusercontent.com/example/repo/main/index.html",
+      "https://valid.example.com/path",
+    ]);
+  });
+
+  it("keeps the local source extraction script aligned with the library", () => {
+    const directory = mkdtempSync(join(tmpdir(), "candidate-source-"));
+    const snapshotPath = join(directory, "snapshot.html");
+    const snapshot = `
+      <a href="https://App.PulseX.com/swap?chain=pulse">PulseX</a>
+      <outline htmlUrl="https://bridge.pulsechain.com/#/bridge" />
+    `;
+
+    try {
+      writeFileSync(snapshotPath, snapshot, "utf8");
+      const scriptOutput = execFileSync(
+        process.execPath,
+        ["scripts/extract-candidate-source.mjs", snapshotPath, "--json"],
+        { cwd: process.cwd(), encoding: "utf8" },
+      );
+
+      expect(JSON.parse(scriptOutput)).toEqual(
+        extractCandidateSourceSnapshot(snapshot),
+      );
+    } finally {
+      rmSync(directory, { force: true, recursive: true });
+    }
   });
 });
