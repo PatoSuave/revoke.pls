@@ -14,6 +14,7 @@ import { useLifeboatDustTrapScan } from "@/hooks/use-lifeboat-dust-trap-scan";
 import { useLifeboatEip7702Scan } from "@/hooks/use-lifeboat-eip7702-scan";
 import { useLifeboatHexStakeScan } from "@/hooks/use-lifeboat-hex-stake-scan";
 import { useLifeboatPendingNonceScan } from "@/hooks/use-lifeboat-pending-nonce-scan";
+import { useLifeboatSmartWalletScan } from "@/hooks/use-lifeboat-smart-wallet-scan";
 import { useLifeboatSpenderRiskScan } from "@/hooks/use-lifeboat-spender-risk-scan";
 import { useLifeboatSweeperScan } from "@/hooks/use-lifeboat-sweeper-scan";
 import { useLifeboatTimelineScan } from "@/hooks/use-lifeboat-timeline-scan";
@@ -39,6 +40,7 @@ import {
   LIFEBOAT_NOT_TO_DO,
   LIFEBOAT_PENDING_NONCE_DIAGNOSTIC_COPY,
   LIFEBOAT_PERMIT2_DIAGNOSTIC_COPY,
+  LIFEBOAT_SMART_WALLET_DIAGNOSTIC_COPY,
   LIFEBOAT_PLANNED_MODULES,
   LIFEBOAT_SPENDER_RISK_DIAGNOSTIC_COPY,
   LIFEBOAT_SWEEPER_DIAGNOSTIC_COPY,
@@ -81,6 +83,11 @@ import {
   type Permit2ExposureAnalysis,
   type Permit2ExposureRiskLevel,
 } from "@/lib/lifeboat/permit2-exposure";
+import {
+  smartWalletRiskLabel,
+  type LifeboatSmartWalletApiResponse,
+  type SmartWalletRiskLevel,
+} from "@/lib/lifeboat/smart-wallet";
 import { buildWalletLifeboatReportMarkdown } from "@/lib/lifeboat/report";
 import {
   spenderRiskLabel,
@@ -147,6 +154,12 @@ export function WalletLifeboat() {
     enabled: Boolean(owner),
   });
   const eip7702 = useLifeboatEip7702Scan({
+    owner: owner ?? undefined,
+    chainId: selectedChainId,
+    chainName: selectedOption.displayName,
+    enabled: Boolean(owner),
+  });
+  const smartWallet = useLifeboatSmartWalletScan({
     owner: owner ?? undefined,
     chainId: selectedChainId,
     chainName: selectedOption.displayName,
@@ -274,6 +287,7 @@ export function WalletLifeboat() {
           spenderRisk={spenderRisk.response}
           permit2Exposure={permit2Exposure}
           eip7702={eip7702.response}
+          smartWallet={smartWallet.response}
           dustTrap={dustTrap.response}
           hexStake={hexStake.response}
           goodAccountingAssist={goodAccountingAssist}
@@ -338,6 +352,12 @@ export function WalletLifeboat() {
               option={selectedOption}
               isScanning={eip7702.status === "pending"}
             />
+            <SmartWalletSection
+              smartWallet={smartWallet.response}
+              owner={owner}
+              option={selectedOption}
+              isScanning={smartWallet.status === "pending"}
+            />
             <HexStakeSection
               hexStake={hexStake.response}
               owner={owner}
@@ -370,6 +390,7 @@ export function WalletLifeboat() {
               permit2Exposure={permit2Exposure}
               permit2Status={moduleStatusFromPermit2Exposure(scan.approvalsStatus)}
               eip7702={eip7702.response}
+              smartWallet={smartWallet.response}
               dustTrap={dustTrap.response}
               hexStake={hexStake.response}
               goodAccountingAssist={goodAccountingAssist}
@@ -384,6 +405,7 @@ export function WalletLifeboat() {
               spenderRisk={spenderRisk.response}
               permit2Exposure={permit2Exposure}
               eip7702={eip7702.response}
+              smartWallet={smartWallet.response}
               dustTrap={dustTrap.response}
               hexStake={hexStake.response}
               goodAccountingAssist={goodAccountingAssist}
@@ -548,6 +570,7 @@ function TriageSummary({
   spenderRisk,
   permit2Exposure,
   eip7702,
+  smartWallet,
   dustTrap,
   hexStake,
   goodAccountingAssist,
@@ -561,6 +584,7 @@ function TriageSummary({
   spenderRisk: LifeboatSpenderRiskApiResponse;
   permit2Exposure: Permit2ExposureAnalysis;
   eip7702: LifeboatEip7702ApiResponse;
+  smartWallet: LifeboatSmartWalletApiResponse;
   dustTrap: LifeboatDustTrapApiResponse;
   hexStake: LifeboatHexStakeApiResponse;
   goodAccountingAssist: GoodAccountingAssistAnalysis;
@@ -627,6 +651,11 @@ function TriageSummary({
       label: "EIP-7702 delegation",
       value: statusLabelForEip7702(eip7702),
       tone: toneForEip7702(eip7702.riskLevel),
+    },
+    {
+      label: "Smart wallet / Safe",
+      value: statusLabelForSmartWallet(smartWallet),
+      tone: toneForSmartWallet(smartWallet.riskLevel),
     },
     {
       label: "Token/NFT dust traps",
@@ -2120,6 +2149,149 @@ function Eip7702Summary({
   );
 }
 
+function SmartWalletSection({
+  smartWallet,
+  owner,
+  option,
+  isScanning,
+}: {
+  smartWallet: LifeboatSmartWalletApiResponse;
+  owner: Address | null;
+  option: AddressOnlyScanOption;
+  isScanning: boolean;
+}) {
+  const status = moduleStatusFromSmartWalletResponse(smartWallet);
+  return (
+    <section className="rounded-2xl border border-pulse-border bg-pulse-panel/65 p-5">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-pulse-cyan">
+            {LIFEBOAT_SMART_WALLET_DIAGNOSTIC_COPY.title}
+          </p>
+          <h2 className="mt-1 text-xl font-semibold text-pulse-text">
+            Account and Safe configuration
+          </h2>
+          <p className="mt-2 text-sm leading-6 text-pulse-muted">
+            {owner
+              ? `${option.displayName} latest account code and Safe-compatible view methods are checked without connecting or signing.`
+              : "Paste a wallet address to check whether this address looks like a smart wallet or Safe-compatible account."}
+          </p>
+        </div>
+        <span
+          className={`inline-flex w-fit rounded-full border px-3 py-1 text-xs font-semibold ${toneClassForSmartWallet(
+            smartWallet.riskLevel,
+          )}`}
+        >
+          {isScanning ? "Scanning" : smartWalletRiskLabel(smartWallet.riskLevel)}
+        </span>
+      </div>
+
+      <p className="mt-4 rounded-xl border border-pulse-border/70 bg-pulse-bg/45 p-3 text-sm leading-6 text-pulse-muted">
+        {LIFEBOAT_SMART_WALLET_DIAGNOSTIC_COPY.body}
+      </p>
+
+      {owner && (status === "partial" || status === "upstream_unavailable") ? (
+        <div className="mt-4 rounded-xl border border-amber-400/35 bg-amber-400/10 p-3 text-sm leading-6 text-amber-100">
+          This diagnostic is incomplete. Do not treat missing smart-wallet
+          evidence as proof that no Safe, module, guard, or session-key risk
+          exists.
+        </div>
+      ) : null}
+
+      {owner && (status === "complete" || status === "partial") ? (
+        <SmartWalletSummary smartWallet={smartWallet} />
+      ) : null}
+
+      {owner && smartWallet.evidence.length > 0 ? (
+        <div className="mt-4 overflow-hidden rounded-2xl border border-pulse-border bg-pulse-bg/40">
+          <ul>
+            {smartWallet.evidence.map((item) => (
+              <li
+                key={`${item.accountAddress}-${item.title}`}
+                className="grid gap-4 border-b border-pulse-border/60 p-4 last:border-b-0 lg:grid-cols-[1fr_1.1fr_0.9fr]"
+              >
+                <div className="min-w-0">
+                  <p className="text-sm font-semibold text-pulse-text">
+                    {item.title}
+                  </p>
+                  <a
+                    href={item.explorerUrl ?? addressUrlFor(option, item.accountAddress)}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="mt-1 block truncate font-mono text-xs text-pulse-muted underline-offset-2 hover:text-pulse-cyan hover:underline"
+                    title={item.accountAddress}
+                  >
+                    {shortenAddress(item.accountAddress)}
+                  </a>
+                </div>
+                <div className="min-w-0 text-xs leading-5 text-pulse-muted">
+                  <p>{item.description}</p>
+                  {item.safeOwners.length > 0 ? (
+                    <p className="mt-1">
+                      Owners: {item.safeOwners.map(shortenAddress).join(", ")}
+                    </p>
+                  ) : null}
+                  {item.safeModules.length > 0 ? (
+                    <p className="mt-1">
+                      Modules: {item.safeModules.map(shortenAddress).join(", ")}
+                    </p>
+                  ) : null}
+                </div>
+                <div className="min-w-0 text-xs leading-5 text-pulse-muted lg:text-right">
+                  <p>Code bytes: {item.codeLengthBytes}</p>
+                  <p>
+                    Threshold:{" "}
+                    {item.safeThreshold === null ? "unknown" : item.safeThreshold}
+                  </p>
+                  <p>Safe nonce: {item.safeNonce ?? "unknown"}</p>
+                </div>
+              </li>
+            ))}
+          </ul>
+        </div>
+      ) : owner && status === "complete" ? (
+        <div className="mt-4 rounded-2xl border border-dashed border-pulse-border/80 bg-pulse-bg/40 p-4 text-sm leading-6 text-pulse-muted">
+          No account code was found at latest block on this network. This is
+          not proof that the wallet secret is uncompromised or that no off-chain
+          authorization risk exists.
+        </div>
+      ) : null}
+    </section>
+  );
+}
+
+function SmartWalletSummary({
+  smartWallet,
+}: {
+  smartWallet: LifeboatSmartWalletApiResponse;
+}) {
+  return (
+    <dl className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+      <SweeperMetric
+        label="Code"
+        value={smartWallet.summary.hasCode ? "present" : "empty"}
+      />
+      <SweeperMetric
+        label="Safe-like"
+        value={smartWallet.summary.isSafeLike ? "yes" : "not detected"}
+      />
+      <SweeperMetric
+        label="Owners"
+        value={smartWallet.summary.ownerCount.toString()}
+      />
+      <SweeperMetric
+        label="Modules"
+        value={smartWallet.summary.moduleCount.toString()}
+      />
+      {[...smartWallet.warnings, ...smartWallet.supportNotes].length > 0 ? (
+        <div className="rounded-xl border border-pulse-border/70 bg-pulse-bg/45 p-3 text-xs leading-5 text-pulse-muted sm:col-span-2 lg:col-span-4">
+          {[...smartWallet.warnings, ...smartWallet.supportNotes].join(" ")}
+        </div>
+      ) : null}
+    </dl>
+  );
+}
+
 function HexStakeSection({
   hexStake,
   owner,
@@ -2645,6 +2817,7 @@ function CompletenessPanel({
   permit2Exposure,
   permit2Status,
   eip7702,
+  smartWallet,
   dustTrap,
   hexStake,
   goodAccountingAssist,
@@ -2658,6 +2831,7 @@ function CompletenessPanel({
   permit2Exposure: Permit2ExposureAnalysis;
   permit2Status: LifeboatModuleStatus;
   eip7702: LifeboatEip7702ApiResponse;
+  smartWallet: LifeboatSmartWalletApiResponse;
   dustTrap: LifeboatDustTrapApiResponse;
   hexStake: LifeboatHexStakeApiResponse;
   goodAccountingAssist: GoodAccountingAssistAnalysis;
@@ -2719,6 +2893,10 @@ function CompletenessPanel({
           value={statusLabelForEip7702(eip7702)}
         />
         <CompletenessRow
+          label="Smart wallet / Safe"
+          value={statusLabelForSmartWallet(smartWallet)}
+        />
+        <CompletenessRow
           label="Token/NFT dust traps"
           value={statusLabelForDustTrap(dustTrap)}
         />
@@ -2759,6 +2937,7 @@ function ReportExport({
   spenderRisk,
   permit2Exposure,
   eip7702,
+  smartWallet,
   dustTrap,
   hexStake,
   goodAccountingAssist,
@@ -2772,6 +2951,7 @@ function ReportExport({
   spenderRisk: LifeboatSpenderRiskApiResponse;
   permit2Exposure: Permit2ExposureAnalysis;
   eip7702: LifeboatEip7702ApiResponse;
+  smartWallet: LifeboatSmartWalletApiResponse;
   dustTrap: LifeboatDustTrapApiResponse;
   hexStake: LifeboatHexStakeApiResponse;
   goodAccountingAssist: GoodAccountingAssistAnalysis;
@@ -2795,6 +2975,7 @@ function ReportExport({
         spenderRisk,
         permit2Exposure,
         eip7702,
+        smartWallet,
         dustTrap,
         hexStake,
         goodAccountingAssist,
@@ -3102,6 +3283,7 @@ function buildReportFromSnapshot(
   spenderRisk: LifeboatSpenderRiskApiResponse,
   permit2Exposure: Permit2ExposureAnalysis,
   eip7702: LifeboatEip7702ApiResponse,
+  smartWallet: LifeboatSmartWalletApiResponse,
   dustTrap: LifeboatDustTrapApiResponse,
   hexStake: LifeboatHexStakeApiResponse,
   goodAccountingAssist: GoodAccountingAssistAnalysis,
@@ -3148,6 +3330,9 @@ function buildReportFromSnapshot(
     eip7702Status: moduleStatusFromEip7702Response(eip7702),
     eip7702RiskLevel: eip7702.riskLevel,
     eip7702Evidence: eip7702.evidence,
+    smartWalletStatus: moduleStatusFromSmartWalletResponse(smartWallet),
+    smartWalletRiskLevel: smartWallet.riskLevel,
+    smartWalletEvidence: smartWallet.evidence,
     dustTrapStatus: moduleStatusFromDustTrapResponse(dustTrap),
     dustTrapRiskLevel: dustTrap.riskLevel,
     dustTrapEvidence: dustTrap.evidence,
@@ -3175,6 +3360,7 @@ function buildReportFromSnapshot(
         goodAccountingAssist.summary.sourceComplete,
       permit2Complete: scan.approvalsStatus === "complete",
       eip7702Complete: eip7702.status === "complete",
+      smartWalletComplete: smartWallet.status === "complete",
       dustTrapCheckComplete: dustTrap.status === "complete",
       visibleAssetsComplete: false,
     },
@@ -3271,6 +3457,22 @@ function moduleStatusFromEip7702Response(
   if (
     eip7702.status === "config-missing" ||
     eip7702.status === "upstream-failure"
+  ) {
+    return "upstream_unavailable";
+  }
+  return "partial";
+}
+
+function moduleStatusFromSmartWalletResponse(
+  smartWallet: LifeboatSmartWalletApiResponse,
+): LifeboatModuleStatus {
+  if (smartWallet.status === "idle") return "not_scanned";
+  if (smartWallet.status === "scanning") return "scanning";
+  if (smartWallet.status === "complete") return "complete";
+  if (smartWallet.status === "unsupported") return "unsupported";
+  if (
+    smartWallet.status === "config-missing" ||
+    smartWallet.status === "upstream-failure"
   ) {
     return "upstream_unavailable";
   }
@@ -3384,6 +3586,13 @@ function statusLabelForSpenderRisk(
 function statusLabelForEip7702(eip7702: LifeboatEip7702ApiResponse): string {
   if (eip7702.status === "scanning") return "Scanning";
   return eip7702RiskLabel(eip7702.riskLevel);
+}
+
+function statusLabelForSmartWallet(
+  smartWallet: LifeboatSmartWalletApiResponse,
+): string {
+  if (smartWallet.status === "scanning") return "Scanning";
+  return smartWalletRiskLabel(smartWallet.riskLevel);
 }
 
 function statusLabelForDustTrap(dustTrap: LifeboatDustTrapApiResponse): string {
@@ -3535,6 +3744,23 @@ function toneForPermit2Exposure(
   return "neutral";
 }
 
+function toneForSmartWallet(
+  riskLevel: SmartWalletRiskLevel,
+): "neutral" | "success" | "warning" | "danger" {
+  if (riskLevel === "elevated") return "danger";
+  if (riskLevel === "possible") return "warning";
+  if (riskLevel === "none_detected") return "success";
+  if (riskLevel === "informational") return "neutral";
+  if (
+    riskLevel === "insufficient_data" ||
+    riskLevel === "upstream_unavailable" ||
+    riskLevel === "unsupported"
+  ) {
+    return "warning";
+  }
+  return "neutral";
+}
+
 function toneForDustTrap(
   riskLevel: DustTrapRiskLevel,
 ): "neutral" | "success" | "warning" | "danger" {
@@ -3640,6 +3866,16 @@ function toneClassForSpenderRisk(riskLevel: SpenderRiskLevel): string {
 
 function toneClassForEip7702(riskLevel: Eip7702RiskLevel): string {
   const tone = toneForEip7702(riskLevel);
+  return {
+    neutral: "border-pulse-border bg-pulse-bg/50 text-pulse-muted",
+    success: "border-pulse-green/35 bg-pulse-green/10 text-pulse-green",
+    warning: "border-amber-400/35 bg-amber-400/10 text-amber-200",
+    danger: "border-pulse-red/40 bg-pulse-red/10 text-pulse-red",
+  }[tone];
+}
+
+function toneClassForSmartWallet(riskLevel: SmartWalletRiskLevel): string {
+  const tone = toneForSmartWallet(riskLevel);
   return {
     neutral: "border-pulse-border bg-pulse-bg/50 text-pulse-muted",
     success: "border-pulse-green/35 bg-pulse-green/10 text-pulse-green",

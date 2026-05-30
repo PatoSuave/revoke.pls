@@ -454,6 +454,16 @@ contract, report export.
 
 Validation commands: Full validation stack plus smart-wallet tests.
 
+Current safe production pass:
+
+- Adds a read-only `/api/lifeboat/smart-wallet` diagnostic.
+- Reads latest account code and Safe-compatible owners, threshold, modules, and
+  nonce where the selected RPC supports those calls.
+- Shows smart-wallet/Safe context in the Lifeboat UI and exportable report.
+- Keeps module and single-threshold warnings as review context only.
+- Does not create Safe transactions, rotate owners, disable modules, use
+  relayers, sign, submit, or recover assets.
+
 ## Phase 12: ERC-4337 / Session-Key Diagnostics
 
 Purpose: Surface account-abstraction signals such as recent UserOperations,

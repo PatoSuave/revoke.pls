@@ -23,6 +23,7 @@ const REPORT: LifeboatReport = {
     goodAccountingAssistComplete: true,
     permit2Complete: true,
     eip7702Complete: true,
+    smartWalletComplete: true,
     dustTrapCheckComplete: true,
     visibleAssetsComplete: false,
   },
@@ -248,6 +249,24 @@ const REPORT: LifeboatReport = {
             "https://scan.pulsechain.com/address/0x8888888888888888888888888888888888888888",
           description:
             "The account code matches the EIP-7702 delegation designator format.",
+        },
+      ],
+      smartWalletStatus: "complete",
+      smartWalletRiskLevel: "elevated",
+      smartWalletEvidence: [
+        {
+          title: "Safe modules enabled",
+          description:
+            "The account responded to Safe-compatible reads and has one or more enabled modules.",
+          riskLevel: "elevated",
+          accountAddress: "0x1111111111111111111111111111111111111111",
+          safeOwners: ["0x2222222222222222222222222222222222222222"],
+          safeThreshold: 1,
+          safeModules: ["0x3333333333333333333333333333333333333333"],
+          safeNonce: "12",
+          codeLengthBytes: 5,
+          explorerUrl:
+            "https://scan.pulsechain.com/address/0x1111111111111111111111111111111111111111",
         },
       ],
       dustTrapStatus: "complete",
