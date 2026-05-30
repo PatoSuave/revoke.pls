@@ -581,6 +581,9 @@ Current safe production pass:
 - Keeps missing RPC config, unsupported networks, RPC failures, broad-log
   provider limits, and partial reads as incomplete or limited states instead of
   all-clear.
+- Treats RPCs that require a contract address filter for broad owner-topic log
+  scans as unsupported for this diagnostic, not as proof of no ERC-6909
+  exposure.
 - Does not prepare generic ERC-6909 revokes, call wallet write functions,
   request signatures, submit transactions, relay transactions, or add any new
   wallet write path.

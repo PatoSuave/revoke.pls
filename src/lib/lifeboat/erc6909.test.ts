@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   analyzeErc6909Events,
   erc6909RiskLabel,
+  isErc6909BroadLogAddressFilterRequiredError,
   type Erc6909PermissionEvent,
 } from "@/lib/lifeboat/erc6909";
 
@@ -51,6 +52,19 @@ function operator(
 }
 
 describe("Wallet Lifeboat ERC-6909 diagnostic", () => {
+  it("detects RPC providers that require contract address filters", () => {
+    expect(
+      isErc6909BroadLogAddressFilterRequiredError(
+        "RPC error -32701: Please specify an address in your request.",
+      ),
+    ).toBe(true);
+    expect(
+      isErc6909BroadLogAddressFilterRequiredError(
+        "RPC error -32000: query returned more than 10000 results",
+      ),
+    ).toBe(false);
+  });
+
   it("treats no recent events as no recent ERC-6909 events", () => {
     const result = analyzeErc6909Events({
       events: [],

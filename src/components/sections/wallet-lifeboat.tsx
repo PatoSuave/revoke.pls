@@ -2910,11 +2910,15 @@ function Erc6909Section({
         {LIFEBOAT_ERC6909_DIAGNOSTIC_COPY.body}
       </p>
 
-      {owner && (status === "partial" || status === "upstream_unavailable") ? (
+      {owner &&
+      (status === "partial" ||
+        status === "upstream_unavailable" ||
+        status === "unsupported") ? (
         <div className="mt-4 rounded-xl border border-amber-400/35 bg-amber-400/10 p-3 text-sm leading-6 text-amber-100">
-          This diagnostic is incomplete. Do not treat missing ERC-6909 event
-          evidence as proof that no multi-token allowance, operator, wrapper, or
-          historical approval risk exists.
+          This diagnostic is incomplete or unsupported by the selected network
+          or RPC. Do not treat missing ERC-6909 event evidence as proof that no
+          multi-token allowance, operator, wrapper, or historical approval risk
+          exists.
         </div>
       ) : null}
 

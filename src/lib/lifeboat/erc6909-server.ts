@@ -32,6 +32,7 @@ import {
 import {
   analyzeErc6909Events,
   emptyErc6909Summary,
+  isErc6909BroadLogAddressFilterRequiredError,
   isErc6909UnlimitedAmount,
   type Erc6909PermissionEvent,
   type LifeboatErc6909ApiResponse,
@@ -258,10 +259,27 @@ export async function discoverErc6909Approvals({
       ],
     };
   } catch (error) {
+    const errorText = error instanceof Error ? error.message : String(error);
+    if (isErc6909BroadLogAddressFilterRequiredError(errorText)) {
+      return emptyErc6909Response(config, owner, "unsupported", {
+        supported: false,
+        errors: [
+          `${config.chainName} ERC-6909 diagnostic could not run because the configured RPC requires a contract address filter for broad log searches.`,
+        ],
+        warnings: [
+          "The ERC-6909 diagnostic is unsupported by the configured RPC for this network. Do not treat this as proof that no multi-token allowance or operator risk exists.",
+        ],
+        supportNotes: [
+          ...config.supportNotes,
+          "The configured RPC rejected broad owner-topic ERC-6909 log discovery without a contract address filter.",
+        ],
+      });
+    }
+
     return emptyErc6909Response(config, owner, "upstream-failure", {
       errors: [
         `ERC-6909 diagnostic failed: ${redactSensitiveErrorText(
-          error instanceof Error ? error.message : String(error),
+          errorText,
         )}`,
       ],
       warnings: [
@@ -538,6 +556,8 @@ function emptyErc6909Response(
     errors?: string[];
     warnings?: string[];
     missingConfig?: string[];
+    supported?: boolean;
+    supportNotes?: string[];
   } = {},
 ): LifeboatErc6909ApiResponse {
   return {
@@ -554,8 +574,8 @@ function emptyErc6909Response(
     warnings: overrides.warnings ?? [],
     errors: overrides.errors ?? [],
     missingConfig: overrides.missingConfig ?? [],
-    supported: config.supported,
-    supportNotes: config.supportNotes,
+    supported: overrides.supported ?? config.supported,
+    supportNotes: overrides.supportNotes ?? config.supportNotes,
   };
 }
 

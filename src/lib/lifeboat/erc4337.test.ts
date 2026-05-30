@@ -1,10 +1,12 @@
 import { describe, expect, it } from "vitest";
+import { isAddress } from "viem";
 
 import {
   analyzeErc4337Activity,
   erc4337RiskLabel,
   type Erc4337UserOperationEvent,
 } from "@/lib/lifeboat/erc4337";
+import { ERC4337_ENTRY_POINTS } from "@/lib/lifeboat/erc4337-entry-points";
 
 const OWNER = "0x1111111111111111111111111111111111111111";
 const ENTRY_POINT = "0x0000000071727de22E5E9d8BAf0edAc6f37da032";
@@ -31,6 +33,17 @@ function userOp(
 }
 
 describe("Wallet Lifeboat ERC-4337 diagnostic", () => {
+  it("keeps configured EntryPoint addresses valid", () => {
+    expect(ERC4337_ENTRY_POINTS).toHaveLength(3);
+    expect(
+      ERC4337_ENTRY_POINTS.every((entryPoint) => isAddress(entryPoint.address)),
+    ).toBe(true);
+    expect(
+      ERC4337_ENTRY_POINTS.find((entryPoint) => entryPoint.version === "v0.8")
+        ?.address,
+    ).toBe("0x4337084D9E255Ff0702461CF8895CE9E3b5Ff108");
+  });
+
   it("treats no recent UserOps and no code as no recent activity", () => {
     const result = analyzeErc4337Activity({
       events: [],

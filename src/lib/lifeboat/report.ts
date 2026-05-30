@@ -646,7 +646,7 @@ function formatEmptyErc6909Evidence(
     return "  - No recent ERC-6909 Approval or OperatorSet events were found in the bounded owner-topic window. This is not proof that no historical or current multi-token approval exposure exists.";
   }
   if (status === "unsupported") {
-    return "  - This network is not marked supported for ERC-6909 diagnostics.";
+    return "  - This network or configured RPC is not marked supported for ERC-6909 broad owner-topic diagnostics.";
   }
   if (status === "upstream_unavailable" || status === "partial") {
     return "  - The ERC-6909 check did not fully complete. Do not treat this as proof that no multi-token allowance or operator risk exists.";
