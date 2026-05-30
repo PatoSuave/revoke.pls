@@ -24,22 +24,30 @@ describe("candidate-domain-registry", () => {
       sourcePacketPath: "docs/security/domain-source-packets/plstart-eth-limo.md",
       capturedAt: "2026-05-30",
     });
-    expect(CANDIDATE_DOMAIN_SOURCE_PACKETS).toHaveLength(1);
-    expect(CANDIDATE_DOMAIN_SOURCE_PACKETS[0]?.source).toBe(
+    const plstartPacket = CANDIDATE_DOMAIN_SOURCE_PACKETS.find(
+      (packet) => packet.source.id === PLSTART_CANDIDATE_SOURCE.id,
+    );
+
+    expect(plstartPacket?.source).toBe(
       PLSTART_CANDIDATE_SOURCE,
     );
-    expect(CANDIDATE_DOMAIN_SOURCE_PACKETS[0]?.hostnames).toBe(
+    expect(plstartPacket?.hostnames).toBe(
       PLSTART_CANDIDATE_HOSTNAMES,
     );
   });
 
   it("keeps the imported hostnames deduped and broad enough for the source", () => {
+    const uniquePacketHostnames = new Set(
+      CANDIDATE_DOMAIN_SOURCE_PACKETS.flatMap((packet) => packet.hostnames),
+    );
+
     expect(PLSTART_CANDIDATE_HOSTNAMES).toHaveLength(178);
-    expect(CANDIDATE_DOMAIN_HOSTNAMES).toEqual(PLSTART_CANDIDATE_HOSTNAMES);
+    expect(CANDIDATE_DOMAIN_HOSTNAMES).toEqual(
+      [...uniquePacketHostnames].sort(),
+    );
     expect(new Set(CANDIDATE_DOMAIN_HOSTNAMES).size).toBe(
       CANDIDATE_DOMAIN_HOSTNAMES.length,
     );
-    expect(CANDIDATE_DOMAIN_HOSTNAMES).toHaveLength(178);
     expect(CANDIDATE_DOMAIN_HOSTNAMES).toContain("app.pulsex.com");
     expect(CANDIDATE_DOMAIN_HOSTNAMES).toContain("bridge.pulsechain.com");
     expect(CANDIDATE_DOMAIN_HOSTNAMES).toContain("scan.pulsechain.com");
@@ -55,6 +63,11 @@ describe("candidate-domain-registry", () => {
       expect(hostname).not.toMatch(/[/?#@\s]/);
       expect(hostname).not.toMatch(/^\./);
       expect(hostname).not.toMatch(/\.$/);
+    }
+
+    for (const packet of CANDIDATE_DOMAIN_SOURCE_PACKETS) {
+      expect(packet.hostnames).toEqual([...packet.hostnames].sort());
+      expect(new Set(packet.hostnames).size).toBe(packet.hostnames.length);
     }
   });
 
@@ -92,17 +105,20 @@ describe("candidate-domain-registry", () => {
     }
   });
 
-  it("keeps a source packet tied to the pinned source snapshot", () => {
-    const sourcePacket = readFileSync(
-      join(process.cwd(), PLSTART_CANDIDATE_SOURCE.sourcePacketPath),
-      "utf8",
-    );
+  it("keeps each source packet tied to reviewed source metadata", () => {
+    for (const packet of CANDIDATE_DOMAIN_SOURCE_PACKETS) {
+      const sourcePacket = readFileSync(
+        join(process.cwd(), packet.source.sourcePacketPath),
+        "utf8",
+      );
 
-    expect(sourcePacket).toContain(PLSTART_CANDIDATE_SOURCE.sourceUrl);
-    expect(sourcePacket).toContain(PLSTART_CANDIDATE_SOURCE.sourceRepositoryUrl);
-    expect(sourcePacket).toContain("Candidate source context only");
-    expect(sourcePacket).toContain("Unique URLs observed");
-    expect(sourcePacket).toContain("178");
+      expect(sourcePacket).toContain(packet.source.sourceUrl);
+      expect(sourcePacket).toContain(packet.source.sourceRepositoryUrl);
+      expect(sourcePacket).toContain(packet.source.capturedAt);
+      expect(sourcePacket).toContain("Candidate source context only");
+      expect(sourcePacket).toContain("Unique URLs observed");
+      expect(sourcePacket).toContain(String(packet.hostnames.length));
+    }
   });
 
   it("matches exact source hostnames without promoting them to official domains", () => {
