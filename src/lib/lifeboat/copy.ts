@@ -75,6 +75,12 @@ export const LIFEBOAT_HEX_STAKE_DIAGNOSTIC_COPY = {
   body: "This diagnostic reads visible open HEX stake rows on PulseChain, classifies active, mature, late, and Good Accounting candidate context, and does not run or prepare End Stake, Emergency End Stake, or Good Accounting.",
 } as const;
 
+export const LIFEBOAT_GOOD_ACCOUNTING_ASSIST_COPY = {
+  title: "Good Accounting Assist",
+  activeStatus: "Clean-wallet assist only",
+  body: "This assist layer explains when a visible late HEX stake may be relevant for manual Good Accounting review from a clean wallet. It does not prepare, sign, submit, relay, or simulate a Good Accounting transaction.",
+} as const;
+
 export const LIFEBOAT_PLANNED_MODULES = [
   {
     id: "visible-assets",
@@ -84,10 +90,8 @@ export const LIFEBOAT_PLANNED_MODULES = [
   },
 ] as const;
 
-// Future Lifeboat phases stay read-only until separately reviewed: HEX stake
-// reads, clean-wallet Good Accounting Assist, and manual planning reports.
+// Future Lifeboat phases stay read-only until separately reviewed: manual
+// planning reports and any later execution-adjacent education.
 export const LIFEBOAT_FUTURE_PHASES = [
-  "HEX stake reads",
-  "Good Accounting Assist from a clean wallet",
   "Manual rescue planning reports",
 ] as const;

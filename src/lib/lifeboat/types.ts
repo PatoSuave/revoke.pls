@@ -26,6 +26,11 @@ import type {
   HexStakeRow,
 } from "@/lib/lifeboat/hex-stake";
 import type {
+  GoodAccountingAssistEvidence,
+  GoodAccountingAssistRiskLevel,
+  GoodAccountingCandidate,
+} from "@/lib/lifeboat/good-accounting";
+import type {
   Permit2ExposureEvidence,
   Permit2ExposureRiskLevel,
 } from "@/lib/lifeboat/permit2-exposure";
@@ -75,6 +80,7 @@ export interface LifeboatCompleteness {
   addressPoisoningCheckComplete: boolean;
   spenderRiskCheckComplete: boolean;
   hexStakeCheckComplete: boolean;
+  goodAccountingAssistComplete: boolean;
   permit2Complete: boolean;
   eip7702Complete: boolean;
   dustTrapCheckComplete: boolean;
@@ -111,6 +117,10 @@ export interface LifeboatChainReport {
   hexStakeRiskLevel: HexStakeRiskLevel;
   hexStakeEvidence: HexStakeEvidence[];
   hexStakeRows: HexStakeRow[];
+  goodAccountingStatus: LifeboatModuleStatus;
+  goodAccountingRiskLevel: GoodAccountingAssistRiskLevel;
+  goodAccountingEvidence: GoodAccountingAssistEvidence[];
+  goodAccountingCandidates: GoodAccountingCandidate[];
   permit2Status: LifeboatModuleStatus;
   permit2RiskLevel: Permit2ExposureRiskLevel;
   permit2Evidence: Permit2ExposureEvidence[];

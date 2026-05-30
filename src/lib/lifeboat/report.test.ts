@@ -20,6 +20,7 @@ const REPORT: LifeboatReport = {
     addressPoisoningCheckComplete: true,
     spenderRiskCheckComplete: true,
     hexStakeCheckComplete: true,
+    goodAccountingAssistComplete: true,
     permit2Complete: true,
     eip7702Complete: true,
     dustTrapCheckComplete: true,
@@ -165,7 +166,52 @@ const REPORT: LifeboatReport = {
             "https://scan.pulsechain.com/token/0x2b591e99afE9f32eAA6214f7B7629768c40Eeb39",
         },
       ],
-      hexStakeRows: [],
+      hexStakeRows: [
+        {
+          stakeId: "123",
+          stakedHearts: "10000000000",
+          stakedHex: "100 HEX",
+          stakeShares: "1000000",
+          lockedDay: 1000,
+          stakedDays: 100,
+          endDay: 1100,
+          unlockedDay: 0,
+          isAutoStake: false,
+          servedDays: 100,
+          daysRemaining: 0,
+          daysLate: 0,
+          status: "mature",
+        },
+      ],
+      goodAccountingStatus: "complete",
+      goodAccountingRiskLevel: "elevated",
+      goodAccountingEvidence: [
+        {
+          stakeId: "456",
+          title: "Possible Good Accounting candidate",
+          description:
+            "This visible open stake is late enough for Good Accounting review from a clean wallet. Lifeboat does not execute or prepare Good Accounting.",
+          riskLevel: "elevated",
+          stakedHex: "50 HEX",
+          endDay: 1000,
+          daysLate: 30,
+        },
+      ],
+      goodAccountingCandidates: [
+        {
+          stakeId: "456",
+          stakedHex: "50 HEX",
+          lockedDay: 900,
+          stakedDays: 100,
+          endDay: 1000,
+          daysLate: 30,
+          owner: "0x1111111111111111111111111111111111111111",
+          reason:
+            "The visible open stake is past the normal grace window in the read-only HEX stake diagnostic.",
+          cleanWalletNote:
+            "A clean wallet may be able to review Good Accounting manually; Lifeboat does not create or submit that transaction.",
+        },
+      ],
       permit2Status: "complete",
       permit2RiskLevel: "possible",
       permit2Evidence: [
@@ -259,6 +305,9 @@ describe("Wallet Lifeboat report", () => {
     expect(markdown).toContain("HEX stake status");
     expect(markdown).toContain("Mature stake context");
     expect(markdown).toContain("stake 123");
+    expect(markdown).toContain("Good Accounting Assist");
+    expect(markdown).toContain("Good Accounting candidates");
+    expect(markdown).toContain("stake 456");
     expect(markdown).toContain("Permit2 exposure");
     expect(markdown).toContain("Active Permit2 exposure");
     expect(markdown).toContain("0x7777777777777777777777777777777777777777");

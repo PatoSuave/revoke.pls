@@ -184,6 +184,9 @@ The current Lifeboat branch implements these read-only modules:
 - HEX stake diagnostic from PulseChain read-only contract calls for visible
   open stake rows, with mature/late/Good Accounting candidate context but no
   stake-ending or Good Accounting execution.
+- Good Accounting Assist derived from the read-only HEX stake diagnostic, with
+  clean-wallet-only manual review context and no calldata preparation,
+  signature request, transaction submission, relay, simulation, or execution.
 
 These modules do not add custody, server signing, relayers, rescue contracts,
 automatic gas funding, automatic transfer, HEX write execution, private bundle

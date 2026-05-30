@@ -33,6 +33,7 @@ import {
   LIFEBOAT_CRITICAL_WARNINGS,
   LIFEBOAT_DUST_TRAP_DIAGNOSTIC_COPY,
   LIFEBOAT_EIP7702_DIAGNOSTIC_COPY,
+  LIFEBOAT_GOOD_ACCOUNTING_ASSIST_COPY,
   LIFEBOAT_HEX_STAKE_DIAGNOSTIC_COPY,
   LIFEBOAT_NEXT_STEPS,
   LIFEBOAT_NOT_TO_DO,
@@ -68,6 +69,12 @@ import {
   type HexStakeRiskLevel,
   type LifeboatHexStakeApiResponse,
 } from "@/lib/lifeboat/hex-stake";
+import {
+  analyzeGoodAccountingAssist,
+  goodAccountingAssistRiskLabel,
+  type GoodAccountingAssistAnalysis,
+  type GoodAccountingAssistRiskLevel,
+} from "@/lib/lifeboat/good-accounting";
 import {
   analyzePermit2Exposure,
   permit2ExposureRiskLabel,
@@ -157,6 +164,10 @@ export function WalletLifeboat() {
     chainName: selectedOption.displayName,
     enabled: Boolean(owner),
   });
+  const goodAccountingAssist = useMemo(
+    () => analyzeGoodAccountingAssist(hexStake.response),
+    [hexStake.response],
+  );
   const approvalSpenderAddresses = useMemo(
     () => collectApprovalSpenderAddresses(scan.approvals, scan.nftApprovals),
     [scan.approvals, scan.nftApprovals],
@@ -265,6 +276,7 @@ export function WalletLifeboat() {
           eip7702={eip7702.response}
           dustTrap={dustTrap.response}
           hexStake={hexStake.response}
+          goodAccountingAssist={goodAccountingAssist}
         />
 
         <div className="mt-6 grid gap-6 xl:grid-cols-[minmax(0,1fr)_360px]">
@@ -332,6 +344,12 @@ export function WalletLifeboat() {
               option={selectedOption}
               isScanning={hexStake.status === "pending"}
             />
+            <GoodAccountingAssistSection
+              goodAccountingAssist={goodAccountingAssist}
+              hexStake={hexStake.response}
+              owner={owner}
+              option={selectedOption}
+            />
             <DustTrapSection
               dustTrap={dustTrap.response}
               owner={owner}
@@ -354,6 +372,7 @@ export function WalletLifeboat() {
               eip7702={eip7702.response}
               dustTrap={dustTrap.response}
               hexStake={hexStake.response}
+              goodAccountingAssist={goodAccountingAssist}
             />
             <ReportExport
               scan={scan}
@@ -367,6 +386,7 @@ export function WalletLifeboat() {
               eip7702={eip7702.response}
               dustTrap={dustTrap.response}
               hexStake={hexStake.response}
+              goodAccountingAssist={goodAccountingAssist}
             />
           </div>
         </div>
@@ -530,6 +550,7 @@ function TriageSummary({
   eip7702,
   dustTrap,
   hexStake,
+  goodAccountingAssist,
 }: {
   scan: LifeboatScanSnapshot;
   owner: Address | null;
@@ -542,6 +563,7 @@ function TriageSummary({
   eip7702: LifeboatEip7702ApiResponse;
   dustTrap: LifeboatDustTrapApiResponse;
   hexStake: LifeboatHexStakeApiResponse;
+  goodAccountingAssist: GoodAccountingAssistAnalysis;
 }) {
   const cards: {
     label: string;
@@ -595,6 +617,11 @@ function TriageSummary({
       label: "HEX stake status",
       value: statusLabelForHexStake(hexStake),
       tone: toneForHexStake(hexStake.riskLevel),
+    },
+    {
+      label: "Good Accounting Assist",
+      value: statusLabelForGoodAccountingAssist(goodAccountingAssist),
+      tone: toneForGoodAccountingAssist(goodAccountingAssist.riskLevel),
     },
     {
       label: "EIP-7702 delegation",
@@ -2245,6 +2272,144 @@ function HexStakeSummary({
   );
 }
 
+function GoodAccountingAssistSection({
+  goodAccountingAssist,
+  hexStake,
+  owner,
+  option,
+}: {
+  goodAccountingAssist: GoodAccountingAssistAnalysis;
+  hexStake: LifeboatHexStakeApiResponse;
+  owner: Address | null;
+  option: AddressOnlyScanOption;
+}) {
+  const status = moduleStatusFromGoodAccountingAssist(goodAccountingAssist);
+  return (
+    <section className="rounded-2xl border border-pulse-border bg-pulse-panel/65 p-5">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-pulse-cyan">
+            {LIFEBOAT_GOOD_ACCOUNTING_ASSIST_COPY.title}
+          </p>
+          <h2 className="mt-1 text-xl font-semibold text-pulse-text">
+            Clean-wallet review context
+          </h2>
+          <p className="mt-2 text-sm leading-6 text-pulse-muted">
+            {owner
+              ? `${option.displayName} Good Accounting Assist uses the read-only HEX stake diagnostic for candidate context.`
+              : "Paste a wallet address to check whether visible late HEX stake rows may need manual Good Accounting review."}
+          </p>
+        </div>
+        <span
+          className={`inline-flex w-fit rounded-full border px-3 py-1 text-xs font-semibold ${toneClassForGoodAccountingAssist(
+            goodAccountingAssist.riskLevel,
+          )}`}
+        >
+          {goodAccountingAssistRiskLabel(goodAccountingAssist.riskLevel)}
+        </span>
+      </div>
+
+      <p className="mt-4 rounded-xl border border-pulse-border/70 bg-pulse-bg/45 p-3 text-sm leading-6 text-pulse-muted">
+        {LIFEBOAT_GOOD_ACCOUNTING_ASSIST_COPY.body}
+      </p>
+
+      {owner && status === "unsupported" ? (
+        <div className="mt-4 rounded-xl border border-amber-400/35 bg-amber-400/10 p-3 text-sm leading-6 text-amber-100">
+          Good Accounting Assist is currently available only when the
+          PulseChain HEX stake diagnostic is supported and completed.
+        </div>
+      ) : null}
+
+      {owner && (status === "partial" || status === "upstream_unavailable") ? (
+        <div className="mt-4 rounded-xl border border-amber-400/35 bg-amber-400/10 p-3 text-sm leading-6 text-amber-100">
+          This assist view is incomplete because the HEX stake diagnostic did
+          not fully complete. Do not treat missing candidates as proof that no
+          Good Accounting review is relevant.
+        </div>
+      ) : null}
+
+      {owner && (status === "complete" || status === "partial") ? (
+        <GoodAccountingAssistSummary
+          goodAccountingAssist={goodAccountingAssist}
+          hexStake={hexStake}
+        />
+      ) : null}
+
+      {owner && goodAccountingAssist.candidates.length > 0 ? (
+        <div className="mt-4 overflow-hidden rounded-2xl border border-pulse-border bg-pulse-bg/40">
+          <ul>
+            {goodAccountingAssist.candidates.map((candidate) => (
+              <li
+                key={candidate.stakeId}
+                className="grid gap-4 border-b border-pulse-border/60 p-4 last:border-b-0 lg:grid-cols-[1fr_1fr_0.8fr]"
+              >
+                <div className="min-w-0">
+                  <p className="text-sm font-semibold text-pulse-text">
+                    Possible Good Accounting candidate
+                  </p>
+                  <p className="mt-1 truncate font-mono text-xs text-pulse-muted">
+                    Stake {candidate.stakeId}
+                  </p>
+                </div>
+                <div className="min-w-0 text-xs leading-5 text-pulse-muted">
+                  <p>{candidate.stakedHex}</p>
+                  <p>
+                    End day {candidate.endDay}; {candidate.daysLate} days late
+                  </p>
+                  <p>{candidate.reason}</p>
+                </div>
+                <div className="min-w-0 text-xs leading-5 text-pulse-muted lg:text-right">
+                  <p>Clean wallet only</p>
+                  <p>No transaction prepared</p>
+                </div>
+                <p className="text-xs leading-5 text-pulse-muted lg:col-span-3">
+                  {candidate.cleanWalletNote}
+                </p>
+              </li>
+            ))}
+          </ul>
+        </div>
+      ) : owner && status === "complete" ? (
+        <div className="mt-4 rounded-2xl border border-dashed border-pulse-border/80 bg-pulse-bg/40 p-4 text-sm leading-6 text-pulse-muted">
+          No Good Accounting candidate was found in the checked visible open
+          HEX stake rows. This is not a historical ended-stake inventory.
+        </div>
+      ) : null}
+    </section>
+  );
+}
+
+function GoodAccountingAssistSummary({
+  goodAccountingAssist,
+  hexStake,
+}: {
+  goodAccountingAssist: GoodAccountingAssistAnalysis;
+  hexStake: LifeboatHexStakeApiResponse;
+}) {
+  return (
+    <dl className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+      <SweeperMetric
+        label="Candidates"
+        value={goodAccountingAssist.summary.candidateCount.toString()}
+      />
+      <SweeperMetric
+        label="Stake rows"
+        value={`${goodAccountingAssist.summary.checkedStakeCount}/${hexStake.summary.totalOpenStakeCount}`}
+      />
+      <SweeperMetric
+        label="Source"
+        value={goodAccountingAssist.summary.sourceComplete ? "complete" : "incomplete"}
+      />
+      <SweeperMetric label="Execution" value="none" />
+      {goodAccountingAssist.warnings.length > 0 ? (
+        <div className="rounded-xl border border-pulse-border/70 bg-pulse-bg/45 p-3 text-xs leading-5 text-pulse-muted sm:col-span-2 lg:col-span-4">
+          {goodAccountingAssist.warnings.join(" ")}
+        </div>
+      ) : null}
+    </dl>
+  );
+}
+
 function DustTrapSection({
   dustTrap,
   owner,
@@ -2482,6 +2647,7 @@ function CompletenessPanel({
   eip7702,
   dustTrap,
   hexStake,
+  goodAccountingAssist,
 }: {
   scan: LifeboatScanSnapshot;
   sweeper: LifeboatSweeperApiResponse;
@@ -2494,6 +2660,7 @@ function CompletenessPanel({
   eip7702: LifeboatEip7702ApiResponse;
   dustTrap: LifeboatDustTrapApiResponse;
   hexStake: LifeboatHexStakeApiResponse;
+  goodAccountingAssist: GoodAccountingAssistAnalysis;
 }) {
   return (
     <section className="rounded-2xl border border-pulse-border bg-pulse-panel/65 p-5">
@@ -2544,6 +2711,10 @@ function CompletenessPanel({
           value={statusLabelForHexStake(hexStake)}
         />
         <CompletenessRow
+          label="Good Accounting Assist"
+          value={statusLabelForGoodAccountingAssist(goodAccountingAssist)}
+        />
+        <CompletenessRow
           label="EIP-7702 delegation"
           value={statusLabelForEip7702(eip7702)}
         />
@@ -2590,6 +2761,7 @@ function ReportExport({
   eip7702,
   dustTrap,
   hexStake,
+  goodAccountingAssist,
 }: {
   scan: LifeboatScanSnapshot;
   owner: Address | null;
@@ -2602,6 +2774,7 @@ function ReportExport({
   eip7702: LifeboatEip7702ApiResponse;
   dustTrap: LifeboatDustTrapApiResponse;
   hexStake: LifeboatHexStakeApiResponse;
+  goodAccountingAssist: GoodAccountingAssistAnalysis;
 }) {
   const [copyState, setCopyState] = useState<"idle" | "copied" | "failed">(
     "idle",
@@ -2624,6 +2797,7 @@ function ReportExport({
         eip7702,
         dustTrap,
         hexStake,
+        goodAccountingAssist,
       ),
     );
   }
@@ -2930,6 +3104,7 @@ function buildReportFromSnapshot(
   eip7702: LifeboatEip7702ApiResponse,
   dustTrap: LifeboatDustTrapApiResponse,
   hexStake: LifeboatHexStakeApiResponse,
+  goodAccountingAssist: GoodAccountingAssistAnalysis,
 ): LifeboatReport {
   const chain: LifeboatChainReport = {
     chainId: scan.chainId,
@@ -2962,6 +3137,11 @@ function buildReportFromSnapshot(
     hexStakeRiskLevel: hexStake.riskLevel,
     hexStakeEvidence: hexStake.evidence,
     hexStakeRows: hexStake.stakes,
+    goodAccountingStatus:
+      moduleStatusFromGoodAccountingAssist(goodAccountingAssist),
+    goodAccountingRiskLevel: goodAccountingAssist.riskLevel,
+    goodAccountingEvidence: goodAccountingAssist.evidence,
+    goodAccountingCandidates: goodAccountingAssist.candidates,
     permit2Status: moduleStatusFromPermit2Exposure(scan.approvalsStatus),
     permit2RiskLevel: permit2Exposure.riskLevel,
     permit2Evidence: permit2Exposure.evidence,
@@ -2991,6 +3171,8 @@ function buildReportFromSnapshot(
       addressPoisoningCheckComplete: addressPoisoning.status === "complete",
       spenderRiskCheckComplete: spenderRisk.status === "complete",
       hexStakeCheckComplete: hexStake.status === "complete",
+      goodAccountingAssistComplete:
+        goodAccountingAssist.summary.sourceComplete,
       permit2Complete: scan.approvalsStatus === "complete",
       eip7702Complete: eip7702.status === "complete",
       dustTrapCheckComplete: dustTrap.status === "complete",
@@ -3129,6 +3311,21 @@ function moduleStatusFromHexStakeResponse(
   return "partial";
 }
 
+function moduleStatusFromGoodAccountingAssist(
+  goodAccountingAssist: GoodAccountingAssistAnalysis,
+): LifeboatModuleStatus {
+  const sourceStatus = goodAccountingAssist.summary.sourceStatus;
+  if (sourceStatus === "idle") return "not_scanned";
+  if (sourceStatus === "scanning") return "scanning";
+  if (sourceStatus === "complete") return "complete";
+  if (sourceStatus === "partial") return "partial";
+  if (sourceStatus === "unsupported") return "unsupported";
+  if (sourceStatus === "config-missing" || sourceStatus === "upstream-failure") {
+    return "upstream_unavailable";
+  }
+  return "partial";
+}
+
 function moduleStatusFromPermit2Exposure(
   approvalStatus: LifeboatModuleStatus,
 ): LifeboatModuleStatus {
@@ -3197,6 +3394,13 @@ function statusLabelForDustTrap(dustTrap: LifeboatDustTrapApiResponse): string {
 function statusLabelForHexStake(hexStake: LifeboatHexStakeApiResponse): string {
   if (hexStake.status === "scanning") return "Scanning";
   return hexStakeRiskLabel(hexStake.riskLevel);
+}
+
+function statusLabelForGoodAccountingAssist(
+  goodAccountingAssist: GoodAccountingAssistAnalysis,
+): string {
+  if (goodAccountingAssist.summary.sourceStatus === "scanning") return "Scanning";
+  return goodAccountingAssistRiskLabel(goodAccountingAssist.riskLevel);
 }
 
 function statusLabelForPermit2Exposure(
@@ -3365,6 +3569,23 @@ function toneForHexStake(
   return "neutral";
 }
 
+function toneForGoodAccountingAssist(
+  riskLevel: GoodAccountingAssistRiskLevel,
+): "neutral" | "success" | "warning" | "danger" {
+  if (riskLevel === "elevated") return "danger";
+  if (riskLevel === "possible") return "warning";
+  if (riskLevel === "none_detected") return "success";
+  if (riskLevel === "informational") return "neutral";
+  if (
+    riskLevel === "insufficient_data" ||
+    riskLevel === "upstream_unavailable" ||
+    riskLevel === "unsupported"
+  ) {
+    return "warning";
+  }
+  return "neutral";
+}
+
 function toneClassForSweeper(riskLevel: SweeperRiskLevel): string {
   const tone = toneForSweeper(riskLevel);
   return {
@@ -3449,6 +3670,18 @@ function toneClassForDustTrap(riskLevel: DustTrapRiskLevel): string {
 
 function toneClassForHexStake(riskLevel: HexStakeRiskLevel): string {
   const tone = toneForHexStake(riskLevel);
+  return {
+    neutral: "border-pulse-border bg-pulse-bg/50 text-pulse-muted",
+    success: "border-pulse-green/35 bg-pulse-green/10 text-pulse-green",
+    warning: "border-amber-400/35 bg-amber-400/10 text-amber-200",
+    danger: "border-pulse-red/40 bg-pulse-red/10 text-pulse-red",
+  }[tone];
+}
+
+function toneClassForGoodAccountingAssist(
+  riskLevel: GoodAccountingAssistRiskLevel,
+): string {
+  const tone = toneForGoodAccountingAssist(riskLevel);
   return {
     neutral: "border-pulse-border bg-pulse-bg/50 text-pulse-muted",
     success: "border-pulse-green/35 bg-pulse-green/10 text-pulse-green",

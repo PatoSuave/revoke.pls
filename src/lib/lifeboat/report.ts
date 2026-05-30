@@ -3,6 +3,7 @@ import {
   LIFEBOAT_CRITICAL_WARNINGS,
   LIFEBOAT_DUST_TRAP_DIAGNOSTIC_COPY,
   LIFEBOAT_EIP7702_DIAGNOSTIC_COPY,
+  LIFEBOAT_GOOD_ACCOUNTING_ASSIST_COPY,
   LIFEBOAT_HEX_STAKE_DIAGNOSTIC_COPY,
   LIFEBOAT_NEXT_STEPS,
   LIFEBOAT_NOT_TO_DO,
@@ -15,6 +16,7 @@ import {
 import { addressPoisoningRiskLabel } from "@/lib/lifeboat/address-poisoning";
 import { dustTrapRiskLabel } from "@/lib/lifeboat/dust-trap";
 import { eip7702RiskLabel } from "@/lib/lifeboat/eip7702";
+import { goodAccountingAssistRiskLabel } from "@/lib/lifeboat/good-accounting";
 import { hexStakeRiskLabel } from "@/lib/lifeboat/hex-stake";
 import { pendingNonceRiskLabel } from "@/lib/lifeboat/pending-nonce";
 import { permit2ExposureRiskLabel } from "@/lib/lifeboat/permit2-exposure";
@@ -84,6 +86,10 @@ ${formatSpenderRiskSection(report)}
 ## HEX stake status
 
 ${formatHexStakeSection(report)}
+
+## Good Accounting Assist
+
+${formatGoodAccountingSection(report)}
 
 ## Permit2 exposure
 
@@ -286,6 +292,45 @@ ${evidence}`;
   return `${LIFEBOAT_HEX_STAKE_DIAGNOSTIC_COPY.body}
 
 ${rows || "No network scan has been added to this report yet."}`;
+}
+
+function formatGoodAccountingSection(report: LifeboatReport): string {
+  const rows = report.chains
+    .map((chain) => {
+      const evidence =
+        chain.goodAccountingEvidence.length > 0
+          ? chain.goodAccountingEvidence
+              .map(
+                (item) =>
+                  `  - ${item.title}: stake ${item.stakeId}; ${item.stakedHex}; end day ${item.endDay}; days late ${item.daysLate}. ${item.description}`,
+              )
+              .join("\n")
+          : formatEmptyGoodAccountingEvidence(chain.goodAccountingStatus);
+      return `- ${chain.chainName}: ${formatModuleStatus(
+        chain.goodAccountingStatus,
+      )}; ${goodAccountingAssistRiskLabel(chain.goodAccountingRiskLevel)}
+${evidence}`;
+    })
+    .join("\n");
+
+  return `${LIFEBOAT_GOOD_ACCOUNTING_ASSIST_COPY.body}
+
+${rows || "No network scan has been added to this report yet."}`;
+}
+
+function formatEmptyGoodAccountingEvidence(
+  status: LifeboatReport["chains"][number]["goodAccountingStatus"],
+): string {
+  if (status === "complete") {
+    return "  - No Good Accounting candidate was found in the checked visible open HEX stake rows. This is not a historical ended-stake inventory.";
+  }
+  if (status === "unsupported") {
+    return "  - This network is not marked supported for Good Accounting Assist.";
+  }
+  if (status === "upstream_unavailable" || status === "partial") {
+    return "  - Good Accounting Assist is incomplete because the HEX stake diagnostic did not fully complete.";
+  }
+  return "  - Good Accounting Assist was not checked.";
 }
 
 function formatEmptyHexStakeEvidence(
