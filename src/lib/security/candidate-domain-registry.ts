@@ -5,6 +5,7 @@ export type CandidateDomainSource = {
   label: string;
   sourceUrl: string;
   sourceRepositoryUrl: string;
+  sourcePacketPath: string;
   capturedAt: string;
 };
 
@@ -21,6 +22,7 @@ export const PLSTART_CANDIDATE_SOURCE: CandidateDomainSource = {
   sourceUrl:
     "https://raw.githubusercontent.com/0xWhankFrite/plstart.eth.limo/6417ee6c6b86ab9fa79417e9cc532f70edc19446/index.html",
   sourceRepositoryUrl: "https://github.com/0xWhankFrite/plstart.eth.limo",
+  sourcePacketPath: "docs/security/domain-source-packets/plstart-eth-limo.md",
   capturedAt: "2026-05-30",
 };
 
@@ -59,8 +61,8 @@ export const CANDIDATE_DOMAIN_HOSTNAMES = [
   "chromewebstore.google.com",
   "coin.quest",
   "communis.app",
-  "cryptoparadise.net",
   "crypto-stickers.com",
+  "cryptoparadise.net",
   "ct.app",
   "dapp.phiat.io",
   "degenprotocol.io",

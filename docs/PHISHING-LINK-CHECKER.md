@@ -80,6 +80,8 @@ The first candidate source is:
 - Captured on `2026-05-30`
 - Imported as exact hostnames in
   `src/lib/security/candidate-domain-registry.ts`
+- Source packet:
+  `docs/security/domain-source-packets/plstart-eth-limo.md`
 
 Candidate hostnames must not change the result to `official-match`. They may
 appear as source context beside the normal result status. If a candidate
