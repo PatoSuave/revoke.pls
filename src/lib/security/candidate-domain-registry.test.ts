@@ -6,6 +6,8 @@ import { describe, expect, it } from "vitest";
 import {
   CANDIDATE_DOMAIN_HOSTNAMES,
   CANDIDATE_DOMAIN_REGISTRY,
+  CANDIDATE_DOMAIN_SOURCE_PACKETS,
+  PLSTART_CANDIDATE_HOSTNAMES,
   PLSTART_CANDIDATE_SOURCE,
   findCandidateDomainMatches,
 } from "@/lib/security/candidate-domain-registry";
@@ -22,9 +24,18 @@ describe("candidate-domain-registry", () => {
       sourcePacketPath: "docs/security/domain-source-packets/plstart-eth-limo.md",
       capturedAt: "2026-05-30",
     });
+    expect(CANDIDATE_DOMAIN_SOURCE_PACKETS).toHaveLength(1);
+    expect(CANDIDATE_DOMAIN_SOURCE_PACKETS[0]?.source).toBe(
+      PLSTART_CANDIDATE_SOURCE,
+    );
+    expect(CANDIDATE_DOMAIN_SOURCE_PACKETS[0]?.hostnames).toBe(
+      PLSTART_CANDIDATE_HOSTNAMES,
+    );
   });
 
   it("keeps the imported hostnames deduped and broad enough for the source", () => {
+    expect(PLSTART_CANDIDATE_HOSTNAMES).toHaveLength(178);
+    expect(CANDIDATE_DOMAIN_HOSTNAMES).toEqual(PLSTART_CANDIDATE_HOSTNAMES);
     expect(new Set(CANDIDATE_DOMAIN_HOSTNAMES).size).toBe(
       CANDIDATE_DOMAIN_HOSTNAMES.length,
     );
@@ -58,13 +69,26 @@ describe("candidate-domain-registry", () => {
   });
 
   it("keeps every candidate entry labeled as candidate-source", () => {
+    const sourceHostnameCount = CANDIDATE_DOMAIN_SOURCE_PACKETS.reduce(
+      (total, packet) => total + packet.hostnames.length,
+      0,
+    );
+    const packetBySourceId = new Map(
+      CANDIDATE_DOMAIN_SOURCE_PACKETS.map((packet) => [
+        packet.source.id,
+        packet,
+      ]),
+    );
+
     expect(CANDIDATE_DOMAIN_REGISTRY).toHaveLength(
-      CANDIDATE_DOMAIN_HOSTNAMES.length,
+      sourceHostnameCount,
     );
     for (const entry of CANDIDATE_DOMAIN_REGISTRY) {
       expect(entry.confidence).toBe("candidate-source");
-      expect(entry.source.id).toBe(PLSTART_CANDIDATE_SOURCE.id);
-      expect(entry.lastReviewedAt).toBe(PLSTART_CANDIDATE_SOURCE.capturedAt);
+      expect(packetBySourceId.get(entry.source.id)?.hostnames).toContain(
+        entry.hostname,
+      );
+      expect(entry.lastReviewedAt).toBe(entry.source.capturedAt);
     }
   });
 

@@ -3,7 +3,10 @@
 import { FormEvent, useMemo, useState } from "react";
 
 import { LinkCheckerResult } from "@/components/security/link-checker-result";
-import { CANDIDATE_DOMAIN_HOSTNAMES } from "@/lib/security/candidate-domain-registry";
+import {
+  CANDIDATE_DOMAIN_HOSTNAMES,
+  CANDIDATE_DOMAIN_SOURCE_PACKETS,
+} from "@/lib/security/candidate-domain-registry";
 import { checkCryptoLink } from "@/lib/security/link-checker";
 
 const EXAMPLE_LINK = "https://pulserevoke.com/security";
@@ -12,6 +15,10 @@ const CANDIDATE_EXAMPLE_LINK = "https://app.pulsex.com";
 export function LinkChecker() {
   const [input, setInput] = useState("");
   const [submittedInput, setSubmittedInput] = useState("");
+  const sourcePacketLabel =
+    CANDIDATE_DOMAIN_SOURCE_PACKETS.length === 1
+      ? "reviewed source packet"
+      : "reviewed source packets";
 
   const result = useMemo(() => {
     if (!submittedInput) return null;
@@ -89,8 +96,11 @@ export function LinkChecker() {
             <span className="font-mono text-pulse-text">
               {CANDIDATE_DOMAIN_HOSTNAMES.length}
             </span>{" "}
-            hostnames from reviewed source packets. Those entries are not
-            official-domain matches.
+            hostnames from{" "}
+            <span className="font-mono text-pulse-text">
+              {CANDIDATE_DOMAIN_SOURCE_PACKETS.length}
+            </span>{" "}
+            {sourcePacketLabel}. Those entries are not official-domain matches.
           </p>
         </div>
 
