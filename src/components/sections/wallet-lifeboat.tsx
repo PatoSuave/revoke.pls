@@ -13,6 +13,7 @@ import { useLifeboatAddressPoisoningScan } from "@/hooks/use-lifeboat-address-po
 import { useLifeboatDustTrapScan } from "@/hooks/use-lifeboat-dust-trap-scan";
 import { useLifeboatEip7702Scan } from "@/hooks/use-lifeboat-eip7702-scan";
 import { useLifeboatErc4337Scan } from "@/hooks/use-lifeboat-erc4337-scan";
+import { useLifeboatErc6909Scan } from "@/hooks/use-lifeboat-erc6909-scan";
 import { useLifeboatHexStakeScan } from "@/hooks/use-lifeboat-hex-stake-scan";
 import { useLifeboatPendingNonceScan } from "@/hooks/use-lifeboat-pending-nonce-scan";
 import { useLifeboatSmartWalletScan } from "@/hooks/use-lifeboat-smart-wallet-scan";
@@ -36,6 +37,7 @@ import {
   LIFEBOAT_DUST_TRAP_DIAGNOSTIC_COPY,
   LIFEBOAT_EIP7702_DIAGNOSTIC_COPY,
   LIFEBOAT_ERC4337_DIAGNOSTIC_COPY,
+  LIFEBOAT_ERC6909_DIAGNOSTIC_COPY,
   LIFEBOAT_GOOD_ACCOUNTING_ASSIST_COPY,
   LIFEBOAT_HEX_STAKE_DIAGNOSTIC_COPY,
   LIFEBOAT_NEXT_STEPS,
@@ -68,6 +70,11 @@ import {
   type Erc4337RiskLevel,
   type LifeboatErc4337ApiResponse,
 } from "@/lib/lifeboat/erc4337";
+import {
+  erc6909RiskLabel,
+  type Erc6909RiskLevel,
+  type LifeboatErc6909ApiResponse,
+} from "@/lib/lifeboat/erc6909";
 import {
   pendingNonceRiskLabel,
   type LifeboatPendingNonceApiResponse,
@@ -173,6 +180,12 @@ export function WalletLifeboat() {
     enabled: Boolean(owner),
   });
   const erc4337 = useLifeboatErc4337Scan({
+    owner: owner ?? undefined,
+    chainId: selectedChainId,
+    chainName: selectedOption.displayName,
+    enabled: Boolean(owner),
+  });
+  const erc6909 = useLifeboatErc6909Scan({
     owner: owner ?? undefined,
     chainId: selectedChainId,
     chainName: selectedOption.displayName,
@@ -302,6 +315,7 @@ export function WalletLifeboat() {
           eip7702={eip7702.response}
           smartWallet={smartWallet.response}
           erc4337={erc4337.response}
+          erc6909={erc6909.response}
           dustTrap={dustTrap.response}
           hexStake={hexStake.response}
           goodAccountingAssist={goodAccountingAssist}
@@ -378,6 +392,12 @@ export function WalletLifeboat() {
               option={selectedOption}
               isScanning={erc4337.status === "pending"}
             />
+            <Erc6909Section
+              erc6909={erc6909.response}
+              owner={owner}
+              option={selectedOption}
+              isScanning={erc6909.status === "pending"}
+            />
             <HexStakeSection
               hexStake={hexStake.response}
               owner={owner}
@@ -412,6 +432,7 @@ export function WalletLifeboat() {
               eip7702={eip7702.response}
               smartWallet={smartWallet.response}
               erc4337={erc4337.response}
+              erc6909={erc6909.response}
               dustTrap={dustTrap.response}
               hexStake={hexStake.response}
               goodAccountingAssist={goodAccountingAssist}
@@ -428,6 +449,7 @@ export function WalletLifeboat() {
               eip7702={eip7702.response}
               smartWallet={smartWallet.response}
               erc4337={erc4337.response}
+              erc6909={erc6909.response}
               dustTrap={dustTrap.response}
               hexStake={hexStake.response}
               goodAccountingAssist={goodAccountingAssist}
@@ -594,6 +616,7 @@ function TriageSummary({
   eip7702,
   smartWallet,
   erc4337,
+  erc6909,
   dustTrap,
   hexStake,
   goodAccountingAssist,
@@ -609,6 +632,7 @@ function TriageSummary({
   eip7702: LifeboatEip7702ApiResponse;
   smartWallet: LifeboatSmartWalletApiResponse;
   erc4337: LifeboatErc4337ApiResponse;
+  erc6909: LifeboatErc6909ApiResponse;
   dustTrap: LifeboatDustTrapApiResponse;
   hexStake: LifeboatHexStakeApiResponse;
   goodAccountingAssist: GoodAccountingAssistAnalysis;
@@ -685,6 +709,11 @@ function TriageSummary({
       label: "ERC-4337 / session keys",
       value: statusLabelForErc4337(erc4337),
       tone: toneForErc4337(erc4337.riskLevel),
+    },
+    {
+      label: "ERC-6909 approvals",
+      value: statusLabelForErc6909(erc6909),
+      tone: toneForErc6909(erc6909.riskLevel),
     },
     {
       label: "Token/NFT dust traps",
@@ -2460,6 +2489,151 @@ function Erc4337Summary({
   );
 }
 
+function Erc6909Section({
+  erc6909,
+  owner,
+  option,
+  isScanning,
+}: {
+  erc6909: LifeboatErc6909ApiResponse;
+  owner: Address | null;
+  option: AddressOnlyScanOption;
+  isScanning: boolean;
+}) {
+  const status = moduleStatusFromErc6909Response(erc6909);
+  return (
+    <section className="rounded-2xl border border-pulse-border bg-pulse-panel/65 p-5">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-pulse-cyan">
+            {LIFEBOAT_ERC6909_DIAGNOSTIC_COPY.title}
+          </p>
+          <h2 className="mt-1 text-xl font-semibold text-pulse-text">
+            Multi-token allowance activity
+          </h2>
+          <p className="mt-2 text-sm leading-6 text-pulse-muted">
+            {owner
+              ? `${option.displayName} recent ERC-6909 Approval and OperatorSet logs are checked without revoke preparation or transaction submission.`
+              : "Paste a wallet address to check for recent ERC-6909 multi-token permission events where supported."}
+          </p>
+        </div>
+        <span
+          className={`inline-flex w-fit rounded-full border px-3 py-1 text-xs font-semibold ${toneClassForErc6909(
+            erc6909.riskLevel,
+          )}`}
+        >
+          {isScanning ? "Scanning" : erc6909RiskLabel(erc6909.riskLevel)}
+        </span>
+      </div>
+
+      <p className="mt-4 rounded-xl border border-pulse-border/70 bg-pulse-bg/45 p-3 text-sm leading-6 text-pulse-muted">
+        {LIFEBOAT_ERC6909_DIAGNOSTIC_COPY.body}
+      </p>
+
+      {owner && (status === "partial" || status === "upstream_unavailable") ? (
+        <div className="mt-4 rounded-xl border border-amber-400/35 bg-amber-400/10 p-3 text-sm leading-6 text-amber-100">
+          This diagnostic is incomplete. Do not treat missing ERC-6909 event
+          evidence as proof that no multi-token allowance, operator, wrapper, or
+          historical approval risk exists.
+        </div>
+      ) : null}
+
+      {owner && (status === "complete" || status === "partial") ? (
+        <Erc6909Summary erc6909={erc6909} />
+      ) : null}
+
+      {owner && erc6909.evidence.length > 0 ? (
+        <div className="mt-4 overflow-hidden rounded-2xl border border-pulse-border bg-pulse-bg/40">
+          <ul>
+            {erc6909.evidence.map((item) => (
+              <li
+                key={`${item.event.contractAddress}-${item.event.transactionHash}-${item.title}`}
+                className="grid gap-4 border-b border-pulse-border/60 p-4 last:border-b-0 lg:grid-cols-[1fr_1.1fr_0.9fr]"
+              >
+                <div className="min-w-0">
+                  <p className="text-sm font-semibold text-pulse-text">
+                    {item.title}
+                  </p>
+                  <a
+                    href={item.event.explorerUrl ?? txUrlFor(option, item.event.transactionHash)}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="mt-1 block truncate font-mono text-xs text-pulse-muted underline-offset-2 hover:text-pulse-cyan hover:underline"
+                    title={item.event.transactionHash}
+                  >
+                    {shortHash(item.event.transactionHash)}
+                  </a>
+                </div>
+                <div className="min-w-0 text-xs leading-5 text-pulse-muted">
+                  <p>{item.description}</p>
+                  <p className="mt-1">
+                    Contract: {shortenAddress(item.event.contractAddress)}
+                  </p>
+                  <p className="mt-1">
+                    Spender: {shortenAddress(item.event.spender)}
+                  </p>
+                </div>
+                <div className="min-w-0 text-xs leading-5 text-pulse-muted lg:text-right">
+                  <p>Block: {item.event.blockNumber}</p>
+                  {item.event.kind === "approval" ? (
+                    <>
+                      <p>Token ID: {item.event.tokenId}</p>
+                      <p>
+                        Allowance:{" "}
+                        {item.event.unlimited ? "infinite" : item.event.amount}
+                      </p>
+                    </>
+                  ) : (
+                    <p>Operator: {item.event.approved ? "enabled" : "disabled"}</p>
+                  )}
+                </div>
+              </li>
+            ))}
+          </ul>
+        </div>
+      ) : owner && status === "complete" ? (
+        <div className="mt-4 rounded-2xl border border-dashed border-pulse-border/80 bg-pulse-bg/40 p-4 text-sm leading-6 text-pulse-muted">
+          No recent ERC-6909 Approval or OperatorSet events were found in the
+          bounded owner-topic window. This is not proof that no historical or
+          current multi-token approval exposure exists.
+        </div>
+      ) : null}
+    </section>
+  );
+}
+
+function Erc6909Summary({
+  erc6909,
+}: {
+  erc6909: LifeboatErc6909ApiResponse;
+}) {
+  return (
+    <dl className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+      <SweeperMetric
+        label="Events"
+        value={erc6909.summary.permissionEventCount.toString()}
+      />
+      <SweeperMetric
+        label="Allowances"
+        value={erc6909.summary.nonzeroApprovalEventCount.toString()}
+      />
+      <SweeperMetric
+        label="Operators"
+        value={erc6909.summary.activeOperatorEventCount.toString()}
+      />
+      <SweeperMetric
+        label="Block window"
+        value={erc6909.summary.checkedBlockRange.toString()}
+      />
+      {[...erc6909.warnings, ...erc6909.supportNotes].length > 0 ? (
+        <div className="rounded-xl border border-pulse-border/70 bg-pulse-bg/45 p-3 text-xs leading-5 text-pulse-muted sm:col-span-2 lg:col-span-4">
+          {[...erc6909.warnings, ...erc6909.supportNotes].join(" ")}
+        </div>
+      ) : null}
+    </dl>
+  );
+}
+
 function HexStakeSection({
   hexStake,
   owner,
@@ -2987,6 +3161,7 @@ function CompletenessPanel({
   eip7702,
   smartWallet,
   erc4337,
+  erc6909,
   dustTrap,
   hexStake,
   goodAccountingAssist,
@@ -3002,6 +3177,7 @@ function CompletenessPanel({
   eip7702: LifeboatEip7702ApiResponse;
   smartWallet: LifeboatSmartWalletApiResponse;
   erc4337: LifeboatErc4337ApiResponse;
+  erc6909: LifeboatErc6909ApiResponse;
   dustTrap: LifeboatDustTrapApiResponse;
   hexStake: LifeboatHexStakeApiResponse;
   goodAccountingAssist: GoodAccountingAssistAnalysis;
@@ -3071,6 +3247,10 @@ function CompletenessPanel({
           value={statusLabelForErc4337(erc4337)}
         />
         <CompletenessRow
+          label="ERC-6909 approvals"
+          value={statusLabelForErc6909(erc6909)}
+        />
+        <CompletenessRow
           label="Token/NFT dust traps"
           value={statusLabelForDustTrap(dustTrap)}
         />
@@ -3113,6 +3293,7 @@ function ReportExport({
   eip7702,
   smartWallet,
   erc4337,
+  erc6909,
   dustTrap,
   hexStake,
   goodAccountingAssist,
@@ -3128,6 +3309,7 @@ function ReportExport({
   eip7702: LifeboatEip7702ApiResponse;
   smartWallet: LifeboatSmartWalletApiResponse;
   erc4337: LifeboatErc4337ApiResponse;
+  erc6909: LifeboatErc6909ApiResponse;
   dustTrap: LifeboatDustTrapApiResponse;
   hexStake: LifeboatHexStakeApiResponse;
   goodAccountingAssist: GoodAccountingAssistAnalysis;
@@ -3153,6 +3335,7 @@ function ReportExport({
         eip7702,
         smartWallet,
         erc4337,
+        erc6909,
         dustTrap,
         hexStake,
         goodAccountingAssist,
@@ -3189,7 +3372,7 @@ function ReportExport({
   return (
     <section className="rounded-2xl border border-pulse-border bg-pulse-panel/65 p-5">
       <p className="text-xs font-semibold uppercase tracking-[0.18em] text-pulse-cyan">
-        Export rescue report
+        Export incident report
       </p>
       <h2 className="mt-1 text-xl font-semibold text-pulse-text">
         Save the read-only snapshot.
@@ -3462,6 +3645,7 @@ function buildReportFromSnapshot(
   eip7702: LifeboatEip7702ApiResponse,
   smartWallet: LifeboatSmartWalletApiResponse,
   erc4337: LifeboatErc4337ApiResponse,
+  erc6909: LifeboatErc6909ApiResponse,
   dustTrap: LifeboatDustTrapApiResponse,
   hexStake: LifeboatHexStakeApiResponse,
   goodAccountingAssist: GoodAccountingAssistAnalysis,
@@ -3515,6 +3699,10 @@ function buildReportFromSnapshot(
     erc4337RiskLevel: erc4337.riskLevel,
     erc4337Evidence: erc4337.evidence,
     erc4337Events: erc4337.events,
+    erc6909Status: moduleStatusFromErc6909Response(erc6909),
+    erc6909RiskLevel: erc6909.riskLevel,
+    erc6909Evidence: erc6909.evidence,
+    erc6909Events: erc6909.events,
     dustTrapStatus: moduleStatusFromDustTrapResponse(dustTrap),
     dustTrapRiskLevel: dustTrap.riskLevel,
     dustTrapEvidence: dustTrap.evidence,
@@ -3544,6 +3732,7 @@ function buildReportFromSnapshot(
       eip7702Complete: eip7702.status === "complete",
       smartWalletComplete: smartWallet.status === "complete",
       erc4337Complete: erc4337.status === "complete",
+      erc6909Complete: erc6909.status === "complete",
       dustTrapCheckComplete: dustTrap.status === "complete",
       visibleAssetsComplete: false,
     },
@@ -3678,6 +3867,22 @@ function moduleStatusFromErc4337Response(
   return "partial";
 }
 
+function moduleStatusFromErc6909Response(
+  erc6909: LifeboatErc6909ApiResponse,
+): LifeboatModuleStatus {
+  if (erc6909.status === "idle") return "not_scanned";
+  if (erc6909.status === "scanning") return "scanning";
+  if (erc6909.status === "complete") return "complete";
+  if (erc6909.status === "unsupported") return "unsupported";
+  if (
+    erc6909.status === "config-missing" ||
+    erc6909.status === "upstream-failure"
+  ) {
+    return "upstream_unavailable";
+  }
+  return "partial";
+}
+
 function moduleStatusFromDustTrapResponse(
   dustTrap: LifeboatDustTrapApiResponse,
 ): LifeboatModuleStatus {
@@ -3799,6 +4004,13 @@ function statusLabelForErc4337(
 ): string {
   if (erc4337.status === "scanning") return "Scanning";
   return erc4337RiskLabel(erc4337.riskLevel);
+}
+
+function statusLabelForErc6909(
+  erc6909: LifeboatErc6909ApiResponse,
+): string {
+  if (erc6909.status === "scanning") return "Scanning";
+  return erc6909RiskLabel(erc6909.riskLevel);
 }
 
 function statusLabelForDustTrap(dustTrap: LifeboatDustTrapApiResponse): string {
@@ -3984,6 +4196,23 @@ function toneForErc4337(
   return "neutral";
 }
 
+function toneForErc6909(
+  riskLevel: Erc6909RiskLevel,
+): "neutral" | "success" | "warning" | "danger" {
+  if (riskLevel === "elevated") return "danger";
+  if (riskLevel === "possible") return "warning";
+  if (riskLevel === "none_detected") return "success";
+  if (riskLevel === "informational") return "neutral";
+  if (
+    riskLevel === "insufficient_data" ||
+    riskLevel === "upstream_unavailable" ||
+    riskLevel === "unsupported"
+  ) {
+    return "warning";
+  }
+  return "neutral";
+}
+
 function toneForDustTrap(
   riskLevel: DustTrapRiskLevel,
 ): "neutral" | "success" | "warning" | "danger" {
@@ -4109,6 +4338,16 @@ function toneClassForSmartWallet(riskLevel: SmartWalletRiskLevel): string {
 
 function toneClassForErc4337(riskLevel: Erc4337RiskLevel): string {
   const tone = toneForErc4337(riskLevel);
+  return {
+    neutral: "border-pulse-border bg-pulse-bg/50 text-pulse-muted",
+    success: "border-pulse-green/35 bg-pulse-green/10 text-pulse-green",
+    warning: "border-amber-400/35 bg-amber-400/10 text-amber-200",
+    danger: "border-pulse-red/40 bg-pulse-red/10 text-pulse-red",
+  }[tone];
+}
+
+function toneClassForErc6909(riskLevel: Erc6909RiskLevel): string {
+  const tone = toneForErc6909(riskLevel);
   return {
     neutral: "border-pulse-border bg-pulse-bg/50 text-pulse-muted",
     success: "border-pulse-green/35 bg-pulse-green/10 text-pulse-green",
