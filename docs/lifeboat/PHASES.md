@@ -528,6 +528,23 @@ export.
 
 Validation commands: Full validation stack plus ERC-6909 tests.
 
+Current safe production pass:
+
+- Adds a read-only `/api/lifeboat/erc6909` diagnostic.
+- Checks a bounded recent RPC log window for ERC-6909 `Approval` and
+  `OperatorSet` events indexed by the scanned owner address.
+- Shows contract, spender, token ID, amount, operator status, transaction, and
+  checked block-window context in the Wallet Lifeboat UI and exportable report.
+- Labels nonzero per-token allowances, unlimited per-token allowances, and
+  active operator permissions as review context, not proof of theft or current
+  full allowance state.
+- Keeps missing RPC config, unsupported networks, RPC failures, broad-log
+  provider limits, and partial reads as incomplete or limited states instead of
+  all-clear.
+- Does not prepare generic ERC-6909 revokes, call wallet write functions,
+  request signatures, submit transactions, relay transactions, or add any new
+  wallet write path.
+
 ## Phase 14: Known-Risk Recipient Registry
 
 Purpose: Add curated context for recipient, spender, or contract addresses that

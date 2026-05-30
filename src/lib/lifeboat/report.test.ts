@@ -25,6 +25,7 @@ const REPORT: LifeboatReport = {
     eip7702Complete: true,
     smartWalletComplete: true,
     erc4337Complete: true,
+    erc6909Complete: true,
     dustTrapCheckComplete: true,
     visibleAssetsComplete: false,
   },
@@ -316,6 +317,46 @@ const REPORT: LifeboatReport = {
             "https://scan.pulsechain.com/tx/0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
         },
       ],
+      erc6909Status: "complete",
+      erc6909RiskLevel: "elevated",
+      erc6909Evidence: [
+        {
+          title: "Operator permission enabled",
+          description:
+            "Spender 0x2222222222222222222222222222222222222222 was recorded as an ERC-6909 operator for all token IDs in contract 0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa.",
+          riskLevel: "elevated",
+          event: {
+            kind: "operator",
+            contractAddress: "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            owner: "0x1111111111111111111111111111111111111111",
+            spender: "0x2222222222222222222222222222222222222222",
+            approved: true,
+            blockNumber: 123457,
+            transactionHash:
+              "0xcccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+            explorerUrl:
+              "https://scan.pulsechain.com/tx/0xcccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+            contractExplorerUrl:
+              "https://scan.pulsechain.com/address/0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          },
+        },
+      ],
+      erc6909Events: [
+        {
+          kind: "operator",
+          contractAddress: "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          owner: "0x1111111111111111111111111111111111111111",
+          spender: "0x2222222222222222222222222222222222222222",
+          approved: true,
+          blockNumber: 123457,
+          transactionHash:
+            "0xcccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+          explorerUrl:
+            "https://scan.pulsechain.com/tx/0xcccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+          contractExplorerUrl:
+            "https://scan.pulsechain.com/address/0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        },
+      ],
       dustTrapStatus: "complete",
       dustTrapRiskLevel: "elevated",
       dustTrapEvidence: [
@@ -383,6 +424,9 @@ describe("Wallet Lifeboat report", () => {
     expect(markdown).toContain("ERC-4337 / session-key signals");
     expect(markdown).toContain("UserOperation used a paymaster");
     expect(markdown).toContain("0x2222222222222222222222222222222222222222");
+    expect(markdown).toContain("ERC-6909 multi-token approvals");
+    expect(markdown).toContain("Operator permission enabled");
+    expect(markdown).toContain("0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa");
     expect(markdown).toContain("Token/NFT dust traps");
     expect(markdown).toContain("Multiple dust/bait signals");
     expect(markdown).toContain("Claim [link removed]");

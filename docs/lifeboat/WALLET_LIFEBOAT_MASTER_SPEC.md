@@ -143,7 +143,7 @@ Wallet Lifeboat should grow through the phases in `docs/lifeboat/PHASES.md`.
 The long-term module set is:
 
 - Existing approval and NFT approval integration.
-- Exportable rescue report.
+- Exportable incident report.
 - Gas-sweeper pattern scanner.
 - Pending transaction / nonce scanner.
 - Approval-to-drain timeline scanner.
@@ -178,6 +178,12 @@ The current Lifeboat branch implements these read-only modules:
   were already live-read by the existing approval scanner.
 - EIP-7702 delegation diagnostic from latest account-code reads on explicitly
   supported networks.
+- Smart wallet and Safe configuration diagnostic from latest account code and
+  Safe-compatible owner, threshold, module, and nonce reads.
+- ERC-4337 account-abstraction diagnostic from bounded recent EntryPoint
+  `UserOperationEvent` logs.
+- ERC-6909 multi-token approval diagnostic from bounded recent owner-topic
+  `Approval` and `OperatorSet` logs.
 - Token/NFT dust-trap diagnostic from bounded inbound token and NFT transfer
   history with sanitized metadata, URL-like text stripping, and no arbitrary
   token-provided website fetches.

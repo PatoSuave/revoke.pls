@@ -4,6 +4,7 @@ import {
   LIFEBOAT_DUST_TRAP_DIAGNOSTIC_COPY,
   LIFEBOAT_EIP7702_DIAGNOSTIC_COPY,
   LIFEBOAT_ERC4337_DIAGNOSTIC_COPY,
+  LIFEBOAT_ERC6909_DIAGNOSTIC_COPY,
   LIFEBOAT_GOOD_ACCOUNTING_ASSIST_COPY,
   LIFEBOAT_HEX_STAKE_DIAGNOSTIC_COPY,
   LIFEBOAT_NEXT_STEPS,
@@ -19,6 +20,7 @@ import { addressPoisoningRiskLabel } from "@/lib/lifeboat/address-poisoning";
 import { dustTrapRiskLabel } from "@/lib/lifeboat/dust-trap";
 import { eip7702RiskLabel } from "@/lib/lifeboat/eip7702";
 import { erc4337RiskLabel } from "@/lib/lifeboat/erc4337";
+import { erc6909RiskLabel } from "@/lib/lifeboat/erc6909";
 import { goodAccountingAssistRiskLabel } from "@/lib/lifeboat/good-accounting";
 import { hexStakeRiskLabel } from "@/lib/lifeboat/hex-stake";
 import { pendingNonceRiskLabel } from "@/lib/lifeboat/pending-nonce";
@@ -110,6 +112,10 @@ ${formatSmartWalletSection(report)}
 ## ERC-4337 / session-key signals
 
 ${formatErc4337Section(report)}
+
+## ERC-6909 multi-token approvals
+
+${formatErc6909Section(report)}
 
 ## Token/NFT dust traps
 
@@ -475,6 +481,34 @@ ${evidence}`;
 ${rows || "No network scan has been added to this report yet."}`;
 }
 
+function formatErc6909Section(report: LifeboatReport): string {
+  const rows = report.chains
+    .map((chain) => {
+      const evidence =
+        chain.erc6909Evidence.length > 0
+          ? chain.erc6909Evidence
+              .map((item) => {
+                const event = item.event;
+                const detail =
+                  event.kind === "approval"
+                    ? `token ID ${event.tokenId}; amount ${event.amount}`
+                    : `operator approved ${event.approved}`;
+                return `  - ${item.title}: contract ${event.contractAddress}; spender ${event.spender}; tx ${event.transactionHash}; ${detail}. ${item.description}`;
+              })
+              .join("\n")
+          : formatEmptyErc6909Evidence(chain.erc6909Status);
+      return `- ${chain.chainName}: ${formatModuleStatus(
+        chain.erc6909Status,
+      )}; ${erc6909RiskLabel(chain.erc6909RiskLevel)}
+${evidence}`;
+    })
+    .join("\n");
+
+  return `${LIFEBOAT_ERC6909_DIAGNOSTIC_COPY.body}
+
+${rows || "No network scan has been added to this report yet."}`;
+}
+
 function formatDustTrapSection(report: LifeboatReport): string {
   const rows = report.chains
     .map((chain) => {
@@ -512,6 +546,21 @@ function formatEmptyErc4337Evidence(
     return "  - The ERC-4337 check did not fully complete. Do not treat this as proof that no account-abstraction or session-key risk exists.";
   }
   return "  - ERC-4337 / session-key signals were not checked.";
+}
+
+function formatEmptyErc6909Evidence(
+  status: LifeboatReport["chains"][number]["erc6909Status"],
+): string {
+  if (status === "complete") {
+    return "  - No recent ERC-6909 Approval or OperatorSet events were found in the bounded owner-topic window. This is not proof that no historical or current multi-token approval exposure exists.";
+  }
+  if (status === "unsupported") {
+    return "  - This network is not marked supported for ERC-6909 diagnostics.";
+  }
+  if (status === "upstream_unavailable" || status === "partial") {
+    return "  - The ERC-6909 check did not fully complete. Do not treat this as proof that no multi-token allowance or operator risk exists.";
+  }
+  return "  - ERC-6909 multi-token approvals were not checked.";
 }
 
 function formatEmptySmartWalletEvidence(

@@ -75,6 +75,12 @@ export const LIFEBOAT_ERC4337_DIAGNOSTIC_COPY = {
   body: "This diagnostic checks a bounded recent window of EntryPoint UserOperationEvent logs for the scanned address. It does not contact bundlers, request UserOperation signatures, use paymasters, submit transactions, or clear session keys.",
 } as const;
 
+export const LIFEBOAT_ERC6909_DIAGNOSTIC_COPY = {
+  title: "ERC-6909 multi-token approvals",
+  activeStatus: "Read-only multi-token event check",
+  body: "This diagnostic checks a bounded recent RPC log window for ERC-6909 Approval and OperatorSet events by the scanned address. It does not prepare generic multi-token revokes, submit transactions, or prove full current allowance state.",
+} as const;
+
 export const LIFEBOAT_DUST_TRAP_DIAGNOSTIC_COPY = {
   title: "Token/NFT dust traps",
   activeStatus: "Read-only metadata safety check",
@@ -105,5 +111,5 @@ export const LIFEBOAT_PLANNED_MODULES = [
 // Future Lifeboat phases stay read-only until separately reviewed: manual
 // planning reports and any later execution-adjacent education.
 export const LIFEBOAT_FUTURE_PHASES = [
-  "Manual rescue planning reports",
+  "Manual incident planning reports",
 ] as const;
