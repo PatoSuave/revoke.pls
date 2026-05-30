@@ -184,6 +184,8 @@ The current Lifeboat branch implements these read-only modules:
   `UserOperationEvent` logs.
 - ERC-6909 multi-token approval diagnostic from bounded recent owner-topic
   `Approval` and `OperatorSet` logs.
+- Known-risk registry context from a local reviewed-source schema that currently
+  ships without risk entries and treats no-match results as unknown, not safe.
 - Token/NFT dust-trap diagnostic from bounded inbound token and NFT transfer
   history with sanitized metadata, URL-like text stripping, and no arbitrary
   token-provided website fetches.

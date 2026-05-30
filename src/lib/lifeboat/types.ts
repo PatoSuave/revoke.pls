@@ -45,6 +45,11 @@ import type {
   GoodAccountingCandidate,
 } from "@/lib/lifeboat/good-accounting";
 import type {
+  KnownRiskRegistryEvidence,
+  KnownRiskRegistryRiskLevel,
+  KnownRiskRegistrySubject,
+} from "@/lib/lifeboat/known-risk-registry";
+import type {
   Permit2ExposureEvidence,
   Permit2ExposureRiskLevel,
 } from "@/lib/lifeboat/permit2-exposure";
@@ -95,6 +100,7 @@ export interface LifeboatCompleteness {
   spenderRiskCheckComplete: boolean;
   hexStakeCheckComplete: boolean;
   goodAccountingAssistComplete: boolean;
+  knownRiskRegistryComplete: boolean;
   permit2Complete: boolean;
   eip7702Complete: boolean;
   smartWalletComplete: boolean;
@@ -138,6 +144,10 @@ export interface LifeboatChainReport {
   goodAccountingRiskLevel: GoodAccountingAssistRiskLevel;
   goodAccountingEvidence: GoodAccountingAssistEvidence[];
   goodAccountingCandidates: GoodAccountingCandidate[];
+  knownRiskRegistryStatus: LifeboatModuleStatus;
+  knownRiskRegistryRiskLevel: KnownRiskRegistryRiskLevel;
+  knownRiskRegistryEvidence: KnownRiskRegistryEvidence[];
+  knownRiskRegistrySubjects: KnownRiskRegistrySubject[];
   permit2Status: LifeboatModuleStatus;
   permit2RiskLevel: Permit2ExposureRiskLevel;
   permit2Evidence: Permit2ExposureEvidence[];

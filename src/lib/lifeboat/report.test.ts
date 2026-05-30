@@ -21,6 +21,7 @@ const REPORT: LifeboatReport = {
     spenderRiskCheckComplete: true,
     hexStakeCheckComplete: true,
     goodAccountingAssistComplete: true,
+    knownRiskRegistryComplete: true,
     permit2Complete: true,
     eip7702Complete: true,
     smartWalletComplete: true,
@@ -213,6 +214,41 @@ const REPORT: LifeboatReport = {
             "The visible open stake is past the normal grace window in the read-only HEX stake diagnostic.",
           cleanWalletNote:
             "A clean wallet may be able to review Good Accounting manually; Lifeboat does not create or submit that transaction.",
+        },
+      ],
+      knownRiskRegistryStatus: "complete",
+      knownRiskRegistryRiskLevel: "elevated",
+      knownRiskRegistryEvidence: [
+        {
+          entryId: "reviewed-risk-context-1",
+          address: "0x5555555555555555555555555555555555555555",
+          chainId: 369,
+          subjectRole: "approval-spender",
+          subjectLabel: "Approval spender",
+          sourceModule: "approval-scan",
+          label: "Reviewed risk context",
+          category: "reported-risk-spender",
+          confidence: "high",
+          reviewedAt: "2026-05-29T00:00:00.000Z",
+          summary:
+            "Reviewed public source context links this address to wallet-drain risk reports.",
+          sources: [
+            {
+              title: "Reviewed public report",
+              url: "https://example.com/reviewed-report",
+              publishedAt: "2026-05-28T00:00:00.000Z",
+            },
+          ],
+          expired: false,
+          riskLevel: "elevated",
+        },
+      ],
+      knownRiskRegistrySubjects: [
+        {
+          address: "0x5555555555555555555555555555555555555555",
+          role: "approval-spender",
+          label: "Approval spender",
+          sourceModule: "approval-scan",
         },
       ],
       permit2Status: "complete",
@@ -415,6 +451,9 @@ describe("Wallet Lifeboat report", () => {
     expect(markdown).toContain("Good Accounting Assist");
     expect(markdown).toContain("Good Accounting candidates");
     expect(markdown).toContain("stake 456");
+    expect(markdown).toContain("Known-risk registry context");
+    expect(markdown).toContain("Reviewed risk match");
+    expect(markdown).toContain("reviewed 2026-05-29T00:00:00.000Z");
     expect(markdown).toContain("Permit2 exposure");
     expect(markdown).toContain("Active Permit2 exposure");
     expect(markdown).toContain("0x7777777777777777777777777777777777777777");

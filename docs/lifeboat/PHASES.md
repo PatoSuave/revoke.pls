@@ -570,3 +570,21 @@ Suggested tests: Schema validation, required source fields, stale-entry
 warnings, display copy.
 
 Validation commands: Full validation stack plus registry schema tests.
+
+Current safe production pass:
+
+- Adds a local reviewed registry schema, validator, analyzer, UI panel, summary
+  card, completeness row, and exportable report section.
+- Ships with no known-risk entries until Pulse Revoke has reviewed durable
+  public source evidence for each address.
+- Requires source URLs, source dates, reviewer, review date, confidence, chain
+  scope, and non-defamatory labels before future entries can pass validation.
+- Compares discovered approval spenders, token contracts, NFT operators,
+  timeline counterparties, spender-risk rows, delegation addresses, Safe
+  owners/modules, ERC-4337 paymasters, ERC-6909 counterparties, and dust-trap
+  contracts as context only.
+- Treats "no reviewed match" as an unknown state, not proof that a wallet,
+  recipient, spender, or contract is safe.
+- Does not block revokes, accept user-submitted public accusations, mutate the
+  registry at runtime, call reputation APIs, fetch arbitrary evidence URLs,
+  make definitive attribution claims, or add wallet write paths.

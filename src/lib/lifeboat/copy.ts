@@ -51,6 +51,12 @@ export const LIFEBOAT_SPENDER_RISK_DIAGNOSTIC_COPY = {
   body: "This diagnostic checks approval spenders for public contract context such as bytecode presence, verified-source availability, proxy-like metadata, and reviewed registry matches. Unknown or unverified spenders are review signals, not proof of malicious activity.",
 } as const;
 
+export const LIFEBOAT_KNOWN_RISK_REGISTRY_COPY = {
+  title: "Known-risk registry context",
+  activeStatus: "Reviewed-source context",
+  body: "This local registry can flag addresses only when Pulse Revoke has reviewed public source evidence. Unknown does not mean safe, and matches are context rather than proof of control, intent, or recoverability.",
+} as const;
+
 export const LIFEBOAT_PERMIT2_DIAGNOSTIC_COPY = {
   title: "Permit2 exposure",
   activeStatus: "Read-only delegated allowance check",
