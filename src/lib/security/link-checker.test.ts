@@ -90,12 +90,36 @@ describe("checkCryptoLink", () => {
 
     expect(result.status).toBe("unknown-domain");
     expect(result.matchedOfficialDomain).toBeUndefined();
+    expect(result.closestCandidateDomain).toBeUndefined();
     expect(result.candidateDomainMatches).toHaveLength(1);
     expect(result.candidateDomainMatches[0]).toMatchObject({
       hostname: "app.pulsex.com",
       confidence: "candidate-source",
     });
     expect(result.userMessage).toContain("candidate source list");
+  });
+
+  it("detects lookalikes of candidate source-list domains without making them official", () => {
+    const result = checkCryptoLink("https://app.pu1sex.com");
+
+    expect(result.status).toBe("likely-lookalike");
+    expect(result.matchedOfficialDomain).toBeUndefined();
+    expect(result.closestOfficialDomain).toBeUndefined();
+    expect(result.candidateDomainMatches).toEqual([]);
+    expect(result.closestCandidateDomain).toMatchObject({
+      hostname: "app.pulsex.com",
+      confidence: "candidate-source",
+    });
+    expect(result.userMessage).toContain("candidate source list");
+    expect(result.userMessage).not.toContain("official-domain registry");
+  });
+
+  it("detects candidate source-list TLD swaps as lookalike risk", () => {
+    const result = checkCryptoLink("https://pulsex.net");
+
+    expect(result.status).toBe("likely-lookalike");
+    expect(result.closestCandidateDomain?.hostname).toBe("app.pulsex.com");
+    expect(result.candidateDomainMatches).toEqual([]);
   });
 
   it("does not treat unapproved official-domain subdomains as official", () => {
