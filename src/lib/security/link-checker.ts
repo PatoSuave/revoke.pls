@@ -1,4 +1,8 @@
 import {
+  findCandidateDomainMatches,
+  type CandidateDomainEntry,
+} from "@/lib/security/candidate-domain-registry";
+import {
   OFFICIAL_DOMAIN_REGISTRY,
   findOfficialDomainMatch,
   findOfficialParentDomain,
@@ -31,6 +35,7 @@ export type LinkCheckResult = {
   status: LinkCheckStatus;
   matchedOfficialDomain?: OfficialDomainEntry;
   closestOfficialDomain?: OfficialDomainEntry;
+  candidateDomainMatches: CandidateDomainEntry[];
   signals: LinkRiskSignal[];
   userMessage: string;
 };
@@ -101,6 +106,7 @@ export function checkCryptoLink(input: string): LinkCheckResult {
     hostname,
     registrableDomain,
   );
+  const candidateDomainMatches = findCandidateDomainMatches(hostname);
 
   const status = classifyResult({
     matchedOfficialDomain,
@@ -119,8 +125,9 @@ export function checkCryptoLink(input: string): LinkCheckResult {
     status,
     matchedOfficialDomain,
     closestOfficialDomain,
+    candidateDomainMatches,
     signals,
-    userMessage: STATUS_MESSAGES[status],
+    userMessage: getUserMessage(status, candidateDomainMatches),
   };
 }
 
@@ -143,6 +150,7 @@ function invalidResult(input: string): LinkCheckResult {
   return {
     input,
     status: "invalid-input",
+    candidateDomainMatches: [],
     signals: [
       {
         id: "invalid-input",
@@ -154,6 +162,17 @@ function invalidResult(input: string): LinkCheckResult {
     ],
     userMessage: STATUS_MESSAGES["invalid-input"],
   };
+}
+
+function getUserMessage(
+  status: LinkCheckStatus,
+  candidateDomainMatches: readonly CandidateDomainEntry[],
+): string {
+  if (status === "unknown-domain" && candidateDomainMatches.length > 0) {
+    return "This domain is not in the official registry. It appears in a candidate source list, which is context only and still needs independent verification before connecting a wallet.";
+  }
+
+  return STATUS_MESSAGES[status];
 }
 
 function parseCandidate(input: string): URL | null {
