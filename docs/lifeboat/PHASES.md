@@ -210,6 +210,25 @@ display, unknown-contract handling.
 
 Validation commands: Full validation stack plus registry tests.
 
+Current safe production pass:
+
+- Adds a read-only `/api/lifeboat/spender-risk` diagnostic.
+- Uses active approval spender and NFT operator addresses from the existing
+  Lifeboat approval scan; callers can only provide a capped list of spender
+  addresses.
+- Checks public bytecode presence with `eth_getCode`.
+- Checks explorer source-code metadata where configured, including verified
+  source availability and proxy-like metadata.
+- Enriches spenders with reviewed registry context where available.
+- Labels unknown, no-bytecode, unverified-source, proxy-like, and legacy
+  registry context as review signals, not proof of malicious activity.
+- Keeps known registry matches informational only; known does not mean safe.
+- Rejects caller-controlled explorer pagination, block ranges, modules,
+  actions, calldata, and transaction parameters.
+- Adds the diagnostic to the Wallet Lifeboat UI and exportable report without
+  blocking revokes, mutating registry entries, adding wallet writes, or making
+  definitive scam claims.
+
 ## Phase 6: Permit2 Exposure Scanner
 
 Purpose: Show Permit2 delegated allowance exposure for supported chains.

@@ -11,6 +11,7 @@ import { useEthereumApprovalScan } from "@/hooks/use-ethereum-approval-scan";
 import { useHyperEVMApprovalScan } from "@/hooks/use-hyperevm-approval-scan";
 import { useLifeboatAddressPoisoningScan } from "@/hooks/use-lifeboat-address-poisoning-scan";
 import { useLifeboatPendingNonceScan } from "@/hooks/use-lifeboat-pending-nonce-scan";
+import { useLifeboatSpenderRiskScan } from "@/hooks/use-lifeboat-spender-risk-scan";
 import { useLifeboatSweeperScan } from "@/hooks/use-lifeboat-sweeper-scan";
 import { useLifeboatTimelineScan } from "@/hooks/use-lifeboat-timeline-scan";
 import { useNftApprovalDiscovery } from "@/hooks/use-nft-approval-discovery";
@@ -31,6 +32,7 @@ import {
   LIFEBOAT_NOT_TO_DO,
   LIFEBOAT_PENDING_NONCE_DIAGNOSTIC_COPY,
   LIFEBOAT_PLANNED_MODULES,
+  LIFEBOAT_SPENDER_RISK_DIAGNOSTIC_COPY,
   LIFEBOAT_SWEEPER_DIAGNOSTIC_COPY,
   LIFEBOAT_TIMELINE_DIAGNOSTIC_COPY,
 } from "@/lib/lifeboat/copy";
@@ -45,6 +47,11 @@ import {
   type PendingNonceRiskLevel,
 } from "@/lib/lifeboat/pending-nonce";
 import { buildWalletLifeboatReportMarkdown } from "@/lib/lifeboat/report";
+import {
+  spenderRiskLabel,
+  type LifeboatSpenderRiskApiResponse,
+  type SpenderRiskLevel,
+} from "@/lib/lifeboat/spender-risk";
 import {
   sweeperRiskLabel,
   type LifeboatSweeperApiResponse,
@@ -103,6 +110,16 @@ export function WalletLifeboat() {
     chainId: selectedChainId,
     chainName: selectedOption.displayName,
     enabled: Boolean(owner),
+  });
+  const approvalSpenderAddresses = useMemo(
+    () => collectApprovalSpenderAddresses(scan.approvals, scan.nftApprovals),
+    [scan.approvals, scan.nftApprovals],
+  );
+  const spenderRisk = useLifeboatSpenderRiskScan({
+    spenderAddresses: approvalSpenderAddresses,
+    chainId: selectedChainId,
+    chainName: selectedOption.displayName,
+    enabled: Boolean(owner) && approvalSpenderAddresses.length > 0,
   });
   const scoredApprovals = useMemo(
     () => sortScoredApprovals(scoreApprovals(scan.approvals)),
@@ -189,6 +206,7 @@ export function WalletLifeboat() {
           pendingNonce={pendingNonce.response}
           timeline={timeline.response}
           addressPoisoning={addressPoisoning.response}
+          spenderRisk={spenderRisk.response}
         />
 
         <div className="mt-6 grid gap-6 xl:grid-cols-[minmax(0,1fr)_360px]">
@@ -231,6 +249,13 @@ export function WalletLifeboat() {
               option={selectedOption}
               isScanning={addressPoisoning.status === "pending"}
             />
+            <SpenderRiskSection
+              spenderRisk={spenderRisk.response}
+              owner={owner}
+              option={selectedOption}
+              isScanning={spenderRisk.status === "pending"}
+              activeSpenderCount={approvalSpenderAddresses.length}
+            />
             <PlannedDiagnostics />
             <DetectionLimits />
           </div>
@@ -241,6 +266,7 @@ export function WalletLifeboat() {
               pendingNonce={pendingNonce.response}
               timeline={timeline.response}
               addressPoisoning={addressPoisoning.response}
+              spenderRisk={spenderRisk.response}
             />
             <ReportExport
               scan={scan}
@@ -249,6 +275,7 @@ export function WalletLifeboat() {
               pendingNonce={pendingNonce.response}
               timeline={timeline.response}
               addressPoisoning={addressPoisoning.response}
+              spenderRisk={spenderRisk.response}
             />
           </div>
         </div>
@@ -407,6 +434,7 @@ function TriageSummary({
   pendingNonce,
   timeline,
   addressPoisoning,
+  spenderRisk,
 }: {
   scan: LifeboatScanSnapshot;
   owner: Address | null;
@@ -414,6 +442,7 @@ function TriageSummary({
   pendingNonce: LifeboatPendingNonceApiResponse;
   timeline: LifeboatTimelineApiResponse;
   addressPoisoning: LifeboatAddressPoisoningApiResponse;
+  spenderRisk: LifeboatSpenderRiskApiResponse;
 }) {
   const cards: {
     label: string;
@@ -452,6 +481,11 @@ function TriageSummary({
       label: "Address poisoning signals",
       value: statusLabelForAddressPoisoning(addressPoisoning),
       tone: toneForAddressPoisoning(addressPoisoning.riskLevel),
+    },
+    {
+      label: "Spender contract risk",
+      value: statusLabelForSpenderRisk(spenderRisk),
+      tone: toneForSpenderRisk(spenderRisk.riskLevel),
     },
     {
       label: "HEX stake status",
@@ -1451,6 +1485,210 @@ function AddressPoisoningSummary({
   );
 }
 
+function SpenderRiskSection({
+  spenderRisk,
+  owner,
+  option,
+  isScanning,
+  activeSpenderCount,
+}: {
+  spenderRisk: LifeboatSpenderRiskApiResponse;
+  owner: Address | null;
+  option: AddressOnlyScanOption;
+  isScanning: boolean;
+  activeSpenderCount: number;
+}) {
+  const status = moduleStatusFromSpenderRiskResponse(spenderRisk);
+  return (
+    <section className="rounded-2xl border border-pulse-border bg-pulse-panel/65 p-5">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-pulse-cyan">
+            {LIFEBOAT_SPENDER_RISK_DIAGNOSTIC_COPY.title}
+          </p>
+          <h2 className="mt-1 text-xl font-semibold text-pulse-text">
+            Approval spender context
+          </h2>
+          <p className="mt-2 text-sm leading-6 text-pulse-muted">
+            {owner
+              ? `${option.displayName} active approval spenders are checked for public contract context without blocking actions or making scam claims.`
+              : "Paste a wallet address to check active approval spenders for public contract context."}
+          </p>
+        </div>
+        <span
+          className={`inline-flex w-fit rounded-full border px-3 py-1 text-xs font-semibold ${toneClassForSpenderRisk(
+            spenderRisk.riskLevel,
+          )}`}
+        >
+          {isScanning ? "Scanning" : spenderRiskLabel(spenderRisk.riskLevel)}
+        </span>
+      </div>
+
+      <p className="mt-4 rounded-xl border border-pulse-border/70 bg-pulse-bg/45 p-3 text-sm leading-6 text-pulse-muted">
+        {LIFEBOAT_SPENDER_RISK_DIAGNOSTIC_COPY.body}
+      </p>
+
+      {owner && activeSpenderCount === 0 ? (
+        <div className="mt-4 rounded-2xl border border-dashed border-pulse-border/80 bg-pulse-bg/40 p-4 text-sm leading-6 text-pulse-muted">
+          No active approval spender rows are available yet. This module runs
+          after the visible approval scan finds token or NFT approvals.
+        </div>
+      ) : null}
+
+      {owner && (status === "partial" || status === "upstream_unavailable") ? (
+        <div className="mt-4 rounded-xl border border-amber-400/35 bg-amber-400/10 p-3 text-sm leading-6 text-amber-100">
+          This diagnostic is incomplete. Do not treat missing spender warnings
+          as proof that active approval spenders are safe.
+        </div>
+      ) : null}
+
+      {owner && (status === "complete" || status === "partial") ? (
+        <SpenderRiskSummary spenderRisk={spenderRisk} />
+      ) : null}
+
+      {owner && spenderRisk.evidence.length > 0 ? (
+        <div className="mt-4 overflow-hidden rounded-2xl border border-pulse-border bg-pulse-bg/40">
+          <ul>
+            {spenderRisk.evidence.map((item) => (
+              <li
+                key={`${item.address}-${item.title}`}
+                className="grid gap-4 border-b border-pulse-border/60 p-4 last:border-b-0 lg:grid-cols-[1fr_1fr]"
+              >
+                <div className="min-w-0">
+                  <p className="text-sm font-semibold text-pulse-text">
+                    {item.title}
+                  </p>
+                  <p className="mt-1 text-xs leading-5 text-pulse-muted">
+                    {item.description}
+                  </p>
+                </div>
+                <div className="min-w-0 lg:text-right">
+                  <a
+                    href={item.explorerUrl ?? addressUrlFor(option, item.address)}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="block truncate font-mono text-xs text-pulse-muted underline-offset-2 hover:text-pulse-cyan hover:underline"
+                    title={item.address}
+                  >
+                    {shortenAddress(item.address)}
+                  </a>
+                  <p className="mt-1 text-[11px] uppercase tracking-wide text-pulse-muted">
+                    {item.riskLevel} signal
+                  </p>
+                </div>
+              </li>
+            ))}
+          </ul>
+        </div>
+      ) : null}
+
+      {owner && spenderRisk.spenders.length > 0 ? (
+        <div className="mt-4 overflow-hidden rounded-2xl border border-pulse-border bg-pulse-bg/40">
+          <ul>
+            {spenderRisk.spenders.map((spender) => (
+              <li
+                key={spender.address}
+                className="grid gap-4 border-b border-pulse-border/60 p-4 last:border-b-0 lg:grid-cols-[1fr_1fr_0.8fr]"
+              >
+                <div className="min-w-0">
+                  <a
+                    href={spender.explorerUrl ?? addressUrlFor(option, spender.address)}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="block truncate font-mono text-xs text-pulse-muted underline-offset-2 hover:text-pulse-cyan hover:underline"
+                    title={spender.address}
+                  >
+                    {shortenAddress(spender.address)}
+                  </a>
+                  <p className="mt-1 text-sm font-semibold text-pulse-text">
+                    {spender.registryContext?.label ??
+                      spender.contractName ??
+                      "Unknown spender"}
+                  </p>
+                </div>
+                <div className="min-w-0 text-xs leading-5 text-pulse-muted">
+                  <p>
+                    Bytecode:{" "}
+                    {spender.hasBytecode === true
+                      ? "present"
+                      : spender.hasBytecode === false
+                        ? "not found"
+                        : "unknown"}
+                  </p>
+                  <p>Source: {spender.verifiedSource}</p>
+                  <p>
+                    Proxy:{" "}
+                    {spender.isProxy === true
+                      ? "reported"
+                      : spender.isProxy === false
+                        ? "not reported"
+                        : "unknown"}
+                  </p>
+                </div>
+                <div className="min-w-0 text-xs leading-5 text-pulse-muted lg:text-right">
+                  <p>
+                    Registry:{" "}
+                    {spender.registryContext
+                      ? spender.registryContext.protocol
+                      : "no reviewed match"}
+                  </p>
+                  {spender.registryContext?.source ? (
+                    <a
+                      href={spender.registryContext.source}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="underline-offset-2 hover:text-pulse-cyan hover:underline"
+                    >
+                      Source
+                    </a>
+                  ) : null}
+                </div>
+              </li>
+            ))}
+          </ul>
+        </div>
+      ) : null}
+    </section>
+  );
+}
+
+function SpenderRiskSummary({
+  spenderRisk,
+}: {
+  spenderRisk: LifeboatSpenderRiskApiResponse;
+}) {
+  return (
+    <dl className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+      <SweeperMetric
+        label="Checked"
+        value={`${spenderRisk.summary.checkedSpenderCount} spenders`}
+      />
+      <SweeperMetric
+        label="Contracts"
+        value={spenderRisk.summary.contractSpenderCount.toString()}
+      />
+      <SweeperMetric
+        label="No bytecode"
+        value={spenderRisk.summary.eoaSpenderCount.toString()}
+      />
+      <SweeperMetric
+        label="Registry matches"
+        value={spenderRisk.summary.registryMatchCount.toString()}
+      />
+      {spenderRisk.errors.length > 0 || spenderRisk.missingConfig.length > 0 ? (
+        <div className="rounded-xl border border-amber-400/35 bg-amber-400/10 p-3 text-xs leading-5 text-amber-100 sm:col-span-2 lg:col-span-4">
+          {[...spenderRisk.errors, ...spenderRisk.missingConfig].join(" ")}
+        </div>
+      ) : null}
+      {spenderRisk.warnings.length > 0 ? (
+        <div className="rounded-xl border border-pulse-border/70 bg-pulse-bg/45 p-3 text-xs leading-5 text-pulse-muted sm:col-span-2 lg:col-span-4">
+          {spenderRisk.warnings.join(" ")}
+        </div>
+      ) : null}
+    </dl>
+  );
+}
+
 function PlannedDiagnostics() {
   return (
     <section className="rounded-2xl border border-pulse-border bg-pulse-panel/65 p-5">
@@ -1530,12 +1768,14 @@ function CompletenessPanel({
   pendingNonce,
   timeline,
   addressPoisoning,
+  spenderRisk,
 }: {
   scan: LifeboatScanSnapshot;
   sweeper: LifeboatSweeperApiResponse;
   pendingNonce: LifeboatPendingNonceApiResponse;
   timeline: LifeboatTimelineApiResponse;
   addressPoisoning: LifeboatAddressPoisoningApiResponse;
+  spenderRisk: LifeboatSpenderRiskApiResponse;
 }) {
   return (
     <section className="rounded-2xl border border-pulse-border bg-pulse-panel/65 p-5">
@@ -1572,6 +1812,10 @@ function CompletenessPanel({
         <CompletenessRow
           label="Address poisoning signals"
           value={statusLabelForAddressPoisoning(addressPoisoning)}
+        />
+        <CompletenessRow
+          label="Spender contract risk"
+          value={statusLabelForSpenderRisk(spenderRisk)}
         />
         <CompletenessRow label="HEX stake status" value="Planned diagnostic" />
         <CompletenessRow
@@ -1613,6 +1857,7 @@ function ReportExport({
   pendingNonce,
   timeline,
   addressPoisoning,
+  spenderRisk,
 }: {
   scan: LifeboatScanSnapshot;
   owner: Address | null;
@@ -1620,6 +1865,7 @@ function ReportExport({
   pendingNonce: LifeboatPendingNonceApiResponse;
   timeline: LifeboatTimelineApiResponse;
   addressPoisoning: LifeboatAddressPoisoningApiResponse;
+  spenderRisk: LifeboatSpenderRiskApiResponse;
 }) {
   const [copyState, setCopyState] = useState<"idle" | "copied" | "failed">(
     "idle",
@@ -1637,6 +1883,7 @@ function ReportExport({
         pendingNonce,
         timeline,
         addressPoisoning,
+        spenderRisk,
       ),
     );
   }
@@ -1938,6 +2185,7 @@ function buildReportFromSnapshot(
   pendingNonce: LifeboatPendingNonceApiResponse,
   timeline: LifeboatTimelineApiResponse,
   addressPoisoning: LifeboatAddressPoisoningApiResponse,
+  spenderRisk: LifeboatSpenderRiskApiResponse,
 ): LifeboatReport {
   const chain: LifeboatChainReport = {
     chainId: scan.chainId,
@@ -1962,6 +2210,10 @@ function buildReportFromSnapshot(
     addressPoisoningRiskLevel: addressPoisoning.riskLevel,
     addressPoisoningEvidence: addressPoisoning.evidence,
     addressPoisoningEvents: addressPoisoning.events,
+    spenderRiskStatus: moduleStatusFromSpenderRiskResponse(spenderRisk),
+    spenderRiskLevel: spenderRisk.riskLevel,
+    spenderRiskEvidence: spenderRisk.evidence,
+    spenderRiskSpenders: spenderRisk.spenders,
     hexStatus: "planned",
     permit2Status: "planned",
     eip7702Status: "planned",
@@ -1982,6 +2234,7 @@ function buildReportFromSnapshot(
       pendingNonceCheckComplete: pendingNonce.status === "complete",
       timelineCheckComplete: timeline.status === "complete",
       addressPoisoningCheckComplete: addressPoisoning.status === "complete",
+      spenderRiskCheckComplete: spenderRisk.status === "complete",
       hexCheckComplete: false,
       permit2Complete: false,
       eip7702Complete: false,
@@ -2056,6 +2309,20 @@ function moduleStatusFromAddressPoisoningResponse(
   return "partial";
 }
 
+function moduleStatusFromSpenderRiskResponse(
+  spenderRisk: LifeboatSpenderRiskApiResponse,
+): LifeboatModuleStatus {
+  if (spenderRisk.status === "idle") return "not_scanned";
+  if (spenderRisk.status === "scanning") return "scanning";
+  if (spenderRisk.status === "complete") return "complete";
+  if (spenderRisk.status === "partial") return "partial";
+  if (spenderRisk.status === "unsupported") return "unsupported";
+  if (spenderRisk.status === "upstream-failure") {
+    return "upstream_unavailable";
+  }
+  return "partial";
+}
+
 function statusLabelForApprovals(
   status: LifeboatModuleStatus,
   count: number,
@@ -2091,6 +2358,13 @@ function statusLabelForAddressPoisoning(
 ): string {
   if (addressPoisoning.status === "scanning") return "Scanning";
   return addressPoisoningRiskLabel(addressPoisoning.riskLevel);
+}
+
+function statusLabelForSpenderRisk(
+  spenderRisk: LifeboatSpenderRiskApiResponse,
+): string {
+  if (spenderRisk.status === "scanning") return "Scanning";
+  return spenderRiskLabel(spenderRisk.riskLevel);
 }
 
 function toneForModule(
@@ -2166,6 +2440,23 @@ function toneForAddressPoisoning(
   return "neutral";
 }
 
+function toneForSpenderRisk(
+  riskLevel: SpenderRiskLevel,
+): "neutral" | "success" | "warning" | "danger" {
+  if (riskLevel === "elevated") return "danger";
+  if (riskLevel === "possible") return "warning";
+  if (riskLevel === "none_detected") return "success";
+  if (riskLevel === "informational") return "neutral";
+  if (
+    riskLevel === "insufficient_data" ||
+    riskLevel === "upstream_unavailable" ||
+    riskLevel === "unsupported"
+  ) {
+    return "warning";
+  }
+  return "neutral";
+}
+
 function toneClassForSweeper(riskLevel: SweeperRiskLevel): string {
   const tone = toneForSweeper(riskLevel);
   return {
@@ -2208,6 +2499,16 @@ function toneClassForAddressPoisoning(
   }[tone];
 }
 
+function toneClassForSpenderRisk(riskLevel: SpenderRiskLevel): string {
+  const tone = toneForSpenderRisk(riskLevel);
+  return {
+    neutral: "border-pulse-border bg-pulse-bg/50 text-pulse-muted",
+    success: "border-pulse-green/35 bg-pulse-green/10 text-pulse-green",
+    warning: "border-amber-400/35 bg-amber-400/10 text-amber-200",
+    danger: "border-pulse-red/40 bg-pulse-red/10 text-pulse-red",
+  }[tone];
+}
+
 function RiskBadge({ level }: { level: RiskLevel }) {
   const styles = {
     low: "border-pulse-green/40 bg-pulse-green/10 text-pulse-green",
@@ -2232,6 +2533,27 @@ function sortScoredApprovals(
     if (a.unlimited !== b.unlimited) return a.unlimited ? -1 : 1;
     return a.tokenSymbol.localeCompare(b.tokenSymbol);
   });
+}
+
+function collectApprovalSpenderAddresses(
+  approvals: LifeboatScanSnapshot["approvals"],
+  nftApprovals: LifeboatScanSnapshot["nftApprovals"],
+): Address[] {
+  const addresses: Address[] = [];
+  const seen = new Set<string>();
+  for (const approval of approvals) {
+    const key = approval.spenderAddress.toLowerCase();
+    if (seen.has(key)) continue;
+    seen.add(key);
+    addresses.push(approval.spenderAddress);
+  }
+  for (const approval of nftApprovals) {
+    const key = approval.operatorAddress.toLowerCase();
+    if (seen.has(key)) continue;
+    seen.add(key);
+    addresses.push(approval.operatorAddress);
+  }
+  return addresses.sort((a, b) => a.localeCompare(b));
 }
 
 function sortNftApprovals(approvals: readonly NftApproval[]): NftApproval[] {

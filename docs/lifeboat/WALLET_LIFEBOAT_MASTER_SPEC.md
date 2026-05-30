@@ -171,6 +171,9 @@ The current Lifeboat branch implements these read-only modules:
 - Approval-to-drain timeline diagnostic from bounded recent explorer history.
 - Address poisoning diagnostic from bounded recent explorer history and
   prefix/suffix lookalike heuristics.
+- Spender contract risk diagnostic from active approval spender addresses,
+  bytecode presence, explorer source-code metadata, proxy-like metadata, and
+  reviewed registry context.
 
 These modules do not add custody, server signing, relayers, rescue contracts,
 automatic gas funding, automatic transfer, HEX write execution, private bundle

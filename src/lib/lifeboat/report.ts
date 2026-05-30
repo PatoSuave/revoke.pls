@@ -5,11 +5,13 @@ import {
   LIFEBOAT_NOT_TO_DO,
   LIFEBOAT_PENDING_NONCE_DIAGNOSTIC_COPY,
   LIFEBOAT_PLANNED_MODULES,
+  LIFEBOAT_SPENDER_RISK_DIAGNOSTIC_COPY,
   LIFEBOAT_SWEEPER_DIAGNOSTIC_COPY,
   LIFEBOAT_TIMELINE_DIAGNOSTIC_COPY,
 } from "@/lib/lifeboat/copy";
 import { addressPoisoningRiskLabel } from "@/lib/lifeboat/address-poisoning";
 import { pendingNonceRiskLabel } from "@/lib/lifeboat/pending-nonce";
+import { spenderRiskLabel } from "@/lib/lifeboat/spender-risk";
 import { sweeperRiskLabel } from "@/lib/lifeboat/sweeper";
 import { timelineRiskLabel } from "@/lib/lifeboat/timeline";
 import type { LifeboatReport } from "@/lib/lifeboat/types";
@@ -67,6 +69,10 @@ ${formatTimelineSection(report)}
 ## Address poisoning signals
 
 ${formatAddressPoisoningSection(report)}
+
+## Spender contract risk
+
+${formatSpenderRiskSection(report)}
 
 ## HEX stake status
 
@@ -201,6 +207,55 @@ ${evidence}`;
     .join("\n");
 
   return `${LIFEBOAT_ADDRESS_POISONING_DIAGNOSTIC_COPY.body}
+
+${rows || "No network scan has been added to this report yet."}`;
+}
+
+function formatSpenderRiskSection(report: LifeboatReport): string {
+  const rows = report.chains
+    .map((chain) => {
+      const evidence =
+        chain.spenderRiskEvidence.length > 0
+          ? chain.spenderRiskEvidence
+              .map(
+                (item) =>
+                  `  - ${item.title}: ${item.address} - ${item.description}`,
+              )
+              .join("\n")
+          : "  - No spender contract warning was found for the active approval spenders checked.";
+      const spenderRows =
+        chain.spenderRiskSpenders.length > 0
+          ? chain.spenderRiskSpenders
+              .slice(0, 8)
+              .map((item) => {
+                const registry = item.registryContext
+                  ? `; registry: ${item.registryContext.label}`
+                  : "";
+                const contractName = item.contractName
+                  ? `; contract: ${item.contractName}`
+                  : "";
+                return `  - ${item.address}: bytecode ${
+                  item.hasBytecode === true
+                    ? "present"
+                    : item.hasBytecode === false
+                      ? "not found"
+                      : "unknown"
+                }; source ${item.verifiedSource}; proxy ${
+                  item.isProxy === true ? "yes" : item.isProxy === false ? "no" : "unknown"
+                }${contractName}${registry}`;
+              })
+              .join("\n")
+          : "  - No spender contract context rows were available.";
+      return `- ${chain.chainName}: ${formatModuleStatus(
+        chain.spenderRiskStatus,
+      )}; ${spenderRiskLabel(chain.spenderRiskLevel)}
+${evidence}
+  Checked spenders:
+${spenderRows}`;
+    })
+    .join("\n");
+
+  return `${LIFEBOAT_SPENDER_RISK_DIAGNOSTIC_COPY.body}
 
 ${rows || "No network scan has been added to this report yet."}`;
 }
