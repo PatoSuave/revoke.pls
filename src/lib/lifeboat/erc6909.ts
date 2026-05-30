@@ -168,6 +168,17 @@ export function isErc6909UnlimitedAmount(amount: string | bigint): boolean {
   return amount.toString() === MAX_UINT256;
 }
 
+export function isErc6909BroadLogAddressFilterRequiredError(
+  value: string,
+): boolean {
+  const normalized = value.toLowerCase();
+  return (
+    normalized.includes("specify an address") ||
+    normalized.includes("address in your request") ||
+    normalized.includes("address filter")
+  );
+}
+
 export function erc6909RiskLabel(riskLevel: Erc6909RiskLevel): string {
   switch (riskLevel) {
     case "elevated":

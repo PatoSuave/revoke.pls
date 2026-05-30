@@ -36,6 +36,10 @@ import {
   type LifeboatErc4337ApiResponse,
 } from "@/lib/lifeboat/erc4337";
 import {
+  ERC4337_ENTRY_POINTS,
+  type Erc4337EntryPointTarget,
+} from "@/lib/lifeboat/erc4337-entry-points";
+import {
   OPTIMISM_CHAIN_ID,
   OPTIMISM_EXPLORER_BASE_URL,
 } from "@/lib/optimism-approval-api";
@@ -57,12 +61,6 @@ type Erc4337DiagnosticChainId =
   | typeof PULSECHAIN_CHAIN_ID
   | typeof BSC_CHAIN_ID
   | typeof HYPEREVM_CHAIN_ID;
-
-interface EntryPointTarget {
-  version: "v0.6" | "v0.7" | "v0.8";
-  address: Address;
-  source: string;
-}
 
 interface Erc4337ChainConfig {
   chainId: Erc4337DiagnosticChainId;
@@ -93,27 +91,6 @@ interface RpcLog {
   data?: string;
   topics?: string[];
 }
-
-// Sources:
-// - ERC-4337 docs describe the singleton EntryPoint role.
-// - Alchemy account-abstraction docs list the v0.6, v0.7, and v0.8 EntryPoint addresses.
-const ENTRY_POINTS: readonly EntryPointTarget[] = [
-  {
-    version: "v0.6",
-    address: "0x5FF137D4b0FDCD49DcA30c7CF57E578a026d2789",
-    source: "https://docs.erc4337.io/smart-accounts/entrypoint-explainer.html",
-  },
-  {
-    version: "v0.7",
-    address: "0x0000000071727de22E5E9d8BAf0edAc6f37da032",
-    source: "https://www.alchemy.com/docs/wallets/reference/entrypoint-addresses",
-  },
-  {
-    version: "v0.8",
-    address: "0x4337084D9E255Ff0702461CF8895CE9E3b5Ff1083",
-    source: "https://www.alchemy.com/docs/wallets/reference/entrypoint-addresses",
-  },
-];
 
 const CHAIN_CONFIGS: Record<Erc4337DiagnosticChainId, Erc4337ChainConfig> = {
   [ETHEREUM_MAINNET_CHAIN_ID]: {
@@ -252,7 +229,7 @@ export async function discoverErc4337Activity({
     const [code, logsByEntryPoint] = await Promise.all([
       readAccountCode({ owner, config, signal, fetcher }),
       Promise.all(
-        ENTRY_POINTS.map((entryPoint) =>
+        ERC4337_ENTRY_POINTS.map((entryPoint) =>
           readUserOperationLogs({
             owner,
             config,
@@ -268,7 +245,7 @@ export async function discoverErc4337Activity({
     const events = logsByEntryPoint.flat();
     const analysis = analyzeErc4337Activity({
       events,
-      checkedEntryPointCount: ENTRY_POINTS.length,
+      checkedEntryPointCount: ERC4337_ENTRY_POINTS.length,
       checkedBlockRange: latestBlock - fromBlock,
       hasAccountCode: code !== "0x",
     });
@@ -289,7 +266,7 @@ export async function discoverErc4337Activity({
       supported: true,
       supportNotes: [
         ...config.supportNotes,
-        `Checked EntryPoint sources: ${ENTRY_POINTS.map(
+        `Checked EntryPoint sources: ${ERC4337_ENTRY_POINTS.map(
           (entryPoint) => `${entryPoint.version} ${entryPoint.address}`,
         ).join(", ")}.`,
       ],
@@ -380,7 +357,7 @@ async function readUserOperationLogs({
 }: {
   owner: Address;
   config: ResolvedErc4337Config;
-  entryPoint: EntryPointTarget;
+  entryPoint: Erc4337EntryPointTarget;
   fromBlock: number;
   toBlock: number;
   signal: AbortSignal | undefined;
@@ -412,7 +389,7 @@ async function readUserOperationLogs({
 
 function parseUserOperationLog(
   log: RpcLog,
-  entryPoint: EntryPointTarget,
+  entryPoint: Erc4337EntryPointTarget,
   config: ResolvedErc4337Config,
 ): Erc4337UserOperationEvent | null {
   if (!log.data || !log.topics || !log.transactionHash || !log.blockNumber) {
