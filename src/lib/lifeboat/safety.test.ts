@@ -71,7 +71,7 @@ describe("Wallet Lifeboat safety copy", () => {
     );
   });
 
-  it("keeps the guided report readable without weakening safety copy", () => {
+  it("keeps the polished report layout readable without weakening safety copy", () => {
     const component = readFileSync(
       join(
         process.cwd(),
@@ -83,9 +83,25 @@ describe("Wallet Lifeboat safety copy", () => {
       "utf8",
     );
 
+    expect(component).toContain("export function WalletLifeboat");
     expect(component).toContain("GuidedTriageReport");
-    expect(component).toContain("Priority findings");
+    expect(component).toContain("Check a risky wallet before adding gas.");
+    expect(component).toContain("Read-only scan");
+    expect(component).toContain("No wallet connection required");
+    expect(component).toContain("Never enter a seed phrase or private key.");
+    expect(component).toContain("Before you do anything");
+    expect(component.match(/Before you do anything/g) ?? []).toHaveLength(1);
+    expect(component).toContain("Wallet to inspect");
+    expect(component).toContain('id="lifeboat-address-input"');
+    expect(component).toContain("What Lifeboat checks");
+    expect(component).toContain("Approvals");
+    expect(component).toContain("NFT permissions");
+    expect(component).toContain("Gas-sweeper signals");
+    expect(component).toContain("HEX stake status");
+    expect(component).toContain("Scan summary");
+    expect(component).toContain("Top priority findings");
     expect(component).toContain("Recommended next steps");
+    expect(component).toContain("Report status");
     expect(component).toContain("function DiagnosticGroup");
     expect(component).toContain("<details");
     expect(component).toContain("<summary");
@@ -93,9 +109,12 @@ describe("Wallet Lifeboat safety copy", () => {
     expect(component).toContain("Active compromise signals");
     expect(component).toContain("Account and delegation risk");
     expect(component).toContain("HEX and staking");
+    expect(component).toContain("Diagnostic details");
+    expect(component).toContain("Full diagnostic coverage");
     expect(component).toContain("Save or share this report");
     expect(component.toLowerCase()).not.toContain("all clear");
     expect(component.toLowerCase()).not.toContain("guaranteed recovery");
     expect(component.toLowerCase()).not.toContain("remove the hacker");
+    expect(component.toLowerCase()).not.toMatch(/scan complete[^.]*safe/);
   });
 });

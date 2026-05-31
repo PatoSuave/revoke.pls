@@ -298,6 +298,25 @@ export function WalletLifeboat() {
     () => sortNftApprovals(scan.nftApprovals),
     [scan.nftApprovals],
   );
+  const triageSignals = buildTriageSignals({
+    scan,
+    sweeper: sweeper.response,
+    pendingNonce: pendingNonce.response,
+    timeline: timeline.response,
+    addressPoisoning: addressPoisoning.response,
+    spenderRisk: spenderRisk.response,
+    permit2Exposure,
+    visibleAssets,
+    knownRiskRegistry,
+    eip7702: eip7702.response,
+    smartWallet: smartWallet.response,
+    erc4337: erc4337.response,
+    erc6909: erc6909.response,
+    dustTrap: dustTrap.response,
+    hexStake: hexStake.response,
+    goodAccountingAssist,
+  });
+  const triageSummary = summarizeTriageSignals(triageSignals);
 
   function scanAddress() {
     const normalized = normalizeScanInputAddress(inputAddress);
@@ -320,76 +339,79 @@ export function WalletLifeboat() {
   return (
     <section className="bg-pulse-bg">
       <div className="border-b border-pulse-border/60 bg-pulse-bg">
-        <div className="mx-auto max-w-6xl px-4 py-8 sm:px-6 sm:py-10">
-          <div className="grid gap-6 lg:grid-cols-[1.05fr_0.95fr] lg:items-end">
-            <div>
-              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-pulse-cyan">
-                Wallet Lifeboat
-              </p>
-              <h1 className="mt-3 max-w-3xl text-3xl font-bold text-pulse-text sm:text-5xl">
-                Check a risky wallet before adding gas.
-              </h1>
-              <p className="mt-4 max-w-2xl text-sm leading-7 text-pulse-muted sm:text-base">
-                Paste a wallet address to scan visible approvals, NFT
-                permissions, and possible compromised-wallet signals. This is
-                read-only and never asks for your seed phrase or private key.
-              </p>
-            </div>
-            <div className="rounded-2xl border border-pulse-red/35 bg-pulse-red/10 p-5 text-sm leading-6 text-pulse-muted">
-              <p className="font-semibold text-pulse-red">
-                Never enter your seed phrase or private key anywhere.
-              </p>
-              <p className="mt-2">
-                If a wallet&apos;s seed phrase or private key is compromised,
-                revoking approvals does not make the wallet safe again. This
-                tool helps you understand visible risks and possible next
-                steps.
-              </p>
+        <div className="mx-auto max-w-7xl px-4 py-10 sm:px-6 sm:py-12 lg:px-8">
+          <div className="max-w-4xl">
+            <p className="text-sm font-semibold tracking-[0.12em] text-pulse-cyan">
+              Wallet Lifeboat
+            </p>
+            <h1 className="mt-3 max-w-3xl text-3xl font-bold text-pulse-text sm:text-5xl">
+              Check a risky wallet before adding gas.
+            </h1>
+            <p className="mt-4 max-w-3xl text-base leading-7 text-pulse-muted sm:text-lg">
+              Paste a wallet address to review approvals, NFT permissions,
+              gas-sweeper signals, HEX stake status, and other visible risk
+              indicators. Read-only first. No seed phrase. No private key.
+            </p>
+            <div className="mt-5 flex flex-wrap gap-2">
+              <span className="rounded-full border border-pulse-cyan/30 bg-pulse-cyan/10 px-3 py-1 text-sm font-semibold text-pulse-cyan">
+                Read-only scan
+              </span>
+              <span className="rounded-full border border-pulse-border bg-pulse-panel/70 px-3 py-1 text-sm font-semibold text-pulse-muted">
+                No wallet connection required
+              </span>
             </div>
           </div>
         </div>
       </div>
 
-      <div className="mx-auto max-w-6xl px-4 py-8 sm:px-6 sm:py-10">
-        <div className="grid gap-6 lg:grid-cols-[0.95fr_1.05fr]">
-          <LifeboatControls
-            inputAddress={inputAddress}
-            selectedChainId={selectedChainId}
-            owner={owner}
-            inputError={inputError}
-            onInputAddressChange={(value) => {
-              setInputAddress(value);
-              setInputError(null);
-            }}
-            onSelectedChainIdChange={setSelectedChainId}
-            onScan={scanAddress}
-            onClear={clearScan}
-          />
-          <SafetyPanel />
+      <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 sm:py-10 lg:px-8">
+        <div className="grid gap-6 lg:grid-cols-12 lg:items-stretch">
+          <div className="lg:col-span-7 xl:col-span-8">
+            <LifeboatControls
+              inputAddress={inputAddress}
+              selectedChainId={selectedChainId}
+              owner={owner}
+              inputError={inputError}
+              onInputAddressChange={(value) => {
+                setInputAddress(value);
+                setInputError(null);
+              }}
+              onSelectedChainIdChange={setSelectedChainId}
+              onScan={scanAddress}
+              onClear={clearScan}
+            />
+          </div>
+          <div className="lg:col-span-5 xl:col-span-4">
+            <SafetyPanel />
+          </div>
         </div>
+
+        <LifeboatChecksGrid />
 
         <GuidedTriageReport
           scan={scan}
           owner={owner}
-          sweeper={sweeper.response}
-          pendingNonce={pendingNonce.response}
-          timeline={timeline.response}
-          addressPoisoning={addressPoisoning.response}
-          spenderRisk={spenderRisk.response}
-          permit2Exposure={permit2Exposure}
-          visibleAssets={visibleAssets}
-          knownRiskRegistry={knownRiskRegistry}
-          eip7702={eip7702.response}
-          smartWallet={smartWallet.response}
-          erc4337={erc4337.response}
-          erc6909={erc6909.response}
-          dustTrap={dustTrap.response}
-          hexStake={hexStake.response}
-          goodAccountingAssist={goodAccountingAssist}
+          signals={triageSignals}
+          summary={triageSummary}
         />
 
-        <div className="mt-6 grid gap-8 xl:grid-cols-[minmax(0,1fr)_360px] xl:items-start">
-          <div className="space-y-6">
+        <div className="mt-8 grid gap-8 xl:grid-cols-12 xl:items-start">
+          <div className="space-y-6 xl:col-span-8">
+            <section className="rounded-3xl border border-pulse-border bg-pulse-panel/55 p-5 sm:p-6">
+              <div className="max-w-3xl">
+                <p className="text-sm font-semibold tracking-[0.08em] text-pulse-cyan">
+                  Diagnostic details
+                </p>
+                <h2 className="mt-1 text-2xl font-semibold text-pulse-text">
+                  Open the groups that need review.
+                </h2>
+                <p className="mt-2 text-base leading-7 text-pulse-muted">
+                  The detailed modules stay lower on the page so the top of the
+                  report stays readable. Groups with findings, incomplete
+                  checks, or active scans open automatically.
+                </p>
+              </div>
+              <div className="mt-5 space-y-4">
             <DiagnosticGroup
               title="Exposure"
               eyebrow="What can spend or move assets"
@@ -636,23 +658,24 @@ export function WalletLifeboat() {
                 option={selectedOption}
               />
             </DiagnosticGroup>
+              </div>
+            </section>
 
             <PlannedDiagnostics />
             <DetectionLimits />
           </div>
-          <aside className="space-y-6 xl:sticky xl:top-24">
-            <div>
-              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-pulse-cyan">
-                Save or share this report
-              </p>
-              <h2 className="mt-1 text-xl font-semibold text-pulse-text">
-                Keep a read-only snapshot.
-              </h2>
-              <p className="mt-2 text-sm leading-6 text-pulse-muted">
-                Export results after scanning so you can review visible context
-                without connecting the risky wallet.
-              </p>
-            </div>
+          <aside className="space-y-4 xl:sticky xl:top-24 xl:col-span-4">
+            <ReportStatusCard
+              owner={owner}
+              scan={scan}
+              summary={triageSummary}
+            />
+            <RecommendedNextSteps
+              owner={owner}
+              scan={scan}
+              elevatedCount={triageSummary.needsAttentionCount}
+              incompleteCount={triageSummary.incompleteCount}
+            />
             <ReportExport
               scan={scan}
               owner={owner}
@@ -673,6 +696,7 @@ export function WalletLifeboat() {
               goodAccountingAssist={goodAccountingAssist}
             />
             <CompletenessPanel
+              summary={triageSummary}
               scan={scan}
               sweeper={sweeper.response}
               pendingNonce={pendingNonce.response}
@@ -719,30 +743,39 @@ function LifeboatControls({
 }) {
   const selectedOption = getAddressOnlyScanOption(selectedChainId);
   return (
-    <section className="rounded-2xl border border-pulse-border bg-pulse-panel/70 p-5 shadow-glow">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+    <section className="h-full rounded-3xl border border-pulse-cyan/25 bg-pulse-panel/80 p-5 shadow-glow sm:p-7">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div>
-          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-pulse-cyan">
-            Triage target
+          <p className="text-sm font-semibold tracking-[0.08em] text-pulse-cyan">
+            Wallet to inspect
           </p>
-          <h2 className="mt-1 text-xl font-semibold text-pulse-text">
-            Paste a wallet to inspect public risk.
+          <h2 className="mt-1 text-2xl font-semibold text-pulse-text">
+            Paste the address you want to inspect.
           </h2>
+          <p className="mt-2 max-w-2xl text-base leading-7 text-pulse-muted">
+            Lifeboat reviews public signals for one wallet on one network at a
+            time before you connect anything.
+          </p>
         </div>
-        <span className="inline-flex w-fit rounded-full border border-pulse-cyan/35 bg-pulse-cyan/10 px-3 py-1 text-xs font-semibold text-pulse-cyan">
-          Read-only
-        </span>
+        <div className="flex flex-wrap gap-2 sm:justify-end">
+          <span className="inline-flex w-fit rounded-full border border-pulse-cyan/35 bg-pulse-cyan/10 px-3 py-1 text-sm font-semibold text-pulse-cyan">
+            Read-only scan
+          </span>
+          <span className="inline-flex w-fit rounded-full border border-pulse-border bg-pulse-bg/55 px-3 py-1 text-sm font-semibold text-pulse-muted">
+            No wallet connection required
+          </span>
+        </div>
       </div>
 
       <form
-        className="mt-5 grid gap-3"
+        className="mt-6 grid gap-4"
         onSubmit={(event) => {
           event.preventDefault();
           onScan();
         }}
       >
         <label
-          className="text-xs font-semibold uppercase tracking-[0.14em] text-pulse-muted"
+          className="text-sm font-semibold text-pulse-muted"
           htmlFor="lifeboat-address-input"
         >
           Wallet address to inspect
@@ -754,14 +787,14 @@ function LifeboatControls({
           placeholder="0x..."
           autoComplete="off"
           spellCheck={false}
-          className="min-h-12 rounded-xl border border-pulse-border bg-pulse-bg/80 px-3 py-2 font-mono text-sm text-pulse-text outline-none transition placeholder:text-pulse-muted/60 focus:border-pulse-cyan/60"
+          className="min-h-14 rounded-2xl border border-pulse-border bg-pulse-bg/85 px-4 py-3 font-mono text-base text-pulse-text outline-none transition placeholder:text-pulse-muted/60 focus:border-pulse-cyan/60"
         />
         {inputError ? (
-          <p className="text-xs font-semibold text-pulse-red">{inputError}</p>
+          <p className="text-sm font-semibold text-pulse-red">{inputError}</p>
         ) : null}
 
         <label
-          className="text-xs font-semibold uppercase tracking-[0.14em] text-pulse-muted"
+          className="text-sm font-semibold text-pulse-muted"
           htmlFor="lifeboat-chain-select"
         >
           Network
@@ -772,7 +805,7 @@ function LifeboatControls({
           onChange={(event) =>
             onSelectedChainIdChange(Number(event.target.value) as AddressOnlyScanChainId)
           }
-          className="min-h-12 rounded-xl border border-pulse-border bg-pulse-bg/80 px-3 py-2 text-sm text-pulse-text outline-none transition focus:border-pulse-cyan/60"
+          className="min-h-14 rounded-2xl border border-pulse-border bg-pulse-bg/85 px-4 py-3 text-base text-pulse-text outline-none transition focus:border-pulse-cyan/60"
         >
           {addressOnlyScanOptions.map((option) => (
             <option key={option.chainId} value={option.chainId}>
@@ -784,7 +817,7 @@ function LifeboatControls({
         <div className="flex flex-col gap-2 sm:flex-row">
           <button
             type="submit"
-            className="inline-flex min-h-11 items-center justify-center rounded-xl bg-pulse-gradient px-4 py-2 text-sm font-semibold text-pulse-on-gradient shadow-glow transition hover:brightness-110"
+            className="inline-flex min-h-12 items-center justify-center rounded-2xl bg-pulse-gradient px-5 py-3 text-base font-semibold text-pulse-on-gradient shadow-glow transition hover:brightness-110"
           >
             Scan wallet
           </button>
@@ -792,14 +825,14 @@ function LifeboatControls({
             type="button"
             onClick={onClear}
             disabled={!owner && !inputAddress}
-            className="inline-flex min-h-11 items-center justify-center rounded-xl border border-pulse-border bg-pulse-text/5 px-4 py-2 text-sm font-semibold text-pulse-muted transition hover:bg-pulse-text/10 disabled:cursor-not-allowed disabled:opacity-50"
+            className="inline-flex min-h-12 items-center justify-center rounded-2xl border border-pulse-border bg-pulse-text/5 px-5 py-3 text-base font-semibold text-pulse-muted transition hover:bg-pulse-text/10 disabled:cursor-not-allowed disabled:opacity-50"
           >
             Clear
           </button>
         </div>
       </form>
 
-      <div className="mt-5 rounded-xl border border-pulse-border/70 bg-pulse-bg/45 p-3 text-xs leading-5 text-pulse-muted">
+      <div className="mt-6 rounded-2xl border border-pulse-border/70 bg-pulse-bg/45 p-4 text-sm leading-6 text-pulse-muted">
         <div className="flex items-center gap-2">
           <ChainLogo chainId={selectedOption.chainId} className="h-4 w-4" />
           <span className="font-semibold text-pulse-text">
@@ -818,25 +851,91 @@ function LifeboatControls({
 
 function SafetyPanel() {
   return (
-    <section className="rounded-2xl border border-pulse-border bg-pulse-panel/70 p-5">
-      <p className="text-xs font-semibold uppercase tracking-[0.18em] text-pulse-cyan">
-        Before taking action
+    <section className="h-full rounded-3xl border border-pulse-border bg-pulse-panel/70 p-5 sm:p-6">
+      <p className="text-sm font-semibold tracking-[0.08em] text-pulse-cyan">
+        Before you do anything
       </p>
-      <div className="mt-4 grid gap-3">
-        {LIFEBOAT_CRITICAL_WARNINGS.map((warning) => (
-          <div
-            key={warning}
-            className="rounded-xl border border-pulse-border/70 bg-pulse-bg/45 p-3 text-sm leading-6 text-pulse-muted"
+      <ul className="mt-4 grid gap-3 text-base leading-7 text-pulse-muted">
+        <li className="flex gap-3">
+          <span
+            className="mt-3 h-1.5 w-1.5 shrink-0 rounded-full bg-pulse-cyan"
+            aria-hidden
+          />
+          <span>Do not add gas to a wallet you believe is compromised.</span>
+        </li>
+        <li className="flex gap-3">
+          <span
+            className="mt-3 h-1.5 w-1.5 shrink-0 rounded-full bg-pulse-cyan"
+            aria-hidden
+          />
+          <span>Never enter a seed phrase or private key.</span>
+        </li>
+        <li className="flex gap-3">
+          <span
+            className="mt-3 h-1.5 w-1.5 shrink-0 rounded-full bg-pulse-cyan"
+            aria-hidden
+          />
+          <span>
+            Revoking approvals does not secure a wallet if the wallet itself is
+            compromised.
+          </span>
+        </li>
+      </ul>
+      <p className="mt-5 rounded-2xl border border-pulse-border/70 bg-pulse-bg/45 p-4 text-sm leading-6 text-pulse-muted">
+        This page is a read-only triage view. It helps you inspect visible
+        signals before deciding what to review next.
+      </p>
+    </section>
+  );
+}
+
+function LifeboatChecksGrid() {
+  const checks = [
+    {
+      title: "Approvals",
+      body: "Active token allowances and spender context from the existing scanner.",
+    },
+    {
+      title: "NFT permissions",
+      body: "Collection-wide and token-specific permission rows found in public data.",
+    },
+    {
+      title: "Gas-sweeper signals",
+      body: "Recent native-token movement patterns and pending nonce context.",
+    },
+    {
+      title: "HEX stake status",
+      body: "Read-only PulseChain stake diagnostics and Good Accounting context.",
+    },
+  ] as const;
+
+  return (
+    <section className="mt-6">
+      <div className="mb-3 flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
+        <div>
+          <p className="text-sm font-semibold tracking-[0.08em] text-pulse-cyan">
+            What Lifeboat checks
+          </p>
+          <p className="mt-1 text-base leading-7 text-pulse-muted">
+            A quick view of the main read-only signals in this pass.
+          </p>
+        </div>
+      </div>
+      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+        {checks.map((check) => (
+          <article
+            key={check.title}
+            className="rounded-2xl border border-pulse-border bg-pulse-panel/55 p-4"
           >
-            {warning}
-          </div>
+            <h3 className="text-base font-semibold text-pulse-text">
+              {check.title}
+            </h3>
+            <p className="mt-2 text-sm leading-6 text-pulse-muted">
+              {check.body}
+            </p>
+          </article>
         ))}
       </div>
-      <p className="mt-4 rounded-xl border border-amber-400/35 bg-amber-400/10 p-3 text-sm leading-6 text-amber-100">
-        Do not add gas to a wallet you believe is compromised until you review
-        the scan. Some compromised wallets use sweepers that automatically drain
-        native gas before you can move assets.
-      </p>
     </section>
   );
 }
@@ -851,6 +950,12 @@ type TriageSignal = {
   findingCount: number;
 };
 
+type TriageSummaryCounts = {
+  needsAttentionCount: number;
+  noIssueDetectedCount: number;
+  incompleteCount: number;
+};
+
 type DiagnosticModuleSummary = {
   label: string;
   status: LifeboatModuleStatus;
@@ -858,27 +963,8 @@ type DiagnosticModuleSummary = {
   findingCount: number;
 };
 
-function GuidedTriageReport({
-  scan,
-  owner,
-  sweeper,
-  pendingNonce,
-  timeline,
-  addressPoisoning,
-  spenderRisk,
-  permit2Exposure,
-  visibleAssets,
-  knownRiskRegistry,
-  eip7702,
-  smartWallet,
-  erc4337,
-  erc6909,
-  dustTrap,
-  hexStake,
-  goodAccountingAssist,
-}: {
+type BuildTriageSignalsInput = {
   scan: LifeboatScanSnapshot;
-  owner: Address | null;
   sweeper: LifeboatSweeperApiResponse;
   pendingNonce: LifeboatPendingNonceApiResponse;
   timeline: LifeboatTimelineApiResponse;
@@ -894,8 +980,27 @@ function GuidedTriageReport({
   dustTrap: LifeboatDustTrapApiResponse;
   hexStake: LifeboatHexStakeApiResponse;
   goodAccountingAssist: GoodAccountingAssistAnalysis;
-}) {
-  const signals: TriageSignal[] = [
+};
+
+function buildTriageSignals({
+  scan,
+  sweeper,
+  pendingNonce,
+  timeline,
+  addressPoisoning,
+  spenderRisk,
+  permit2Exposure,
+  visibleAssets,
+  knownRiskRegistry,
+  eip7702,
+  smartWallet,
+  erc4337,
+  erc6909,
+  dustTrap,
+  hexStake,
+  goodAccountingAssist,
+}: BuildTriageSignalsInput): TriageSignal[] {
+  return [
     {
       label: "Visible approval risk",
       value: statusLabelForApprovals(scan.approvalsStatus, scan.approvals.length),
@@ -1022,7 +1127,7 @@ function GuidedTriageReport({
       label: "Report completeness",
       value:
         scan.status === "complete"
-          ? "Approval scan complete"
+          ? "Scan complete"
           : scan.status === "partial"
             ? "Incomplete diagnostics"
             : scan.status === "failed"
@@ -1049,36 +1154,77 @@ function GuidedTriageReport({
       findingCount: scan.incompleteReasons.length,
     },
   ];
+}
+
+function summarizeTriageSignals(
+  signals: readonly TriageSignal[],
+): TriageSummaryCounts {
+  return {
+    needsAttentionCount: signals.filter(
+      (signal) => signal.tone === "danger" || signal.tone === "warning",
+    ).length,
+    noIssueDetectedCount: signals.filter(
+      (signal) =>
+        signal.label !== "Report completeness" &&
+        signal.status === "complete" &&
+        signal.tone === "success",
+    ).length,
+    incompleteCount: signals.filter((signal) =>
+      isIncompleteModuleStatus(signal.status),
+    ).length,
+  };
+}
+
+function GuidedTriageReport({
+  scan,
+  owner,
+  signals,
+  summary,
+}: {
+  scan: LifeboatScanSnapshot;
+  owner: Address | null;
+  signals: readonly TriageSignal[];
+  summary: TriageSummaryCounts;
+}) {
   const prioritySignals = priorityTriageSignals(signals);
-  const elevatedCount = signals.filter((signal) =>
-    signal.tone === "danger" || signal.tone === "warning"
-  ).length;
-  const incompleteCount = signals.filter((signal) =>
-    isIncompleteModuleStatus(signal.status)
-  ).length;
 
   return (
-    <section className="mt-6 rounded-2xl border border-pulse-border bg-pulse-panel/65 p-5 shadow-glow">
+    <section className="mt-8 rounded-3xl border border-pulse-border bg-pulse-panel/65 p-5 shadow-glow sm:p-6 lg:p-7">
       <div className="flex flex-col gap-2 lg:flex-row lg:items-end lg:justify-between">
         <div>
-          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-pulse-cyan">
-            Guided report
+          <p className="text-sm font-semibold tracking-[0.08em] text-pulse-cyan">
+            Scan summary
           </p>
           <h2 className="mt-1 text-2xl font-semibold text-pulse-text">
-            Priority findings
+            Start with what needs attention.
           </h2>
-          <p className="mt-2 max-w-2xl text-sm leading-6 text-pulse-muted">
-            Start here, then open the diagnostic groups that need review. Low
-            signal completed groups stay collapsed so the report is easier to
-            read.
+          <p className="mt-2 max-w-3xl text-base leading-7 text-pulse-muted">
+            This card summarizes the scan before the full diagnostic modules.
+            It does not certify the wallet or replace manual review.
           </p>
         </div>
-        <p className="font-mono text-xs text-pulse-muted">
+        <p className="font-mono text-sm text-pulse-muted">
           {owner ? shortenAddress(owner) : "No wallet scanned"}
         </p>
       </div>
 
-      <div className="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
+      <div className="mt-6 grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
+        <QuickStatusMetric
+          label="Needs attention"
+          value={
+            owner ? summary.needsAttentionCount.toString() : "Not scanned"
+          }
+        />
+        <QuickStatusMetric
+          label="No issue detected"
+          value={
+            owner ? summary.noIssueDetectedCount.toString() : "Not scanned"
+          }
+        />
+        <QuickStatusMetric
+          label="Incomplete checks"
+          value={owner ? summary.incompleteCount.toString() : "Not scanned"}
+        />
         <QuickStatusMetric
           label="Token approvals"
           value={owner ? scan.approvals.length.toString() : "Not scanned"}
@@ -1087,32 +1233,28 @@ function GuidedTriageReport({
           label="NFT approvals"
           value={owner ? scan.nftApprovals.length.toString() : "Not scanned"}
         />
-        <QuickStatusMetric
-          label="Priority signals"
-          value={owner ? elevatedCount.toString() : "Not scanned"}
-        />
-        <QuickStatusMetric
-          label="Incomplete checks"
-          value={owner ? incompleteCount.toString() : "Not scanned"}
-        />
-        <QuickStatusMetric
-          label="Report state"
-          value={scanStatusLabel(scan.status)}
-        />
       </div>
 
-      <div className="mt-5 grid gap-4 lg:grid-cols-[minmax(0,1fr)_340px]">
-        <div className="space-y-3">
+      <div className="mt-6">
+        <div className="mb-3 flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
+          <div>
+            <h3 className="text-lg font-semibold text-pulse-text">
+              Top priority findings
+            </h3>
+            <p className="mt-1 text-sm leading-6 text-pulse-muted">
+              The highest-signal checks are shown first. Open diagnostic
+              details for the full context.
+            </p>
+          </div>
+          <span className="text-sm font-semibold text-pulse-muted">
+            {scanStatusLabel(scan.status)}
+          </span>
+        </div>
+        <div className="grid gap-3 lg:grid-cols-2">
           {prioritySignals.map((signal) => (
             <PriorityFinding key={signal.label} signal={signal} />
           ))}
         </div>
-        <RecommendedNextSteps
-          owner={owner}
-          scan={scan}
-          elevatedCount={elevatedCount}
-          incompleteCount={incompleteCount}
-        />
       </div>
     </section>
   );
@@ -1120,11 +1262,11 @@ function GuidedTriageReport({
 
 function QuickStatusMetric({ label, value }: { label: string; value: string }) {
   return (
-    <div className="rounded-xl border border-pulse-border/70 bg-pulse-bg/45 p-3">
-      <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-pulse-muted">
+    <div className="rounded-2xl border border-pulse-border/70 bg-pulse-bg/45 p-4">
+      <p className="text-sm font-semibold text-pulse-muted">
         {label}
       </p>
-      <p className="mt-1 break-words text-sm font-semibold text-pulse-text">
+      <p className="mt-1 break-words text-xl font-semibold text-pulse-text">
         {value}
       </p>
     </div>
@@ -1133,20 +1275,71 @@ function QuickStatusMetric({ label, value }: { label: string; value: string }) {
 
 function PriorityFinding({ signal }: { signal: TriageSignal }) {
   return (
-    <div className={`rounded-xl border p-4 ${toneClassForTriage(signal.tone)}`}>
+    <div className={`rounded-2xl border p-4 ${toneClassForTriage(signal.tone)}`}>
       <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
         <div className="min-w-0">
-          <p className="text-xs font-semibold uppercase tracking-[0.14em]">
+          <p className="text-sm font-semibold">
             {signal.label}
           </p>
           <p className="mt-1 text-lg font-semibold text-pulse-text">
             {signal.value}
           </p>
         </div>
-        <span className="inline-flex w-fit rounded-full border border-current/30 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.12em]">
-          {moduleStatusLabel(signal.status)}
+        <span className="inline-flex w-fit rounded-full border border-current/30 px-3 py-1 text-xs font-semibold">
+          {calmSignalStatusLabel(signal)}
         </span>
       </div>
+    </div>
+  );
+}
+
+function ReportStatusCard({
+  owner,
+  scan,
+  summary,
+}: {
+  owner: Address | null;
+  scan: LifeboatScanSnapshot;
+  summary: TriageSummaryCounts;
+}) {
+  return (
+    <section className="rounded-3xl border border-pulse-border bg-pulse-panel/65 p-5">
+      <p className="text-sm font-semibold tracking-[0.08em] text-pulse-cyan">
+        Report status
+      </p>
+      <h2 className="mt-1 text-xl font-semibold text-pulse-text">
+        {scanStatusLabel(scan.status)}
+      </h2>
+      <p className="mt-2 break-all font-mono text-sm text-pulse-muted">
+        {owner ? shortenAddress(owner) : "No wallet scanned"}
+      </p>
+      <div className="mt-4 grid grid-cols-3 gap-2">
+        <CompactMetric
+          label="Needs attention"
+          value={
+            owner ? summary.needsAttentionCount.toString() : "-"
+          }
+        />
+        <CompactMetric
+          label="No issue detected"
+          value={
+            owner ? summary.noIssueDetectedCount.toString() : "-"
+          }
+        />
+        <CompactMetric
+          label="Incomplete"
+          value={owner ? summary.incompleteCount.toString() : "-"}
+        />
+      </div>
+    </section>
+  );
+}
+
+function CompactMetric({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded-2xl border border-pulse-border/70 bg-pulse-bg/45 p-3">
+      <p className="text-lg font-semibold text-pulse-text">{value}</p>
+      <p className="mt-1 text-xs leading-4 text-pulse-muted">{label}</p>
     </div>
   );
 }
@@ -1164,8 +1357,8 @@ function RecommendedNextSteps({
 }) {
   const steps = recommendedNextSteps({ owner, scan, elevatedCount, incompleteCount });
   return (
-    <div className="rounded-xl border border-pulse-border/70 bg-pulse-bg/45 p-4">
-      <h3 className="text-sm font-semibold text-pulse-text">
+    <section className="rounded-3xl border border-pulse-border bg-pulse-panel/65 p-5">
+      <h3 className="text-base font-semibold text-pulse-text">
         Recommended next steps
       </h3>
       <ol className="mt-3 grid gap-2 text-sm leading-6 text-pulse-muted">
@@ -1179,7 +1372,7 @@ function RecommendedNextSteps({
           </li>
         ))}
       </ol>
-    </div>
+    </section>
   );
 }
 
@@ -1214,21 +1407,21 @@ function DiagnosticGroup({
   return (
     <details
       open={defaultOpen}
-      className="group border-t border-pulse-border/70 pt-5 [&>summary::-webkit-details-marker]:hidden"
+      className="group rounded-2xl border border-pulse-border/70 bg-pulse-bg/35 p-4 [&>summary::-webkit-details-marker]:hidden"
     >
-      <summary className="flex cursor-pointer list-none flex-col gap-3 rounded-xl px-1 py-2 outline-none transition hover:bg-pulse-text/[0.025] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-pulse-cyan sm:flex-row sm:items-start sm:justify-between">
+      <summary className="flex cursor-pointer list-none flex-col gap-3 rounded-xl outline-none transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-pulse-cyan sm:flex-row sm:items-start sm:justify-between">
         <div className="min-w-0">
-          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-pulse-cyan">
+          <p className="text-sm font-semibold tracking-[0.08em] text-pulse-cyan">
             {eyebrow}
           </p>
           <h2 className="mt-1 text-2xl font-semibold text-pulse-text">
             {title}
           </h2>
-          <p className="mt-2 max-w-2xl text-sm leading-6 text-pulse-muted">
+          <p className="mt-2 max-w-2xl text-base leading-7 text-pulse-muted">
             {description}
           </p>
         </div>
-        <div className="flex shrink-0 items-center gap-2 text-xs font-semibold text-pulse-muted">
+        <div className="flex shrink-0 items-center gap-2 text-sm font-semibold text-pulse-muted">
           <span className="rounded-full border border-pulse-border bg-pulse-bg/50 px-3 py-1">
             {summary}
           </span>
@@ -1319,15 +1512,19 @@ function toneClassForTriage(tone: TriageTone): string {
 function scanStatusLabel(status: LifeboatScanStatus): string {
   if (status === "idle") return "Not scanned";
   if (status === "scanning") return "Scanning";
-  if (status === "partial") return "Incomplete";
+  if (status === "partial") return "Verification incomplete";
   if (status === "failed") return "Upstream unavailable";
-  return "Approval scan complete";
+  return "Scan complete";
 }
 
-function moduleStatusLabel(status: LifeboatModuleStatus): string {
-  if (status === "not_scanned") return "Not scanned";
-  if (status === "upstream_unavailable") return "Upstream issue";
-  return status.replaceAll("_", " ");
+function calmSignalStatusLabel(signal: TriageSignal): string {
+  if (signal.status === "scanning") return "Scanning";
+  if (signal.status === "upstream_unavailable") return "Upstream unavailable";
+  if (isIncompleteModuleStatus(signal.status)) return "Verification incomplete";
+  if (signal.tone === "danger") return "Needs review";
+  if (signal.tone === "warning") return "Possible risk";
+  if (signal.tone === "success") return "No issue detected";
+  return "Review manually";
 }
 
 function recommendedNextSteps({
@@ -4030,6 +4227,7 @@ function Checklist({
 }
 
 function CompletenessPanel({
+  summary,
   scan,
   sweeper,
   pendingNonce,
@@ -4048,6 +4246,7 @@ function CompletenessPanel({
   hexStake,
   goodAccountingAssist,
 }: {
+  summary: TriageSummaryCounts;
   scan: LifeboatScanSnapshot;
   sweeper: LifeboatSweeperApiResponse;
   pendingNonce: LifeboatPendingNonceApiResponse;
@@ -4066,89 +4265,121 @@ function CompletenessPanel({
   hexStake: LifeboatHexStakeApiResponse;
   goodAccountingAssist: GoodAccountingAssistAnalysis;
 }) {
+  const rows = [
+    {
+      label: "Token approvals",
+      value: statusLabelForApprovals(scan.approvalsStatus, scan.approvals.length),
+    },
+    {
+      label: "NFT approvals",
+      value: statusLabelForApprovals(
+        scan.nftApprovalsStatus,
+        scan.nftApprovals.length,
+      ),
+    },
+    {
+      label: "Gas-sweeper pattern",
+      value: statusLabelForSweeper(sweeper),
+    },
+    {
+      label: "Pending nonce",
+      value: statusLabelForPendingNonce(pendingNonce),
+    },
+    {
+      label: "Approval-to-drain timeline",
+      value: statusLabelForTimeline(timeline),
+    },
+    {
+      label: "Address poisoning signals",
+      value: statusLabelForAddressPoisoning(addressPoisoning),
+    },
+    {
+      label: "Spender contract risk",
+      value: statusLabelForSpenderRisk(spenderRisk),
+    },
+    {
+      label: "Permit2 exposure",
+      value: statusLabelForPermit2Exposure(permit2Exposure, permit2Status),
+    },
+    {
+      label: "Visible assets at risk",
+      value: statusLabelForVisibleAssets(visibleAssets),
+    },
+    {
+      label: "Known-risk registry",
+      value: statusLabelForKnownRiskRegistry(knownRiskRegistry),
+    },
+    {
+      label: "HEX stake status",
+      value: statusLabelForHexStake(hexStake),
+    },
+    {
+      label: "Good Accounting Assist",
+      value: statusLabelForGoodAccountingAssist(goodAccountingAssist),
+    },
+    {
+      label: "EIP-7702 delegation",
+      value: statusLabelForEip7702(eip7702),
+    },
+    {
+      label: "Smart wallet / Safe",
+      value: statusLabelForSmartWallet(smartWallet),
+    },
+    {
+      label: "ERC-4337 / session keys",
+      value: statusLabelForErc4337(erc4337),
+    },
+    {
+      label: "ERC-6909 approvals",
+      value: statusLabelForErc6909(erc6909),
+    },
+    {
+      label: "Token/NFT dust traps",
+      value: statusLabelForDustTrap(dustTrap),
+    },
+  ];
+
   return (
-    <section className="rounded-2xl border border-pulse-border bg-pulse-panel/65 p-5">
-      <p className="text-xs font-semibold uppercase tracking-[0.18em] text-pulse-cyan">
-        Report completeness
+    <section className="rounded-3xl border border-pulse-border bg-pulse-panel/65 p-5">
+      <p className="text-sm font-semibold tracking-[0.08em] text-pulse-cyan">
+        Compact completeness summary
       </p>
       <h2 className="mt-1 text-xl font-semibold text-pulse-text">
-        Current diagnostic coverage
+        Diagnostic coverage
       </h2>
-      <dl className="mt-4 grid gap-2 text-sm">
-        <CompletenessRow
-          label="Token approvals"
-          value={statusLabelForApprovals(scan.approvalsStatus, scan.approvals.length)}
+      <div className="mt-4 grid grid-cols-3 gap-2">
+        <CompactMetric
+          label="Needs attention"
+          value={summary.needsAttentionCount.toString()}
         />
-        <CompletenessRow
-          label="NFT approvals"
-          value={statusLabelForApprovals(
-            scan.nftApprovalsStatus,
-            scan.nftApprovals.length,
-          )}
+        <CompactMetric
+          label="No issue detected"
+          value={summary.noIssueDetectedCount.toString()}
         />
-        <CompletenessRow
-          label="Gas-sweeper pattern"
-          value={statusLabelForSweeper(sweeper)}
+        <CompactMetric
+          label="Incomplete"
+          value={summary.incompleteCount.toString()}
         />
-        <CompletenessRow
-          label="Pending nonce"
-          value={statusLabelForPendingNonce(pendingNonce)}
-        />
-        <CompletenessRow
-          label="Approval-to-drain timeline"
-          value={statusLabelForTimeline(timeline)}
-        />
-        <CompletenessRow
-          label="Address poisoning signals"
-          value={statusLabelForAddressPoisoning(addressPoisoning)}
-        />
-        <CompletenessRow
-          label="Spender contract risk"
-          value={statusLabelForSpenderRisk(spenderRisk)}
-        />
-        <CompletenessRow
-          label="Permit2 exposure"
-          value={statusLabelForPermit2Exposure(permit2Exposure, permit2Status)}
-        />
-        <CompletenessRow
-          label="Visible assets at risk"
-          value={statusLabelForVisibleAssets(visibleAssets)}
-        />
-        <CompletenessRow
-          label="Known-risk registry"
-          value={statusLabelForKnownRiskRegistry(knownRiskRegistry)}
-        />
-        <CompletenessRow
-          label="HEX stake status"
-          value={statusLabelForHexStake(hexStake)}
-        />
-        <CompletenessRow
-          label="Good Accounting Assist"
-          value={statusLabelForGoodAccountingAssist(goodAccountingAssist)}
-        />
-        <CompletenessRow
-          label="EIP-7702 delegation"
-          value={statusLabelForEip7702(eip7702)}
-        />
-        <CompletenessRow
-          label="Smart wallet / Safe"
-          value={statusLabelForSmartWallet(smartWallet)}
-        />
-        <CompletenessRow
-          label="ERC-4337 / session keys"
-          value={statusLabelForErc4337(erc4337)}
-        />
-        <CompletenessRow
-          label="ERC-6909 approvals"
-          value={statusLabelForErc6909(erc6909)}
-        />
-        <CompletenessRow
-          label="Token/NFT dust traps"
-          value={statusLabelForDustTrap(dustTrap)}
-        />
-      </dl>
+      </div>
+      <details className="group mt-4 rounded-2xl border border-pulse-border/70 bg-pulse-bg/45 p-3 [&>summary::-webkit-details-marker]:hidden">
+        <summary className="flex cursor-pointer list-none items-center justify-between gap-3 text-sm font-semibold text-pulse-text">
+          <span>Full diagnostic coverage</span>
+          <span className="rounded-full border border-pulse-border px-2 py-0.5 text-pulse-muted transition group-open:rotate-45">
+            +
+          </span>
+        </summary>
+        <dl className="mt-3 grid gap-2 text-sm">
+          {rows.map((row) => (
+            <CompletenessRow
+              key={row.label}
+              label={row.label}
+              value={row.value}
+            />
+          ))}
+        </dl>
+      </details>
       {scan.incompleteReasons.length > 0 ? (
-        <div className="mt-4 rounded-xl border border-amber-400/35 bg-amber-400/10 p-3 text-xs leading-5 text-amber-100">
+        <div className="mt-4 rounded-2xl border border-amber-400/35 bg-amber-400/10 p-3 text-xs leading-5 text-amber-100">
           <p className="font-semibold">Known incomplete diagnostics</p>
           <ul className="mt-2 grid gap-1">
             {scan.incompleteReasons.map((reason) => (
@@ -4164,7 +4395,7 @@ function CompletenessPanel({
 function CompletenessRow({ label, value }: { label: string; value: string }) {
   return (
     <div className="grid gap-1 rounded-xl border border-pulse-border/70 bg-pulse-bg/45 p-3">
-      <dt className="text-xs font-semibold uppercase tracking-[0.12em] text-pulse-muted">
+      <dt className="text-xs font-semibold text-pulse-muted">
         {label}
       </dt>
       <dd className="text-pulse-text">{value}</dd>
@@ -4267,17 +4498,16 @@ function ReportExport({
   }
 
   return (
-    <section className="rounded-2xl border border-pulse-border bg-pulse-panel/65 p-5">
-      <p className="text-xs font-semibold uppercase tracking-[0.18em] text-pulse-cyan">
-        Report export
+    <section className="rounded-3xl border border-pulse-border bg-pulse-panel/65 p-5">
+      <p className="text-sm font-semibold tracking-[0.08em] text-pulse-cyan">
+        Export actions
       </p>
       <h2 className="mt-1 text-xl font-semibold text-pulse-text">
-        Save or share this report.
+        Save or share this report
       </h2>
       <p className="mt-3 text-sm leading-6 text-pulse-muted">
-        Export this report before taking action. It can help you review visible
-        risks, approvals, stakes, and possible next steps without connecting the
-        compromised wallet.
+        Keep a read-only snapshot of visible risks, approvals, stakes, and
+        unresolved checks before you decide what to review next.
       </p>
       <div className="mt-4 grid gap-2 sm:grid-cols-2">
         <button
@@ -4888,7 +5118,7 @@ function statusLabelForApprovals(
   if (status === "partial") return "Incomplete verification";
   if (status === "upstream_unavailable") return "Upstream unavailable";
   if (status === "complete") {
-    return count > 0 ? "Active risk found" : "No active rows found";
+    return count > 0 ? "Needs review" : "No issue detected";
   }
   return "Not scanned";
 }
