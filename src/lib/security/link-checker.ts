@@ -325,7 +325,11 @@ function classifyResult({
   closestCandidateDomain?: CandidateDomainEntry;
   signals: readonly LinkRiskSignal[];
 }): LinkCheckStatus {
-  if (matchedOfficialDomain) return "official-match";
+  const hasElevatedSignal = signals.some(
+    (signal) => signal.severity === "medium" || signal.severity === "high",
+  );
+
+  if (matchedOfficialDomain && !hasElevatedSignal) return "official-match";
   if (closestOfficialDomain || closestCandidateDomain) return "likely-lookalike";
   if (signals.length > 0) return "suspicious-patterns";
   return "unknown-domain";

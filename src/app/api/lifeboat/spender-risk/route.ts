@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { rateLimitKeyFromRequest } from "@/lib/request-rate-limit";
 
 import { approvalApiNoStoreHeaders } from "@/lib/approval-api-cache";
 import {
@@ -58,7 +59,9 @@ export async function GET(request: Request) {
     );
   }
 
-  const rateLimit = checkLifeboatSpenderRiskRateLimit(rateLimitKey(request));
+  const rateLimit = checkLifeboatSpenderRiskRateLimit(
+    rateLimitKeyFromRequest(request),
+  );
   if (!rateLimit.allowed) {
     return NextResponse.json(
       {
@@ -161,17 +164,6 @@ function statusCodeFor(status: string): number {
   if (status === "bad-request") return 400;
   if (status === "unsupported") return 501;
   return 200;
-}
-
-function rateLimitKey(request: Request): string {
-  const forwardedFor = request.headers.get("x-forwarded-for");
-  const forwardedIp = forwardedFor?.split(",")[0]?.trim();
-  return (
-    request.headers.get("cf-connecting-ip")?.trim() ||
-    request.headers.get("x-real-ip")?.trim() ||
-    forwardedIp ||
-    "unknown-client"
-  );
 }
 
 function rateLimitHeaders(

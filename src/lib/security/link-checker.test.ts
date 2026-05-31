@@ -42,6 +42,14 @@ describe("checkCryptoLink", () => {
     expect(result.signals.map((signal) => signal.id)).toContain("non-https");
   });
 
+  it("does not give HTTP official-domain links the official-match status", () => {
+    const result = checkCryptoLink("http://pulserevoke.com/security");
+
+    expect(result.status).toBe("suspicious-patterns");
+    expect(result.matchedOfficialDomain?.domain).toBe("pulserevoke.com");
+    expect(result.signals.map((signal) => signal.id)).toContain("non-https");
+  });
+
   it("flags IP hostnames", () => {
     const result = checkCryptoLink("https://192.168.0.1/connect");
 
