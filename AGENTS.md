@@ -74,3 +74,11 @@ Before adding or changing Wallet Lifeboat behavior, read:
   defamatory labels unless backed by a curated, reviewed source.
 - Add tests for any new parser, heuristic, API route, or safety gate.
 - Run the validation commands requested by the phase ticket before handoff.
+
+## Attribution Hygiene
+
+- Do not add tool, automation, or vendor identities as commit authors,
+  committers, contributors, or co-authors.
+- Do not add commit trailer lines that credit tool, automation, or vendor
+  identities.
+- The repository owner reviews and commits work using their own Git identity.
