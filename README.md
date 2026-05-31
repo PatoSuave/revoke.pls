@@ -7,6 +7,7 @@ Live app: <https://pulserevoke.com>
 
 - Scanner: <https://pulserevoke.com/app>
 - Security guide: <https://pulserevoke.com/security>
+- Public review guide: [docs/PUBLIC_REVIEW_GUIDE.md](docs/PUBLIC_REVIEW_GUIDE.md)
 - Manual QA checklist: [docs/MANUAL-QA-CHECKLIST.md](docs/MANUAL-QA-CHECKLIST.md)
 
 ## What It Does
@@ -222,6 +223,8 @@ git diff -- src/hooks src/app/api src/lib/wagmi.ts src/lib/preflight.ts src/lib/
 
 ## Documentation
 
+- [Documentation map](docs/README.md)
+- [Public review guide](docs/PUBLIC_REVIEW_GUIDE.md)
 - [Architecture](docs/ARCHITECTURE.md)
 - [Environment variables](docs/ENVIRONMENT.md)
 - [Security policy](SECURITY.md)
