@@ -70,4 +70,32 @@ describe("Wallet Lifeboat safety copy", () => {
       /writeContract|sendTransaction|server signer|server-sign|flashbots|eth_sendBundle|eth_sendPrivateTransaction/i,
     );
   });
+
+  it("keeps the guided report readable without weakening safety copy", () => {
+    const component = readFileSync(
+      join(
+        process.cwd(),
+        "src",
+        "components",
+        "sections",
+        "wallet-lifeboat.tsx",
+      ),
+      "utf8",
+    );
+
+    expect(component).toContain("GuidedTriageReport");
+    expect(component).toContain("Priority findings");
+    expect(component).toContain("Recommended next steps");
+    expect(component).toContain("function DiagnosticGroup");
+    expect(component).toContain("<details");
+    expect(component).toContain("<summary");
+    expect(component).toContain("Exposure");
+    expect(component).toContain("Active compromise signals");
+    expect(component).toContain("Account and delegation risk");
+    expect(component).toContain("HEX and staking");
+    expect(component).toContain("Save or share this report");
+    expect(component.toLowerCase()).not.toContain("all clear");
+    expect(component.toLowerCase()).not.toContain("guaranteed recovery");
+    expect(component.toLowerCase()).not.toContain("remove the hacker");
+  });
 });

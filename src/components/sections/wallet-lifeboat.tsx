@@ -368,7 +368,7 @@ export function WalletLifeboat() {
           <SafetyPanel />
         </div>
 
-        <TriageSummary
+        <GuidedTriageReport
           scan={scan}
           owner={owner}
           sweeper={sweeper.response}
@@ -388,135 +388,271 @@ export function WalletLifeboat() {
           goodAccountingAssist={goodAccountingAssist}
         />
 
-        <div className="mt-6 grid gap-6 xl:grid-cols-[minmax(0,1fr)_360px]">
+        <div className="mt-6 grid gap-8 xl:grid-cols-[minmax(0,1fr)_360px] xl:items-start">
           <div className="space-y-6">
-            <LifeboatApprovalsSection
-              approvals={scoredApprovals}
-              status={scan.approvalsStatus}
-              owner={owner}
-              option={selectedOption}
-              isScanning={scan.status === "scanning"}
-            />
-            <LifeboatNftApprovalsSection
-              approvals={sortedNftApprovals}
-              status={scan.nftApprovalsStatus}
-              owner={owner}
-              option={selectedOption}
-              isScanning={scan.status === "scanning"}
-            />
-            <VisibleAssetsSection
-              visibleAssets={visibleAssets}
-              owner={owner}
-              option={selectedOption}
-              status={moduleStatusFromVisibleAssets(scan)}
-            />
-            <SweeperActivitySection
-              sweeper={sweeper.response}
-              owner={owner}
-              option={selectedOption}
-              isScanning={sweeper.status === "pending"}
-            />
-            <PendingNonceActivitySection
-              pendingNonce={pendingNonce.response}
-              owner={owner}
-              option={selectedOption}
-              isScanning={pendingNonce.status === "pending"}
-            />
-            <TimelineActivitySection
-              timeline={timeline.response}
-              owner={owner}
-              option={selectedOption}
-              isScanning={timeline.status === "pending"}
-            />
-            <AddressPoisoningSection
-              addressPoisoning={addressPoisoning.response}
-              owner={owner}
-              option={selectedOption}
-              isScanning={addressPoisoning.status === "pending"}
-            />
-            <SpenderRiskSection
-              spenderRisk={spenderRisk.response}
-              owner={owner}
-              option={selectedOption}
-              isScanning={spenderRisk.status === "pending"}
-              activeSpenderCount={approvalSpenderAddresses.length}
-            />
-            <Permit2ExposureSection
-              permit2Exposure={permit2Exposure}
-              owner={owner}
-              option={selectedOption}
-              status={moduleStatusFromPermit2Exposure(scan.approvalsStatus)}
-            />
-            <KnownRiskRegistrySection
-              knownRiskRegistry={knownRiskRegistry}
-              owner={owner}
-              option={selectedOption}
-            />
-            <Eip7702DelegationSection
-              eip7702={eip7702.response}
-              owner={owner}
-              option={selectedOption}
-              isScanning={eip7702.status === "pending"}
-            />
-            <SmartWalletSection
-              smartWallet={smartWallet.response}
-              owner={owner}
-              option={selectedOption}
-              isScanning={smartWallet.status === "pending"}
-            />
-            <Erc4337Section
-              erc4337={erc4337.response}
-              owner={owner}
-              option={selectedOption}
-              isScanning={erc4337.status === "pending"}
-            />
-            <Erc6909Section
-              erc6909={erc6909.response}
-              owner={owner}
-              option={selectedOption}
-              isScanning={erc6909.status === "pending"}
-            />
-            <HexStakeSection
-              hexStake={hexStake.response}
-              owner={owner}
-              option={selectedOption}
-              isScanning={hexStake.status === "pending"}
-            />
-            <GoodAccountingAssistSection
-              goodAccountingAssist={goodAccountingAssist}
-              hexStake={hexStake.response}
-              owner={owner}
-              option={selectedOption}
-            />
-            <DustTrapSection
-              dustTrap={dustTrap.response}
-              owner={owner}
-              option={selectedOption}
-              isScanning={dustTrap.status === "pending"}
-            />
+            <DiagnosticGroup
+              title="Exposure"
+              eyebrow="What can spend or move assets"
+              description="Approvals, NFT permissions, visible asset exposure, and Permit2 context."
+              modules={[
+                diagnosticModule(
+                  "Token approvals",
+                  scan.approvalsStatus,
+                  toneForModule(scan.approvalsStatus, scan.approvals.length),
+                  scan.approvals.length,
+                ),
+                diagnosticModule(
+                  "NFT approvals",
+                  scan.nftApprovalsStatus,
+                  toneForModule(
+                    scan.nftApprovalsStatus,
+                    scan.nftApprovals.length,
+                  ),
+                  scan.nftApprovals.length,
+                ),
+                diagnosticModule(
+                  "Visible assets",
+                  moduleStatusFromVisibleAssets(scan),
+                  toneForVisibleAssets(visibleAssets.riskLevel),
+                  visibleAssets.evidence.length,
+                ),
+                diagnosticModule(
+                  "Permit2",
+                  moduleStatusFromPermit2Exposure(scan.approvalsStatus),
+                  toneForPermit2Exposure(permit2Exposure.riskLevel),
+                  permit2Exposure.evidence.length,
+                ),
+              ]}
+            >
+              <LifeboatApprovalsSection
+                approvals={scoredApprovals}
+                status={scan.approvalsStatus}
+                owner={owner}
+                option={selectedOption}
+                isScanning={scan.status === "scanning"}
+              />
+              <LifeboatNftApprovalsSection
+                approvals={sortedNftApprovals}
+                status={scan.nftApprovalsStatus}
+                owner={owner}
+                option={selectedOption}
+                isScanning={scan.status === "scanning"}
+              />
+              <VisibleAssetsSection
+                visibleAssets={visibleAssets}
+                owner={owner}
+                option={selectedOption}
+                status={moduleStatusFromVisibleAssets(scan)}
+              />
+              <Permit2ExposureSection
+                permit2Exposure={permit2Exposure}
+                owner={owner}
+                option={selectedOption}
+                status={moduleStatusFromPermit2Exposure(scan.approvalsStatus)}
+              />
+            </DiagnosticGroup>
+
+            <DiagnosticGroup
+              title="Active compromise signals"
+              eyebrow="Recent wallet behavior"
+              description="Gas-sweeper patterns, pending nonce state, approval-to-drain timing, address poisoning, and dust traps."
+              modules={[
+                diagnosticModule(
+                  "Gas sweeper",
+                  moduleStatusFromSweeperResponse(sweeper.response),
+                  toneForSweeper(sweeper.response.riskLevel),
+                  sweeper.response.evidence.length,
+                ),
+                diagnosticModule(
+                  "Pending nonce",
+                  moduleStatusFromPendingNonceResponse(pendingNonce.response),
+                  toneForPendingNonce(pendingNonce.response.riskLevel),
+                  pendingNonce.response.evidence.length,
+                ),
+                diagnosticModule(
+                  "Timeline",
+                  moduleStatusFromTimelineResponse(timeline.response),
+                  toneForTimeline(timeline.response.riskLevel),
+                  timeline.response.evidence.length,
+                ),
+                diagnosticModule(
+                  "Address poisoning",
+                  moduleStatusFromAddressPoisoningResponse(
+                    addressPoisoning.response,
+                  ),
+                  toneForAddressPoisoning(addressPoisoning.response.riskLevel),
+                  addressPoisoning.response.evidence.length,
+                ),
+                diagnosticModule(
+                  "Dust traps",
+                  moduleStatusFromDustTrapResponse(dustTrap.response),
+                  toneForDustTrap(dustTrap.response.riskLevel),
+                  dustTrap.response.evidence.length,
+                ),
+              ]}
+            >
+              <SweeperActivitySection
+                sweeper={sweeper.response}
+                owner={owner}
+                option={selectedOption}
+                isScanning={sweeper.status === "pending"}
+              />
+              <PendingNonceActivitySection
+                pendingNonce={pendingNonce.response}
+                owner={owner}
+                option={selectedOption}
+                isScanning={pendingNonce.status === "pending"}
+              />
+              <TimelineActivitySection
+                timeline={timeline.response}
+                owner={owner}
+                option={selectedOption}
+                isScanning={timeline.status === "pending"}
+              />
+              <AddressPoisoningSection
+                addressPoisoning={addressPoisoning.response}
+                owner={owner}
+                option={selectedOption}
+                isScanning={addressPoisoning.status === "pending"}
+              />
+              <DustTrapSection
+                dustTrap={dustTrap.response}
+                owner={owner}
+                option={selectedOption}
+                isScanning={dustTrap.status === "pending"}
+              />
+            </DiagnosticGroup>
+
+            <DiagnosticGroup
+              title="Account and delegation risk"
+              eyebrow="Contracts, registries, and account control"
+              description="Spender contract context, known-risk registry matches, delegation, smart wallet, ERC-4337, and ERC-6909 signals."
+              modules={[
+                diagnosticModule(
+                  "Spender risk",
+                  moduleStatusFromSpenderRiskResponse(spenderRisk.response),
+                  toneForSpenderRisk(spenderRisk.response.riskLevel),
+                  spenderRisk.response.evidence.length,
+                ),
+                diagnosticModule(
+                  "Known-risk registry",
+                  moduleStatusFromKnownRiskRegistry(knownRiskRegistry),
+                  toneForKnownRiskRegistry(knownRiskRegistry.riskLevel),
+                  knownRiskRegistry.evidence.length,
+                ),
+                diagnosticModule(
+                  "EIP-7702",
+                  moduleStatusFromEip7702Response(eip7702.response),
+                  toneForEip7702(eip7702.response.riskLevel),
+                  eip7702.response.evidence.length,
+                ),
+                diagnosticModule(
+                  "Smart wallet / Safe",
+                  moduleStatusFromSmartWalletResponse(smartWallet.response),
+                  toneForSmartWallet(smartWallet.response.riskLevel),
+                  smartWallet.response.evidence.length,
+                ),
+                diagnosticModule(
+                  "ERC-4337",
+                  moduleStatusFromErc4337Response(erc4337.response),
+                  toneForErc4337(erc4337.response.riskLevel),
+                  erc4337.response.evidence.length,
+                ),
+                diagnosticModule(
+                  "ERC-6909",
+                  moduleStatusFromErc6909Response(erc6909.response),
+                  toneForErc6909(erc6909.response.riskLevel),
+                  erc6909.response.evidence.length,
+                ),
+              ]}
+            >
+              <SpenderRiskSection
+                spenderRisk={spenderRisk.response}
+                owner={owner}
+                option={selectedOption}
+                isScanning={spenderRisk.status === "pending"}
+                activeSpenderCount={approvalSpenderAddresses.length}
+              />
+              <KnownRiskRegistrySection
+                knownRiskRegistry={knownRiskRegistry}
+                owner={owner}
+                option={selectedOption}
+              />
+              <Eip7702DelegationSection
+                eip7702={eip7702.response}
+                owner={owner}
+                option={selectedOption}
+                isScanning={eip7702.status === "pending"}
+              />
+              <SmartWalletSection
+                smartWallet={smartWallet.response}
+                owner={owner}
+                option={selectedOption}
+                isScanning={smartWallet.status === "pending"}
+              />
+              <Erc4337Section
+                erc4337={erc4337.response}
+                owner={owner}
+                option={selectedOption}
+                isScanning={erc4337.status === "pending"}
+              />
+              <Erc6909Section
+                erc6909={erc6909.response}
+                owner={owner}
+                option={selectedOption}
+                isScanning={erc6909.status === "pending"}
+              />
+            </DiagnosticGroup>
+
+            <DiagnosticGroup
+              title="HEX and staking"
+              eyebrow="Locked or time-sensitive value"
+              description="Read-only HEX stake diagnostics and Good Accounting Assist context."
+              modules={[
+                diagnosticModule(
+                  "HEX stake",
+                  moduleStatusFromHexStakeResponse(hexStake.response),
+                  toneForHexStake(hexStake.response.riskLevel),
+                  hexStake.response.evidence.length,
+                ),
+                diagnosticModule(
+                  "Good Accounting Assist",
+                  moduleStatusFromGoodAccountingAssist(goodAccountingAssist),
+                  toneForGoodAccountingAssist(goodAccountingAssist.riskLevel),
+                  goodAccountingAssist.evidence.length,
+                ),
+              ]}
+            >
+              <HexStakeSection
+                hexStake={hexStake.response}
+                owner={owner}
+                option={selectedOption}
+                isScanning={hexStake.status === "pending"}
+              />
+              <GoodAccountingAssistSection
+                goodAccountingAssist={goodAccountingAssist}
+                hexStake={hexStake.response}
+                owner={owner}
+                option={selectedOption}
+              />
+            </DiagnosticGroup>
+
             <PlannedDiagnostics />
             <DetectionLimits />
           </div>
-          <div className="space-y-6">
-            <CompletenessPanel
-              scan={scan}
-              sweeper={sweeper.response}
-              pendingNonce={pendingNonce.response}
-              timeline={timeline.response}
-              addressPoisoning={addressPoisoning.response}
-              spenderRisk={spenderRisk.response}
-              permit2Exposure={permit2Exposure}
-              visibleAssets={visibleAssets}
-              knownRiskRegistry={knownRiskRegistry}
-              permit2Status={moduleStatusFromPermit2Exposure(scan.approvalsStatus)}
-              eip7702={eip7702.response}
-              smartWallet={smartWallet.response}
-              erc4337={erc4337.response}
-              erc6909={erc6909.response}
-              dustTrap={dustTrap.response}
-              hexStake={hexStake.response}
-              goodAccountingAssist={goodAccountingAssist}
-            />
+          <aside className="space-y-6 xl:sticky xl:top-24">
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-pulse-cyan">
+                Save or share this report
+              </p>
+              <h2 className="mt-1 text-xl font-semibold text-pulse-text">
+                Keep a read-only snapshot.
+              </h2>
+              <p className="mt-2 text-sm leading-6 text-pulse-muted">
+                Export results after scanning so you can review visible context
+                without connecting the risky wallet.
+              </p>
+            </div>
             <ReportExport
               scan={scan}
               owner={owner}
@@ -536,7 +672,26 @@ export function WalletLifeboat() {
               hexStake={hexStake.response}
               goodAccountingAssist={goodAccountingAssist}
             />
-          </div>
+            <CompletenessPanel
+              scan={scan}
+              sweeper={sweeper.response}
+              pendingNonce={pendingNonce.response}
+              timeline={timeline.response}
+              addressPoisoning={addressPoisoning.response}
+              spenderRisk={spenderRisk.response}
+              permit2Exposure={permit2Exposure}
+              visibleAssets={visibleAssets}
+              knownRiskRegistry={knownRiskRegistry}
+              permit2Status={moduleStatusFromPermit2Exposure(scan.approvalsStatus)}
+              eip7702={eip7702.response}
+              smartWallet={smartWallet.response}
+              erc4337={erc4337.response}
+              erc6909={erc6909.response}
+              dustTrap={dustTrap.response}
+              hexStake={hexStake.response}
+              goodAccountingAssist={goodAccountingAssist}
+            />
+          </aside>
         </div>
       </div>
     </section>
@@ -686,7 +841,24 @@ function SafetyPanel() {
   );
 }
 
-function TriageSummary({
+type TriageTone = "neutral" | "success" | "warning" | "danger";
+
+type TriageSignal = {
+  label: string;
+  value: string;
+  tone: TriageTone;
+  status: LifeboatModuleStatus;
+  findingCount: number;
+};
+
+type DiagnosticModuleSummary = {
+  label: string;
+  status: LifeboatModuleStatus;
+  tone: TriageTone;
+  findingCount: number;
+};
+
+function GuidedTriageReport({
   scan,
   owner,
   sweeper,
@@ -723,15 +895,13 @@ function TriageSummary({
   hexStake: LifeboatHexStakeApiResponse;
   goodAccountingAssist: GoodAccountingAssistAnalysis;
 }) {
-  const cards: {
-    label: string;
-    value: string;
-    tone: "neutral" | "success" | "warning" | "danger";
-  }[] = [
+  const signals: TriageSignal[] = [
     {
       label: "Visible approval risk",
       value: statusLabelForApprovals(scan.approvalsStatus, scan.approvals.length),
       tone: toneForModule(scan.approvalsStatus, scan.approvals.length),
+      status: scan.approvalsStatus,
+      findingCount: scan.approvals.length,
     },
     {
       label: "NFT permission risk",
@@ -740,81 +910,113 @@ function TriageSummary({
         scan.nftApprovals.length,
       ),
       tone: toneForModule(scan.nftApprovalsStatus, scan.nftApprovals.length),
+      status: scan.nftApprovalsStatus,
+      findingCount: scan.nftApprovals.length,
     },
     {
       label: "Visible assets at risk",
       value: statusLabelForVisibleAssets(visibleAssets),
       tone: toneForVisibleAssets(visibleAssets.riskLevel),
+      status: moduleStatusFromVisibleAssets(scan),
+      findingCount: visibleAssets.evidence.length,
     },
     {
       label: "Gas-sweeper pattern",
       value: statusLabelForSweeper(sweeper),
       tone: toneForSweeper(sweeper.riskLevel),
+      status: moduleStatusFromSweeperResponse(sweeper),
+      findingCount: sweeper.evidence.length,
     },
     {
       label: "Pending transaction activity",
       value: statusLabelForPendingNonce(pendingNonce),
       tone: toneForPendingNonce(pendingNonce.riskLevel),
+      status: moduleStatusFromPendingNonceResponse(pendingNonce),
+      findingCount: pendingNonce.evidence.length,
     },
     {
       label: "Approval-to-drain timeline",
       value: statusLabelForTimeline(timeline),
       tone: toneForTimeline(timeline.riskLevel),
+      status: moduleStatusFromTimelineResponse(timeline),
+      findingCount: timeline.evidence.length,
     },
     {
       label: "Address poisoning signals",
       value: statusLabelForAddressPoisoning(addressPoisoning),
       tone: toneForAddressPoisoning(addressPoisoning.riskLevel),
+      status: moduleStatusFromAddressPoisoningResponse(addressPoisoning),
+      findingCount: addressPoisoning.evidence.length,
     },
     {
       label: "Spender contract risk",
       value: statusLabelForSpenderRisk(spenderRisk),
       tone: toneForSpenderRisk(spenderRisk.riskLevel),
+      status: moduleStatusFromSpenderRiskResponse(spenderRisk),
+      findingCount: spenderRisk.evidence.length,
     },
     {
       label: "Permit2 exposure",
       value: statusLabelForPermit2Exposure(permit2Exposure),
       tone: toneForPermit2Exposure(permit2Exposure.riskLevel),
+      status: moduleStatusFromPermit2Exposure(scan.approvalsStatus),
+      findingCount: permit2Exposure.evidence.length,
     },
     {
       label: "Known-risk registry",
       value: statusLabelForKnownRiskRegistry(knownRiskRegistry),
       tone: toneForKnownRiskRegistry(knownRiskRegistry.riskLevel),
+      status: moduleStatusFromKnownRiskRegistry(knownRiskRegistry),
+      findingCount: knownRiskRegistry.evidence.length,
     },
     {
       label: "HEX stake status",
       value: statusLabelForHexStake(hexStake),
       tone: toneForHexStake(hexStake.riskLevel),
+      status: moduleStatusFromHexStakeResponse(hexStake),
+      findingCount: hexStake.evidence.length,
     },
     {
       label: "Good Accounting Assist",
       value: statusLabelForGoodAccountingAssist(goodAccountingAssist),
       tone: toneForGoodAccountingAssist(goodAccountingAssist.riskLevel),
+      status: moduleStatusFromGoodAccountingAssist(goodAccountingAssist),
+      findingCount: goodAccountingAssist.evidence.length,
     },
     {
       label: "EIP-7702 delegation",
       value: statusLabelForEip7702(eip7702),
       tone: toneForEip7702(eip7702.riskLevel),
+      status: moduleStatusFromEip7702Response(eip7702),
+      findingCount: eip7702.evidence.length,
     },
     {
       label: "Smart wallet / Safe",
       value: statusLabelForSmartWallet(smartWallet),
       tone: toneForSmartWallet(smartWallet.riskLevel),
+      status: moduleStatusFromSmartWalletResponse(smartWallet),
+      findingCount: smartWallet.evidence.length,
     },
     {
       label: "ERC-4337 / session keys",
       value: statusLabelForErc4337(erc4337),
       tone: toneForErc4337(erc4337.riskLevel),
+      status: moduleStatusFromErc4337Response(erc4337),
+      findingCount: erc4337.evidence.length,
     },
     {
       label: "ERC-6909 approvals",
       value: statusLabelForErc6909(erc6909),
       tone: toneForErc6909(erc6909.riskLevel),
+      status: moduleStatusFromErc6909Response(erc6909),
+      findingCount: erc6909.evidence.length,
     },
     {
       label: "Token/NFT dust traps",
       value: statusLabelForDustTrap(dustTrap),
       tone: toneForDustTrap(dustTrap.riskLevel),
+      status: moduleStatusFromDustTrapResponse(dustTrap),
+      findingCount: dustTrap.evidence.length,
     },
     {
       label: "Report completeness",
@@ -827,63 +1029,355 @@ function TriageSummary({
               ? "Upstream unavailable"
               : scan.status === "scanning"
                 ? "Scanning"
-                : "Not scanned",
+              : "Not scanned",
       tone:
         scan.status === "complete"
           ? "success"
           : scan.status === "partial" || scan.status === "failed"
             ? "warning"
             : "neutral",
+      status:
+        scan.status === "complete"
+          ? "complete"
+          : scan.status === "partial"
+            ? "partial"
+            : scan.status === "failed"
+              ? "upstream_unavailable"
+              : scan.status === "scanning"
+                ? "scanning"
+                : "not_scanned",
+      findingCount: scan.incompleteReasons.length,
     },
   ];
+  const prioritySignals = priorityTriageSignals(signals);
+  const elevatedCount = signals.filter((signal) =>
+    signal.tone === "danger" || signal.tone === "warning"
+  ).length;
+  const incompleteCount = signals.filter((signal) =>
+    isIncompleteModuleStatus(signal.status)
+  ).length;
 
   return (
-    <section className="mt-6">
-      <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+    <section className="mt-6 rounded-2xl border border-pulse-border bg-pulse-panel/65 p-5 shadow-glow">
+      <div className="flex flex-col gap-2 lg:flex-row lg:items-end lg:justify-between">
         <div>
           <p className="text-xs font-semibold uppercase tracking-[0.18em] text-pulse-cyan">
-            Incident dashboard
+            Guided report
           </p>
           <h2 className="mt-1 text-2xl font-semibold text-pulse-text">
-            Triage summary
+            Priority findings
           </h2>
+          <p className="mt-2 max-w-2xl text-sm leading-6 text-pulse-muted">
+            Start here, then open the diagnostic groups that need review. Low
+            signal completed groups stay collapsed so the report is easier to
+            read.
+          </p>
         </div>
         <p className="font-mono text-xs text-pulse-muted">
           {owner ? shortenAddress(owner) : "No wallet scanned"}
         </p>
       </div>
-      <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-        {cards.map((card) => (
-          <RiskCard key={card.label} {...card} />
-        ))}
+
+      <div className="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
+        <QuickStatusMetric
+          label="Token approvals"
+          value={owner ? scan.approvals.length.toString() : "Not scanned"}
+        />
+        <QuickStatusMetric
+          label="NFT approvals"
+          value={owner ? scan.nftApprovals.length.toString() : "Not scanned"}
+        />
+        <QuickStatusMetric
+          label="Priority signals"
+          value={owner ? elevatedCount.toString() : "Not scanned"}
+        />
+        <QuickStatusMetric
+          label="Incomplete checks"
+          value={owner ? incompleteCount.toString() : "Not scanned"}
+        />
+        <QuickStatusMetric
+          label="Report state"
+          value={scanStatusLabel(scan.status)}
+        />
+      </div>
+
+      <div className="mt-5 grid gap-4 lg:grid-cols-[minmax(0,1fr)_340px]">
+        <div className="space-y-3">
+          {prioritySignals.map((signal) => (
+            <PriorityFinding key={signal.label} signal={signal} />
+          ))}
+        </div>
+        <RecommendedNextSteps
+          owner={owner}
+          scan={scan}
+          elevatedCount={elevatedCount}
+          incompleteCount={incompleteCount}
+        />
       </div>
     </section>
   );
 }
 
-function RiskCard({
-  label,
-  value,
-  tone,
+function QuickStatusMetric({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded-xl border border-pulse-border/70 bg-pulse-bg/45 p-3">
+      <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-pulse-muted">
+        {label}
+      </p>
+      <p className="mt-1 break-words text-sm font-semibold text-pulse-text">
+        {value}
+      </p>
+    </div>
+  );
+}
+
+function PriorityFinding({ signal }: { signal: TriageSignal }) {
+  return (
+    <div className={`rounded-xl border p-4 ${toneClassForTriage(signal.tone)}`}>
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+        <div className="min-w-0">
+          <p className="text-xs font-semibold uppercase tracking-[0.14em]">
+            {signal.label}
+          </p>
+          <p className="mt-1 text-lg font-semibold text-pulse-text">
+            {signal.value}
+          </p>
+        </div>
+        <span className="inline-flex w-fit rounded-full border border-current/30 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.12em]">
+          {moduleStatusLabel(signal.status)}
+        </span>
+      </div>
+    </div>
+  );
+}
+
+function RecommendedNextSteps({
+  owner,
+  scan,
+  elevatedCount,
+  incompleteCount,
 }: {
-  label: string;
-  value: string;
-  tone: "neutral" | "success" | "warning" | "danger";
+  owner: Address | null;
+  scan: LifeboatScanSnapshot;
+  elevatedCount: number;
+  incompleteCount: number;
 }) {
-  const toneClass = {
-    neutral: "border-pulse-border bg-pulse-panel/65 text-pulse-muted",
+  const steps = recommendedNextSteps({ owner, scan, elevatedCount, incompleteCount });
+  return (
+    <div className="rounded-xl border border-pulse-border/70 bg-pulse-bg/45 p-4">
+      <h3 className="text-sm font-semibold text-pulse-text">
+        Recommended next steps
+      </h3>
+      <ol className="mt-3 grid gap-2 text-sm leading-6 text-pulse-muted">
+        {steps.map((step) => (
+          <li key={step} className="flex gap-2">
+            <span
+              className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-pulse-cyan"
+              aria-hidden
+            />
+            <span>{step}</span>
+          </li>
+        ))}
+      </ol>
+    </div>
+  );
+}
+
+function DiagnosticGroup({
+  title,
+  eyebrow,
+  description,
+  modules,
+  children,
+}: {
+  title: string;
+  eyebrow: string;
+  description: string;
+  modules: readonly DiagnosticModuleSummary[];
+  children: React.ReactNode;
+}) {
+  const defaultOpen = modules.some(shouldOpenDiagnosticGroup);
+  const priorityCount = modules.filter((module) =>
+    module.tone === "danger" || module.tone === "warning"
+  ).length;
+  const findingCount = modules.reduce(
+    (total, module) => total + module.findingCount,
+    0,
+  );
+  const summary =
+    priorityCount > 0
+      ? `${priorityCount} priority`
+      : findingCount > 0
+        ? `${findingCount} finding${findingCount === 1 ? "" : "s"}`
+        : "Review details";
+
+  return (
+    <details
+      open={defaultOpen}
+      className="group border-t border-pulse-border/70 pt-5 [&>summary::-webkit-details-marker]:hidden"
+    >
+      <summary className="flex cursor-pointer list-none flex-col gap-3 rounded-xl px-1 py-2 outline-none transition hover:bg-pulse-text/[0.025] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-pulse-cyan sm:flex-row sm:items-start sm:justify-between">
+        <div className="min-w-0">
+          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-pulse-cyan">
+            {eyebrow}
+          </p>
+          <h2 className="mt-1 text-2xl font-semibold text-pulse-text">
+            {title}
+          </h2>
+          <p className="mt-2 max-w-2xl text-sm leading-6 text-pulse-muted">
+            {description}
+          </p>
+        </div>
+        <div className="flex shrink-0 items-center gap-2 text-xs font-semibold text-pulse-muted">
+          <span className="rounded-full border border-pulse-border bg-pulse-bg/50 px-3 py-1">
+            {summary}
+          </span>
+          <span className="rounded-full border border-pulse-border bg-pulse-bg/50 px-2.5 py-1 transition group-open:rotate-45">
+            +
+          </span>
+        </div>
+      </summary>
+      <div className="mt-4 space-y-4">{children}</div>
+    </details>
+  );
+}
+
+function diagnosticModule(
+  label: string,
+  status: LifeboatModuleStatus,
+  tone: TriageTone,
+  findingCount: number,
+): DiagnosticModuleSummary {
+  return { label, status, tone, findingCount };
+}
+
+function shouldOpenDiagnosticGroup(module: DiagnosticModuleSummary): boolean {
+  return (
+    module.status === "scanning" ||
+    isIncompleteModuleStatus(module.status) ||
+    module.tone === "danger" ||
+    module.tone === "warning" ||
+    module.findingCount > 0
+  );
+}
+
+function isIncompleteModuleStatus(status: LifeboatModuleStatus): boolean {
+  return (
+    status === "partial" ||
+    status === "upstream_unavailable" ||
+    status === "unsupported"
+  );
+}
+
+function priorityTriageSignals(signals: readonly TriageSignal[]): TriageSignal[] {
+  const prioritized = signals
+    .filter((signal) => shouldPrioritizeSignal(signal))
+    .sort((a, b) => triageSignalRank(a) - triageSignalRank(b));
+
+  if (prioritized.length > 0) return prioritized.slice(0, 5);
+
+  return signals
+    .filter((signal) =>
+      [
+        "Visible approval risk",
+        "NFT permission risk",
+        "Gas-sweeper pattern",
+        "Report completeness",
+      ].includes(signal.label),
+    )
+    .slice(0, 4);
+}
+
+function shouldPrioritizeSignal(signal: TriageSignal): boolean {
+  return (
+    signal.status === "scanning" ||
+    isIncompleteModuleStatus(signal.status) ||
+    signal.tone === "danger" ||
+    signal.tone === "warning" ||
+    signal.findingCount > 0
+  );
+}
+
+function triageSignalRank(signal: TriageSignal): number {
+  if (signal.tone === "danger") return 0;
+  if (signal.tone === "warning") return 1;
+  if (signal.status === "scanning") return 2;
+  if (signal.findingCount > 0) return 3;
+  if (signal.tone === "success") return 4;
+  return 5;
+}
+
+function toneClassForTriage(tone: TriageTone): string {
+  return {
+    neutral: "border-pulse-border bg-pulse-bg/45 text-pulse-muted",
     success: "border-pulse-green/35 bg-pulse-green/10 text-pulse-green",
     warning: "border-amber-400/35 bg-amber-400/10 text-amber-200",
     danger: "border-pulse-red/40 bg-pulse-red/10 text-pulse-red",
   }[tone];
-  return (
-    <div className={`rounded-2xl border p-4 ${toneClass}`}>
-      <p className="text-xs font-semibold uppercase tracking-[0.14em]">
-        {label}
-      </p>
-      <p className="mt-2 text-lg font-semibold text-pulse-text">{value}</p>
-    </div>
-  );
+}
+
+function scanStatusLabel(status: LifeboatScanStatus): string {
+  if (status === "idle") return "Not scanned";
+  if (status === "scanning") return "Scanning";
+  if (status === "partial") return "Incomplete";
+  if (status === "failed") return "Upstream unavailable";
+  return "Approval scan complete";
+}
+
+function moduleStatusLabel(status: LifeboatModuleStatus): string {
+  if (status === "not_scanned") return "Not scanned";
+  if (status === "upstream_unavailable") return "Upstream issue";
+  return status.replaceAll("_", " ");
+}
+
+function recommendedNextSteps({
+  owner,
+  scan,
+  elevatedCount,
+  incompleteCount,
+}: {
+  owner: Address | null;
+  scan: LifeboatScanSnapshot;
+  elevatedCount: number;
+  incompleteCount: number;
+}): string[] {
+  if (!owner) {
+    return [
+      "Paste a public wallet address and choose one network to start.",
+      "Read the warnings before adding gas to a wallet you believe is compromised.",
+      "Connect a wallet only in the standard scanner when you are ready to revoke.",
+    ];
+  }
+
+  if (scan.status === "scanning") {
+    return [
+      "Wait for in-progress diagnostics before acting on the report.",
+      "Treat missing or pending rows as incomplete context.",
+      "Export the read-only snapshot after the scan settles.",
+    ];
+  }
+
+  if (elevatedCount > 0) {
+    return [
+      "Review the priority findings before adding gas or signing anything.",
+      "Open the highlighted diagnostic groups and verify important addresses on the explorer.",
+      "Use the standard scanner only when you are ready to revoke from the matching wallet and chain.",
+    ];
+  }
+
+  if (incompleteCount > 0) {
+    return [
+      "Review incomplete diagnostics and provider warnings before deciding what to do next.",
+      "Do not treat missing rows as proof that no exposure exists.",
+      "Export the report so the unresolved context is preserved.",
+    ];
+  }
+
+  return [
+    "Review the Exposure group first, then any account or staking context that applies.",
+    "Export the report if you need to compare results later.",
+    "Use the standard scanner only when you are ready to review revoke actions.",
+  ];
 }
 
 function LifeboatApprovalsSection({
@@ -3775,10 +4269,10 @@ function ReportExport({
   return (
     <section className="rounded-2xl border border-pulse-border bg-pulse-panel/65 p-5">
       <p className="text-xs font-semibold uppercase tracking-[0.18em] text-pulse-cyan">
-        Export incident report
+        Report export
       </p>
       <h2 className="mt-1 text-xl font-semibold text-pulse-text">
-        Save the read-only snapshot.
+        Save or share this report.
       </h2>
       <p className="mt-3 text-sm leading-6 text-pulse-muted">
         Export this report before taking action. It can help you review visible
