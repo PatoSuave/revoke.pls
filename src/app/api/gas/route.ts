@@ -1,6 +1,12 @@
 import { NextResponse } from "next/server";
+import { rateLimitKeyFromRequest } from "@/lib/request-rate-limit";
 
 import { approvalApiNoStoreHeaders } from "@/lib/approval-api-cache";
+import {
+  GAS_API_RATE_LIMIT,
+  checkGasApiRateLimit,
+  type RateLimitResult,
+} from "@/lib/gas/gas-api-controls";
 import {
   GAS_TRACKER_CHAIN_IDS,
   getGasTrackerChainConfig,
@@ -35,11 +41,32 @@ export async function GET(request: Request) {
     );
   }
 
+  const rateLimit = checkGasApiRateLimit(
+    rateLimitKeyFromRequest(request),
+  );
+  if (!rateLimit.allowed) {
+    return NextResponse.json(
+      {
+        ok: false,
+        status: "rate-limited",
+        supportedChainIds: GAS_TRACKER_CHAIN_IDS,
+        errors: ["Gas tracker request limit reached. Try again shortly."],
+      },
+      {
+        status: 429,
+        headers: approvalApiNoStoreHeaders(
+          rateLimitHeaders(rateLimit, { includeRetryAfter: true }),
+        ),
+      },
+    );
+  }
+
   try {
     const result = await fetchRouteGasData(chain);
     return NextResponse.json(result, {
       status: 200,
       headers: approvalApiNoStoreHeaders({
+        ...rateLimitHeaders(rateLimit),
         "X-Gas-Tracker-Source": result.source,
       }),
     });
@@ -51,6 +78,7 @@ export async function GET(request: Request) {
       {
         status: 200,
         headers: approvalApiNoStoreHeaders({
+          ...rateLimitHeaders(rateLimit),
           "X-Gas-Tracker-Source": "unavailable",
         }),
       },
@@ -71,4 +99,19 @@ function fetchRouteGasData(
   });
   inFlightGasData.set(chain.chainId, promise);
   return promise;
+}
+
+function rateLimitHeaders(
+  rateLimit: RateLimitResult,
+  options: { includeRetryAfter?: boolean } = {},
+): HeadersInit {
+  return {
+    ...(options.includeRetryAfter
+      ? { "Retry-After": rateLimit.retryAfterSeconds.toString() }
+      : {}),
+    "X-RateLimit-Limit": rateLimit.limit.toString(),
+    "X-RateLimit-Remaining": rateLimit.remaining.toString(),
+    "X-RateLimit-Reset": Math.ceil(rateLimit.resetAt / 1000).toString(),
+    "X-RateLimit-Window-Ms": GAS_API_RATE_LIMIT.windowMs.toString(),
+  };
 }

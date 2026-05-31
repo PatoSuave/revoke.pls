@@ -1,6 +1,10 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { GET } from "@/app/api/gas/route";
+import {
+  GAS_API_RATE_LIMIT,
+  resetGasApiRateLimitForTests,
+} from "@/lib/gas/gas-api-controls";
 import { resetNativeUsdPriceCacheForTests } from "@/lib/gas/native-price";
 import { resetOwlracleAdvisoryCacheForTests } from "@/lib/gas/owlracle-gas";
 
@@ -14,6 +18,7 @@ function rpcResponse(result: unknown): Response {
 describe("/api/gas", () => {
   afterEach(() => {
     vi.unstubAllGlobals();
+    resetGasApiRateLimitForTests();
     resetNativeUsdPriceCacheForTests();
     resetOwlracleAdvisoryCacheForTests();
     delete process.env.PULSECHAIN_RPC_URL;
@@ -31,6 +36,30 @@ describe("/api/gas", () => {
     expect(payload.status).toBe("bad-request");
     expect(payload.supportedChainIds).toContain(369);
     expect(payload.supportedChainIds).toContain(1);
+  });
+
+  it("rate-limits repeated gas tracker requests by platform-forwarded client IP", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockRejectedValue(new Error("offline")));
+
+    let response: Response | null = null;
+    for (let i = 0; i <= GAS_API_RATE_LIMIT.maxRequests; i += 1) {
+      response = await GET(
+        new Request("https://example.test/api/gas?chainId=369", {
+          headers: {
+            "cf-connecting-ip": `198.51.100.${i % 200}`,
+            "x-forwarded-for": "203.0.113.70",
+          },
+        }),
+      );
+    }
+
+    const payload = await response!.json();
+    expect(response?.status).toBe(429);
+    expect(payload.status).toBe("rate-limited");
+    expect(response?.headers.get("Retry-After")).toBeTruthy();
+    expect(response?.headers.get("X-RateLimit-Limit")).toBe(
+      GAS_API_RATE_LIMIT.maxRequests.toString(),
+    );
   });
 
   it("dedupes simultaneous PulseChain sample requests", async () => {

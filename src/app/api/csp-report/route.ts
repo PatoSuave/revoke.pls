@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { rateLimitKeyFromRequest } from "@/lib/request-rate-limit";
 
 import { approvalApiNoStoreHeaders } from "@/lib/approval-api-cache";
 import {
@@ -11,7 +12,9 @@ import {
 export const runtime = "nodejs";
 
 export async function POST(request: Request) {
-  const rateLimit = checkCspReportRateLimit(rateLimitKey(request));
+  const rateLimit = checkCspReportRateLimit(
+    rateLimitKeyFromRequest(request),
+  );
   if (!rateLimit.allowed) {
     return new NextResponse(null, {
       status: 429,
@@ -29,14 +32,15 @@ export async function POST(request: Request) {
     });
   }
 
-  const body = await request.text();
-  if (new TextEncoder().encode(body).length > CSP_REPORT_MAX_BYTES) {
+  const bodyResult = await readBoundedRequestBody(request);
+  if (!bodyResult.ok) {
     return new NextResponse(null, {
       status: 413,
       headers: approvalApiNoStoreHeaders(rateLimitHeaders(rateLimit)),
     });
   }
 
+  const body = bodyResult.body;
   const report = parseCspReport(body);
   if (report) {
     console.warn(
@@ -54,6 +58,38 @@ function parseContentLength(value: string | null): number | null {
   if (!value) return null;
   const parsed = Number(value);
   return Number.isFinite(parsed) && parsed >= 0 ? parsed : null;
+}
+
+async function readBoundedRequestBody(
+  request: Request,
+): Promise<{ ok: true; body: string } | { ok: false }> {
+  if (!request.body) {
+    const body = await request.text();
+    return new TextEncoder().encode(body).length > CSP_REPORT_MAX_BYTES
+      ? { ok: false }
+      : { ok: true, body };
+  }
+
+  const reader = request.body.getReader();
+  const decoder = new TextDecoder();
+  const chunks: string[] = [];
+  let totalBytes = 0;
+
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+
+    totalBytes += value.byteLength;
+    if (totalBytes > CSP_REPORT_MAX_BYTES) {
+      await reader.cancel();
+      return { ok: false };
+    }
+
+    chunks.push(decoder.decode(value, { stream: true }));
+  }
+
+  chunks.push(decoder.decode());
+  return { ok: true, body: chunks.join("") };
 }
 
 function parseCspReport(body: string): Record<string, unknown> | null {
@@ -105,17 +141,6 @@ function sanitizeText(value: unknown, maxLength = 120): string | undefined {
 
 function sanitizeNumber(value: unknown): number | undefined {
   return typeof value === "number" && Number.isFinite(value) ? value : undefined;
-}
-
-function rateLimitKey(request: Request): string {
-  const forwardedFor = request.headers.get("x-forwarded-for");
-  const forwardedIp = forwardedFor?.split(",")[0]?.trim();
-  return (
-    request.headers.get("cf-connecting-ip")?.trim() ||
-    request.headers.get("x-real-ip")?.trim() ||
-    forwardedIp ||
-    "unknown-client"
-  );
 }
 
 function rateLimitHeaders(

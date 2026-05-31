@@ -19,6 +19,15 @@ function expectNoStore(response: Response) {
   expect(response.headers.get("Vercel-CDN-Cache-Control")).toBe("no-store");
 }
 
+function streamBody(body: string): ReadableStream<Uint8Array> {
+  return new ReadableStream({
+    start(controller) {
+      controller.enqueue(new TextEncoder().encode(body));
+      controller.close();
+    },
+  });
+}
+
 describe("CSP report route hardening", () => {
   it("accepts and logs a sanitized report summary", async () => {
     const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
@@ -75,6 +84,20 @@ describe("CSP report route hardening", () => {
     expectNoStore(response);
   });
 
+  it("rejects oversized streamed report bodies without content-length", async () => {
+    const response = await POST(
+      new Request("https://pulserevoke.test/api/csp-report", {
+        method: "POST",
+        headers: { "x-forwarded-for": "203.0.113.33" },
+        body: streamBody("x".repeat(CSP_REPORT_MAX_BYTES + 1)),
+        duplex: "half",
+      } as RequestInit & { duplex: "half" }),
+    );
+
+    expect(response.status).toBe(413);
+    expectNoStore(response);
+  });
+
   it("rate-limits repeated reports", async () => {
     let response: Response | null = null;
     for (let i = 0; i < 31; i += 1) {
@@ -90,6 +113,25 @@ describe("CSP report route hardening", () => {
     expect(response?.status).toBe(429);
     expectNoStore(response!);
     expect(response?.headers.get("Retry-After")).toBeTruthy();
+    expect(response?.headers.get("X-RateLimit-Limit")).toBe("30");
+  });
+
+  it("does not let spoofed proxy headers reset the rate-limit bucket", async () => {
+    let response: Response | null = null;
+    for (let i = 0; i < 31; i += 1) {
+      response = await POST(
+        new Request("https://pulserevoke.test/api/csp-report", {
+          method: "POST",
+          headers: {
+            "cf-connecting-ip": `198.51.100.${i}`,
+            "x-forwarded-for": "203.0.113.34",
+          },
+          body: "{}",
+        }),
+      );
+    }
+
+    expect(response?.status).toBe(429);
     expect(response?.headers.get("X-RateLimit-Limit")).toBe("30");
   });
 });

@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { rateLimitKeyFromRequest } from "@/lib/request-rate-limit";
 
 import { approvalApiNoStoreHeaders } from "@/lib/approval-api-cache";
 import {
@@ -67,7 +68,9 @@ export async function GET(request: Request) {
     );
   }
 
-  const rateLimit = checkHyperEVMApprovalApiRateLimit(rateLimitKey(request));
+  const rateLimit = checkHyperEVMApprovalApiRateLimit(
+    rateLimitKeyFromRequest(request),
+  );
   if (!rateLimit.allowed) {
     const result = createHyperEVMApprovalApiFailureResponse({
       status: "upstream-failure",
@@ -120,17 +123,6 @@ export async function GET(request: Request) {
         HYPEREVM_APPROVAL_API_LIVE_READ_CANDIDATE_CAP.toString(),
     }),
   });
-}
-
-function rateLimitKey(request: Request): string {
-  const forwardedFor = request.headers.get("x-forwarded-for");
-  const forwardedIp = forwardedFor?.split(",")[0]?.trim();
-  return (
-    request.headers.get("cf-connecting-ip")?.trim() ||
-    request.headers.get("x-real-ip")?.trim() ||
-    forwardedIp ||
-    "unknown-client"
-  );
 }
 
 function rateLimitHeaders(
