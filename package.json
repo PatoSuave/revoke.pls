@@ -10,6 +10,7 @@
     "start": "next start",
     "lint": "eslint . --max-warnings=0",
     "security:extract-source": "node scripts/extract-candidate-source.mjs",
+    "smoke:intel": "node scripts/intel-preview-smoke.mjs",
     "smoke:lifeboat": "node scripts/lifeboat-preview-smoke.mjs",
     "smoke:preview": "node scripts/preview-smoke.mjs",
     "security:env": "node scripts/check-hosted-public-env.mjs",
