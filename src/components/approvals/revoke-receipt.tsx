@@ -66,15 +66,15 @@ export function RevokeReceipt({
         ) : null}
       </div>
 
-      <dl className="mt-3 grid gap-3 rounded-xl border border-current/15 bg-pulse-bg/35 p-3 text-pulse-muted sm:grid-cols-2 xl:grid-cols-3">
+      <dl className="mt-3 grid grid-cols-1 gap-3 rounded-xl border border-current/15 bg-pulse-bg/35 p-3 text-pulse-muted sm:grid-cols-2">
         <ReceiptField
           label="Chain"
           value={
-            <span className="inline-flex min-w-0 items-center gap-2">
+            <span className="flex w-full min-w-0 max-w-full items-center gap-2">
               <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full border border-current/20 bg-pulse-bg/45">
                 <ChainLogo chainId={details.chainId} className="h-4 w-4" />
               </span>
-              <span className="truncate">{details.chainName}</span>
+              <span className="min-w-0 truncate">{details.chainName}</span>
             </span>
           }
         />
@@ -118,12 +118,12 @@ function ReceiptField({
   mono?: boolean;
 }) {
   return (
-    <div className="min-w-0">
+    <div className="min-w-0 overflow-hidden">
       <dt className="text-[11px] font-semibold uppercase tracking-[0.14em] text-pulse-muted">
         {label}
       </dt>
       <dd
-        className={`mt-1 break-words leading-5 text-pulse-text ${
+        className={`mt-1 min-w-0 break-words leading-5 text-pulse-text [overflow-wrap:anywhere] ${
           mono ? "font-mono" : ""
         }`}
       >
