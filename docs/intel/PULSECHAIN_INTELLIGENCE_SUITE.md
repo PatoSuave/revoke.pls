@@ -10,6 +10,7 @@ Routes:
 
 - `/intel`
 - `/intel/wallet`
+- `/intel/visualizer`
 
 The first pass is a polished local demo. It ships:
 
@@ -19,8 +20,10 @@ The first pass is a polished local demo. It ships:
 - A labeled demo decoded activity feed.
 - A one-hop constellation graph shell built with React, SVG, and CSS.
 - A node detail panel and graph filters.
+- A full-screen visualizer workbench with local graph data, transaction edge
+  details, filter controls, a timeline strip, and investigator-style panels.
 - A homepage and footer entry point.
-- Sitemap entries for both routes.
+- Sitemap entries for the intelligence routes.
 
 The demo does not fetch live wallet data. It does not add an API route, RPC
 reader, explorer reader, graph dependency, subscription, or transaction path.
@@ -52,6 +55,13 @@ activity, and one-hop relationships.
 
 First pass: local demo route at `/intel/wallet`.
 
+Current status:
+
+- Address validation runs locally.
+- The typed address changes the center wallet in the demo report.
+- Portfolio, activity, labels, and relationships remain static sample records.
+- A link opens the dedicated visualizer demo for deeper graph review.
+
 Future data sources, if explicitly approved:
 
 - Capped PulseChain RPC reads.
@@ -64,7 +74,19 @@ Future data sources, if explicitly approved:
 Purpose: visualize wallet, contract, token, staking, and liquidity
 relationships.
 
-First pass: local graph shell inside the wallet demo.
+First pass: local graph shell inside the wallet demo plus a dedicated
+workbench route at `/intel/visualizer`.
+
+Current status:
+
+- The visualizer uses a local demo dataset with wallet, protocol, token,
+  liquidity, router, unknown-contract, and spender-style nodes.
+- Edges include demo inflow, outflow, internal, approval, and warning
+  categories.
+- The workbench includes a top search bar, left investigator console, filter
+  panel, right detail drawer, floating graph controls, and bottom timeline.
+- Node and edge selection changes visible context without fetching or
+  executing anything.
 
 Future work:
 
@@ -72,6 +94,8 @@ Future work:
 - Entity grouping.
 - Edge type filtering.
 - Exportable graph snapshots.
+- Higher-fidelity pan, zoom, and graph layout behavior.
+- Optional canvas or WebGL renderer only if local performance requires it.
 
 ### Research Assistant
 
@@ -143,13 +167,16 @@ Future work:
 - `/intel` renders a hub with all seven cards.
 - `/intel/wallet` renders address input, demo status, portfolio, activity, graph,
   filters, and node details.
+- `/intel/visualizer` renders the full workbench, top search, graph canvas,
+  investigator console, filters, detail drawer, graph controls, and timeline.
 - The searched valid address becomes the graph center node.
 - Demo labels are visible.
-- No wallet prompt appears on either intel route.
+- No wallet prompt appears on intel routes.
 - No API route is created for intel.
 - No new dependency is added.
 - Existing scanner, revoke hooks, chain config, and preflight logic remain
   unchanged.
+- Mobile at 390px keeps the visualizer usable without horizontal page overflow.
 
 ## Validation
 
