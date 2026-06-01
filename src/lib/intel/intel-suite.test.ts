@@ -227,9 +227,9 @@ describe("PulseChain Intelligence Suite first pass", () => {
     expect(visualizerTopBar).toContain('activeHref="/intel/visualizer"');
     expect(visualizerSidePanels).toContain("PulseChain Visualizer");
     expect(visualizerOverlays).toContain("Volume timeline");
-    expect(visualizerGraph).toContain("PulseChain visualizer preview graph");
+    expect(visualizerGraph).toContain("PulseChain wallet graph");
     expect(visualizerGraph).toContain("Trace canvas");
-    expect(visualizerGraph).toContain("Preview data");
+    expect(visualizerGraph).toContain("Sample data");
     expect(visualizerGraph).toContain("SigmaGraphCanvasClient");
     expect(visualizerGraph).toContain("buildVisualizerGraphologyGraph");
     expect(visualizerGraph).not.toContain("<svg");

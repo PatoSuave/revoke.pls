@@ -50,6 +50,8 @@ export function IntelVisualizerPage() {
     useState<MobileVisualizerPanel>("summary");
   const [graphCommand, setGraphCommand] =
     useState<VisualizerGraphCommand | null>(null);
+  const [leftPanelOpen, setLeftPanelOpen] = useState(true);
+  const [inspectorOpen, setInspectorOpen] = useState(false);
 
   const validation = useMemo(
     () => validateIntelWalletAddress(addressInput),
@@ -112,6 +114,7 @@ export function IntelVisualizerPage() {
       if (searchMatch) {
         setSelectedNodeId(searchMatch.id);
         setSelectedEdgeId(null);
+        setInspectorOpen(true);
         issueGraphCommand("expand-selected");
       }
       return;
@@ -120,6 +123,7 @@ export function IntelVisualizerPage() {
     setActiveAddress(validation.normalizedAddress);
     setSelectedNodeId(graph.centerNodeId);
     setSelectedEdgeId(null);
+    setInspectorOpen(false);
     issueGraphCommand("fit");
   };
 
@@ -128,6 +132,7 @@ export function IntelVisualizerPage() {
     setActiveAddress(DEMO_VISUALIZER_WALLET);
     setSelectedNodeId(graph.centerNodeId);
     setSelectedEdgeId(null);
+    setInspectorOpen(false);
     issueGraphCommand("fit");
   };
 
@@ -138,6 +143,7 @@ export function IntelVisualizerPage() {
     setLayoutLocked(true);
     setSelectedNodeId(graph.centerNodeId);
     setSelectedEdgeId(null);
+    setInspectorOpen(false);
     issueGraphCommand("fit");
   };
 
@@ -152,11 +158,9 @@ export function IntelVisualizerPage() {
         onLoadDemo={loadDemo}
         onReset={resetWorkbench}
         activeTimeRange={activeTimeRange}
-        onTimeRangeChange={setActiveTimeRange}
       />
-      <main className="mx-auto grid max-w-[112rem] gap-3 p-3 lg:grid-cols-[17rem_minmax(0,1fr)_18rem] lg:items-start lg:p-3">
-        <section className="order-1 min-w-0 lg:order-2">
-          <div className="relative">
+      <main className="relative min-h-[calc(100dvh-6.6rem)] overflow-hidden bg-pulse-bg lg:h-[calc(100dvh-7.7rem)] lg:min-h-0">
+        <section className="relative min-h-[calc(100dvh-6.6rem)] lg:h-full lg:min-h-0">
             <VisualizerGraphCanvas
               graph={graph}
               visibleEdges={visibleEdges}
@@ -165,13 +169,16 @@ export function IntelVisualizerPage() {
               onSelectNode={(nodeId) => {
                 setSelectedNodeId(nodeId);
                 setSelectedEdgeId(null);
+                setInspectorOpen(true);
               }}
               onSelectEdge={(edgeId) => {
                 setSelectedEdgeId(edgeId);
+                setInspectorOpen(true);
               }}
               onClearSelection={() => {
                 setSelectedNodeId(graph.centerNodeId);
                 setSelectedEdgeId(null);
+                setInspectorOpen(false);
               }}
               command={graphCommand}
               layoutLocked={layoutLocked}
@@ -203,10 +210,73 @@ export function IntelVisualizerPage() {
               activeTimeRange={activeTimeRange}
               onTimeRangeChange={setActiveTimeRange}
             />
+          <div className="pointer-events-auto absolute left-3 top-[8.8rem] z-30 hidden w-[19rem] max-w-[calc(100vw-2rem)] lg:block">
+            {leftPanelOpen ? (
+              <div className="grid max-h-[calc(100dvh-25rem)] gap-2 overflow-y-auto pr-1">
+                <button
+                  type="button"
+                  onClick={() => setLeftPanelOpen(false)}
+                  className="justify-self-start rounded-md border border-pulse-border bg-pulse-bg/70 px-3 py-1.5 text-xs font-semibold text-pulse-muted shadow-glow backdrop-blur-xl transition hover:text-pulse-text"
+                >
+                  Collapse scope
+                </button>
+                <VisualizerLeftPanel
+                  graph={graph}
+                  selectedNode={selectedNode}
+                  transactions={visibleTransactions}
+                  onSelectTransaction={(edgeId) => {
+                    setSelectedEdgeId(edgeId);
+                    setInspectorOpen(true);
+                  }}
+                />
+                <VisualizerFilterPanel
+                  filters={filters}
+                  onFiltersChange={(nextFilters) => {
+                    setFilters(nextFilters);
+                    setSelectedEdgeId(null);
+                  }}
+                />
+              </div>
+            ) : (
+              <button
+                type="button"
+                onClick={() => setLeftPanelOpen(true)}
+                className="rounded-lg border border-pulse-border bg-pulse-bg/74 px-3 py-2 font-mono text-[10px] font-semibold uppercase tracking-[0.14em] text-pulse-cyan shadow-glow backdrop-blur-xl transition hover:border-pulse-cyan/45"
+              >
+                Wallet scope
+              </button>
+            )}
+          </div>
+
+          <div className="pointer-events-auto absolute right-3 top-4 z-40 hidden lg:block">
+            {inspectorOpen ? (
+              <div className="w-[21.5rem] max-w-[calc(100vw-2rem)]">
+                <button
+                  type="button"
+                  onClick={() => setInspectorOpen(false)}
+                  className="mb-2 rounded-md border border-pulse-border bg-pulse-bg/70 px-3 py-1.5 text-xs font-semibold text-pulse-muted shadow-glow backdrop-blur-xl transition hover:text-pulse-text"
+                >
+                  Close inspector
+                </button>
+                <VisualizerDetailDrawer
+                  selectedNode={selectedNode}
+                  selectedEdge={selectedEdge}
+                  transactions={graph.transactions}
+                />
+              </div>
+            ) : (
+              <button
+                type="button"
+                onClick={() => setInspectorOpen(true)}
+                className="rounded-lg border border-pulse-border bg-pulse-bg/74 px-3 py-2 font-mono text-[10px] font-semibold uppercase tracking-[0.14em] text-pulse-cyan shadow-glow backdrop-blur-xl transition hover:border-pulse-cyan/45"
+              >
+                Inspector
+              </button>
+            )}
           </div>
         </section>
 
-        <section className="order-2 min-w-0 lg:hidden">
+        <section className="relative z-40 min-w-0 border-t border-pulse-border bg-pulse-bg/96 p-3 lg:hidden">
           <div className="flex rounded-lg border border-pulse-border bg-pulse-panel/72 p-1">
             {[
               ["summary", "Summary"],
@@ -258,32 +328,6 @@ export function IntelVisualizerPage() {
             ) : null}
           </div>
         </section>
-
-        <div className="order-2 hidden min-w-0 gap-3 lg:order-1 lg:grid lg:max-h-[calc(100dvh-7.5rem)] lg:overflow-hidden">
-          <VisualizerLeftPanel
-            graph={graph}
-            selectedNode={selectedNode}
-            transactions={visibleTransactions}
-            onSelectTransaction={(edgeId) => {
-              setSelectedEdgeId(edgeId);
-            }}
-          />
-          <VisualizerFilterPanel
-            filters={filters}
-            onFiltersChange={(nextFilters) => {
-              setFilters(nextFilters);
-              setSelectedEdgeId(null);
-            }}
-          />
-        </div>
-
-        <div className="order-3 hidden min-w-0 lg:sticky lg:top-20 lg:block">
-          <VisualizerDetailDrawer
-            selectedNode={selectedNode}
-            selectedEdge={selectedEdge}
-            transactions={graph.transactions}
-          />
-        </div>
       </main>
     </div>
   );
