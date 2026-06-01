@@ -68,13 +68,13 @@ export function VisualizerTimeline({
   onTimeRangeChange: (range: string) => void;
 }) {
   return (
-    <section className="absolute inset-x-3 bottom-3 z-30 rounded-lg border border-pulse-border bg-pulse-bg/82 p-3 shadow-glow backdrop-blur-xl">
-      <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
+    <section className="absolute inset-x-3 bottom-3 z-30 rounded-lg border border-pulse-border bg-pulse-bg/76 p-2.5 shadow-glow backdrop-blur-xl">
+      <div className="flex flex-col gap-2 md:flex-row md:items-end md:justify-between">
         <div className="min-w-0">
           <p className="font-mono text-[10px] font-semibold uppercase tracking-[0.16em] text-pulse-cyan">
             Volume timeline
           </p>
-          <div className="mt-3 flex h-16 min-w-0 items-end gap-1 overflow-x-auto rounded-md border border-pulse-border bg-pulse-panel/45 px-3 pb-2 pt-3">
+          <div className="intel-viz-timeline-strip mt-2 flex h-14 min-w-0 items-end gap-1 overflow-x-auto rounded-md border border-pulse-border bg-pulse-panel/38 px-3 pb-2 pt-3">
             {graph.timeline.map((bucket) => (
               <button
                 key={bucket.label}
@@ -82,12 +82,12 @@ export function VisualizerTimeline({
                 onClick={() => onTimeRangeChange(bucket.label)}
                 className={`intel-viz-timeline-bar intel-viz-timeline-${bucket.direction} shrink-0 rounded-t-md transition hover:brightness-125 ${
                   activeTimeRange === bucket.label
-                    ? "ring-2 ring-pulse-cyan"
+                    ? "intel-viz-timeline-active"
                     : ""
                 }`}
                 style={{ height: `${Math.max(18, bucket.volume)}%` }}
-                title={`${bucket.label} demo volume`}
-                aria-label={`${bucket.label} demo volume`}
+                title={`${bucket.label} preview volume`}
+                aria-label={`${bucket.label} preview volume`}
               />
             ))}
           </div>
@@ -208,8 +208,8 @@ function EdgeDetails({
         {edge.label}
       </h2>
       <p className="mt-3 text-sm leading-6 text-pulse-muted">
-        Selected relationship in the local sample graph with transaction count,
-        value, token, and time range context.
+        Relationship summary with transaction count, value, token, and time
+        range context.
       </p>
       <dl className="mt-5 grid gap-3 text-sm">
         <DetailRow label="Transaction count" value={`${edge.txCount}`} />
@@ -245,7 +245,7 @@ function EdgeDetails({
             ))
           ) : (
             <p className="rounded-md border border-pulse-border bg-pulse-panel/45 px-3 py-2 text-xs text-pulse-muted">
-              No transaction rows match this filtered demo edge.
+              No transaction rows match this filtered preview edge.
             </p>
           )}
         </div>

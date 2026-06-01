@@ -227,8 +227,9 @@ describe("PulseChain Intelligence Suite first pass", () => {
     expect(visualizerTopBar).toContain('activeHref="/intel/visualizer"');
     expect(visualizerSidePanels).toContain("PulseChain Visualizer");
     expect(visualizerOverlays).toContain("Volume timeline");
-    expect(visualizerGraph).toContain("PulseChain visualizer demo graph");
+    expect(visualizerGraph).toContain("PulseChain visualizer preview graph");
     expect(visualizerGraph).toContain("Trace canvas");
+    expect(visualizerGraph).toContain("Preview data");
     expect(visualizerGraph).toContain("SigmaGraphCanvasClient");
     expect(visualizerGraph).toContain("buildVisualizerGraphologyGraph");
     expect(visualizerGraph).not.toContain("<svg");
@@ -238,7 +239,7 @@ describe("PulseChain Intelligence Suite first pass", () => {
     expect(sigmaGraphCanvas).toContain("useSetSettings");
     expect(sigmaGraphCanvas).toContain("useCamera");
     expect(sigmaGraphCanvas).toContain("enableEdgeEvents: true");
-    expect(sigmaGraphCanvas).toContain("renderEdgeLabels: true");
+    expect(sigmaGraphCanvas).toContain("renderEdgeLabels: false");
     expect(graphologyAdapter).toContain("MultiDirectedGraph");
     expect(graphologyAdapter).toContain("forceAtlas2.assign");
     expect(styles).toContain(".intel-viz-canvas");

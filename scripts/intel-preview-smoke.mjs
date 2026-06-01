@@ -34,9 +34,9 @@ const ROUTE_CHECKS = [
     markers: [
       "PulseChain Visualizer",
       "Graph workbench",
-      "PulseChain visualizer demo graph",
+      "PulseChain visualizer preview graph",
       "Trace canvas",
-      "Local sample graph. Live reads are not connected on this screen.",
+      "Preview data",
       "Volume timeline",
       "https://pulserevoke.com/intel/visualizer",
     ],
