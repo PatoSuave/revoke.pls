@@ -420,7 +420,7 @@ async function checkApis(target) {
 
 async function checkLiveAssets(target) {
   const assets = new Set();
-  const assetPattern = /(?:src|href)="([^"\s]+\.(?:js|css))"/g;
+  const assetPattern = /(?:src|href)="([^"\s]+\.(?:js|css)(?:\?[^"\s]*)?)"/g;
 
   for (const path of PAGE_PATHS) {
     const pageUrl = withAccessParams(
