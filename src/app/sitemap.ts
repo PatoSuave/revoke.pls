@@ -38,6 +38,12 @@ export default function sitemap(): MetadataRoute.Sitemap {
       priority: 0.78,
     },
     {
+      url: absoluteUrl("/intel/visualizer"),
+      lastModified: now,
+      changeFrequency: "weekly",
+      priority: 0.78,
+    },
+    {
       url: absoluteUrl("/security"),
       lastModified: now,
       changeFrequency: "weekly",

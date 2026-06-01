@@ -413,8 +413,270 @@ body {
         circle at 50% 0%,
         rgb(var(--pulse-cyan) / 0.12),
         transparent 52%
-      );
+    );
     opacity: 0.82;
+  }
+
+  .intel-viz-panel {
+    box-shadow:
+      inset 0 1px 0 rgb(var(--pulse-text) / 0.06),
+      0 22px 70px rgb(0 0 0 / 0.3);
+    backdrop-filter: blur(18px);
+  }
+
+  .intel-viz-canvas {
+    background:
+      radial-gradient(
+        circle at 50% 48%,
+        rgb(var(--pulse-cyan) / 0.12),
+        transparent 30%
+      ),
+      radial-gradient(
+        circle at 18% 76%,
+        rgb(var(--pulse-pink) / 0.1),
+        transparent 32%
+      ),
+      radial-gradient(
+        circle at 82% 26%,
+        rgb(var(--pulse-purple) / 0.13),
+        transparent 34%
+      ),
+      linear-gradient(
+        145deg,
+        rgb(var(--pulse-bg) / 0.98),
+        rgb(var(--pulse-panel) / 0.78)
+      );
+  }
+
+  .intel-viz-grid {
+    background-image:
+      linear-gradient(rgb(var(--pulse-cyan) / 0.052) 1px, transparent 1px),
+      linear-gradient(90deg, rgb(var(--pulse-text) / 0.038) 1px, transparent 1px),
+      linear-gradient(rgb(var(--pulse-cyan) / 0.08) 1px, transparent 1px),
+      linear-gradient(90deg, rgb(var(--pulse-cyan) / 0.08) 1px, transparent 1px);
+    background-position: 0 0;
+    background-size:
+      32px 32px,
+      32px 32px,
+      160px 160px,
+      160px 160px;
+    mask-image: radial-gradient(circle at center, black 0%, transparent 84%);
+    animation: intel-grid-drift 26s linear infinite;
+  }
+
+  .intel-viz-noise {
+    background-image:
+      radial-gradient(circle, rgb(var(--pulse-cyan) / 0.16) 0 1px, transparent 1.3px),
+      radial-gradient(circle, rgb(var(--pulse-purple) / 0.12) 0 1px, transparent 1.2px);
+    background-position:
+      0 0,
+      26px 18px;
+    background-size:
+      82px 82px,
+      118px 118px;
+    opacity: 0.24;
+  }
+
+  .intel-viz-edge-shadow {
+    stroke: rgb(var(--pulse-text) / 0.12);
+    filter: blur(4px);
+    transition:
+      opacity 180ms ease,
+      stroke-width 180ms ease;
+  }
+
+  .intel-viz-edge {
+    opacity: 0.72;
+    filter: drop-shadow(0 0 5px rgb(var(--pulse-cyan) / 0.16));
+    pointer-events: stroke;
+    transition:
+      filter 180ms ease,
+      opacity 180ms ease,
+      stroke-width 180ms ease;
+  }
+
+  .intel-viz-edge-active {
+    opacity: 1;
+    stroke-dasharray: 14 18;
+    filter:
+      drop-shadow(0 0 5px currentColor)
+      drop-shadow(0 0 18px rgb(var(--pulse-purple) / 0.22));
+    animation: intel-edge-drift 6.5s linear infinite;
+  }
+
+  .intel-viz-edge-dimmed {
+    opacity: 0.16;
+  }
+
+  .intel-viz-edge-inflow {
+    stroke: rgb(var(--pulse-green));
+  }
+
+  .intel-viz-edge-outflow {
+    stroke: rgb(var(--pulse-red));
+  }
+
+  .intel-viz-edge-internal {
+    stroke: rgb(var(--pulse-text) / 0.72);
+  }
+
+  .intel-viz-edge-approval {
+    stroke: rgb(var(--pulse-purple));
+  }
+
+  .intel-viz-edge-warning {
+    stroke: rgb(var(--pulse-yellow));
+  }
+
+  .intel-viz-edge-terminal {
+    filter: drop-shadow(0 0 5px currentColor);
+    transition:
+      opacity 180ms ease,
+      r 180ms ease;
+  }
+
+  .intel-viz-edge-label {
+    paint-order: stroke fill;
+    stroke: rgb(var(--pulse-bg) / 0.9);
+    stroke-width: 0.46px;
+    transition: opacity 180ms ease;
+  }
+
+  .intel-viz-node-button {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    border-radius: 1.15rem;
+    border: 1px solid rgb(var(--pulse-border));
+    color: rgb(var(--pulse-text));
+    background: rgb(var(--pulse-panel) / 0.82);
+    box-shadow:
+      0 18px 58px rgb(0 0 0 / 0.38),
+      inset 0 1px 0 rgb(var(--pulse-text) / 0.12);
+    backdrop-filter: blur(18px);
+    transform-origin: center;
+    transition:
+      border-color 180ms ease,
+      box-shadow 180ms ease,
+      filter 180ms ease,
+      opacity 180ms ease,
+      transform 180ms ease;
+  }
+
+  .intel-viz-node-button:hover,
+  .intel-viz-node-button:focus-visible {
+    transform: translate(-50%, -50%) scale(1.06) !important;
+    z-index: 35;
+  }
+
+  .intel-viz-node-ring {
+    position: absolute;
+    inset: -5px;
+    border-radius: inherit;
+    border: 1px solid currentColor;
+    opacity: 0.24;
+    pointer-events: none;
+  }
+
+  .intel-viz-node-center {
+    border-color: rgb(var(--pulse-cyan) / 0.78);
+    box-shadow:
+      0 0 0 1px rgb(var(--pulse-cyan) / 0.18),
+      0 0 44px rgb(var(--pulse-cyan) / 0.24),
+      0 18px 70px rgb(0 0 0 / 0.44);
+  }
+
+  .intel-viz-node-wallet {
+    color: rgb(var(--pulse-text));
+  }
+
+  .intel-viz-node-protocol {
+    border-color: rgb(var(--pulse-cyan) / 0.55);
+    color: rgb(var(--pulse-cyan));
+  }
+
+  .intel-viz-node-token {
+    border-color: rgb(var(--pulse-green) / 0.5);
+    color: rgb(var(--pulse-green));
+  }
+
+  .intel-viz-node-liquidity {
+    border-color: rgb(var(--pulse-purple) / 0.56);
+    color: rgb(var(--pulse-purple));
+  }
+
+  .intel-viz-node-warning {
+    border-color: rgb(var(--pulse-yellow) / 0.66);
+    color: rgb(var(--pulse-yellow));
+  }
+
+  .intel-viz-node-selected {
+    border-color: rgb(var(--pulse-cyan));
+    box-shadow:
+      0 0 0 1px rgb(var(--pulse-cyan) / 0.2),
+      0 0 34px rgb(var(--pulse-cyan) / 0.34),
+      0 20px 76px rgb(0 0 0 / 0.5);
+  }
+
+  .intel-viz-node-related {
+    filter: saturate(1.2) brightness(1.1);
+  }
+
+  .intel-viz-node-dimmed {
+    opacity: 0.32;
+    filter: grayscale(0.42);
+  }
+
+  .intel-viz-node-hidden {
+    opacity: 0.1;
+    pointer-events: none;
+  }
+
+  .intel-viz-timeline-bar {
+    width: 0.9rem;
+    min-height: 0.9rem;
+    background: rgb(var(--pulse-text) / 0.28);
+  }
+
+  .intel-viz-timeline-inflow {
+    background: linear-gradient(
+      180deg,
+      rgb(var(--pulse-green)),
+      rgb(var(--pulse-green) / 0.24)
+    );
+  }
+
+  .intel-viz-timeline-outflow {
+    background: linear-gradient(
+      180deg,
+      rgb(var(--pulse-red)),
+      rgb(var(--pulse-red) / 0.22)
+    );
+  }
+
+  .intel-viz-timeline-internal {
+    background: linear-gradient(
+      180deg,
+      rgb(var(--pulse-text) / 0.78),
+      rgb(var(--pulse-text) / 0.18)
+    );
+  }
+
+  .intel-viz-timeline-approval {
+    background: linear-gradient(
+      180deg,
+      rgb(var(--pulse-purple)),
+      rgb(var(--pulse-purple) / 0.24)
+    );
+  }
+
+  .intel-viz-timeline-warning {
+    background: linear-gradient(
+      180deg,
+      rgb(var(--pulse-yellow)),
+      rgb(var(--pulse-yellow) / 0.22)
+    );
   }
 }
 
