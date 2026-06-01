@@ -73,6 +73,19 @@ const NODE_DOT_TONE: Record<IntelGraphNode["kind"], string> = {
   liquidity: "bg-pulse-yellow",
 };
 
+function getCurvedEdgePath(from: IntelGraphNode, to: IntelGraphNode): string {
+  const midX = (from.x + to.x) / 2;
+  const midY = (from.y + to.y) / 2;
+  const dx = to.x - from.x;
+  const dy = to.y - from.y;
+  const length = Math.max(Math.hypot(dx, dy), 1);
+  const curveStrength = Math.min(8, Math.max(3.5, length * 0.12));
+  const normalX = (-dy / length) * curveStrength;
+  const normalY = (dx / length) * curveStrength;
+
+  return `M ${from.x} ${from.y} Q ${midX + normalX} ${midY + normalY} ${to.x} ${to.y}`;
+}
+
 export function WalletIntelPage() {
   const [addressInput, setAddressInput] = useState<string>(DEMO_INTEL_WALLET);
   const [filter, setFilter] = useState<GraphFilter>("all");
@@ -463,6 +476,7 @@ function GraphPanel({
   const hoveredEdge = edges.find((edge) => edge.id === hoveredEdgeId) ?? null;
   const spotlightNodeId =
     hoveredNodeId ?? (hoveredEdgeId ? null : selectedNodeId);
+  const hasPointerSpotlight = hoveredNodeId !== null || hoveredEdgeId !== null;
   const activeEdgeIds = new Set<string>();
   const relatedNodeIds = new Set<string>(
     spotlightNodeId ? [spotlightNodeId] : [],
@@ -520,8 +534,12 @@ function GraphPanel({
 
       <div className="intel-map-stage relative mt-6 aspect-[16/10] min-h-[320px] overflow-hidden rounded-3xl border border-pulse-border bg-pulse-bg/65">
         <div className="intel-map-grid pointer-events-none absolute inset-0" />
-        <div className="intel-map-halo pointer-events-none absolute left-1/2 top-1/2 h-[66%] w-[66%] -translate-x-1/2 -translate-y-1/2 rounded-full" />
-        <div className="intel-map-scan pointer-events-none absolute left-1/2 top-1/2 h-[72%] w-[72%] -translate-x-1/2 -translate-y-1/2 rounded-full" />
+        <div className="intel-map-depth pointer-events-none absolute inset-6 rounded-[1.75rem]" />
+        <div className="intel-map-axis pointer-events-none absolute left-1/2 top-0 h-full w-px -translate-x-1/2" />
+        <div className="intel-map-axis pointer-events-none absolute left-0 top-1/2 h-px w-full -translate-y-1/2" />
+        <div className="pointer-events-none absolute left-4 top-4 rounded-full border border-pulse-border/80 bg-pulse-bg/70 px-3 py-1 font-mono text-[10px] uppercase tracking-[0.16em] text-pulse-muted">
+          One-hop / local demo
+        </div>
         <svg
           viewBox="0 0 100 100"
           className="absolute inset-0 h-full w-full"
@@ -534,11 +552,9 @@ function GraphPanel({
 
             if (!from || !to) return null;
 
-            const edgePathId = `intel-edge-path-${edge.id}`;
-            const path = `M ${from.x} ${from.y} L ${to.x} ${to.y}`;
-            const isActive = activeEdgeIds.has(edge.id);
-            const isDimmed = activeEdgeIds.size > 0 && !isActive;
-            const energyDuration = edge.kind === "approval" ? "2.8s" : "3.6s";
+            const path = getCurvedEdgePath(from, to);
+            const isActive = hasPointerSpotlight && activeEdgeIds.has(edge.id);
+            const isDimmed = hasPointerSpotlight && !isActive;
 
             return (
               <g
@@ -547,7 +563,19 @@ function GraphPanel({
                 onMouseLeave={() => setHoveredEdgeId(null)}
               >
                 <path
-                  id={edgePathId}
+                  d={path}
+                  className={`intel-edge-shadow ${
+                    isActive
+                      ? "opacity-70"
+                      : isDimmed
+                        ? "opacity-10"
+                        : "opacity-22"
+                  }`}
+                  strokeWidth={edge.kind === "approval" ? 5.5 : 4.4}
+                  strokeLinecap="round"
+                  fill="none"
+                />
+                <path
                   d={path}
                   className={`intel-edge-flow ${EDGE_TONE[edge.kind]} ${
                     isActive
@@ -556,25 +584,10 @@ function GraphPanel({
                         ? "intel-edge-muted"
                         : ""
                   }`}
-                  strokeWidth={edge.kind === "approval" ? 1.7 : 1.25}
+                  strokeWidth={isActive ? 1.85 : 1.15}
                   strokeLinecap="round"
                   fill="none"
                 />
-                <circle
-                  r={isActive ? 1.25 : 0.82}
-                  className={`intel-edge-energy ${
-                    isDimmed ? "opacity-20" : "opacity-80"
-                  }`}
-                  aria-hidden
-                >
-                  <animateMotion
-                    dur={energyDuration}
-                    repeatCount="indefinite"
-                    rotate="auto"
-                  >
-                    <mpath href={`#${edgePathId}`} />
-                  </animateMotion>
-                </circle>
                 <text
                   x={(from.x + to.x) / 2}
                   y={(from.y + to.y) / 2 - 2}
@@ -582,7 +595,7 @@ function GraphPanel({
                   className={`intel-edge-label text-[3px] ${
                     isActive
                       ? "fill-pulse-text opacity-100"
-                      : "fill-pulse-muted opacity-50"
+                      : "fill-pulse-muted opacity-0"
                   }`}
                 >
                   {edge.label}
@@ -601,7 +614,7 @@ function GraphPanel({
                 : "h-14 w-14";
           const isSelected = node.id === selectedNodeId;
           const isRelated = relatedNodeIds.has(node.id);
-          const isDimmed = activeEdgeIds.size > 0 && !isRelated;
+          const isDimmed = hasPointerSpotlight && !isRelated;
           const style = {
             left: `${node.x}%`,
             top: `${node.y}%`,
@@ -630,10 +643,9 @@ function GraphPanel({
                 node.weight === "primary" ? "intel-node-core" : ""
               }`}
             >
-              <span className="intel-node-orbit" aria-hidden />
-              <span className="intel-node-pulse" aria-hidden />
+              <span className="intel-node-surface" aria-hidden />
               <span
-                className={`mb-1 h-2 w-2 rounded-full ${NODE_DOT_TONE[node.kind]}`}
+                className={`relative mb-1 h-2 w-2 rounded-full ${NODE_DOT_TONE[node.kind]}`}
                 aria-hidden
               />
               <span className="relative block max-w-[4.25rem] truncate px-1">
