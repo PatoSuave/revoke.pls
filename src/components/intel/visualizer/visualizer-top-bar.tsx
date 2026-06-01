@@ -24,7 +24,6 @@ export function VisualizerTopBar({
   onLoadDemo,
   onReset,
   activeTimeRange,
-  onTimeRangeChange,
 }: {
   addressInput: string;
   onAddressInputChange: (value: string) => void;
@@ -34,7 +33,6 @@ export function VisualizerTopBar({
   onLoadDemo: () => void;
   onReset: () => void;
   activeTimeRange: string;
-  onTimeRangeChange: (range: string) => void;
 }) {
   return (
     <header className="relative z-40 border-b border-pulse-border/70 bg-pulse-bg/88 backdrop-blur-xl">
@@ -134,22 +132,9 @@ export function VisualizerTopBar({
             className="md:max-w-[25rem]"
           />
         </div>
-        <div className="flex gap-1 overflow-x-auto rounded-md border border-pulse-border bg-pulse-panel/50 p-1">
-          {VISUALIZER_TIME_RANGE_OPTIONS.map((range) => (
-            <button
-              key={range}
-              type="button"
-              onClick={() => onTimeRangeChange(range)}
-              className={`shrink-0 rounded px-3 py-1.5 font-semibold transition ${
-                activeTimeRange === range
-                  ? "bg-pulse-cyan text-pulse-bg"
-                  : "text-pulse-muted hover:bg-pulse-text/5 hover:text-pulse-text"
-              }`}
-            >
-              {range}
-            </button>
-          ))}
-        </div>
+        <span className="hidden rounded border border-pulse-border bg-pulse-panel/50 px-3 py-1.5 font-mono text-[10px] font-semibold uppercase tracking-[0.12em] text-pulse-muted md:inline-flex">
+          Read-only intelligence view
+        </span>
       </div>
     </header>
   );

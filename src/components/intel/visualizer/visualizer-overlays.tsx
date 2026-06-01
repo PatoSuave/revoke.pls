@@ -128,7 +128,7 @@ export function VisualizerDetailDrawer({
     : undefined;
 
   return (
-    <aside className="intel-viz-panel rounded-lg border border-pulse-border bg-pulse-panel/72 p-4">
+    <aside className="intel-viz-panel max-h-[calc(100dvh-9rem)] overflow-y-auto rounded-lg border border-pulse-border bg-pulse-panel/72 p-4">
       <p className="font-mono text-[11px] font-semibold uppercase tracking-[0.18em] text-pulse-cyan">
         Entity inspector
       </p>

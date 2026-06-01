@@ -93,8 +93,8 @@ export function VisualizerGraphCanvas({
 
   return (
     <section
-      className="intel-viz-canvas relative h-[78dvh] min-h-[42rem] max-h-[calc(100dvh-7.25rem)] overflow-hidden rounded-lg border border-pulse-border shadow-glow"
-      aria-label="PulseChain visualizer preview graph"
+      className="intel-viz-canvas absolute inset-0 overflow-hidden shadow-glow"
+      aria-label="PulseChain wallet graph"
     >
       <div className="pointer-events-none absolute inset-0 intel-viz-grid" />
       <div className="pointer-events-none absolute inset-0 intel-viz-noise" />
@@ -105,10 +105,10 @@ export function VisualizerGraphCanvas({
           Trace canvas
         </p>
         <h1 className="mt-1 text-sm font-semibold text-pulse-text sm:text-base">
-          PulseChain visualizer preview graph
+          PulseChain wallet graph
         </h1>
         <div className="mt-2 inline-flex rounded border border-pulse-cyan/30 bg-pulse-cyan/10 px-2 py-1 font-mono text-[10px] font-semibold uppercase tracking-[0.12em] text-pulse-cyan">
-          Preview data
+          Sample data
         </div>
       </div>
 
