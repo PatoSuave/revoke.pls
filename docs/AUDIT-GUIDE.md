@@ -254,6 +254,22 @@ submission must stay unavailable.
 - Does `/api/token-logos` rate-limit upstream lookups so repeated logo requests
   cannot freely amplify traffic to Dex Screener?
 
+## Hosted Hardening Questions
+
+- Does `npm run security:env` pass for hosted web environments with explorer
+  API keys kept in server-only variables?
+- Does `npm run security:live` pass against the production origin after each
+  `main` deployment?
+- Do `/`, `/app`, and `/security` keep enforced CSP, report-only CSP, HSTS,
+  `X-Frame-Options: DENY`, `X-Content-Type-Options: nosniff`, referrer policy,
+  and permissions policy headers?
+- Do public API bad-input probes keep returning bounded errors without RPC
+  URLs, API keys, JWT-shaped values, or private-key-shaped strings?
+- Do live `_next/static` JS/CSS assets stay free of key-bearing URLs and
+  API-key-shaped literals?
+- Are Vercel Firewall API rate limits reviewed separately from application code
+  before enforcement?
+
 ## Telemetry Questions
 
 - Is there any third-party analytics SDK dependency?
@@ -276,6 +292,8 @@ npm.cmd run typecheck
 npx.cmd vitest run
 npm.cmd run lint
 npm.cmd run build
+npm.cmd run security:env
+npm.cmd run security:live
 ```
 
 ## Manual Review Checklist

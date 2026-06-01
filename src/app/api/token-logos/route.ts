@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { rateLimitKeyFromRequest } from "@/lib/request-rate-limit";
 
 import {
   TOKEN_LOGO_MAX_ADDRESSES,
@@ -78,7 +79,9 @@ export async function GET(request: Request) {
     );
   }
 
-  const rateLimit = checkTokenLogoApiRateLimit(rateLimitKey(request));
+  const rateLimit = checkTokenLogoApiRateLimit(
+    rateLimitKeyFromRequest(request),
+  );
   if (!rateLimit.allowed) {
     return NextResponse.json(
       {
@@ -189,17 +192,6 @@ function tokenLogoNoStoreHeaders(headers: HeadersInit = {}): HeadersInit {
     "Vercel-CDN-Cache-Control": "no-store",
     ...headers,
   };
-}
-
-function rateLimitKey(request: Request): string {
-  const forwardedFor = request.headers.get("x-forwarded-for");
-  const forwardedIp = forwardedFor?.split(",")[0]?.trim();
-  return (
-    request.headers.get("cf-connecting-ip")?.trim() ||
-    request.headers.get("x-real-ip")?.trim() ||
-    forwardedIp ||
-    "unknown-client"
-  );
 }
 
 function rateLimitHeaders(
