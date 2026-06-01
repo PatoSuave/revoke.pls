@@ -43,7 +43,12 @@ export function VisualizerLeftPanel({
   onSelectTransaction: (edgeId: string) => void;
 }) {
   const counterparties = graph.nodes
-    .filter((node) => node.kind === "wallet" || node.kind === "spender")
+    .filter(
+      (node) =>
+        node.kind === "wallet" ||
+        node.kind === "spender" ||
+        node.kind === "high-risk-spender",
+    )
     .slice(0, 6);
 
   return (

@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 
+import "@react-sigma/core/lib/style.css";
 import "@/app/globals.css";
 import { Providers } from "@/components/providers";
 import { absoluteUrl, siteConfig } from "@/lib/site";

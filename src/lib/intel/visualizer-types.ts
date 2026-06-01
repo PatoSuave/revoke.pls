@@ -6,6 +6,7 @@ export type VisualizerNodeKind =
   | "lp-pair"
   | "router"
   | "unknown-contract"
+  | "high-risk-spender"
   | "spender";
 
 export type VisualizerEdgeKind =
