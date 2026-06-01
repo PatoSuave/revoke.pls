@@ -27,6 +27,35 @@ const GRAPH_FILTERS = [
 
 type GraphFilter = (typeof GRAPH_FILTERS)[number]["key"];
 
+const WALLET_STATUS_BADGES = [
+  "Read-only view",
+  "No live RPC",
+  "Demo data",
+] as const;
+
+const REPORT_STEPS = [
+  {
+    title: "1. Validate address",
+    body: "Place the wallet at the center without connecting it.",
+  },
+  {
+    title: "2. Review context",
+    body: "Scan the summary, activity, and visible relationships.",
+  },
+  {
+    title: "3. Plan research",
+    body: "Use findings as questions for a future capped live-read phase.",
+  },
+] as const;
+
+const GRAPH_LEGEND = [
+  ["Approval", "bg-pulse-pink"],
+  ["Token", "bg-pulse-cyan"],
+  ["Native", "bg-pulse-green"],
+  ["Staking", "bg-pulse-purple"],
+  ["Liquidity", "bg-pulse-yellow"],
+] as const;
+
 const EDGE_TONE: Record<IntelGraphEdgeKind, string> = {
   approval: "stroke-pulse-pink",
   "token-flow": "stroke-pulse-cyan",
@@ -65,6 +94,11 @@ export function WalletIntelPage() {
         : report.graph.edges.filter((edge) => edge.kind === filter),
     [filter, report.graph.edges],
   );
+  const resetToDemoWallet = () => {
+    setAddressInput(DEMO_INTEL_WALLET);
+    setSelectedNodeId(report.graph.centerNodeId);
+    setFilter("all");
+  };
 
   return (
     <div className="min-h-dvh bg-pulse-bg text-pulse-text">
@@ -84,7 +118,7 @@ export function WalletIntelPage() {
               </p>
 
               <div className="mt-6 flex flex-wrap gap-2">
-                {["Read-only view", "No live RPC", "Demo data"].map((item) => (
+                {WALLET_STATUS_BADGES.map((item) => (
                   <span
                     key={item}
                     className="rounded-full border border-pulse-border bg-pulse-panel/70 px-3 py-1 text-xs font-semibold text-pulse-muted"
@@ -120,6 +154,21 @@ export function WalletIntelPage() {
                 placeholder="0x..."
                 className="mt-4 w-full rounded-2xl border border-pulse-border bg-pulse-bg/80 px-4 py-3 font-mono text-sm text-pulse-text outline-none transition placeholder:text-pulse-muted/70 focus:border-pulse-cyan focus:ring-2 focus:ring-pulse-cyan/25"
               />
+              <div className="mt-3 flex flex-col gap-2 sm:flex-row">
+                <button
+                  type="button"
+                  onClick={resetToDemoWallet}
+                  className="inline-flex items-center justify-center rounded-xl border border-pulse-cyan/35 bg-pulse-cyan/10 px-4 py-2 text-sm font-semibold text-pulse-cyan transition hover:bg-pulse-cyan/15"
+                >
+                  Load demo wallet
+                </button>
+                <a
+                  href="#demo-report"
+                  className="inline-flex items-center justify-center rounded-xl border border-pulse-border bg-pulse-text/5 px-4 py-2 text-sm font-semibold text-pulse-text transition hover:bg-pulse-text/10"
+                >
+                  Jump to report
+                </a>
+              </div>
               <div className="mt-3 min-h-6 text-sm">
                 {validation.ok ? (
                   <p className="text-pulse-green">
@@ -134,28 +183,39 @@ export function WalletIntelPage() {
           </div>
         </section>
 
-        <section className="border-b border-pulse-border/60 py-10 sm:py-14">
-          <div className="mx-auto grid max-w-7xl gap-4 px-4 sm:px-6 lg:grid-cols-4">
-            <SummaryStat
-              label="Demo value"
-              value={report.summary.totalValueLabel}
-              note="Local portfolio sample"
-            />
-            <SummaryStat
-              label="Relations"
-              value={String(report.summary.relationCount)}
-              note="One-hop graph edges"
-            />
-            <SummaryStat
-              label="Decoded events"
-              value={String(report.summary.decodedActivityCount)}
-              note="Static activity feed"
-            />
-            <SummaryStat
-              label="Exposure markers"
-              value={String(report.summary.exposureCount)}
-              note="Review context only"
-            />
+        <section
+          id="demo-report"
+          className="border-b border-pulse-border/60 py-10 sm:py-14"
+        >
+          <div className="mx-auto grid max-w-7xl gap-4 px-4 sm:px-6 xl:grid-cols-[minmax(0,1fr)_minmax(320px,0.38fr)]">
+            <ReportOverviewCard walletAddress={report.walletAddress} />
+            <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-1">
+              <SummaryStat
+                label="Demo value"
+                value={report.summary.totalValueLabel}
+                note="Local portfolio sample"
+              />
+              <SummaryStat
+                label="Relations"
+                value={String(report.summary.relationCount)}
+                note="One-hop graph edges"
+              />
+            </div>
+          </div>
+          <div className="mx-auto mt-4 grid max-w-7xl gap-4 px-4 sm:grid-cols-2 sm:px-6 lg:grid-cols-3">
+            {REPORT_STEPS.map((step) => (
+              <article
+                key={step.title}
+                className="rounded-2xl border border-pulse-border bg-pulse-panel/45 p-4"
+              >
+                <h3 className="text-sm font-semibold text-pulse-text">
+                  {step.title}
+                </h3>
+                <p className="mt-2 text-sm leading-6 text-pulse-muted">
+                  {step.body}
+                </p>
+              </article>
+            ))}
           </div>
         </section>
 
@@ -203,6 +263,40 @@ function SummaryStat({
       <p className="mt-2 text-3xl font-bold text-pulse-text">{value}</p>
       <p className="mt-2 text-sm text-pulse-muted">{note}</p>
     </div>
+  );
+}
+
+function ReportOverviewCard({
+  walletAddress,
+}: {
+  walletAddress: `0x${string}`;
+}) {
+  return (
+    <section className="rounded-3xl border border-pulse-cyan/25 bg-pulse-panel/70 p-5 shadow-glow sm:p-6">
+      <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+        <div className="min-w-0">
+          <p className="text-sm font-semibold text-pulse-cyan">
+            Demo report status
+          </p>
+          <h2 className="mt-2 text-3xl font-bold text-pulse-text">
+            Local sample report ready for review.
+          </h2>
+          <p className="mt-3 max-w-3xl text-sm leading-7 text-pulse-muted sm:text-base">
+            The wallet address drives the center node only. Portfolio values,
+            activity, labels, and relationships remain static sample records
+            until a live-data phase is approved.
+          </p>
+        </div>
+        <div className="rounded-2xl border border-pulse-border bg-pulse-bg/55 p-4 lg:min-w-72">
+          <p className="text-xs font-semibold text-pulse-cyan">
+            Center wallet
+          </p>
+          <p className="mt-2 break-all font-mono text-sm text-pulse-text">
+            {walletAddress}
+          </p>
+        </div>
+      </div>
+    </section>
   );
 }
 
@@ -320,19 +414,19 @@ function DemoStatusPanel({ walletAddress }: { walletAddress: `0x${string}` }) {
       <dl className="mt-5 grid gap-3 text-sm">
         <div className="rounded-2xl border border-pulse-border bg-pulse-bg/45 p-4">
           <dt className="text-xs font-semibold text-pulse-cyan">
-            Center wallet
-          </dt>
-          <dd className="mt-2 break-all font-mono text-pulse-text">
-            {walletAddress}
-          </dd>
-        </div>
-        <div className="rounded-2xl border border-pulse-border bg-pulse-bg/45 p-4">
-          <dt className="text-xs font-semibold text-pulse-cyan">
             Disabled in this pass
           </dt>
           <dd className="mt-2 text-pulse-muted">
             Live explorer reads, wallet prompts, transaction submission, and
             automated actions.
+          </dd>
+        </div>
+        <div className="rounded-2xl border border-pulse-border bg-pulse-bg/45 p-4">
+          <dt className="text-xs font-semibold text-pulse-cyan">
+            Current center
+          </dt>
+          <dd className="mt-2 break-all font-mono text-pulse-text">
+            {walletAddress}
           </dd>
         </div>
       </dl>
@@ -387,7 +481,12 @@ function GraphPanel({
       </div>
 
       <div className="relative mt-6 aspect-[16/10] min-h-[320px] overflow-hidden rounded-3xl border border-pulse-border bg-pulse-bg/65">
-        <svg viewBox="0 0 100 100" className="absolute inset-0 h-full w-full">
+        <svg
+          viewBox="0 0 100 100"
+          className="absolute inset-0 h-full w-full"
+          aria-label="Static demo relationship map"
+          role="img"
+        >
           {edges.map((edge) => {
             const from = nodeById.get(edge.from);
             const to = nodeById.get(edge.to);
@@ -420,7 +519,11 @@ function GraphPanel({
 
         {nodes.map((node) => {
           const size =
-            node.weight === "primary" ? "h-20 w-20" : node.weight === "strong" ? "h-16 w-16" : "h-14 w-14";
+            node.weight === "primary"
+              ? "h-20 w-20"
+              : node.weight === "strong"
+                ? "h-16 w-16"
+                : "h-14 w-14";
           const isSelected = node.id === selectedNodeId;
           const style = {
             left: `${node.x}%`,
@@ -449,6 +552,20 @@ function GraphPanel({
             </button>
           );
         })}
+      </div>
+      <div className="mt-4 flex flex-wrap gap-2 text-xs text-pulse-muted">
+        {GRAPH_LEGEND.map(([label, colorClass]) => (
+          <span
+            key={label}
+            className="inline-flex items-center gap-2 rounded-full border border-pulse-border bg-pulse-bg/45 px-3 py-1"
+          >
+            <span
+              className={`h-2 w-2 rounded-full ${colorClass}`}
+              aria-hidden
+            />
+            {label}
+          </span>
+        ))}
       </div>
     </section>
   );

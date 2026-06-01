@@ -5,6 +5,19 @@ import { SiteFooter } from "@/components/sections/site-footer";
 import { INTEL_FEATURES } from "@/lib/intel/feature-catalog";
 import type { IntelFeature } from "@/lib/intel/types";
 
+const HUB_GUARDRAILS = [
+  "No wallet connection",
+  "No live fetching",
+  "Demo data labeled",
+] as const;
+
+const BOUNDARY_POINTS = [
+  "Local demo data only in this pass.",
+  "No API route or live RPC call was added.",
+  "Research Assistant is a future planning surface.",
+  "Revoke scanner behavior remains separate.",
+] as const;
+
 export function IntelHub() {
   return (
     <div className="min-h-dvh bg-pulse-bg text-pulse-text">
@@ -16,7 +29,7 @@ export function IntelHub() {
             <div className="min-w-0">
               <IntelStatusBadge>Read-only first pass</IntelStatusBadge>
               <h1 className="mt-5 max-w-4xl text-4xl font-bold leading-[1.06] sm:text-6xl">
-                PulseChain intelligence, built for careful review.
+                PulseChain intelligence, organized for careful review.
               </h1>
               <p className="mt-5 max-w-3xl text-base leading-7 text-pulse-muted sm:text-lg">
                 Explore wallet context, network relationships, token analytics,
@@ -38,20 +51,18 @@ export function IntelHub() {
                 </Link>
               </div>
               <ul className="mt-6 grid max-w-3xl gap-2 text-sm text-pulse-muted sm:grid-cols-3">
-                {["No wallet connection", "No live fetching", "Demo data labeled"].map(
-                  (item) => (
-                    <li
-                      key={item}
-                      className="flex min-w-0 items-center gap-2 rounded-xl border border-pulse-border/70 bg-pulse-panel/45 px-3 py-2"
-                    >
-                      <span
-                        className="h-1.5 w-1.5 shrink-0 rounded-full bg-pulse-green"
-                        aria-hidden
-                      />
-                      <span>{item}</span>
-                    </li>
-                  ),
-                )}
+                {HUB_GUARDRAILS.map((item) => (
+                  <li
+                    key={item}
+                    className="flex min-w-0 items-center gap-2 rounded-xl border border-pulse-border/70 bg-pulse-panel/45 px-3 py-2"
+                  >
+                    <span
+                      className="h-1.5 w-1.5 shrink-0 rounded-full bg-pulse-green"
+                      aria-hidden
+                    />
+                    <span>{item}</span>
+                  </li>
+                ))}
               </ul>
             </div>
 
@@ -75,7 +86,7 @@ export function IntelHub() {
               </p>
             </div>
 
-            <div className="mt-9 grid gap-4 md:grid-cols-2 xl:grid-cols-7">
+            <div className="mt-9 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
               {INTEL_FEATURES.map((feature, index) => (
                 <FeatureCard key={feature.key} feature={feature} index={index} />
               ))}
@@ -99,12 +110,7 @@ export function IntelHub() {
               </p>
             </div>
             <div className="grid gap-3 sm:grid-cols-2">
-              {[
-                "Local demo data only in this pass.",
-                "No API route or live RPC call was added.",
-                "Research Assistant is a future planning surface.",
-                "Revoke scanner behavior remains separate.",
-              ].map((item) => (
+              {BOUNDARY_POINTS.map((item) => (
                 <div
                   key={item}
                   className="rounded-2xl border border-pulse-border bg-pulse-panel/55 p-5 text-sm leading-6 text-pulse-muted"
@@ -128,8 +134,14 @@ function FeatureCard({
   feature: IntelFeature;
   index: number;
 }) {
+  const isPrimary = feature.key === "wallet-intelligence";
+  const cardLayout = isPrimary ? "md:col-span-2 xl:col-span-2" : "";
   const content = (
-    <article className="group flex h-full min-h-72 flex-col rounded-2xl border border-pulse-border bg-pulse-panel/60 p-5 transition duration-200 hover:-translate-y-0.5 hover:border-pulse-cyan/45 hover:bg-pulse-panel/80 hover:shadow-glow xl:col-span-1">
+    <article
+      className={`group flex h-full flex-col rounded-2xl border border-pulse-border bg-pulse-panel/60 p-5 transition duration-200 hover:-translate-y-0.5 hover:border-pulse-cyan/45 hover:bg-pulse-panel/80 hover:shadow-glow ${
+        isPrimary ? "min-h-80 p-6" : "min-h-64"
+      }`}
+    >
       <div className="flex items-start justify-between gap-3">
         <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-pulse-cyan/25 bg-pulse-cyan/10 font-mono text-sm font-bold text-pulse-cyan">
           {String(index + 1).padStart(2, "0")}
@@ -144,7 +156,11 @@ function FeatureCard({
       <h3 className="mt-2 text-xl font-semibold leading-7 text-pulse-text">
         {feature.title}
       </h3>
-      <p className="mt-3 flex-1 text-sm leading-6 text-pulse-muted">
+      <p
+        className={`mt-3 flex-1 text-sm leading-6 text-pulse-muted ${
+          isPrimary ? "sm:text-base sm:leading-7" : ""
+        }`}
+      >
         {feature.body}
       </p>
       <div className="mt-5 flex flex-wrap gap-2">
@@ -157,15 +173,18 @@ function FeatureCard({
           </span>
         ))}
       </div>
+      <div className="mt-5 border-t border-pulse-border/70 pt-4 text-sm font-semibold text-pulse-cyan">
+        {feature.href ? "Open demo" : "Roadmap module"}
+      </div>
     </article>
   );
 
   return feature.href ? (
-    <Link href={feature.href} className="block h-full">
+    <Link href={feature.href} className={`block h-full ${cardLayout}`}>
       {content}
     </Link>
   ) : (
-    content
+    <div className={cardLayout}>{content}</div>
   );
 }
 
@@ -192,6 +211,24 @@ function HubPreviewPanel() {
           <span className="rounded-full border border-pulse-green/30 bg-pulse-green/10 px-3 py-1 text-xs font-semibold text-pulse-green">
             Local
           </span>
+        </div>
+
+        <div className="mt-5 grid grid-cols-3 gap-2 text-center text-xs">
+          {[
+            ["7", "surfaces"],
+            ["1", "demo route"],
+            ["0", "live calls"],
+          ].map(([value, label]) => (
+            <div
+              key={label}
+              className="rounded-xl border border-pulse-border bg-pulse-panel/55 px-3 py-2"
+            >
+              <p className="font-mono text-lg font-bold text-pulse-text">
+                {value}
+              </p>
+              <p className="text-pulse-muted">{label}</p>
+            </div>
+          ))}
         </div>
 
         <div className="mt-6 aspect-[16/11] rounded-2xl border border-pulse-border bg-pulse-bg/70 p-4">
