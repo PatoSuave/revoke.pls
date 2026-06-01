@@ -47,6 +47,14 @@ describe("revoke receipt UI source", () => {
     expect(ethereumSource).toContain("ReadOnlyAction");
   });
 
+  it("keeps receipt detail fields readable in narrow side panels", () => {
+    expect(receiptSource).toContain("grid-cols-1");
+    expect(receiptSource).toContain("sm:grid-cols-2");
+    expect(receiptSource).not.toContain("xl:grid-cols-3");
+    expect(receiptSource).toContain("[overflow-wrap:anywhere]");
+    expect(receiptSource).toContain("overflow-hidden");
+  });
+
   it("does not add protected-status claims to receipt source", () => {
     const forbidden = ["sa", "fe"].join("");
 
