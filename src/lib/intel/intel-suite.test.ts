@@ -128,6 +128,9 @@ describe("PulseChain Intelligence Suite first pass", () => {
     expect(readSource("src/app/intel/visualizer/page.tsx")).toContain(
       "IntelVisualizerPage",
     );
+    expect(readSource("src/app/intel/visualizer/page.tsx")).toContain(
+      'canonical: "/intel/visualizer"',
+    );
     expect(readSource("src/app/page.tsx")).toContain('href="/intel"');
     expect(readSource("src/components/sections/site-footer.tsx")).toContain(
       'href="/intel"',
