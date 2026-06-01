@@ -107,8 +107,10 @@ describe("PulseChain Intelligence Suite first pass", () => {
     expect(wallet).toContain("Hover/select nodes");
     expect(wallet).toContain("aria-pressed");
     expect(wallet).toContain("intel-edge-flow");
-    expect(styles).toContain("@keyframes intel-radar-sweep");
-    expect(styles).toContain(".intel-node-orbit");
+    expect(wallet).toContain("intel-map-depth");
+    expect(styles).toContain(".intel-node-surface");
+    expect(styles).toContain(".intel-edge-shadow");
+    expect(styles).not.toContain(`intel-${"rad"}ar-sweep`);
   });
 
   it("keeps new intel sources read-only and demo-data only", () => {
