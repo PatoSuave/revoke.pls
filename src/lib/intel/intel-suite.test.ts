@@ -193,7 +193,7 @@ describe("PulseChain Intelligence Suite first pass", () => {
     expect(routeSwitcher).toContain("variant === \"chips\"");
     expect(routeSwitcher).toContain("aria-current");
     expect(visualizer).toContain("VisualizerGraphCanvas");
-    expect(visualizerTopBar).toContain("Trace</span>");
+    expect(visualizerTopBar).toContain("Visualizer</span>");
     expect(visualizerTopBar).toContain('activeHref="/intel/visualizer"');
     expect(visualizerSidePanels).toContain("PulseChain Visualizer");
     expect(visualizerOverlays).toContain("Volume timeline");

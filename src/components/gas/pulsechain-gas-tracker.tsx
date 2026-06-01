@@ -221,7 +221,7 @@ export function PulseChainGasTrackerView({
   heartbeat,
   now = Date.now(),
 }: TrackerViewProps) {
-  const [detailsOpen, setDetailsOpen] = useState(false);
+  const [detailsOpen, setDetailsOpen] = useState(true);
   const status = isStale ? "elevated" : sample?.status ?? "unavailable";
   const conditionLabel = isStale
     ? "Stale"
@@ -599,7 +599,7 @@ function GasChartCard({
             label={`Waiting for ${selectedChain.chainName} gas data...`}
             heartbeat={heartbeat}
           />
-        ) : history.length < 2 ? (
+        ) : history.length === 0 ? (
           <ChartEmptyState
             label="Chart will fill as new blocks arrive."
             heartbeat={heartbeat}

@@ -3,6 +3,13 @@ import type { NextConfig } from "next";
 // When TAURI_BUILD=1, produce a fully-static export that Tauri can serve
 // from the `out/` directory. Web deployments omit `output` and keep SSR.
 const isDesktopBuild = process.env.TAURI_BUILD === "1";
+const isDevelopment = process.env.NODE_ENV === "development";
+const scriptSource = isDevelopment
+  ? "script-src 'self' 'unsafe-inline' 'unsafe-eval'"
+  : "script-src 'self' 'unsafe-inline'";
+const reportOnlyScriptSource = isDevelopment
+  ? "script-src 'self' 'unsafe-inline' 'unsafe-eval'"
+  : "script-src 'self'";
 
 const contentSecurityPolicy = [
   "default-src 'self'",
@@ -13,7 +20,7 @@ const contentSecurityPolicy = [
   "img-src 'self' data: blob: https:",
   "font-src 'self' data:",
   "style-src 'self' 'unsafe-inline'",
-  "script-src 'self' 'unsafe-inline'",
+  scriptSource,
   "connect-src 'self' https: wss:",
   "frame-src 'self' https:",
   "worker-src 'self' blob:",
@@ -29,7 +36,7 @@ const contentSecurityPolicyReportOnly = [
   "img-src 'self' data: blob: https:",
   "font-src 'self' data:",
   "style-src 'self' 'unsafe-inline'",
-  "script-src 'self'",
+  reportOnlyScriptSource,
   "connect-src 'self' https: wss:",
   "frame-src 'self' https:",
   "worker-src 'self' blob:",

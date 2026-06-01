@@ -47,7 +47,7 @@ export function VisualizerTopBar({
           >
             <PulseMark className="h-8 w-8 shrink-0" />
             <span className="truncate text-sm font-semibold">
-              Pulse<span className="text-gradient-pulse"> Trace</span>
+              Pulse<span className="text-gradient-pulse"> Visualizer</span>
             </span>
           </Link>
           <Link
@@ -85,14 +85,14 @@ export function VisualizerTopBar({
               type="submit"
               className="rounded-md bg-pulse-gradient px-4 py-2 text-xs font-semibold text-pulse-on-gradient shadow-glow transition hover:brightness-110"
             >
-              Trace
+              Center graph
             </button>
             <button
               type="button"
               onClick={onLoadDemo}
               className="rounded-md border border-pulse-cyan/35 bg-pulse-cyan/10 px-4 py-2 text-xs font-semibold text-pulse-cyan transition hover:bg-pulse-cyan/15"
             >
-              Sample
+              Demo wallet
             </button>
             <button
               type="button"
