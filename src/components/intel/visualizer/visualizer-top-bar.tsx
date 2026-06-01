@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 
+import { IntelRouteSwitcher } from "@/components/intel/intel-route-switcher";
 import { PulseMark } from "@/components/pulse-mark";
 import { VisualizerIcon } from "@/components/intel/visualizer/visualizer-icons";
 import { compactIntelAddress } from "@/lib/intel/address";
@@ -116,16 +117,23 @@ export function VisualizerTopBar({
           )}
         </div>
       </div>
-      <div className="mx-auto flex max-w-[100rem] flex-col gap-2 px-3 pb-3 text-xs text-pulse-muted sm:flex-row sm:items-center sm:justify-between lg:px-4">
-        <p>
-          Active center:{" "}
-          <span className="font-mono text-pulse-cyan">
-            {compactIntelAddress(activeAddress)}
-          </span>
-          {validationMessage ? (
-            <span className="ml-2 text-pulse-yellow">{validationMessage}</span>
-          ) : null}
-        </p>
+      <div className="mx-auto flex max-w-[100rem] flex-col gap-2 px-3 pb-3 text-xs text-pulse-muted lg:flex-row lg:items-center lg:justify-between lg:px-4">
+        <div className="flex min-w-0 flex-col gap-2 md:flex-row md:items-center">
+          <p className="shrink-0">
+            Active center:{" "}
+            <span className="font-mono text-pulse-cyan">
+              {compactIntelAddress(activeAddress)}
+            </span>
+            {validationMessage ? (
+              <span className="ml-2 text-pulse-yellow">{validationMessage}</span>
+            ) : null}
+          </p>
+          <IntelRouteSwitcher
+            activeHref="/intel/visualizer"
+            variant="chips"
+            className="md:max-w-[25rem]"
+          />
+        </div>
         <div className="flex gap-1 overflow-x-auto rounded-xl border border-pulse-border bg-pulse-panel/50 p-1">
           {VISUALIZER_TIME_RANGE_OPTIONS.map((range) => (
             <button

@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useMemo, useState, type CSSProperties } from "react";
 
+import { IntelRouteSwitcher } from "@/components/intel/intel-route-switcher";
 import { IntelShellHeader, IntelStatusBadge } from "@/components/intel/intel-shell";
 import { SiteFooter } from "@/components/sections/site-footer";
 import {
@@ -208,6 +209,9 @@ export function WalletIntelPage() {
                 )}
               </div>
             </form>
+          </div>
+          <div className="mx-auto max-w-7xl px-4 pb-10 sm:px-6 sm:pb-12">
+            <IntelRouteSwitcher activeHref="/intel/wallet" />
           </div>
         </section>
 

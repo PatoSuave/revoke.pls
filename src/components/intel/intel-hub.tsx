@@ -1,5 +1,6 @@
 import Link from "next/link";
 
+import { IntelRouteSwitcher } from "@/components/intel/intel-route-switcher";
 import { IntelShellHeader, IntelStatusBadge } from "@/components/intel/intel-shell";
 import { SiteFooter } from "@/components/sections/site-footer";
 import { INTEL_FEATURES } from "@/lib/intel/feature-catalog";
@@ -73,6 +74,9 @@ export function IntelHub() {
             </div>
 
             <HubPreviewPanel />
+          </div>
+          <div className="relative mx-auto max-w-7xl px-4 pb-10 sm:px-6 sm:pb-14">
+            <IntelRouteSwitcher activeHref="/intel" />
           </div>
         </section>
 
