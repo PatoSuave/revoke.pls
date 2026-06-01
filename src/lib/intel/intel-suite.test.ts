@@ -1,0 +1,150 @@
+import { existsSync, readdirSync, readFileSync } from "node:fs";
+import { join } from "node:path";
+
+import { describe, expect, it } from "vitest";
+
+import { validateIntelWalletAddress } from "@/lib/intel/address";
+import { buildDemoWalletIntel } from "@/lib/intel/demo-wallet";
+import { INTEL_FEATURES } from "@/lib/intel/feature-catalog";
+
+const VALID_ADDRESS = "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48";
+
+function readSource(path: string) {
+  return readFileSync(join(process.cwd(), path), "utf8");
+}
+
+function collectSourceFiles(root: string): string[] {
+  const absoluteRoot = join(process.cwd(), root);
+  if (!existsSync(absoluteRoot)) return [];
+
+  return readdirSync(absoluteRoot, { withFileTypes: true }).flatMap((entry) => {
+    const relativePath = `${root}/${entry.name}`;
+    if (entry.isDirectory()) return collectSourceFiles(relativePath);
+    if (!/\.(md|ts|tsx)$/.test(entry.name)) return [];
+    if (/\.test\.tsx?$/.test(entry.name)) return [];
+    return [relativePath];
+  });
+}
+
+function readIntelSources() {
+  return [
+    ...collectSourceFiles("src/app/intel"),
+    ...collectSourceFiles("src/components/intel"),
+    ...collectSourceFiles("src/lib/intel"),
+    ...collectSourceFiles("docs/intel"),
+  ]
+    .map((path) => readSource(path))
+    .join("\n");
+}
+
+describe("PulseChain Intelligence Suite first pass", () => {
+  it("defines the seven feature cards", () => {
+    expect(INTEL_FEATURES).toHaveLength(7);
+    expect(INTEL_FEATURES.map((feature) => feature.title)).toEqual([
+      "Wallet Intelligence",
+      "Constellation Network Maps",
+      "Research Assistant",
+      "Token Deep Analytics",
+      "Research Workspaces",
+      "Real-Time Network Pulse",
+      "Risk & Exposure Awareness",
+    ]);
+  });
+
+  it("validates EVM wallet addresses locally", () => {
+    expect(validateIntelWalletAddress(VALID_ADDRESS)).toMatchObject({
+      ok: true,
+      normalizedAddress: VALID_ADDRESS,
+    });
+    expect(validateIntelWalletAddress("0x123")).toMatchObject({
+      ok: false,
+    });
+    expect(validateIntelWalletAddress("not-an-address")).toMatchObject({
+      ok: false,
+    });
+  });
+
+  it("keeps the searched wallet as the graph center node", () => {
+    const report = buildDemoWalletIntel(VALID_ADDRESS);
+    const centerNode = report.graph.nodes.find(
+      (node) => node.id === report.graph.centerNodeId,
+    );
+
+    expect(report.mode).toBe("demo");
+    expect(centerNode).toMatchObject({
+      id: "searched-wallet",
+      address: VALID_ADDRESS,
+      kind: "wallet",
+    });
+  });
+
+  it("wires the routes, homepage entry, and sitemap entries", () => {
+    expect(readSource("src/app/intel/page.tsx")).toContain("IntelHub");
+    expect(readSource("src/app/intel/wallet/page.tsx")).toContain(
+      "WalletIntelPage",
+    );
+    expect(readSource("src/app/page.tsx")).toContain('href="/intel"');
+    expect(readSource("src/components/sections/site-footer.tsx")).toContain(
+      'href="/intel"',
+    );
+
+    const sitemap = readSource("src/app/sitemap.ts");
+    expect(sitemap).toContain('absoluteUrl("/intel")');
+    expect(sitemap).toContain('absoluteUrl("/intel/wallet")');
+  });
+
+  it("keeps new intel sources read-only and demo-data only", () => {
+    const source = readIntelSources();
+    const writePathPattern = new RegExp(
+      [
+        `${"write"}${"Contract"}`,
+        `${"send"}${"Transaction"}`,
+        `${"use"}${"Write"}${"Contract"}`,
+        `${"use"}${"Wallet"}${"Client"}`,
+        `${"use"}${"Account"}`,
+        `${"use"}${"Connect"}`,
+        `${"Connect"}${"Wallet"}${"Button"}`,
+        `${"fetch"}\\s*\\(`,
+      ].join("|"),
+    );
+    const executionPattern = new RegExp(
+      [
+        `${"server"}\\s+${"signing"}`,
+        `${"server-side"}\\s+${"signing"}`,
+        `${"flash"}bots`,
+        `${"eth_send"}Bundle`,
+        `${"eth_send"}PrivateTransaction`,
+      ].join("|"),
+      "i",
+    );
+
+    expect(source).toContain("No wallet connection");
+    expect(source).toContain("Demo data");
+    expect(source).toContain("No live fetching");
+    expect(source).not.toMatch(writePathPattern);
+    expect(source).not.toMatch(executionPattern);
+  });
+
+  it("does not add secret-request fields or outcome promises", () => {
+    const source = readIntelSources();
+    const lowerSource = source.toLowerCase();
+    const blockedTerms = [
+      `${"sa"}fe`,
+      `${"trust"}ed`,
+      `${"guarante"}ed`,
+      `${"guarante"}e`,
+      `${"seed"} phrase`,
+      `${"private"} key`,
+      "mnemonic",
+      "keystore",
+      `${"relay"}er`,
+      "sweep",
+    ];
+
+    for (const term of blockedTerms) {
+      expect(lowerSource).not.toContain(term);
+    }
+
+    expect(source).not.toMatch(new RegExp(`\\b${"A"}${"I"}\\b`));
+  });
+});
