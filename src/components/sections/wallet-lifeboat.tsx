@@ -2696,7 +2696,7 @@ function SpenderRiskSection({
       {owner && (status === "partial" || status === "upstream_unavailable") ? (
         <div className="mt-4 rounded-xl border border-amber-400/35 bg-amber-400/10 p-3 text-sm leading-6 text-amber-100">
           This diagnostic is incomplete. Do not treat missing spender warnings
-          as proof that active approval spenders are safe.
+          as proof that active approval spenders are benign.
         </div>
       ) : null}
 
@@ -3091,7 +3091,7 @@ function KnownRiskRegistrySection({
         <div className="mt-4 rounded-2xl border border-dashed border-pulse-border/80 bg-pulse-bg/40 p-4 text-sm leading-6 text-pulse-muted">
           No reviewed registry match was found for the checked address context.
           This is not proof that the wallet, spenders, recipients, contracts, or
-          counterparties are safe.
+          counterparties are benign.
         </div>
       ) : null}
     </section>
@@ -3181,7 +3181,7 @@ function Eip7702DelegationSection({
       {owner && (status === "partial" || status === "upstream_unavailable") ? (
         <div className="mt-4 rounded-xl border border-amber-400/35 bg-amber-400/10 p-3 text-sm leading-6 text-amber-100">
           This diagnostic is incomplete. Do not treat missing EIP-7702 evidence
-          as proof that the wallet is safe or that no delegation exists.
+          as proof that the wallet is secure or that no delegation exists.
         </div>
       ) : null}
 
