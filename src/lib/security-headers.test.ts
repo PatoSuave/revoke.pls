@@ -15,6 +15,9 @@ describe("security headers", () => {
     expect(byName.get("Content-Security-Policy")).toContain(
       "object-src 'none'",
     );
+    expect(byName.get("Content-Security-Policy")).not.toContain(
+      "'unsafe-eval'",
+    );
     expect(byName.get("Content-Security-Policy-Report-Only")).toContain(
       "script-src 'self'",
     );

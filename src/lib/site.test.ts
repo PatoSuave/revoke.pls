@@ -66,6 +66,7 @@ describe("siteConfig nav", () => {
       { href: "/app#scanner", label: "Scanner" },
       { href: "/app/wallet-lifeboat", label: "Wallet Lifeboat" },
       { href: "/security", label: "Security Guide" },
+      { href: "/intel", label: "Intelligence" },
     ]);
   });
 });
