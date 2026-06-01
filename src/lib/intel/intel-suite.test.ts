@@ -102,16 +102,40 @@ describe("PulseChain Intelligence Suite first pass", () => {
     const graph = buildDemoVisualizerGraph(VALID_ADDRESS);
     const nodeById = getVisualizerNodeMap(graph);
     const centerNode = nodeById.get(graph.centerNodeId);
+    const nodeKinds = new Set(graph.nodes.map((node) => node.kind));
+    const edgeKinds = new Set(graph.edges.map((edge) => edge.kind));
     const visibleEdges = filterVisualizerEdges(
       graph.edges,
       nodeById,
       DEFAULT_VISUALIZER_FILTERS,
     );
 
-    expect(graph.nodes.length).toBeGreaterThanOrEqual(25);
-    expect(graph.nodes.length).toBeLessThanOrEqual(60);
+    expect(graph.nodes.length).toBeGreaterThanOrEqual(40);
+    expect(graph.nodes.length).toBeLessThanOrEqual(80);
     expect(graph.edges.length).toBeGreaterThanOrEqual(25);
     expect(graph.transactions.length).toBeGreaterThanOrEqual(10);
+    expect([...nodeKinds]).toEqual(
+      expect.arrayContaining([
+        "searched-wallet",
+        "wallet",
+        "known-protocol",
+        "token-contract",
+        "lp-pair",
+        "router",
+        "unknown-contract",
+        "high-risk-spender",
+      ]),
+    );
+    expect([...edgeKinds]).toEqual(
+      expect.arrayContaining([
+        "pls-transfer",
+        "token-transfer",
+        "approval",
+        "swap",
+        "lp-interaction",
+        "contract-call",
+      ]),
+    );
     expect(centerNode).toMatchObject({
       id: "center-wallet",
       address: VALID_ADDRESS,
@@ -170,6 +194,12 @@ describe("PulseChain Intelligence Suite first pass", () => {
     const visualizerGraph = readSource(
       "src/components/intel/visualizer/visualizer-graph.tsx",
     );
+    const sigmaGraphCanvas = readSource(
+      "src/components/intel/visualizer/sigma-graph-canvas.tsx",
+    );
+    const graphologyAdapter = readSource(
+      "src/lib/intel/visualizer-graphology.ts",
+    );
     const styles = readSource("src/app/globals.css");
 
     expect(hub).toContain("Open demo");
@@ -199,8 +229,20 @@ describe("PulseChain Intelligence Suite first pass", () => {
     expect(visualizerOverlays).toContain("Volume timeline");
     expect(visualizerGraph).toContain("PulseChain visualizer demo graph");
     expect(visualizerGraph).toContain("Trace canvas");
+    expect(visualizerGraph).toContain("SigmaGraphCanvasClient");
+    expect(visualizerGraph).toContain("buildVisualizerGraphologyGraph");
+    expect(visualizerGraph).not.toContain("<svg");
+    expect(sigmaGraphCanvas).toContain("SigmaContainer");
+    expect(sigmaGraphCanvas).toContain("useLoadGraph");
+    expect(sigmaGraphCanvas).toContain("useRegisterEvents");
+    expect(sigmaGraphCanvas).toContain("useSetSettings");
+    expect(sigmaGraphCanvas).toContain("useCamera");
+    expect(sigmaGraphCanvas).toContain("enableEdgeEvents: true");
+    expect(sigmaGraphCanvas).toContain("renderEdgeLabels: true");
+    expect(graphologyAdapter).toContain("MultiDirectedGraph");
+    expect(graphologyAdapter).toContain("forceAtlas2.assign");
     expect(styles).toContain(".intel-viz-canvas");
-    expect(styles).toContain(".intel-viz-node-button");
+    expect(styles).toContain(".intel-viz-sigma-stage");
     expect(styles).toContain(".intel-viz-reticle");
     expect(styles).toContain(".intel-node-surface");
     expect(styles).toContain(".intel-edge-shadow");

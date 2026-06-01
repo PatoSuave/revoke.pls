@@ -73,7 +73,9 @@ export function filterVisualizerEdges(
       !filters.showUnknownContracts &&
       nodes.some(
         (node) =>
-          node.kind === "unknown-contract" || node.kind === "spender",
+          node.kind === "unknown-contract" ||
+          node.kind === "spender" ||
+          node.kind === "high-risk-spender",
       )
     ) {
       return false;
@@ -123,6 +125,7 @@ export function getVisualizerNodeTone(kind: VisualizerNode["kind"]) {
     case "lp-pair":
       return "intel-viz-node-liquidity";
     case "unknown-contract":
+    case "high-risk-spender":
     case "spender":
       return "intel-viz-node-warning";
     case "wallet":

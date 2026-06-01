@@ -443,6 +443,34 @@ body {
       );
   }
 
+  .intel-viz-sigma-shell {
+    position: absolute;
+    inset: 0;
+    z-index: 10;
+  }
+
+  .intel-viz-sigma-stage,
+  .intel-viz-sigma-stage.react-sigma,
+  .intel-viz-sigma-stage .sigma-container {
+    height: 100%;
+    width: 100%;
+    background: transparent;
+  }
+
+  .intel-viz-sigma-stage canvas {
+    outline: none;
+  }
+
+  .intel-viz-sigma-loading {
+    position: absolute;
+    inset: 0;
+    display: grid;
+    place-items: center;
+    background: rgb(var(--pulse-bg) / 0.28);
+    color: rgb(var(--pulse-muted));
+    font-size: 0.78rem;
+  }
+
   .intel-viz-grid {
     background-image:
       linear-gradient(rgb(var(--pulse-text) / 0.045) 1px, transparent 1px),
