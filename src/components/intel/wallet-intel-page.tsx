@@ -65,6 +65,14 @@ const EDGE_TONE: Record<IntelGraphEdgeKind, string> = {
   liquidity: "stroke-pulse-cyan",
 };
 
+const NODE_DOT_TONE: Record<IntelGraphNode["kind"], string> = {
+  wallet: "bg-pulse-pink",
+  contract: "bg-pulse-cyan",
+  token: "bg-pulse-green",
+  staking: "bg-pulse-purple",
+  liquidity: "bg-pulse-yellow",
+};
+
 export function WalletIntelPage() {
   const [addressInput, setAddressInput] = useState<string>(DEMO_INTEL_WALLET);
   const [filter, setFilter] = useState<GraphFilter>("all");
@@ -449,7 +457,34 @@ function GraphPanel({
   filter: GraphFilter;
   onFilterChange: (filter: GraphFilter) => void;
 }) {
+  const [hoveredNodeId, setHoveredNodeId] = useState<string | null>(null);
+  const [hoveredEdgeId, setHoveredEdgeId] = useState<string | null>(null);
   const nodeById = new Map(nodes.map((node) => [node.id, node]));
+  const hoveredEdge = edges.find((edge) => edge.id === hoveredEdgeId) ?? null;
+  const spotlightNodeId =
+    hoveredNodeId ?? (hoveredEdgeId ? null : selectedNodeId);
+  const activeEdgeIds = new Set<string>();
+  const relatedNodeIds = new Set<string>(
+    spotlightNodeId ? [spotlightNodeId] : [],
+  );
+
+  for (const edge of edges) {
+    const isNodeEdge =
+      spotlightNodeId !== null &&
+      (edge.from === spotlightNodeId || edge.to === spotlightNodeId);
+    const isHoveredEdge = edge.id === hoveredEdgeId;
+
+    if (isNodeEdge || isHoveredEdge) {
+      activeEdgeIds.add(edge.id);
+      relatedNodeIds.add(edge.from);
+      relatedNodeIds.add(edge.to);
+    }
+  }
+
+  if (hoveredEdge) {
+    relatedNodeIds.add(hoveredEdge.from);
+    relatedNodeIds.add(hoveredEdge.to);
+  }
 
   return (
     <section className="rounded-3xl border border-pulse-border bg-pulse-panel/55 p-5 sm:p-6">
@@ -461,6 +496,9 @@ function GraphPanel({
           <h2 className="mt-2 text-2xl font-semibold text-pulse-text">
             Demo relationship map
           </h2>
+          <p className="mt-2 text-sm leading-6 text-pulse-muted">
+            Hover/select nodes to spotlight relationships and pin details.
+          </p>
         </div>
         <div className="flex max-w-full gap-1 overflow-x-auto rounded-xl border border-pulse-border bg-pulse-bg/45 p-1">
           {GRAPH_FILTERS.map((item) => (
@@ -480,11 +518,14 @@ function GraphPanel({
         </div>
       </div>
 
-      <div className="relative mt-6 aspect-[16/10] min-h-[320px] overflow-hidden rounded-3xl border border-pulse-border bg-pulse-bg/65">
+      <div className="intel-map-stage relative mt-6 aspect-[16/10] min-h-[320px] overflow-hidden rounded-3xl border border-pulse-border bg-pulse-bg/65">
+        <div className="intel-map-grid pointer-events-none absolute inset-0" />
+        <div className="intel-map-halo pointer-events-none absolute left-1/2 top-1/2 h-[66%] w-[66%] -translate-x-1/2 -translate-y-1/2 rounded-full" />
+        <div className="intel-map-scan pointer-events-none absolute left-1/2 top-1/2 h-[72%] w-[72%] -translate-x-1/2 -translate-y-1/2 rounded-full" />
         <svg
           viewBox="0 0 100 100"
           className="absolute inset-0 h-full w-full"
-          aria-label="Static demo relationship map"
+          aria-label="Animated demo relationship map"
           role="img"
         >
           {edges.map((edge) => {
@@ -493,22 +534,56 @@ function GraphPanel({
 
             if (!from || !to) return null;
 
+            const edgePathId = `intel-edge-path-${edge.id}`;
+            const path = `M ${from.x} ${from.y} L ${to.x} ${to.y}`;
+            const isActive = activeEdgeIds.has(edge.id);
+            const isDimmed = activeEdgeIds.size > 0 && !isActive;
+            const energyDuration = edge.kind === "approval" ? "2.8s" : "3.6s";
+
             return (
-              <g key={edge.id}>
-                <line
-                  x1={from.x}
-                  y1={from.y}
-                  x2={to.x}
-                  y2={to.y}
-                  className={`${EDGE_TONE[edge.kind]} opacity-70`}
-                  strokeWidth={edge.kind === "approval" ? 1.6 : 1.2}
+              <g
+                key={edge.id}
+                onMouseEnter={() => setHoveredEdgeId(edge.id)}
+                onMouseLeave={() => setHoveredEdgeId(null)}
+              >
+                <path
+                  id={edgePathId}
+                  d={path}
+                  className={`intel-edge-flow ${EDGE_TONE[edge.kind]} ${
+                    isActive
+                      ? "intel-edge-active"
+                      : isDimmed
+                        ? "intel-edge-muted"
+                        : ""
+                  }`}
+                  strokeWidth={edge.kind === "approval" ? 1.7 : 1.25}
                   strokeLinecap="round"
+                  fill="none"
                 />
+                <circle
+                  r={isActive ? 1.25 : 0.82}
+                  className={`intel-edge-energy ${
+                    isDimmed ? "opacity-20" : "opacity-80"
+                  }`}
+                  aria-hidden
+                >
+                  <animateMotion
+                    dur={energyDuration}
+                    repeatCount="indefinite"
+                    rotate="auto"
+                  >
+                    <mpath href={`#${edgePathId}`} />
+                  </animateMotion>
+                </circle>
                 <text
                   x={(from.x + to.x) / 2}
                   y={(from.y + to.y) / 2 - 2}
                   textAnchor="middle"
-                  className="fill-pulse-muted text-[3px]"
+                  className={`intel-edge-label text-[3px] ${
+                    isActive
+                      ? "fill-pulse-text opacity-100"
+                      : "fill-pulse-muted opacity-50"
+                  }`}
                 >
                   {edge.label}
                 </text>
@@ -525,6 +600,8 @@ function GraphPanel({
                 ? "h-16 w-16"
                 : "h-14 w-14";
           const isSelected = node.id === selectedNodeId;
+          const isRelated = relatedNodeIds.has(node.id);
+          const isDimmed = activeEdgeIds.size > 0 && !isRelated;
           const style = {
             left: `${node.x}%`,
             top: `${node.y}%`,
@@ -536,17 +613,33 @@ function GraphPanel({
               key={node.id}
               type="button"
               style={style}
+              aria-pressed={isSelected}
+              aria-label={`Inspect ${node.label} ${node.kind} node`}
               onClick={() => onSelectNode(node.id)}
-              className={`absolute flex ${size} flex-col items-center justify-center rounded-2xl border text-center text-[10px] font-semibold leading-3 transition ${
+              onMouseEnter={() => setHoveredNodeId(node.id)}
+              onMouseLeave={() => setHoveredNodeId(null)}
+              onFocus={() => setHoveredNodeId(node.id)}
+              onBlur={() => setHoveredNodeId(null)}
+              className={`intel-node-button absolute flex ${size} flex-col items-center justify-center rounded-2xl border text-center text-[10px] font-semibold leading-3 transition ${
                 isSelected
-                  ? "border-pulse-cyan bg-pulse-cyan/18 text-pulse-text shadow-glow"
+                  ? "intel-node-selected border-pulse-cyan bg-pulse-cyan/18 text-pulse-text shadow-glow"
                   : "border-pulse-border bg-pulse-panel/85 text-pulse-muted hover:border-pulse-cyan/50 hover:text-pulse-text"
+              } ${
+                isRelated ? "intel-node-related" : ""
+              } ${isDimmed ? "intel-node-dimmed" : ""} ${
+                node.weight === "primary" ? "intel-node-core" : ""
               }`}
             >
-              <span className="block max-w-[4.25rem] truncate px-1">
+              <span className="intel-node-orbit" aria-hidden />
+              <span className="intel-node-pulse" aria-hidden />
+              <span
+                className={`mb-1 h-2 w-2 rounded-full ${NODE_DOT_TONE[node.kind]}`}
+                aria-hidden
+              />
+              <span className="relative block max-w-[4.25rem] truncate px-1">
                 {node.label}
               </span>
-              <span className="mt-1 rounded-full bg-pulse-bg/70 px-1.5 py-0.5 font-mono text-[9px]">
+              <span className="relative mt-1 rounded-full bg-pulse-bg/70 px-1.5 py-0.5 font-mono text-[9px]">
                 {node.kind}
               </span>
             </button>
