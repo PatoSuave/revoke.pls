@@ -47,16 +47,16 @@ export function VisualizerLeftPanel({
     .slice(0, 6);
 
   return (
-    <aside className="intel-viz-panel flex min-h-0 w-full min-w-0 flex-col overflow-hidden rounded-[1.5rem] border border-pulse-border bg-pulse-panel/72">
+    <aside className="intel-viz-panel flex min-h-0 w-full min-w-0 flex-col overflow-hidden rounded-lg border border-pulse-border bg-pulse-panel/72">
       <div className="border-b border-pulse-border/70 p-4">
         <p className="font-mono text-[11px] font-semibold uppercase tracking-[0.18em] text-pulse-cyan">
           PulseChain Visualizer
         </p>
         <h2 className="mt-2 text-xl font-semibold text-pulse-text">
-          Investigator console
+          Wallet scope
         </h2>
         <p className="mt-2 text-sm leading-6 text-pulse-muted">
-          Demo-only context for the selected wallet or entity.
+          Local sample context for the selected wallet, entity, and flow cluster.
         </p>
       </div>
 
@@ -72,7 +72,7 @@ export function VisualizerLeftPanel({
           ]}
         />
 
-        <div className="rounded-2xl border border-pulse-border bg-pulse-bg/45 p-3">
+        <div className="rounded-lg border border-pulse-border bg-pulse-bg/45 p-3">
           <p className="text-xs font-semibold text-pulse-cyan">
             Selected entity
           </p>
@@ -84,7 +84,7 @@ export function VisualizerLeftPanel({
           </p>
         </div>
 
-        <div className="rounded-2xl border border-pulse-border bg-pulse-bg/45 p-3">
+        <div className="rounded-lg border border-pulse-border bg-pulse-bg/45 p-3">
           <p className="text-xs font-semibold text-pulse-cyan">
             Top counterparties
           </p>
@@ -92,7 +92,7 @@ export function VisualizerLeftPanel({
             {counterparties.map((node) => (
               <div
                 key={node.id}
-                className="flex items-center justify-between gap-3 rounded-xl border border-pulse-border bg-pulse-panel/45 px-3 py-2"
+                className="flex items-center justify-between gap-3 rounded-md border border-pulse-border bg-pulse-panel/45 px-3 py-2"
               >
                 <div className="min-w-0">
                   <p className="truncate text-sm font-semibold text-pulse-text">
@@ -102,7 +102,7 @@ export function VisualizerLeftPanel({
                     {node.activityLabel}
                   </p>
                 </div>
-                <span className="shrink-0 rounded-full border border-pulse-border px-2 py-1 text-[10px] text-pulse-muted">
+                <span className="shrink-0 rounded border border-pulse-border px-2 py-1 font-mono text-[10px] uppercase text-pulse-muted">
                   {node.status}
                 </span>
               </div>
@@ -171,14 +171,14 @@ export function VisualizerFilterPanel({
   onFiltersChange: (filters: VisualizerFilters) => void;
 }) {
   return (
-    <section className="intel-viz-panel rounded-[1.5rem] border border-pulse-border bg-pulse-panel/72 p-4">
+    <section className="intel-viz-panel rounded-lg border border-pulse-border bg-pulse-panel/72 p-4">
       <div className="flex items-center justify-between gap-3">
         <div>
           <p className="font-mono text-[11px] font-semibold uppercase tracking-[0.18em] text-pulse-cyan">
             Filters
           </p>
           <h2 className="mt-2 text-lg font-semibold text-pulse-text">
-            More info
+            Graph layers
           </h2>
         </div>
         <button
@@ -193,7 +193,7 @@ export function VisualizerFilterPanel({
               showLpInteractions: true,
             })
           }
-          className="rounded-xl border border-pulse-border bg-pulse-bg/60 px-3 py-2 text-xs font-semibold text-pulse-muted transition hover:text-pulse-text"
+          className="rounded-md border border-pulse-border bg-pulse-bg/60 px-3 py-2 text-xs font-semibold text-pulse-muted transition hover:text-pulse-text"
         >
           Clear
         </button>
@@ -209,7 +209,7 @@ export function VisualizerFilterPanel({
                 onClick={() =>
                   onFiltersChange({ ...filters, direction: option.value })
                 }
-                className={`rounded-xl border px-3 py-2 text-xs font-semibold transition ${
+                className={`rounded-md border px-3 py-2 text-xs font-semibold transition ${
                   filters.direction === option.value
                     ? "border-pulse-cyan/70 bg-pulse-cyan/15 text-pulse-text"
                     : "border-pulse-border bg-pulse-bg/45 text-pulse-muted hover:text-pulse-text"
@@ -230,7 +230,7 @@ export function VisualizerFilterPanel({
                 onClick={() =>
                   onFiltersChange({ ...filters, minValueUsd: option.value })
                 }
-                className={`rounded-xl border px-3 py-2 text-xs font-semibold transition ${
+                className={`rounded-md border px-3 py-2 text-xs font-semibold transition ${
                   filters.minValueUsd === option.value
                     ? "border-pulse-green/70 bg-pulse-green/10 text-pulse-text"
                     : "border-pulse-border bg-pulse-bg/45 text-pulse-muted hover:text-pulse-text"
@@ -297,7 +297,7 @@ function MetricGrid({ items }: { items: readonly (readonly [string, string])[] }
       {items.map(([label, value]) => (
         <div
           key={label}
-          className="min-w-0 rounded-2xl border border-pulse-border bg-pulse-bg/45 p-3"
+          className="min-w-0 rounded-lg border border-pulse-border bg-pulse-bg/45 p-3"
         >
           <p className="text-[11px] font-semibold text-pulse-muted">{label}</p>
           <p className="mt-1 break-words text-sm font-semibold text-pulse-text">
@@ -337,7 +337,7 @@ function FilterToggle({
     <button
       type="button"
       onClick={onClick}
-      className="flex items-center justify-between rounded-xl border border-pulse-border bg-pulse-bg/45 px-3 py-2 text-xs font-semibold text-pulse-muted transition hover:text-pulse-text"
+      className="flex items-center justify-between rounded-md border border-pulse-border bg-pulse-bg/45 px-3 py-2 text-xs font-semibold text-pulse-muted transition hover:text-pulse-text"
     >
       <span>{label}</span>
       <span

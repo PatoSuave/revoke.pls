@@ -106,7 +106,7 @@ export function IntelVisualizerPage() {
         activeTimeRange={activeTimeRange}
         onTimeRangeChange={setActiveTimeRange}
       />
-      <main className="mx-auto grid max-w-[100rem] gap-3 p-3 lg:grid-cols-[320px_minmax(0,1fr)_330px] lg:items-start lg:p-4">
+      <main className="mx-auto grid max-w-[104rem] gap-3 p-3 lg:grid-cols-[22rem_minmax(0,1fr)_22rem] lg:items-start lg:p-4">
         <section className="order-1 min-w-0 lg:order-2">
           <div className="relative">
             <VisualizerGraphCanvas
