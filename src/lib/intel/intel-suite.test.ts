@@ -6,6 +6,7 @@ import { describe, expect, it } from "vitest";
 import { validateIntelWalletAddress } from "@/lib/intel/address";
 import { buildDemoWalletIntel } from "@/lib/intel/demo-wallet";
 import { INTEL_FEATURES } from "@/lib/intel/feature-catalog";
+import { INTEL_SURFACES } from "@/lib/intel/suite-navigation";
 import { buildDemoVisualizerGraph } from "@/lib/intel/visualizer-demo";
 import {
   DEFAULT_VISUALIZER_FILTERS,
@@ -54,6 +55,19 @@ describe("PulseChain Intelligence Suite first pass", () => {
       "Research Workspaces",
       "Real-Time Network Pulse",
       "Risk & Exposure Awareness",
+    ]);
+  });
+
+  it("defines the shared Intelligence Suite surfaces", () => {
+    expect(INTEL_SURFACES.map((surface) => surface.href)).toEqual([
+      "/intel",
+      "/intel/wallet",
+      "/intel/visualizer",
+    ]);
+    expect(INTEL_SURFACES.map((surface) => surface.label)).toEqual([
+      "Suite hub",
+      "Wallet report",
+      "Graph workbench",
     ]);
   });
 
@@ -134,6 +148,9 @@ describe("PulseChain Intelligence Suite first pass", () => {
     const visualizerTopBar = readSource(
       "src/components/intel/visualizer/visualizer-top-bar.tsx",
     );
+    const routeSwitcher = readSource(
+      "src/components/intel/intel-route-switcher.tsx",
+    );
     const visualizerSidePanels = readSource(
       "src/components/intel/visualizer/visualizer-side-panels.tsx",
     );
@@ -147,9 +164,11 @@ describe("PulseChain Intelligence Suite first pass", () => {
 
     expect(hub).toContain("Open demo");
     expect(hub).toContain("Open Visualizer Demo");
+    expect(hub).toContain("IntelRouteSwitcher");
     expect(hub).not.toContain("xl:grid-cols-7");
     expect(wallet).toContain("Load demo wallet");
     expect(wallet).toContain("Open visualizer");
+    expect(wallet).toContain('activeHref="/intel/wallet"');
     expect(wallet).toContain("Demo report status");
     expect(wallet).toContain("Local sample report ready for review.");
     expect(wallet).toContain("Animated demo relationship map");
@@ -160,8 +179,12 @@ describe("PulseChain Intelligence Suite first pass", () => {
     expect(wallet).toContain("intel-workbench-shell");
     expect(wallet).toContain("intel-edge-flow");
     expect(wallet).toContain("intel-map-depth");
+    expect(routeSwitcher).toContain("Intelligence Suite sections");
+    expect(routeSwitcher).toContain("variant === \"chips\"");
+    expect(routeSwitcher).toContain("aria-current");
     expect(visualizer).toContain("VisualizerGraphCanvas");
     expect(visualizerTopBar).toContain("Visualizer</span>");
+    expect(visualizerTopBar).toContain('activeHref="/intel/visualizer"');
     expect(visualizerSidePanels).toContain("PulseChain Visualizer");
     expect(visualizerOverlays).toContain("Transaction-volume timeline");
     expect(visualizerGraph).toContain("PulseChain visualizer demo graph");
