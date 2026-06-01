@@ -224,17 +224,41 @@ body {
     outline-offset: 3px;
   }
 
+  .intel-workbench-shell {
+    background:
+      radial-gradient(
+        circle at 62% 34%,
+        rgb(var(--pulse-cyan) / 0.1),
+        transparent 32%
+      ),
+      radial-gradient(
+        circle at 92% 12%,
+        rgb(var(--pulse-pink) / 0.08),
+        transparent 28%
+      ),
+      linear-gradient(
+        135deg,
+        rgb(var(--pulse-panel) / 0.88),
+        rgb(var(--pulse-bg) / 0.96)
+      );
+  }
+
   .intel-map-stage {
     background:
       radial-gradient(
         circle at 52% 48%,
-        rgb(var(--pulse-cyan) / 0.08),
+        rgb(var(--pulse-cyan) / 0.1),
         transparent 34%
       ),
       radial-gradient(
         circle at 80% 20%,
         rgb(var(--pulse-purple) / 0.09),
         transparent 36%
+      ),
+      radial-gradient(
+        circle at 22% 75%,
+        rgb(var(--pulse-pink) / 0.08),
+        transparent 34%
       ),
       linear-gradient(
         135deg,
@@ -245,10 +269,16 @@ body {
 
   .intel-map-grid {
     background-image:
-      linear-gradient(rgb(var(--pulse-cyan) / 0.045) 1px, transparent 1px),
-      linear-gradient(90deg, rgb(var(--pulse-text) / 0.035) 1px, transparent 1px);
+      linear-gradient(rgb(var(--pulse-cyan) / 0.052) 1px, transparent 1px),
+      linear-gradient(90deg, rgb(var(--pulse-text) / 0.04) 1px, transparent 1px),
+      linear-gradient(rgb(var(--pulse-cyan) / 0.07) 1px, transparent 1px),
+      linear-gradient(90deg, rgb(var(--pulse-cyan) / 0.07) 1px, transparent 1px);
     background-position: 0 0;
-    background-size: 44px 44px;
+    background-size:
+      44px 44px,
+      44px 44px,
+      176px 176px,
+      176px 176px;
     mask-image: radial-gradient(circle at center, black 0%, transparent 78%);
     animation: intel-grid-drift 28s linear infinite;
   }
@@ -272,8 +302,8 @@ body {
   }
 
   .intel-edge-shadow {
-    stroke: rgb(var(--pulse-text) / 0.08);
-    filter: blur(3px);
+    stroke: rgb(var(--pulse-text) / 0.1);
+    filter: blur(4px);
     transition:
       opacity 180ms ease,
       stroke-width 180ms ease;
@@ -282,8 +312,8 @@ body {
   .intel-edge-flow {
     stroke-dasharray: none;
     stroke-dashoffset: 0;
-    opacity: 0.34;
-    filter: drop-shadow(0 0 2px rgb(var(--pulse-cyan) / 0.12));
+    opacity: 0.42;
+    filter: drop-shadow(0 0 3px rgb(var(--pulse-cyan) / 0.16));
     pointer-events: stroke;
     transition:
       filter 180ms ease,
@@ -298,6 +328,13 @@ body {
       drop-shadow(0 0 4px rgb(var(--pulse-cyan) / 0.52))
       drop-shadow(0 0 12px rgb(var(--pulse-purple) / 0.22));
     animation: intel-edge-drift 8s linear infinite;
+  }
+
+  .intel-edge-terminal {
+    filter: drop-shadow(0 0 5px rgb(var(--pulse-cyan) / 0.34));
+    transition:
+      opacity 180ms ease,
+      r 180ms ease;
   }
 
   .intel-edge-muted {
@@ -331,7 +368,7 @@ body {
 
   .intel-node-button:hover,
   .intel-node-button:focus-visible {
-    transform: translate(-50%, -50%) scale(1.035) !important;
+    transform: translate(-50%, -50%) scale(1.055) !important;
     box-shadow:
       0 16px 54px rgb(0 0 0 / 0.35),
       0 0 26px rgb(var(--pulse-cyan) / 0.18),
