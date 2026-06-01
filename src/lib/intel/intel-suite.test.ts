@@ -104,12 +104,16 @@ describe("PulseChain Intelligence Suite first pass", () => {
     expect(wallet).toContain("Demo report status");
     expect(wallet).toContain("Local sample report ready for review.");
     expect(wallet).toContain("Animated demo relationship map");
-    expect(wallet).toContain("Hover/select nodes");
+    expect(wallet).toContain("Visual workbench");
+    expect(wallet).toContain("Wallet graph");
+    expect(wallet).toContain("Relationship layers");
     expect(wallet).toContain("aria-pressed");
+    expect(wallet).toContain("intel-workbench-shell");
     expect(wallet).toContain("intel-edge-flow");
     expect(wallet).toContain("intel-map-depth");
     expect(styles).toContain(".intel-node-surface");
     expect(styles).toContain(".intel-edge-shadow");
+    expect(styles).toContain(".intel-workbench-shell");
     expect(styles).not.toContain(`intel-${"rad"}ar-sweep`);
   });
 

@@ -15,6 +15,10 @@ const DEMO_CONTRACTS = {
   staking: "0x0000000000000000000000000000000000000369" as const,
   lpPair: "0x95B303987A60C71504D99Aa1b13B4DA07b0790ab" as const,
   counterparty: "0x742d35Cc6634C0532925a3b844Bc454e4438f44e" as const,
+  plsxToken: "0x95B303987A60C71504D99Aa1b13B4DA07b0790ab" as const,
+  bridgeWallet: "0x9ACc1d6Aa9b846083E49742Afd5F89bD6D6b4C01" as const,
+  farmContract: "0xFfFfFfFfD38bD0B166CC6C657f928eC7e3C2CbC8" as const,
+  pairMirror: "0xA1077a294DDE1B09BB078844DF40758a5D0f9a27" as const,
 };
 
 export function buildDemoWalletIntel(
@@ -29,7 +33,7 @@ export function buildDemoWalletIntel(
     summary: {
       totalValueLabel: "$42,680 demo",
       chainCount: 1,
-      relationCount: 5,
+      relationCount: 10,
       decodedActivityCount: DEMO_ACTIVITY.length,
       exposureCount: 3,
     },
@@ -138,6 +142,17 @@ function buildDemoGraph(walletAddress: `0x${string}`): IntelGraph {
         weight: "strong",
       },
       {
+        id: "pair-mirror",
+        label: "Route pair",
+        description:
+          "Sample pair node adds depth to the local route view without live pool reads.",
+        kind: "liquidity",
+        address: DEMO_CONTRACTS.pairMirror,
+        x: 36,
+        y: 18,
+        weight: "normal",
+      },
+      {
         id: "hex-token",
         label: "HEX token",
         description:
@@ -147,6 +162,17 @@ function buildDemoGraph(walletAddress: `0x${string}`): IntelGraph {
         x: 76,
         y: 24,
         weight: "strong",
+      },
+      {
+        id: "plsx-token",
+        label: "PLSX token",
+        description:
+          "Token node used to show a second local asset relationship in the demo graph.",
+        kind: "token",
+        address: DEMO_CONTRACTS.plsxToken,
+        x: 76,
+        y: 47,
+        weight: "normal",
       },
       {
         id: "hex-staking",
@@ -160,6 +186,17 @@ function buildDemoGraph(walletAddress: `0x${string}`): IntelGraph {
         weight: "normal",
       },
       {
+        id: "farm-contract",
+        label: "Farm contract",
+        description:
+          "Sample contract node previews how related protocol surfaces can be grouped.",
+        kind: "contract",
+        address: DEMO_CONTRACTS.farmContract,
+        x: 61,
+        y: 84,
+        weight: "normal",
+      },
+      {
         id: "lp-pair",
         label: "PulseX LP",
         description:
@@ -168,6 +205,17 @@ function buildDemoGraph(walletAddress: `0x${string}`): IntelGraph {
         address: DEMO_CONTRACTS.lpPair,
         x: 29,
         y: 76,
+        weight: "normal",
+      },
+      {
+        id: "bridge-wallet",
+        label: "Bridge wallet",
+        description:
+          "Sample one-hop wallet used to show inbound context from another account.",
+        kind: "wallet",
+        address: DEMO_CONTRACTS.bridgeWallet,
+        x: 13,
+        y: 34,
         weight: "normal",
       },
       {
@@ -193,6 +241,15 @@ function buildDemoGraph(walletAddress: `0x${string}`): IntelGraph {
         direction: "out",
       },
       {
+        id: "edge-route-pair",
+        from: "pulsex-router",
+        to: "pair-mirror",
+        kind: "swap",
+        label: "Route leg",
+        valueLabel: "Demo route",
+        direction: "bidirectional",
+      },
+      {
         id: "edge-token",
         from: "hex-token",
         to: "searched-wallet",
@@ -200,6 +257,15 @@ function buildDemoGraph(walletAddress: `0x${string}`): IntelGraph {
         label: "Token balance",
         valueLabel: "HEX demo",
         direction: "in",
+      },
+      {
+        id: "edge-plsx-token",
+        from: "searched-wallet",
+        to: "plsx-token",
+        kind: "token-flow",
+        label: "Token touch",
+        valueLabel: "PLSX demo",
+        direction: "out",
       },
       {
         id: "edge-stake",
@@ -211,12 +277,30 @@ function buildDemoGraph(walletAddress: `0x${string}`): IntelGraph {
         direction: "out",
       },
       {
+        id: "edge-farm",
+        from: "hex-staking",
+        to: "farm-contract",
+        kind: "staking",
+        label: "Stake helper",
+        valueLabel: "Demo helper",
+        direction: "out",
+      },
+      {
         id: "edge-liquidity",
         from: "lp-pair",
         to: "searched-wallet",
         kind: "liquidity",
         label: "LP receipt",
         valueLabel: "PLSX-LP demo",
+        direction: "in",
+      },
+      {
+        id: "edge-bridge",
+        from: "bridge-wallet",
+        to: "searched-wallet",
+        kind: "native-flow",
+        label: "Bridge context",
+        valueLabel: "PLS demo",
         direction: "in",
       },
       {
