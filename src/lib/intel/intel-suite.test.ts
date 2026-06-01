@@ -93,6 +93,18 @@ describe("PulseChain Intelligence Suite first pass", () => {
     expect(sitemap).toContain('absoluteUrl("/intel/wallet")');
   });
 
+  it("keeps the polished demo flow visible in source", () => {
+    const hub = readSource("src/components/intel/intel-hub.tsx");
+    const wallet = readSource("src/components/intel/wallet-intel-page.tsx");
+
+    expect(hub).toContain("Open demo");
+    expect(hub).not.toContain("xl:grid-cols-7");
+    expect(wallet).toContain("Load demo wallet");
+    expect(wallet).toContain("Demo report status");
+    expect(wallet).toContain("Local sample report ready for review.");
+    expect(wallet).toContain("Static demo relationship map");
+  });
+
   it("keeps new intel sources read-only and demo-data only", () => {
     const source = readIntelSources();
     const writePathPattern = new RegExp(
