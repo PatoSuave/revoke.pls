@@ -125,6 +125,9 @@ describe("PulseChain Intelligence Suite first pass", () => {
     expect(readSource("scripts/intel-preview-smoke.mjs")).toContain(
       "Intelligence Suite smoke passed.",
     );
+    expect(readSource("docs/intel/PULSECHAIN_INTELLIGENCE_SUITE.md")).toContain(
+      "npm run smoke:intel -- <preview-or-local-url>",
+    );
     expect(readSource("src/app/intel/page.tsx")).toContain("IntelHub");
     expect(readSource("src/app/intel/wallet/page.tsx")).toContain(
       "WalletIntelPage",
