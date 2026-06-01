@@ -13,12 +13,13 @@ export const INTEL_FEATURES = [
   },
   {
     key: "constellation-network-maps",
-    eyebrow: "Graph layer",
+    eyebrow: "Visualizer demo",
     title: "Constellation Network Maps",
-    body: "Map wallet, contract, token, and staking relationships so a researcher can see important one-hop context first.",
-    status: "planned",
-    statusLabel: "Planned",
-    metrics: ["One-hop views", "Entity details", "Filterable edges"],
+    body: "Explore a full-canvas PulseChain relationship visualizer with local demo entities, transaction edges, filters, and detail panels.",
+    status: "demo",
+    statusLabel: "Demo shell",
+    href: "/intel/visualizer",
+    metrics: ["Graph canvas", "Timeline", "Details"],
   },
   {
     key: "research-assistant",

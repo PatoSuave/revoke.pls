@@ -32,6 +32,12 @@ export function IntelShellHeader() {
             Wallet demo
           </Link>
           <Link
+            href="/intel/visualizer"
+            className="shrink-0 whitespace-nowrap rounded-lg px-2.5 py-1.5 transition hover:bg-pulse-text/5 hover:text-pulse-text lg:px-0 lg:py-0 lg:hover:bg-transparent"
+          >
+            Visualizer
+          </Link>
+          <Link
             href="/security"
             className="shrink-0 whitespace-nowrap rounded-lg px-2.5 py-1.5 transition hover:bg-pulse-text/5 hover:text-pulse-text lg:px-0 lg:py-0 lg:hover:bg-transparent"
           >

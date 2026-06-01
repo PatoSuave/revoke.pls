@@ -38,8 +38,14 @@ export function IntelHub() {
               </p>
               <div className="mt-8 flex flex-col gap-3 sm:flex-row">
                 <Link
-                  href="/intel/wallet"
+                  href="/intel/visualizer"
                   className="inline-flex items-center justify-center rounded-xl bg-pulse-gradient px-6 py-3 text-sm font-semibold text-pulse-on-gradient shadow-glow transition hover:brightness-110"
+                >
+                  Open Visualizer Demo
+                </Link>
+                <Link
+                  href="/intel/wallet"
+                  className="inline-flex items-center justify-center rounded-xl border border-pulse-cyan/35 bg-pulse-cyan/10 px-6 py-3 text-sm font-semibold text-pulse-cyan transition hover:bg-pulse-cyan/15"
                 >
                   Open Wallet Intelligence Demo
                 </Link>

@@ -6,6 +6,12 @@ import { describe, expect, it } from "vitest";
 import { validateIntelWalletAddress } from "@/lib/intel/address";
 import { buildDemoWalletIntel } from "@/lib/intel/demo-wallet";
 import { INTEL_FEATURES } from "@/lib/intel/feature-catalog";
+import { buildDemoVisualizerGraph } from "@/lib/intel/visualizer-demo";
+import {
+  DEFAULT_VISUALIZER_FILTERS,
+  filterVisualizerEdges,
+  getVisualizerNodeMap,
+} from "@/lib/intel/visualizer-utils";
 
 const VALID_ADDRESS = "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48";
 
@@ -78,10 +84,35 @@ describe("PulseChain Intelligence Suite first pass", () => {
     });
   });
 
+  it("builds a dense local visualizer graph with the searched wallet centered", () => {
+    const graph = buildDemoVisualizerGraph(VALID_ADDRESS);
+    const nodeById = getVisualizerNodeMap(graph);
+    const centerNode = nodeById.get(graph.centerNodeId);
+    const visibleEdges = filterVisualizerEdges(
+      graph.edges,
+      nodeById,
+      DEFAULT_VISUALIZER_FILTERS,
+    );
+
+    expect(graph.nodes.length).toBeGreaterThanOrEqual(25);
+    expect(graph.nodes.length).toBeLessThanOrEqual(60);
+    expect(graph.edges.length).toBeGreaterThanOrEqual(25);
+    expect(graph.transactions.length).toBeGreaterThanOrEqual(10);
+    expect(centerNode).toMatchObject({
+      id: "center-wallet",
+      address: VALID_ADDRESS,
+      kind: "searched-wallet",
+    });
+    expect(visibleEdges.length).toBe(graph.edges.length);
+  });
+
   it("wires the routes, homepage entry, and sitemap entries", () => {
     expect(readSource("src/app/intel/page.tsx")).toContain("IntelHub");
     expect(readSource("src/app/intel/wallet/page.tsx")).toContain(
       "WalletIntelPage",
+    );
+    expect(readSource("src/app/intel/visualizer/page.tsx")).toContain(
+      "IntelVisualizerPage",
     );
     expect(readSource("src/app/page.tsx")).toContain('href="/intel"');
     expect(readSource("src/components/sections/site-footer.tsx")).toContain(
@@ -91,16 +122,34 @@ describe("PulseChain Intelligence Suite first pass", () => {
     const sitemap = readSource("src/app/sitemap.ts");
     expect(sitemap).toContain('absoluteUrl("/intel")');
     expect(sitemap).toContain('absoluteUrl("/intel/wallet")');
+    expect(sitemap).toContain('absoluteUrl("/intel/visualizer")');
   });
 
   it("keeps the polished demo flow visible in source", () => {
     const hub = readSource("src/components/intel/intel-hub.tsx");
     const wallet = readSource("src/components/intel/wallet-intel-page.tsx");
+    const visualizer = readSource(
+      "src/components/intel/visualizer/visualizer-page.tsx",
+    );
+    const visualizerTopBar = readSource(
+      "src/components/intel/visualizer/visualizer-top-bar.tsx",
+    );
+    const visualizerSidePanels = readSource(
+      "src/components/intel/visualizer/visualizer-side-panels.tsx",
+    );
+    const visualizerOverlays = readSource(
+      "src/components/intel/visualizer/visualizer-overlays.tsx",
+    );
+    const visualizerGraph = readSource(
+      "src/components/intel/visualizer/visualizer-graph.tsx",
+    );
     const styles = readSource("src/app/globals.css");
 
     expect(hub).toContain("Open demo");
+    expect(hub).toContain("Open Visualizer Demo");
     expect(hub).not.toContain("xl:grid-cols-7");
     expect(wallet).toContain("Load demo wallet");
+    expect(wallet).toContain("Open visualizer");
     expect(wallet).toContain("Demo report status");
     expect(wallet).toContain("Local sample report ready for review.");
     expect(wallet).toContain("Animated demo relationship map");
@@ -111,6 +160,13 @@ describe("PulseChain Intelligence Suite first pass", () => {
     expect(wallet).toContain("intel-workbench-shell");
     expect(wallet).toContain("intel-edge-flow");
     expect(wallet).toContain("intel-map-depth");
+    expect(visualizer).toContain("VisualizerGraphCanvas");
+    expect(visualizerTopBar).toContain("Visualizer</span>");
+    expect(visualizerSidePanels).toContain("PulseChain Visualizer");
+    expect(visualizerOverlays).toContain("Transaction-volume timeline");
+    expect(visualizerGraph).toContain("PulseChain visualizer demo graph");
+    expect(styles).toContain(".intel-viz-canvas");
+    expect(styles).toContain(".intel-viz-node-button");
     expect(styles).toContain(".intel-node-surface");
     expect(styles).toContain(".intel-edge-shadow");
     expect(styles).toContain(".intel-workbench-shell");

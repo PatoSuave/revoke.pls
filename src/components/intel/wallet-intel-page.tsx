@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useMemo, useState, type CSSProperties } from "react";
 
 import { IntelShellHeader, IntelStatusBadge } from "@/components/intel/intel-shell";
@@ -189,6 +190,12 @@ export function WalletIntelPage() {
                 >
                   Jump to report
                 </a>
+                <Link
+                  href="/intel/visualizer"
+                  className="inline-flex items-center justify-center rounded-xl border border-pulse-purple/40 bg-pulse-purple/10 px-4 py-2 text-sm font-semibold text-pulse-text transition hover:bg-pulse-purple/15"
+                >
+                  Open visualizer
+                </Link>
               </div>
               <div className="mt-3 min-h-6 text-sm">
                 {validation.ok ? (
