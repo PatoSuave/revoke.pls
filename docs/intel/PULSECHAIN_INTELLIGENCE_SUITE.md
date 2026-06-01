@@ -178,6 +178,35 @@ Future work:
   unchanged.
 - Mobile at 390px keeps the visualizer usable without horizontal page overflow.
 
+## Preview QA Workflow
+
+The Intelligence Suite has a dedicated hosted smoke command:
+
+```bash
+npm run smoke:intel -- <preview-or-local-url>
+```
+
+The command checks:
+
+- `/intel` hub markers, feature cards, and shared surface links.
+- `/intel/wallet` address entry, report status, demo labels, and suite links.
+- `/intel/visualizer` graph workbench markers, timeline marker, graph marker,
+  and route-specific canonical metadata.
+
+The command accepts a plain local URL, a Vercel preview URL, or a protected
+preview URL that includes `_vercel_share`. When a protected Vercel preview is
+used, the smoke command preserves the temporary preview cookie across redirects
+so all three Intelligence Suite routes can be checked in one run.
+
+Manual QA should include:
+
+- Desktop review of `/intel`, `/intel/wallet`, and `/intel/visualizer`.
+- Mobile review around 390px width for the visualizer top controls and graph
+  canvas.
+- Confirmation that all intelligence routes still show demo/local-read labels.
+- Confirmation that the visualizer remains usable without horizontal page
+  overflow.
+
 ## Validation
 
 Before merging this pass:
@@ -186,6 +215,7 @@ Before merging this pass:
 - Run `npm run typecheck`.
 - Run `npm run test`.
 - Run `npm run build`.
+- Run `npm run smoke:intel -- <preview-or-local-url>`.
 - Run `git diff --check`.
 - Review changed files for transaction-write imports, wallet prompt imports,
   secret-input handling, middle-service transaction submission, automated asset
