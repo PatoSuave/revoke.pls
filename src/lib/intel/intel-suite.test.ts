@@ -121,6 +121,10 @@ describe("PulseChain Intelligence Suite first pass", () => {
   });
 
   it("wires the routes, homepage entry, and sitemap entries", () => {
+    expect(readSource("package.json")).toContain('"smoke:intel"');
+    expect(readSource("scripts/intel-preview-smoke.mjs")).toContain(
+      "Intelligence Suite smoke passed.",
+    );
     expect(readSource("src/app/intel/page.tsx")).toContain("IntelHub");
     expect(readSource("src/app/intel/wallet/page.tsx")).toContain(
       "WalletIntelPage",
