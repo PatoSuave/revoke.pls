@@ -52,20 +52,20 @@ export function VisualizerLeftPanel({
     .slice(0, 6);
 
   return (
-    <aside className="intel-viz-panel flex min-h-0 w-full min-w-0 flex-col overflow-hidden rounded-lg border border-pulse-border bg-pulse-panel/72">
-      <div className="border-b border-pulse-border/70 p-4">
+    <aside className="intel-viz-panel flex min-h-0 w-full min-w-0 flex-col overflow-hidden rounded-lg border border-pulse-border bg-pulse-panel/66">
+      <div className="border-b border-pulse-border/70 p-3">
         <p className="font-mono text-[11px] font-semibold uppercase tracking-[0.18em] text-pulse-cyan">
           PulseChain Visualizer
         </p>
         <h2 className="mt-2 text-xl font-semibold text-pulse-text">
           Wallet scope
         </h2>
-        <p className="mt-2 text-sm leading-6 text-pulse-muted">
-          Local sample context for the selected wallet, entity, and flow cluster.
+        <p className="mt-2 text-xs leading-5 text-pulse-muted">
+          Preview context for the selected wallet, entity, and flow cluster.
         </p>
       </div>
 
-      <div className="grid gap-3 p-4">
+      <div className="grid gap-2 p-3">
         <MetricGrid
           items={[
             ["PLS balance", graph.summary.plsBalanceLabel],
@@ -77,7 +77,7 @@ export function VisualizerLeftPanel({
           ]}
         />
 
-        <div className="rounded-lg border border-pulse-border bg-pulse-bg/45 p-3">
+        <div className="rounded-lg border border-pulse-border bg-pulse-bg/45 p-2.5">
           <p className="text-xs font-semibold text-pulse-cyan">
             Selected entity
           </p>
@@ -89,7 +89,7 @@ export function VisualizerLeftPanel({
           </p>
         </div>
 
-        <div className="rounded-lg border border-pulse-border bg-pulse-bg/45 p-3">
+        <div className="rounded-lg border border-pulse-border bg-pulse-bg/45 p-2.5">
           <p className="text-xs font-semibold text-pulse-cyan">
             Top counterparties
           </p>
@@ -116,7 +116,7 @@ export function VisualizerLeftPanel({
         </div>
       </div>
 
-      <div className="min-h-0 flex-1 border-t border-pulse-border/70 p-4">
+      <div className="min-h-0 flex-1 border-t border-pulse-border/70 p-3">
         <p className="text-xs font-semibold text-pulse-cyan">
           Transaction list
         </p>
@@ -176,7 +176,7 @@ export function VisualizerFilterPanel({
   onFiltersChange: (filters: VisualizerFilters) => void;
 }) {
   return (
-    <section className="intel-viz-panel rounded-lg border border-pulse-border bg-pulse-panel/72 p-4">
+    <section className="intel-viz-panel rounded-lg border border-pulse-border bg-pulse-panel/66 p-3">
       <div className="flex items-center justify-between gap-3">
         <div>
           <p className="font-mono text-[11px] font-semibold uppercase tracking-[0.18em] text-pulse-cyan">

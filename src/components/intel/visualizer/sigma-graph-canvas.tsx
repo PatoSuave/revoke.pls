@@ -10,6 +10,10 @@ import {
   useSigma,
 } from "@react-sigma/core";
 import { MultiDirectedGraph } from "graphology";
+import type {
+  NodeHoverDrawingFunction,
+  NodeLabelDrawingFunction,
+} from "sigma/rendering";
 import type { Settings } from "sigma/settings";
 
 import type { VisualizerGraphCommand } from "@/components/intel/visualizer/visualizer-graph";
@@ -30,11 +34,46 @@ export interface SigmaGraphCanvasClientProps {
   activeEdgeIds: ReadonlySet<string>;
   onSelectNode: (nodeId: string) => void;
   onSelectEdge: (edgeId: string) => void;
+  onClearSelection: () => void;
   onHoverNode: (nodeId: string | null) => void;
   onHoverEdge: (edgeId: string | null) => void;
   command: VisualizerGraphCommand | null;
   layoutLocked: boolean;
 }
+
+const drawDarkNodeLabel: NodeLabelDrawingFunction<
+  VisualizerSigmaNodeAttributes,
+  VisualizerSigmaEdgeAttributes
+> = (context, data, settings) => {
+  if (!data.label) return;
+
+  const fontSize = settings.labelSize;
+  const label = String(data.label);
+  context.font = `${settings.labelWeight} ${fontSize}px ${settings.labelFont}`;
+  const width = context.measureText(label).width + 16;
+  const height = fontSize + 9;
+  const x = data.x + data.size + 8;
+  const y = data.y - height / 2;
+
+  context.save();
+  context.fillStyle = "rgba(8, 10, 22, 0.78)";
+  context.strokeStyle = "rgba(69, 242, 255, 0.22)";
+  context.lineWidth = 1;
+  context.beginPath();
+  context.roundRect(x, y, width, height, 6);
+  context.fill();
+  context.stroke();
+  context.fillStyle = "#f6f7ff";
+  context.fillText(label, x + 8, y + fontSize + 1);
+  context.restore();
+};
+
+const drawDarkNodeHover: NodeHoverDrawingFunction<
+  VisualizerSigmaNodeAttributes,
+  VisualizerSigmaEdgeAttributes
+> = (context, data, settings) => {
+  drawDarkNodeLabel(context, data, settings);
+};
 
 const SIGMA_SETTINGS: Partial<
   Settings<VisualizerSigmaNodeAttributes, VisualizerSigmaEdgeAttributes>
@@ -51,21 +90,23 @@ const SIGMA_SETTINGS: Partial<
   },
   defaultEdgeColor: "#dfe4ff",
   defaultEdgeType: "arrow",
+  defaultDrawNodeHover: drawDarkNodeHover,
+  defaultDrawNodeLabel: drawDarkNodeLabel,
   defaultNodeColor: "#e8e9ff",
   enableEdgeEvents: true,
   hideEdgesOnMove: false,
   hideLabelsOnMove: false,
   labelColor: { color: "#f6f7ff" },
-  labelDensity: 0.16,
+  labelDensity: 0.08,
   labelFont: "var(--font-geist-sans)",
-  labelRenderedSizeThreshold: 7,
-  labelSize: 12,
+  labelRenderedSizeThreshold: 10,
+  labelSize: 11,
   maxCameraRatio: 3.2,
   minCameraRatio: 0.12,
   minEdgeThickness: 1.2,
-  renderEdgeLabels: true,
+  renderEdgeLabels: false,
   renderLabels: true,
-  stagePadding: 36,
+  stagePadding: 58,
   zIndex: true,
 };
 
@@ -91,6 +132,7 @@ function SigmaGraphController({
   activeEdgeIds,
   onSelectNode,
   onSelectEdge,
+  onClearSelection,
   onHoverNode,
   onHoverEdge,
   command,
@@ -133,9 +175,9 @@ function SigmaGraphController({
           return {
             ...data,
             color: data.status === "elevated" ? "#ff4d6d" : data.color,
-            forceLabel: true,
+            forceLabel: false,
             hidden: false,
-            size: data.size + 1.8,
+            size: data.size + 2.4,
             zIndex: 30,
           };
         }
@@ -143,9 +185,9 @@ function SigmaGraphController({
         if (active) {
           return {
             ...data,
-            forceLabel: data.forceLabel || data.txCount >= 4,
+            forceLabel: false,
             hidden: false,
-            size: data.size + 0.75,
+            size: data.size + 1.15,
             zIndex: data.zIndex + 8,
           };
         }
@@ -156,12 +198,12 @@ function SigmaGraphController({
             color: VISUALIZER_DIMMED_COLOR,
             forceLabel: false,
             hidden: false,
-            size: Math.max(0.7, data.size * 0.58),
+            size: Math.max(0.45, data.size * 0.42),
             zIndex: 1,
           };
         }
 
-        return data;
+        return { ...data, forceLabel: false };
       },
       enableCameraPanning: true,
       enableCameraRotation: false,
@@ -179,7 +221,7 @@ function SigmaGraphController({
             forceLabel: true,
             hidden: false,
             highlighted: true,
-            size: data.size + 4,
+            size: data.kind === "searched-wallet" ? data.size + 7 : data.size + 4,
             zIndex: 40,
           };
         }
@@ -187,10 +229,13 @@ function SigmaGraphController({
         if (related) {
           return {
             ...data,
-            forceLabel: data.forceLabel || data.status !== "context",
+            forceLabel:
+              data.kind === "searched-wallet" ||
+              hoveredNodeId === node ||
+              selectedNodeId === node,
             hidden: false,
-            highlighted: true,
-            size: data.size + 1.7,
+            highlighted: false,
+            size: data.size + 1.25,
             zIndex: data.zIndex + 10,
           };
         }
@@ -202,12 +247,16 @@ function SigmaGraphController({
             forceLabel: false,
             hidden: false,
             highlighted: false,
-            size: Math.max(3.2, data.size * 0.58),
+            size: Math.max(2.4, data.size * 0.44),
             zIndex: 1,
           };
         }
 
-        return data;
+        return {
+          ...data,
+          forceLabel: data.kind === "searched-wallet",
+          label: data.kind === "searched-wallet" ? data.label : null,
+        };
       },
     }),
     [
@@ -230,6 +279,7 @@ function SigmaGraphController({
     registerEvents({
       clickEdge: ({ edge }) => onSelectEdge(edge),
       clickNode: ({ node }) => onSelectNode(node),
+      clickStage: () => onClearSelection(),
       enterEdge: ({ edge }) => onHoverEdge(edge),
       enterNode: ({ node }) => onHoverNode(node),
       leaveEdge: () => onHoverEdge(null),
@@ -238,6 +288,7 @@ function SigmaGraphController({
   }, [
     onHoverEdge,
     onHoverNode,
+    onClearSelection,
     onSelectEdge,
     onSelectNode,
     registerEvents,

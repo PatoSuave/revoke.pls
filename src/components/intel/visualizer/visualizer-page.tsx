@@ -154,7 +154,7 @@ export function IntelVisualizerPage() {
         activeTimeRange={activeTimeRange}
         onTimeRangeChange={setActiveTimeRange}
       />
-      <main className="mx-auto grid max-w-[104rem] gap-3 p-3 lg:grid-cols-[22rem_minmax(0,1fr)_22rem] lg:items-start lg:p-4">
+      <main className="mx-auto grid max-w-[112rem] gap-3 p-3 lg:grid-cols-[17rem_minmax(0,1fr)_18rem] lg:items-start lg:p-3">
         <section className="order-1 min-w-0 lg:order-2">
           <div className="relative">
             <VisualizerGraphCanvas
@@ -168,6 +168,10 @@ export function IntelVisualizerPage() {
               }}
               onSelectEdge={(edgeId) => {
                 setSelectedEdgeId(edgeId);
+              }}
+              onClearSelection={() => {
+                setSelectedNodeId(graph.centerNodeId);
+                setSelectedEdgeId(null);
               }}
               command={graphCommand}
               layoutLocked={layoutLocked}

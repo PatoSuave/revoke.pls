@@ -19,6 +19,7 @@ export interface VisualizerSigmaNodeAttributes {
   color: string;
   kind: VisualizerNodeKind;
   status: VisualizerStatus;
+  balanceLabel: string;
   forceLabel: boolean;
   zIndex: number;
   hidden: boolean;
@@ -166,8 +167,9 @@ function buildSigmaNodeAttributes(
     color: NODE_COLORS[node.kind],
     kind: node.kind,
     status: node.status,
-    forceLabel: node.kind === "searched-wallet" || node.volumeScore >= 60,
-    zIndex: node.kind === "searched-wallet" ? 20 : Math.round(node.volumeScore),
+    balanceLabel: node.balanceLabel,
+    forceLabel: node.kind === "searched-wallet",
+    zIndex: node.kind === "searched-wallet" ? 60 : Math.round(node.volumeScore),
     hidden: !visibleNodeIds.has(node.id),
     activityLabel: node.activityLabel,
   };
@@ -187,16 +189,17 @@ function buildSigmaEdgeAttributes(
     txCount: edge.txCount,
     status: edge.status,
     weight: Math.max(0.45, Math.log10(edge.valueUsd + 10)),
-    forceLabel: edge.status === "elevated" || edge.status === "watch",
+    forceLabel: false,
     zIndex: edge.status === "elevated" ? 9 : edge.status === "watch" ? 7 : 4,
     hidden: !visibleEdgeIds.has(edge.id),
   };
 }
 
 function getNodeSize(node: VisualizerNode) {
-  if (node.kind === "searched-wallet") return 18;
-  if (node.kind === "high-risk-spender") return 12.5;
-  return Math.min(15, Math.max(5.5, 5 + node.volumeScore / 9));
+  if (node.kind === "searched-wallet") return 22;
+  if (node.kind === "high-risk-spender") return 11.5;
+  if (node.kind === "wallet" && node.volumeScore < 24) return 3.8;
+  return Math.min(12.5, Math.max(4.2, 4 + node.volumeScore / 11));
 }
 
 function seededOffset(value: string) {

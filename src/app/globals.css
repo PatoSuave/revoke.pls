@@ -429,6 +429,11 @@ body {
 
   .intel-viz-canvas {
     background:
+      radial-gradient(
+        circle at 50% 44%,
+        rgb(var(--pulse-cyan) / 0.12),
+        transparent 20rem
+      ),
       linear-gradient(
         180deg,
         rgb(var(--pulse-text) / 0.04),
@@ -503,10 +508,10 @@ body {
   .intel-viz-reticle {
     border: 1px solid rgb(var(--pulse-cyan) / 0.12);
     box-shadow:
-      inset 0 0 0 5rem rgb(var(--pulse-bg) / 0.04),
-      inset 0 0 0 10rem rgb(var(--pulse-bg) / 0.03),
-      0 0 0 6rem rgb(var(--pulse-cyan) / 0.018),
-      0 0 0 12rem rgb(var(--pulse-text) / 0.015);
+      inset 0 0 0 5rem rgb(var(--pulse-bg) / 0.035),
+      inset 0 0 0 11rem rgb(var(--pulse-bg) / 0.025),
+      0 0 0 7rem rgb(var(--pulse-cyan) / 0.014),
+      0 0 0 15rem rgb(var(--pulse-text) / 0.012);
   }
 
   .intel-viz-edge-shadow {
@@ -682,9 +687,27 @@ body {
   }
 
   .intel-viz-timeline-bar {
-    width: 0.9rem;
-    min-height: 0.9rem;
+    width: 0.82rem;
+    min-height: 0.75rem;
     background: rgb(var(--pulse-text) / 0.28);
+    box-shadow: 0 0 0 rgb(var(--pulse-cyan) / 0);
+    opacity: 0.78;
+  }
+
+  .intel-viz-timeline-strip {
+    background-image:
+      linear-gradient(rgb(var(--pulse-text) / 0.045) 1px, transparent 1px),
+      linear-gradient(90deg, rgb(var(--pulse-text) / 0.035) 1px, transparent 1px);
+    background-size:
+      18px 18px,
+      18px 18px;
+  }
+
+  .intel-viz-timeline-active {
+    opacity: 1;
+    box-shadow:
+      0 0 0 1px rgb(var(--pulse-cyan) / 0.75),
+      0 0 16px rgb(var(--pulse-cyan) / 0.28);
   }
 
   .intel-viz-timeline-inflow {

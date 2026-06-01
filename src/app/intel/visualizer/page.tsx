@@ -6,7 +6,7 @@ import { absoluteUrl, siteConfig } from "@/lib/site";
 export const metadata: Metadata = {
   title: `PulseChain Visualizer - ${siteConfig.shortName}`,
   description:
-    "A read-only local demo of a PulseChain wallet relationship visualizer.",
+    "A read-only PulseChain wallet relationship visualizer preview.",
   alternates: {
     canonical: "/intel/visualizer",
   },
@@ -14,14 +14,14 @@ export const metadata: Metadata = {
     type: "website",
     title: `PulseChain Visualizer - ${siteConfig.shortName}`,
     description:
-      "Explore a read-only local demo relationship map for PulseChain research context.",
+      "Explore a read-only PulseChain relationship map preview for research context.",
     url: absoluteUrl("/intel/visualizer"),
   },
   twitter: {
     card: "summary_large_image",
     title: `PulseChain Visualizer - ${siteConfig.shortName}`,
     description:
-      "Explore a read-only local demo relationship map for PulseChain research context.",
+      "Explore a read-only PulseChain relationship map preview for research context.",
   },
 };
 
