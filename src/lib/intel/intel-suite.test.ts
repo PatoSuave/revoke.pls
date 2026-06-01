@@ -193,13 +193,15 @@ describe("PulseChain Intelligence Suite first pass", () => {
     expect(routeSwitcher).toContain("variant === \"chips\"");
     expect(routeSwitcher).toContain("aria-current");
     expect(visualizer).toContain("VisualizerGraphCanvas");
-    expect(visualizerTopBar).toContain("Visualizer</span>");
+    expect(visualizerTopBar).toContain("Trace</span>");
     expect(visualizerTopBar).toContain('activeHref="/intel/visualizer"');
     expect(visualizerSidePanels).toContain("PulseChain Visualizer");
-    expect(visualizerOverlays).toContain("Transaction-volume timeline");
+    expect(visualizerOverlays).toContain("Volume timeline");
     expect(visualizerGraph).toContain("PulseChain visualizer demo graph");
+    expect(visualizerGraph).toContain("Trace canvas");
     expect(styles).toContain(".intel-viz-canvas");
     expect(styles).toContain(".intel-viz-node-button");
+    expect(styles).toContain(".intel-viz-reticle");
     expect(styles).toContain(".intel-node-surface");
     expect(styles).toContain(".intel-edge-shadow");
     expect(styles).toContain(".intel-workbench-shell");

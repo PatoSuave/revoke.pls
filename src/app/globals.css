@@ -418,63 +418,67 @@ body {
   }
 
   .intel-viz-panel {
+    background:
+      linear-gradient(180deg, rgb(var(--pulse-text) / 0.035), transparent 34%),
+      rgb(var(--pulse-panel) / 0.72);
     box-shadow:
-      inset 0 1px 0 rgb(var(--pulse-text) / 0.06),
-      0 22px 70px rgb(0 0 0 / 0.3);
-    backdrop-filter: blur(18px);
+      inset 0 1px 0 rgb(var(--pulse-text) / 0.055),
+      0 18px 42px rgb(0 0 0 / 0.24);
+    backdrop-filter: blur(16px);
   }
 
   .intel-viz-canvas {
     background:
-      radial-gradient(
-        circle at 50% 48%,
-        rgb(var(--pulse-cyan) / 0.12),
-        transparent 30%
-      ),
-      radial-gradient(
-        circle at 18% 76%,
-        rgb(var(--pulse-pink) / 0.1),
-        transparent 32%
-      ),
-      radial-gradient(
-        circle at 82% 26%,
-        rgb(var(--pulse-purple) / 0.13),
-        transparent 34%
+      linear-gradient(
+        180deg,
+        rgb(var(--pulse-text) / 0.04),
+        transparent 22%,
+        rgb(var(--pulse-bg) / 0.2) 100%
       ),
       linear-gradient(
-        145deg,
+        135deg,
         rgb(var(--pulse-bg) / 0.98),
-        rgb(var(--pulse-panel) / 0.78)
+        rgb(var(--pulse-panel) / 0.84) 52%,
+        rgb(var(--pulse-bg) / 0.96)
       );
   }
 
   .intel-viz-grid {
     background-image:
-      linear-gradient(rgb(var(--pulse-cyan) / 0.052) 1px, transparent 1px),
-      linear-gradient(90deg, rgb(var(--pulse-text) / 0.038) 1px, transparent 1px),
-      linear-gradient(rgb(var(--pulse-cyan) / 0.08) 1px, transparent 1px),
-      linear-gradient(90deg, rgb(var(--pulse-cyan) / 0.08) 1px, transparent 1px);
+      linear-gradient(rgb(var(--pulse-text) / 0.045) 1px, transparent 1px),
+      linear-gradient(90deg, rgb(var(--pulse-text) / 0.04) 1px, transparent 1px),
+      linear-gradient(rgb(var(--pulse-cyan) / 0.075) 1px, transparent 1px),
+      linear-gradient(90deg, rgb(var(--pulse-cyan) / 0.065) 1px, transparent 1px);
     background-position: 0 0;
     background-size:
       32px 32px,
       32px 32px,
       160px 160px,
       160px 160px;
-    mask-image: radial-gradient(circle at center, black 0%, transparent 84%);
-    animation: intel-grid-drift 26s linear infinite;
+    mask-image: linear-gradient(90deg, transparent, black 10%, black 90%, transparent);
+    opacity: 0.88;
   }
 
   .intel-viz-noise {
     background-image:
-      radial-gradient(circle, rgb(var(--pulse-cyan) / 0.16) 0 1px, transparent 1.3px),
-      radial-gradient(circle, rgb(var(--pulse-purple) / 0.12) 0 1px, transparent 1.2px);
+      linear-gradient(rgb(var(--pulse-text) / 0.032) 1px, transparent 1px),
+      linear-gradient(90deg, rgb(var(--pulse-bg) / 0.28) 1px, transparent 1px);
     background-position:
       0 0,
-      26px 18px;
+      0 0;
     background-size:
-      82px 82px,
-      118px 118px;
-    opacity: 0.24;
+      6px 6px,
+      6px 6px;
+    opacity: 0.16;
+  }
+
+  .intel-viz-reticle {
+    border: 1px solid rgb(var(--pulse-cyan) / 0.12);
+    box-shadow:
+      inset 0 0 0 5rem rgb(var(--pulse-bg) / 0.04),
+      inset 0 0 0 10rem rgb(var(--pulse-bg) / 0.03),
+      0 0 0 6rem rgb(var(--pulse-cyan) / 0.018),
+      0 0 0 12rem rgb(var(--pulse-text) / 0.015);
   }
 
   .intel-viz-edge-shadow {
@@ -486,8 +490,8 @@ body {
   }
 
   .intel-viz-edge {
-    opacity: 0.72;
-    filter: drop-shadow(0 0 5px rgb(var(--pulse-cyan) / 0.16));
+    opacity: 0.78;
+    filter: drop-shadow(0 0 3px rgb(var(--pulse-cyan) / 0.14));
     pointer-events: stroke;
     transition:
       filter 180ms ease,
@@ -497,10 +501,10 @@ body {
 
   .intel-viz-edge-active {
     opacity: 1;
-    stroke-dasharray: 14 18;
+    stroke-dasharray: 9 12;
     filter:
-      drop-shadow(0 0 5px currentColor)
-      drop-shadow(0 0 18px rgb(var(--pulse-purple) / 0.22));
+      drop-shadow(0 0 4px currentColor)
+      drop-shadow(0 0 10px rgb(var(--pulse-cyan) / 0.18));
     animation: intel-edge-drift 6.5s linear infinite;
   }
 
@@ -542,19 +546,35 @@ body {
     transition: opacity 180ms ease;
   }
 
+  .intel-viz-range-ring {
+    fill: none;
+    stroke: rgb(var(--pulse-text) / 0.08);
+    stroke-width: 0.12;
+    stroke-dasharray: 0.75 1.4;
+  }
+
+  .intel-viz-axis-line {
+    fill: none;
+    stroke: rgb(var(--pulse-cyan) / 0.12);
+    stroke-width: 0.1;
+    stroke-dasharray: 0.35 1.2;
+  }
+
   .intel-viz-node-button {
     display: flex;
-    flex-direction: column;
+    flex-direction: row;
     align-items: center;
     justify-content: center;
-    border-radius: 1.15rem;
+    border-radius: 0.5rem;
     border: 1px solid rgb(var(--pulse-border));
     color: rgb(var(--pulse-text));
-    background: rgb(var(--pulse-panel) / 0.82);
+    background:
+      linear-gradient(180deg, rgb(var(--pulse-text) / 0.055), transparent 42%),
+      rgb(var(--pulse-panel) / 0.88);
     box-shadow:
-      0 18px 58px rgb(0 0 0 / 0.38),
-      inset 0 1px 0 rgb(var(--pulse-text) / 0.12);
-    backdrop-filter: blur(18px);
+      0 14px 36px rgb(0 0 0 / 0.34),
+      inset 0 1px 0 rgb(var(--pulse-text) / 0.1);
+    backdrop-filter: blur(14px);
     transform-origin: center;
     transition:
       border-color 180ms ease,
@@ -566,16 +586,16 @@ body {
 
   .intel-viz-node-button:hover,
   .intel-viz-node-button:focus-visible {
-    transform: translate(-50%, -50%) scale(1.06) !important;
+    transform: translate(-50%, -50%) scale(1.035) !important;
     z-index: 35;
   }
 
   .intel-viz-node-ring {
     position: absolute;
-    inset: -5px;
-    border-radius: inherit;
+    inset: -4px;
+    border-radius: 0.65rem;
     border: 1px solid currentColor;
-    opacity: 0.24;
+    opacity: 0.18;
     pointer-events: none;
   }
 
@@ -583,8 +603,8 @@ body {
     border-color: rgb(var(--pulse-cyan) / 0.78);
     box-shadow:
       0 0 0 1px rgb(var(--pulse-cyan) / 0.18),
-      0 0 44px rgb(var(--pulse-cyan) / 0.24),
-      0 18px 70px rgb(0 0 0 / 0.44);
+      0 0 20px rgb(var(--pulse-cyan) / 0.18),
+      0 18px 54px rgb(0 0 0 / 0.44);
   }
 
   .intel-viz-node-wallet {
@@ -615,8 +635,8 @@ body {
     border-color: rgb(var(--pulse-cyan));
     box-shadow:
       0 0 0 1px rgb(var(--pulse-cyan) / 0.2),
-      0 0 34px rgb(var(--pulse-cyan) / 0.34),
-      0 20px 76px rgb(0 0 0 / 0.5);
+      0 0 20px rgb(var(--pulse-cyan) / 0.24),
+      0 18px 56px rgb(0 0 0 / 0.5);
   }
 
   .intel-viz-node-related {

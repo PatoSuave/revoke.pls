@@ -68,11 +68,26 @@ export function VisualizerGraphCanvas({
   }
 
   return (
-    <div className="intel-viz-canvas relative min-h-[620px] overflow-hidden rounded-[1.75rem] border border-pulse-border bg-pulse-bg/80 lg:min-h-[calc(100dvh-10.75rem)]">
+    <div className="intel-viz-canvas relative min-h-[640px] overflow-hidden rounded-lg border border-pulse-border bg-pulse-bg/80 lg:min-h-[calc(100dvh-10.75rem)]">
       <div className="intel-viz-grid pointer-events-none absolute inset-0" />
       <div className="intel-viz-noise pointer-events-none absolute inset-0" />
-      <div className="pointer-events-none absolute left-4 top-4 z-10 rounded-full border border-pulse-border/80 bg-pulse-bg/80 px-3 py-1 font-mono text-[10px] uppercase tracking-[0.18em] text-pulse-muted">
-        Local demo graph / no live reads
+      <div className="intel-viz-reticle pointer-events-none absolute left-1/2 top-1/2 h-[34rem] w-[34rem] -translate-x-1/2 -translate-y-1/2 rounded-full" />
+      <div className="pointer-events-none absolute left-4 right-4 top-4 z-10 grid gap-2 md:grid-cols-[1fr_auto] md:items-start">
+        <div className="min-w-0 rounded-md border border-pulse-border/80 bg-pulse-bg/82 px-3 py-2 backdrop-blur-xl">
+          <p className="font-mono text-[10px] uppercase tracking-[0.18em] text-pulse-cyan">
+            Trace canvas
+          </p>
+          <p className="mt-1 truncate text-xs text-pulse-muted">
+            Local sample graph. Live reads are not connected on this screen.
+          </p>
+        </div>
+        <div className="hidden grid-cols-5 gap-1 rounded-md border border-pulse-border/80 bg-pulse-bg/82 p-1 font-mono text-[10px] uppercase tracking-[0.12em] text-pulse-muted backdrop-blur-xl md:grid">
+          <LegendItem tone="bg-pulse-green" label="In" />
+          <LegendItem tone="bg-pulse-red" label="Out" />
+          <LegendItem tone="bg-pulse-purple" label="Allow" />
+          <LegendItem tone="bg-pulse-yellow" label="Risk" />
+          <LegendItem tone="bg-pulse-text/60" label="Route" />
+        </div>
       </div>
       <svg
         viewBox="0 0 100 100"
@@ -80,6 +95,13 @@ export function VisualizerGraphCanvas({
         role="img"
         aria-label="PulseChain visualizer demo graph"
       >
+        <g className="pointer-events-none">
+          <circle cx="50" cy="50" r="14" className="intel-viz-range-ring" />
+          <circle cx="50" cy="50" r="27" className="intel-viz-range-ring" />
+          <circle cx="50" cy="50" r="40" className="intel-viz-range-ring" />
+          <path d="M 50 8 L 50 92" className="intel-viz-axis-line" />
+          <path d="M 8 50 L 92 50" className="intel-viz-axis-line" />
+        </g>
         {visibleEdges.map((edge) => {
           const from = nodeById.get(edge.from);
           const to = nodeById.get(edge.to);
@@ -135,8 +157,8 @@ export function VisualizerGraphCanvas({
               <text
                 x={(from.x + to.x) / 2}
                 y={(from.y + to.y) / 2 - 1.8}
-                  textAnchor="middle"
-                  className={`intel-viz-edge-label text-[2.75px] ${
+                textAnchor="middle"
+                className={`intel-viz-edge-label text-[2.75px] ${
                   showLabel
                     ? "fill-pulse-text opacity-100"
                     : "fill-pulse-muted opacity-0"
@@ -182,11 +204,18 @@ export function VisualizerGraphCanvas({
             }`}
           >
             <span className="intel-viz-node-ring" aria-hidden />
-            <span className="relative flex h-8 w-8 items-center justify-center rounded-full border border-pulse-text/10 bg-pulse-bg/70 font-mono text-[11px] font-bold text-pulse-text">
-              {getNodeGlyph(node)}
-            </span>
-            <span className="relative mt-1 block max-w-[5.2rem] truncate px-1 text-[10px] font-semibold leading-3">
-              {node.label}
+            <span className="relative flex min-w-0 items-center justify-center gap-2 px-0 sm:justify-start sm:px-2">
+              <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md border border-current/35 bg-pulse-bg/70 font-mono text-[10px] font-bold text-pulse-text">
+                {getNodeGlyph(node)}
+              </span>
+              <span className="hidden min-w-0 text-left sm:block">
+                <span className="block truncate text-[10px] font-semibold leading-3 text-pulse-text">
+                  {node.label}
+                </span>
+                <span className="mt-0.5 block truncate font-mono text-[9px] uppercase leading-3 text-pulse-muted">
+                  {node.activityLabel}
+                </span>
+              </span>
             </span>
           </button>
         );
@@ -195,11 +224,20 @@ export function VisualizerGraphCanvas({
   );
 }
 
+function LegendItem({ tone, label }: { tone: string; label: string }) {
+  return (
+    <span className="flex items-center gap-1.5 rounded px-2 py-1">
+      <span className={`h-1.5 w-1.5 rounded-full ${tone}`} aria-hidden />
+      {label}
+    </span>
+  );
+}
+
 function getNodeSize(node: VisualizerNode) {
-  if (node.kind === "searched-wallet") return "h-[6.5rem] w-[6.5rem]";
-  if (node.volumeScore >= 70) return "h-[5.6rem] w-[5.6rem]";
-  if (node.volumeScore >= 45) return "h-[4.8rem] w-[4.8rem]";
-  return "h-[4rem] w-[4rem]";
+  if (node.kind === "searched-wallet") return "h-11 w-11 sm:h-14 sm:w-[10rem]";
+  if (node.volumeScore >= 70) return "h-10 w-10 sm:h-[3.25rem] sm:w-[9rem]";
+  if (node.volumeScore >= 45) return "h-10 w-10 sm:h-12 sm:w-[8.25rem]";
+  return "h-9 w-9 sm:h-11 sm:w-[7.5rem]";
 }
 
 function getNodeGlyph(node: VisualizerNode) {

@@ -35,8 +35,8 @@ export function VisualizerToolbar({
   ] as const;
 
   return (
-    <div className="pointer-events-auto absolute right-4 top-24 z-30 hidden flex-col items-center gap-2 rounded-2xl border border-pulse-border bg-pulse-bg/72 p-2 shadow-glow backdrop-blur-xl md:flex">
-      <span className="rounded-xl border border-pulse-border bg-pulse-panel/80 px-2 py-1 font-mono text-[10px] text-pulse-cyan">
+    <div className="pointer-events-auto absolute right-4 top-24 z-30 hidden flex-col items-center gap-2 rounded-lg border border-pulse-border bg-pulse-bg/78 p-2 shadow-glow backdrop-blur-xl md:flex">
+      <span className="rounded-md border border-pulse-border bg-pulse-panel/80 px-2 py-1 font-mono text-[10px] text-pulse-cyan">
         {zoomLabel}
       </span>
       {actions.map(([icon, label, action]) => (
@@ -45,7 +45,7 @@ export function VisualizerToolbar({
           type="button"
           title={label}
           onClick={action}
-          className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-pulse-border bg-pulse-panel/70 text-pulse-muted transition hover:border-pulse-cyan/45 hover:text-pulse-text"
+          className="inline-flex h-10 w-10 items-center justify-center rounded-md border border-pulse-border bg-pulse-panel/70 text-pulse-muted transition hover:border-pulse-cyan/45 hover:text-pulse-text"
         >
           <VisualizerIcon name={icon} className="h-4 w-4" />
         </button>
@@ -64,13 +64,13 @@ export function VisualizerTimeline({
   onTimeRangeChange: (range: string) => void;
 }) {
   return (
-    <section className="absolute inset-x-3 bottom-3 z-30 rounded-2xl border border-pulse-border bg-pulse-bg/78 p-3 shadow-glow backdrop-blur-xl">
+    <section className="absolute inset-x-3 bottom-3 z-30 rounded-lg border border-pulse-border bg-pulse-bg/82 p-3 shadow-glow backdrop-blur-xl">
       <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
         <div className="min-w-0">
           <p className="font-mono text-[10px] font-semibold uppercase tracking-[0.16em] text-pulse-cyan">
-            Transaction-volume timeline
+            Volume timeline
           </p>
-          <div className="mt-3 flex h-16 min-w-0 items-end gap-1 overflow-x-auto rounded-xl border border-pulse-border bg-pulse-panel/45 px-3 pb-2 pt-3">
+          <div className="mt-3 flex h-16 min-w-0 items-end gap-1 overflow-x-auto rounded-md border border-pulse-border bg-pulse-panel/45 px-3 pb-2 pt-3">
             {graph.timeline.map((bucket) => (
               <button
                 key={bucket.label}
@@ -88,13 +88,13 @@ export function VisualizerTimeline({
             ))}
           </div>
         </div>
-        <div className="flex gap-1 overflow-x-auto rounded-xl border border-pulse-border bg-pulse-panel/45 p-1">
+        <div className="flex gap-1 overflow-x-auto rounded-md border border-pulse-border bg-pulse-panel/45 p-1">
           {VISUALIZER_TIME_RANGE_OPTIONS.map((range) => (
             <button
               key={range}
               type="button"
               onClick={() => onTimeRangeChange(range)}
-              className={`shrink-0 rounded-lg px-3 py-1.5 text-xs font-semibold transition ${
+              className={`shrink-0 rounded px-3 py-1.5 text-xs font-semibold transition ${
                 activeTimeRange === range
                   ? "bg-pulse-cyan text-pulse-bg"
                   : "text-pulse-muted hover:bg-pulse-text/5 hover:text-pulse-text"
@@ -124,9 +124,9 @@ export function VisualizerDetailDrawer({
     : undefined;
 
   return (
-    <aside className="intel-viz-panel rounded-[1.5rem] border border-pulse-border bg-pulse-panel/72 p-4">
+    <aside className="intel-viz-panel rounded-lg border border-pulse-border bg-pulse-panel/72 p-4">
       <p className="font-mono text-[11px] font-semibold uppercase tracking-[0.18em] text-pulse-cyan">
-        Detail drawer
+        Entity inspector
       </p>
       {selectedEdge ? (
         <EdgeDetails edge={selectedEdge} transactions={transactions} />
@@ -166,7 +166,7 @@ function NodeDetails({
           <button
             type="button"
             onClick={() => void navigator.clipboard?.writeText(node.address ?? "")}
-            className="inline-flex items-center justify-center gap-2 rounded-xl border border-pulse-border bg-pulse-bg/55 px-4 py-2 text-sm font-semibold text-pulse-text transition hover:border-pulse-cyan/45"
+            className="inline-flex items-center justify-center gap-2 rounded-md border border-pulse-border bg-pulse-bg/55 px-4 py-2 text-sm font-semibold text-pulse-text transition hover:border-pulse-cyan/45"
           >
             <VisualizerIcon name="copy" className="h-4 w-4" />
             Copy address
@@ -176,9 +176,9 @@ function NodeDetails({
           <a
             href={explorerHref}
             target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex items-center justify-center rounded-xl border border-pulse-cyan/35 bg-pulse-cyan/10 px-4 py-2 text-sm font-semibold text-pulse-cyan transition hover:bg-pulse-cyan/15"
-          >
+          rel="noopener noreferrer"
+          className="inline-flex items-center justify-center rounded-md border border-pulse-cyan/35 bg-pulse-cyan/10 px-4 py-2 text-sm font-semibold text-pulse-cyan transition hover:bg-pulse-cyan/15"
+        >
             Open in explorer
           </a>
         ) : null}
@@ -204,8 +204,8 @@ function EdgeDetails({
         {edge.label}
       </h2>
       <p className="mt-3 text-sm leading-6 text-pulse-muted">
-        Demo relationship edge with transaction-count, value, token, and time
-        range context.
+        Selected relationship in the local sample graph with transaction count,
+        value, token, and time range context.
       </p>
       <dl className="mt-5 grid gap-3 text-sm">
         <DetailRow label="Transaction count" value={`${edge.txCount}`} />
@@ -215,7 +215,7 @@ function EdgeDetails({
         <DetailRow label="First seen" value={edge.firstSeenLabel} />
         <DetailRow label="Last seen" value={edge.lastSeenLabel} />
       </dl>
-      <div className="mt-5 rounded-2xl border border-pulse-border bg-pulse-bg/45 p-3">
+      <div className="mt-5 rounded-lg border border-pulse-border bg-pulse-bg/45 p-3">
         <p className="text-xs font-semibold text-pulse-cyan">
           Sample transactions
         </p>
@@ -223,7 +223,7 @@ function EdgeDetails({
           {relatedTransactions.map((transaction) => (
             <div
               key={transaction.id}
-              className="rounded-xl border border-pulse-border bg-pulse-panel/45 px-3 py-2 text-xs"
+              className="rounded-md border border-pulse-border bg-pulse-panel/45 px-3 py-2 text-xs"
             >
               <div className="flex justify-between gap-3">
                 <span className="text-pulse-text">{transaction.typeLabel}</span>
@@ -250,7 +250,7 @@ function DetailRow({
   mono?: boolean;
 }) {
   return (
-    <div className="rounded-2xl border border-pulse-border bg-pulse-bg/45 p-3">
+    <div className="rounded-lg border border-pulse-border bg-pulse-bg/45 p-3">
       <dt className="text-xs font-semibold text-pulse-cyan">{label}</dt>
       <dd
         className={`mt-2 break-words text-pulse-text ${
