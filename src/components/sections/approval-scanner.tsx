@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { useAccount, useChainId } from "wagmi";
+import { useAccount, useChainId, useSwitchChain } from "wagmi";
 import type { Address } from "viem";
 
 import { ApprovalFilters } from "@/components/approvals/approval-filters";
@@ -28,6 +28,7 @@ import {
   getAddressOnlyActiveScanChainIds,
   getAddressOnlyScanOption,
   getSupportedAddressOnlyChainConfig,
+  isAddressOnlyScanChainId,
   resolveDefaultAddressOnlyScanChainId,
   type AddressOnlyScanChainId,
 } from "@/lib/address-only-scan";
@@ -105,12 +106,26 @@ export function ApprovalScanner() {
     status: accountStatus,
   } = useAccount();
   const wagmiChainId = useChainId();
+  const { switchChain, isPending: isSwitchingChain } = useSwitchChain();
   const activeChain = resolveActiveChain({
     isConnected,
     walletChainId,
     wagmiChainId,
   });
   const debugMode = useDebugModeFromQuery();
+  const defaultAddressOnlyChainId = useMemo(
+    () =>
+      resolveDefaultAddressOnlyScanChainId({
+        walletChainId,
+        wagmiChainId,
+      }),
+    [walletChainId, wagmiChainId],
+  );
+  const [preferredAddressOnlyChainId, setPreferredAddressOnlyChainId] =
+    useState<AddressOnlyScanChainId>(defaultAddressOnlyChainId);
+  const [networkSwitchError, setNetworkSwitchError] = useState<string | null>(
+    null,
+  );
   const [scanInputAddress, setScanInputAddress] = useState("");
   const [activeAddressOnlyAddress, setActiveAddressOnlyAddress] =
     useState<Address | null>(null);
@@ -123,6 +138,19 @@ export function ApprovalScanner() {
       }),
     [address, activeAddressOnlyAddress],
   );
+  const selectedPageNetworkChainId = isAddressOnlyScanChainId(walletChainId)
+    ? walletChainId
+    : preferredAddressOnlyChainId;
+
+  useEffect(() => {
+    if (isAddressOnlyScanChainId(walletChainId)) {
+      setPreferredAddressOnlyChainId(walletChainId);
+      return;
+    }
+    if (!isConnected) {
+      setPreferredAddressOnlyChainId(defaultAddressOnlyChainId);
+    }
+  }, [defaultAddressOnlyChainId, isConnected, walletChainId]);
 
   const onScanInputChange = useCallback(
     (value: string) => {
@@ -156,6 +184,31 @@ export function ApprovalScanner() {
     setScanInputError(null);
   }, []);
 
+  const onSelectPageNetwork = useCallback(
+    (chainId: AddressOnlyScanChainId) => {
+      setNetworkSwitchError(null);
+
+      if (!isConnected) {
+        setPreferredAddressOnlyChainId(chainId);
+        return;
+      }
+
+      if (walletChainId === chainId) {
+        setPreferredAddressOnlyChainId(chainId);
+        return;
+      }
+
+      switchChain(
+        { chainId },
+        {
+          onError: (error) => setNetworkSwitchError(error.message),
+          onSuccess: () => setPreferredAddressOnlyChainId(chainId),
+        },
+      );
+    },
+    [isConnected, switchChain, walletChainId],
+  );
+
   return (
     <section
       id="scanner"
@@ -182,6 +235,14 @@ export function ApprovalScanner() {
           />
           <div className="p-4 sm:p-6 lg:p-8">
             <ScannerWorkflowStrip />
+            <PageNetworkSelector
+              selectedChainId={selectedPageNetworkChainId}
+              walletChainId={walletChainId}
+              isConnected={isConnected}
+              isSwitching={isSwitchingChain}
+              error={networkSwitchError}
+              onSelect={onSelectPageNetwork}
+            />
             <AddressScanPanel
               inputAddress={scanInputAddress}
               activeAddress={activeAddressOnlyAddress}
@@ -201,6 +262,10 @@ export function ApprovalScanner() {
               chainConfig={activeChain.activeChainConfig}
               onSupportedChain={activeChain.status === "supported"}
               walletMatchesActiveChain={activeChain.walletMatchesActiveChain}
+              preferredAddressOnlyChainId={preferredAddressOnlyChainId}
+              onPreferredAddressOnlyChainChange={
+                setPreferredAddressOnlyChainId
+              }
               scanTarget={scanTarget}
               debugMode={debugMode}
             />
@@ -391,6 +456,101 @@ function ScannerWorkflowStep({
   );
 }
 
+function PageNetworkSelector({
+  selectedChainId,
+  walletChainId,
+  isConnected,
+  isSwitching,
+  error,
+  onSelect,
+}: {
+  selectedChainId: AddressOnlyScanChainId;
+  walletChainId: number | undefined;
+  isConnected: boolean;
+  isSwitching: boolean;
+  error: string | null;
+  onSelect: (chainId: AddressOnlyScanChainId) => void;
+}) {
+  const selectedOption = getAddressOnlyScanOption(selectedChainId);
+  const walletOnListedNetwork = isAddressOnlyScanChainId(walletChainId);
+  const helper = isConnected
+    ? walletOnListedNetwork
+      ? `Wallet network: ${selectedOption.displayName}. Selecting another network opens a wallet switch prompt.`
+      : "Your wallet is connected on an unsupported network. Select a network below to ask the wallet to switch."
+    : `Address-only scans will start on ${selectedOption.displayName}. Connect a wallet only when you are ready to revoke.`;
+
+  return (
+    <div className="mb-4 rounded-2xl border border-pulse-border/80 bg-pulse-bg/45 p-4">
+      <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+        <div className="min-w-0">
+          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-pulse-cyan">
+            Network
+          </p>
+          <h3 className="mt-1 text-lg font-semibold text-pulse-text">
+            Select the network to review
+          </h3>
+          <p className="mt-2 max-w-3xl text-sm leading-6 text-pulse-muted">
+            {helper}
+          </p>
+          {error ? (
+            <p className="mt-2 max-w-3xl text-xs font-semibold text-pulse-red">
+              {error}
+            </p>
+          ) : null}
+        </div>
+        <ScanStatusPill
+          tone={
+            isConnected
+              ? walletOnListedNetwork
+                ? "success"
+                : "warning"
+              : "neutral"
+          }
+        >
+          {isConnected
+            ? walletOnListedNetwork
+              ? selectedOption.shortName
+              : "Unsupported network"
+            : `${selectedOption.shortName} selected`}
+        </ScanStatusPill>
+      </div>
+      <div className="mt-3 flex flex-wrap gap-2">
+        {addressOnlyScanOptions.map((option) => {
+          const selected = selectedChainId === option.chainId;
+          return (
+            <button
+              key={option.chainId}
+              type="button"
+              onClick={() => onSelect(option.chainId)}
+              disabled={isSwitching || (isConnected && selected)}
+              className={`group relative inline-flex min-h-10 items-center gap-2 overflow-hidden rounded-xl border px-2.5 py-1.5 pr-3 text-xs font-semibold transition disabled:cursor-not-allowed disabled:opacity-60 ${
+                selected
+                  ? "border-pulse-green/40 bg-pulse-green/10 text-pulse-green"
+                  : "border-pulse-border bg-pulse-text/5 text-pulse-muted hover:bg-pulse-text/10"
+              }`}
+              aria-pressed={selected}
+            >
+              <ChainLogoBackdrop chainId={option.chainId} className="h-14 w-14" />
+              <span
+                className={`relative z-10 flex h-6 w-6 shrink-0 items-center justify-center rounded-full border ${
+                  selected
+                    ? "border-pulse-green/40 bg-pulse-green/15"
+                    : "border-pulse-border/70 bg-pulse-bg/55"
+                }`}
+              >
+                <ChainLogo chainId={option.chainId} className="h-4 w-4" />
+              </span>
+              <span className="relative z-10">
+                {isSwitching && !selected ? "Switching..." : option.shortName}
+              </span>
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 function ScanStatusPill({
   children,
   tone,
@@ -424,6 +584,8 @@ function ScannerBody({
   chainConfig,
   onSupportedChain,
   walletMatchesActiveChain,
+  preferredAddressOnlyChainId,
+  onPreferredAddressOnlyChainChange,
   scanTarget,
   debugMode,
 }: {
@@ -436,6 +598,8 @@ function ScannerBody({
   chainConfig: SupportedChainConfig | undefined;
   onSupportedChain: boolean;
   walletMatchesActiveChain: boolean | null;
+  preferredAddressOnlyChainId: AddressOnlyScanChainId;
+  onPreferredAddressOnlyChainChange: (chainId: AddressOnlyScanChainId) => void;
   scanTarget: ScanTarget;
   debugMode: boolean;
 }) {
@@ -450,6 +614,8 @@ function ScannerBody({
         connectedAddress={scanTarget.connectedWalletAddress}
         walletChainId={walletChainId}
         wagmiChainId={wagmiChainId}
+        preferredChainId={preferredAddressOnlyChainId}
+        onPreferredChainChange={onPreferredAddressOnlyChainChange}
         debugMode={debugMode}
       />
     );
@@ -622,12 +788,16 @@ function AddressOnlyScanResults({
   connectedAddress,
   walletChainId,
   wagmiChainId,
+  preferredChainId,
+  onPreferredChainChange,
   debugMode,
 }: {
   owner: Address;
   connectedAddress: Address | undefined;
   walletChainId: number | undefined;
   wagmiChainId: number | undefined;
+  preferredChainId: AddressOnlyScanChainId;
+  onPreferredChainChange: (chainId: AddressOnlyScanChainId) => void;
   debugMode: boolean;
 }) {
   const walletMatchesOwner = addressesEqual(connectedAddress, owner);
@@ -635,17 +805,8 @@ function AddressOnlyScanResults({
   const scanMode: ScanMode = walletMatchesOwner
     ? "connected-wallet-matches-scanned-address"
     : "address-only";
-  const defaultChainId = useMemo(
-    () =>
-      resolveDefaultAddressOnlyScanChainId({
-        walletChainId,
-        wagmiChainId,
-      }),
-    [walletChainId, wagmiChainId],
-  );
   const [selectedChainId, setSelectedChainId] =
-    useState<AddressOnlyScanChainId>(defaultChainId);
-  const [userSelectedChain, setUserSelectedChain] = useState(false);
+    useState<AddressOnlyScanChainId>(preferredChainId);
   const [scanAllStarted, setScanAllStarted] = useState(false);
   const [scanAllIndex, setScanAllIndex] = useState(0);
   const previousOwnerRef = useRef(owner);
@@ -653,17 +814,16 @@ function AddressOnlyScanResults({
   useEffect(() => {
     if (previousOwnerRef.current === owner) return;
     previousOwnerRef.current = owner;
-    setSelectedChainId(defaultChainId);
-    setUserSelectedChain(false);
+    setSelectedChainId(preferredChainId);
     setScanAllStarted(false);
     setScanAllIndex(0);
-  }, [defaultChainId, owner]);
+  }, [owner, preferredChainId]);
 
   useEffect(() => {
-    if (!userSelectedChain && !scanAllStarted) {
-      setSelectedChainId(defaultChainId);
-    }
-  }, [defaultChainId, scanAllStarted, userSelectedChain]);
+    setSelectedChainId(preferredChainId);
+    setScanAllStarted(false);
+    setScanAllIndex(0);
+  }, [preferredChainId]);
 
   const status = !connectedAddress
     ? ADDRESS_SCAN_CONNECT_MATCHING_WALLET_COPY
@@ -686,10 +846,10 @@ function AddressOnlyScanResults({
 
   const selectChain = useCallback((chainId: AddressOnlyScanChainId) => {
     setSelectedChainId(chainId);
-    setUserSelectedChain(true);
     setScanAllStarted(false);
     setScanAllIndex(0);
-  }, []);
+    onPreferredChainChange(chainId);
+  }, [onPreferredChainChange]);
 
   const startScanAll = useCallback(() => {
     setScanAllStarted(true);
