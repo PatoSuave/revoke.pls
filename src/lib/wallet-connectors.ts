@@ -1,7 +1,15 @@
 import type { Connector } from "wagmi";
 
+export const DEFAULT_VISIBLE_INJECTED_WALLET_LIMIT = 5;
+
 const GENERIC_INJECTED_IDS = new Set(["injected"]);
 const GENERIC_INJECTED_NAMES = new Set(["injected", "browser wallet"]);
+
+export interface WalletMenuConnectorGroups {
+  visibleInjected: Connector[];
+  hiddenInjectedCount: number;
+  walletConnect: Connector[];
+}
 
 export function isGenericInjectedConnector(c: Connector): boolean {
   return (
@@ -55,4 +63,28 @@ export function buildAvailableWalletConnectors(
   }
 
   return out;
+}
+
+export function groupWalletMenuConnectors(
+  connectors: readonly Connector[],
+  {
+    showMoreInjected = false,
+    visibleInjectedLimit = DEFAULT_VISIBLE_INJECTED_WALLET_LIMIT,
+  }: {
+    showMoreInjected?: boolean;
+    visibleInjectedLimit?: number;
+  } = {},
+): WalletMenuConnectorGroups {
+  const injected = connectors.filter((c) => c.type === "injected");
+  const walletConnect = connectors.filter((c) => c.type === "walletConnect");
+  const visibleInjected =
+    showMoreInjected || injected.length <= visibleInjectedLimit
+      ? injected
+      : injected.slice(0, visibleInjectedLimit);
+
+  return {
+    visibleInjected,
+    hiddenInjectedCount: injected.length - visibleInjected.length,
+    walletConnect,
+  };
 }

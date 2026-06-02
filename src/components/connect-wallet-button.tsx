@@ -15,6 +15,7 @@ import { isDesktopBuild } from "@/lib/platform";
 import { trackEvent } from "@/lib/telemetry";
 import {
   buildAvailableWalletConnectors,
+  groupWalletMenuConnectors,
   isGenericInjectedConnector,
 } from "@/lib/wallet-connectors";
 import { resolveHeaderNetworkStatus } from "@/lib/wallet-network-status";
@@ -71,6 +72,7 @@ export function ConnectWalletButton({
   const { switchChain, isPending: isSwitching } = useSwitchChain();
 
   const [menuOpen, setMenuOpen] = useState(false);
+  const [showMoreWallets, setShowMoreWallets] = useState(false);
   const [pendingId, setPendingId] = useState<string | null>(null);
   const wrapperRef = useRef<HTMLDivElement>(null);
 
@@ -80,6 +82,13 @@ export function ConnectWalletButton({
   const availableConnectors = useMemo(
     () => buildAvailableWalletConnectors(connectors),
     [connectors],
+  );
+  const walletMenuGroups = useMemo(
+    () =>
+      groupWalletMenuConnectors(availableConnectors, {
+        showMoreInjected: showMoreWallets,
+      }),
+    [availableConnectors, showMoreWallets],
   );
 
   // Close the menu on outside click or Escape.
@@ -112,6 +121,9 @@ export function ConnectWalletButton({
   useEffect(() => {
     if (!isConnecting) setPendingId(null);
   }, [isConnecting]);
+  useEffect(() => {
+    if (!menuOpen) setShowMoreWallets(false);
+  }, [menuOpen]);
 
   const base =
     "inline-flex max-w-full items-center justify-center gap-2 whitespace-nowrap rounded-xl px-3 py-2 text-xs font-semibold transition disabled:cursor-not-allowed disabled:opacity-60 sm:px-4 sm:py-2.5 sm:text-sm";
@@ -318,7 +330,50 @@ export function ConnectWalletButton({
           aria-label="Choose a wallet connection method"
           className="absolute right-0 top-[calc(100%+8px)] z-50 w-72 overflow-hidden rounded-2xl border border-pulse-border bg-pulse-panel/95 p-1 shadow-xl backdrop-blur"
         >
-          {availableConnectors.map((c) => {
+          {walletMenuGroups.visibleInjected.map((c) => {
+            const d = describeConnector(c);
+            const isThisPending = isConnecting && pendingId === c.uid;
+            return (
+              <button
+                key={c.uid}
+                role="menuitem"
+                type="button"
+                disabled={isConnecting}
+                onClick={() => {
+                  setPendingId(c.uid);
+                  trackEvent("connector_selected", { type: c.type });
+                  connect({ connector: c });
+                }}
+                className="flex w-full items-start justify-between gap-3 rounded-xl px-3 py-2.5 text-left text-sm text-pulse-text transition hover:bg-pulse-text/5 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                <span className="flex flex-col">
+                  <span className="font-semibold">{d.label}</span>
+                  <span className="text-xs text-pulse-muted">{d.sub}</span>
+                </span>
+                <span className="text-xs text-pulse-muted">
+                  {isThisPending ? "..." : ""}
+                </span>
+              </button>
+            );
+          })}
+          {walletMenuGroups.hiddenInjectedCount > 0 ? (
+            <button
+              role="menuitem"
+              type="button"
+              disabled={isConnecting}
+              onClick={() => setShowMoreWallets(true)}
+              className="flex w-full items-center justify-between gap-3 rounded-xl px-3 py-2.5 text-left text-sm font-semibold text-pulse-cyan transition hover:bg-pulse-text/5 disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              <span>More wallets</span>
+              <span className="text-xs text-pulse-muted">
+                +{walletMenuGroups.hiddenInjectedCount}
+              </span>
+            </button>
+          ) : null}
+          {walletMenuGroups.walletConnect.length > 0 ? (
+            <div className="my-1 border-t border-pulse-border/70" />
+          ) : null}
+          {walletMenuGroups.walletConnect.map((c) => {
             const d = describeConnector(c);
             const isThisPending = isConnecting && pendingId === c.uid;
             return (
