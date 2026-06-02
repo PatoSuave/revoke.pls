@@ -65,6 +65,11 @@ revoke. HyperEVM gas is paid in HYPE.
   separate connector when `NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID` is configured,
   and is the preferred compatibility path for mobile and hardware wallets that
   support WalletConnect.
+- The scanner page exposes a network selector for user-directed chain changes.
+  When disconnected, it changes the default address-only scan network only. When
+  connected, it calls the wallet switch flow and waits for the wallet to confirm
+  the new chain; revoke rows still require the connected wallet chain to match
+  the row chain.
 - PulseChain RPC defaults to `https://rpc.pulsechain.com`.
 - BSC RPC defaults to `https://bsc-dataseed.bnbchain.org`.
 - Base RPC defaults to `https://mainnet.base.org`.

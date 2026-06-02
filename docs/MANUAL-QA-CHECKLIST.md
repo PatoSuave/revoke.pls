@@ -102,6 +102,19 @@ wallet-specific code.
       treating the approval as submitted or cleared.
 - [ ] If using a tiny burner approval, submit one revoke and verify
       post-revoke live confirmation before the UI shows cleared state.
+- [ ] Use the page-level network selector while disconnected and confirm it
+      changes the default address-only scan network without prompting a wallet.
+- [ ] Connect a wallet, select another network from the page-level network
+      selector, and confirm the wallet opens a network-switch prompt.
+- [ ] Reject one network-switch prompt and confirm the app keeps the previous
+      wallet network and does not show stale approval rows for the rejected
+      network.
+- [ ] Accept one network-switch prompt and confirm scan results, row
+      selections, batch state, and diagnostics reset for the newly selected
+      wallet network.
+- [ ] Confirm the page-level network selector does not bypass revoke gates:
+      revoke remains blocked unless the connected wallet, scanned owner, row
+      chain, and live-verified row state all match.
 - [ ] Repeat a basic connect/disconnect check with MetaMask, Rabby, Internet
       Money Wallet, and ZKX Wallet installed together. Confirm the menu shows
       separate named rows for every wallet that announces through EIP-6963 and
