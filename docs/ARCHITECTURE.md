@@ -60,6 +60,11 @@ revoke. HyperEVM gas is paid in HYPE.
   `window.ethereum`. Wallet-specific connectors should be added only after QA
   shows the injected path cannot work safely and a dedicated follow-up review
   approves the change.
+- The connect menu keeps browser-injected wallets compact by showing the first
+  detected set and moving overflow behind `More wallets`. WalletConnect stays a
+  separate connector when `NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID` is configured,
+  and is the preferred compatibility path for mobile and hardware wallets that
+  support WalletConnect.
 - PulseChain RPC defaults to `https://rpc.pulsechain.com`.
 - BSC RPC defaults to `https://bsc-dataseed.bnbchain.org`.
 - Base RPC defaults to `https://mainnet.base.org`.

@@ -114,6 +114,48 @@ wallet-specific code.
       whether an EIP-1193 or EIP-6963 provider is exposed before proposing
       custom support.
 
+### 2B. Popular Wallet And Hardware Wallet Compatibility
+
+Do not add direct hardware-device, USB, HID, seed phrase, custody, relay, or
+server-signing code. Hardware wallets should work only through standard wallet
+surfaces: a hardware-backed injected wallet such as MetaMask or Rabby, or
+WalletConnect when the wallet vendor supports it.
+
+- [ ] Confirm `NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID` is configured for the
+      tested build. WalletConnect will not appear without it.
+- [ ] Confirm the connect menu keeps detected browser wallets compact. If more
+      than five injected wallets are detected, the first five should show
+      directly and the rest should be behind `More wallets`.
+- [ ] Confirm WalletConnect remains a separate visible option when configured,
+      not hidden inside `More wallets`.
+- [ ] Test the browser-extension flow with MetaMask, Rabby, Brave Wallet,
+      Coinbase Wallet extension, OKX Wallet, Internet Money Wallet, and ZKX
+      Wallet where available.
+- [ ] For every wallet, record browser version, extension version, extension
+      ID, route, chain ID, and pass/fail notes.
+- [ ] Test each wallet alone first, then repeat a basic connect/disconnect pass
+      with multiple wallet extensions enabled together.
+- [ ] For Ledger, test both a hardware-backed MetaMask or Rabby connection and
+      a WalletConnect path when available to the tester.
+- [ ] For Trezor, test a hardware-backed MetaMask or Rabby connection and a
+      WalletConnect path when available to the tester.
+- [ ] For Keystone, test a hardware-backed MetaMask connection and any
+      WalletConnect path available to the tester.
+- [ ] For hardware-wallet tests, use a burner account or low-value test setup.
+      Never ask the tester for seed phrases, private keys, keystore files,
+      wallet passwords, or remote desktop access.
+- [ ] Evidence level 1: the wallet appears as an injected wallet or
+      WalletConnect option and can open its connect prompt.
+- [ ] Evidence level 2: the wallet connects and the expected address appears in
+      Pulse Revoke.
+- [ ] Evidence level 3: PulseChain is recognized as chain ID `369` or the wallet
+      can switch to PulseChain without stale scan state carrying over.
+- [ ] Evidence level 4: no-wallet, wallet-mismatch, wrong-chain, and
+      unverified-row revoke gates still block revoke.
+- [ ] Evidence level 5: a tiny burner approval can be revoked and post-revoke
+      live verification confirms the approval is cleared before the UI shows a
+      cleared state.
+
 ## 3. Address-Only Scan
 
 - [ ] Paste a valid EVM address and start a scan.

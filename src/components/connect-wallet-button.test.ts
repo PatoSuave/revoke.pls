@@ -1,7 +1,10 @@
 import { describe, expect, it } from "vitest";
 import type { Connector } from "wagmi";
 
-import { buildAvailableWalletConnectors } from "@/lib/wallet-connectors";
+import {
+  buildAvailableWalletConnectors,
+  groupWalletMenuConnectors,
+} from "@/lib/wallet-connectors";
 
 function mockConnector({
   id,
@@ -84,5 +87,60 @@ describe("connect wallet menu connectors", () => {
     ]);
 
     expect(connectors.map((connector) => connector.uid)).toEqual(["rabby-a"]);
+  });
+
+  it("caps visible injected wallets while keeping WalletConnect separate", () => {
+    const connectors = buildAvailableWalletConnectors([
+      mockConnector({ id: "wallet.a", name: "Wallet A", type: "injected" }),
+      mockConnector({ id: "wallet.b", name: "Wallet B", type: "injected" }),
+      mockConnector({ id: "wallet.c", name: "Wallet C", type: "injected" }),
+      mockConnector({ id: "wallet.d", name: "Wallet D", type: "injected" }),
+      mockConnector({ id: "wallet.e", name: "Wallet E", type: "injected" }),
+      mockConnector({ id: "wallet.f", name: "Wallet F", type: "injected" }),
+      mockConnector({
+        id: "walletConnect",
+        name: "WalletConnect",
+        type: "walletConnect",
+      }),
+    ]);
+
+    const grouped = groupWalletMenuConnectors(connectors);
+
+    expect(grouped.visibleInjected.map((connector) => connector.name)).toEqual([
+      "Wallet A",
+      "Wallet B",
+      "Wallet C",
+      "Wallet D",
+      "Wallet E",
+    ]);
+    expect(grouped.hiddenInjectedCount).toBe(1);
+    expect(grouped.walletConnect.map((connector) => connector.name)).toEqual([
+      "WalletConnect",
+    ]);
+  });
+
+  it("shows all injected wallets after the more-wallets expander is opened", () => {
+    const connectors = buildAvailableWalletConnectors([
+      mockConnector({ id: "wallet.a", name: "Wallet A", type: "injected" }),
+      mockConnector({ id: "wallet.b", name: "Wallet B", type: "injected" }),
+      mockConnector({ id: "wallet.c", name: "Wallet C", type: "injected" }),
+      mockConnector({ id: "wallet.d", name: "Wallet D", type: "injected" }),
+      mockConnector({ id: "wallet.e", name: "Wallet E", type: "injected" }),
+      mockConnector({ id: "wallet.f", name: "Wallet F", type: "injected" }),
+    ]);
+
+    const grouped = groupWalletMenuConnectors(connectors, {
+      showMoreInjected: true,
+    });
+
+    expect(grouped.visibleInjected.map((connector) => connector.name)).toEqual([
+      "Wallet A",
+      "Wallet B",
+      "Wallet C",
+      "Wallet D",
+      "Wallet E",
+      "Wallet F",
+    ]);
+    expect(grouped.hiddenInjectedCount).toBe(0);
   });
 });
