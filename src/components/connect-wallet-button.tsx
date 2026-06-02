@@ -13,6 +13,10 @@ import {
 import { shortenAddress } from "@/lib/format";
 import { isDesktopBuild } from "@/lib/platform";
 import { trackEvent } from "@/lib/telemetry";
+import {
+  buildAvailableWalletConnectors,
+  isGenericInjectedConnector,
+} from "@/lib/wallet-connectors";
 import { resolveHeaderNetworkStatus } from "@/lib/wallet-network-status";
 
 type Variant = "primary" | "ghost";
@@ -29,12 +33,6 @@ const variantStyles: Record<Variant, string> = {
     "bg-pulse-text/5 text-pulse-text border border-pulse-border hover:bg-pulse-text/10",
 };
 
-/**
- * Connector types we surface in the connect menu. Everything else wagmi might
- * register (mock, etc.) is filtered out. Ordering here matches display order.
- */
-const SUPPORTED_CONNECTOR_TYPES = ["injected", "walletConnect"] as const;
-
 function describeConnector(c: Connector): { label: string; sub: string } {
   if (c.type === "walletConnect") {
     return {
@@ -45,11 +43,18 @@ function describeConnector(c: Connector): { label: string; sub: string } {
     };
   }
   if (c.type === "injected") {
+    if (!isGenericInjectedConnector(c)) {
+      return {
+        label: c.name,
+        sub: "Detected browser extension wallet",
+      };
+    }
+
     return {
       label: "Browser wallet",
       sub: isDesktopBuild
         ? "Browser extensions run only in the web app — use the web version for MetaMask, Rabby, etc."
-        : "MetaMask, Rabby, Brave, and similar",
+        : "MetaMask, Rabby, ZKX, Internet Money, Brave, and similar",
     };
   }
   return { label: c.name, sub: c.type };
@@ -69,24 +74,13 @@ export function ConnectWalletButton({
   const [pendingId, setPendingId] = useState<string | null>(null);
   const wrapperRef = useRef<HTMLDivElement>(null);
 
-  // Deduplicate connectors by type. wagmi auto-registers EIP-6963 providers
-  // alongside our explicit `injected()` connector — each with `type: "injected"`
-  // — which would otherwise render as multiple identical "Browser wallet" rows.
-  // We keep the first entry per type, preserving the order declared in
-  // SUPPORTED_CONNECTOR_TYPES so injected appears before WalletConnect.
-  const availableConnectors = useMemo(() => {
-    const seen = new Set<string>();
-    const out: Connector[] = [];
-    for (const t of SUPPORTED_CONNECTOR_TYPES) {
-      for (const c of connectors) {
-        if (c.type !== t) continue;
-        if (seen.has(c.type)) continue;
-        seen.add(c.type);
-        out.push(c);
-      }
-    }
-    return out;
-  }, [connectors]);
+  // Keep named EIP-6963 injected wallets separate so users with multiple
+  // extensions can choose the exact wallet. Keep one generic Browser wallet
+  // fallback only when named injected wallet discovery is unavailable.
+  const availableConnectors = useMemo(
+    () => buildAvailableWalletConnectors(connectors),
+    [connectors],
+  );
 
   // Close the menu on outside click or Escape.
   useEffect(() => {
