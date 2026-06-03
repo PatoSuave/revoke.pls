@@ -34,13 +34,13 @@ const config: Config = {
         mono: ["ui-monospace", "SFMono-Regular", "Menlo", "monospace"],
       },
       boxShadow: {
-        glow: "0 24px 90px -42px rgb(var(--pulse-cyan) / 0.55)",
+        glow: "0 24px 90px -42px rgb(var(--pulse-purple) / 0.55)",
       },
       backgroundImage: {
         "pulse-gradient":
-          "linear-gradient(135deg, rgb(var(--pulse-cyan)) 0%, rgb(var(--pulse-green)) 52%, rgb(var(--pulse-purple)) 100%)",
+          "linear-gradient(135deg, rgb(var(--pulse-purple)) 0%, rgb(var(--pulse-pink)) 55%, rgb(var(--pulse-cyan)) 100%)",
         "pulse-radial":
-          "radial-gradient(1200px 620px at 50% -10%, rgb(var(--pulse-cyan) / 0.22), transparent 62%), radial-gradient(760px 520px at 92% 8%, rgb(var(--pulse-green) / 0.14), transparent 64%), radial-gradient(760px 520px at 8% 16%, rgb(var(--pulse-purple) / 0.12), transparent 64%)",
+          "radial-gradient(1200px 620px at 50% -10%, rgb(var(--pulse-purple) / 0.24), transparent 62%), radial-gradient(760px 520px at 92% 8%, rgb(var(--pulse-pink) / 0.14), transparent 64%), radial-gradient(760px 520px at 8% 16%, rgb(var(--pulse-cyan) / 0.12), transparent 64%)",
       },
     },
   },
