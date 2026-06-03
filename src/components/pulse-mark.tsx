@@ -23,6 +23,8 @@ export function PulseMark({ className = "h-8 w-8" }: { className?: string }) {
         rx="10"
         className="pulse-mark-frame"
         fill="url(#pulseMarkFill)"
+        stroke="rgb(var(--pulse-mark-outline) / var(--pulse-mark-outline-alpha))"
+        strokeWidth="1.4"
       />
       <path
         d={lifelinePath}
