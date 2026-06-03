@@ -17,6 +17,14 @@
   --pulse-red: 255 77 109;
   --pulse-on-gradient: 255 255 255;
   --pulse-mark-stroke: 8 11 15;
+  --pulse-mark-outline: 255 255 255;
+  --pulse-mark-outline-alpha: 0.12;
+  --chain-map-surface-alpha: 0.32;
+  --chain-map-purple-alpha: 0.08;
+  --chain-map-pink-alpha: 0.055;
+  --chain-map-grid-opacity: 0.26;
+  --chain-map-scan-opacity: 0.09;
+  --chain-map-mark-opacity: 0.025;
   color-scheme: dark;
 }
 
@@ -35,6 +43,14 @@ html[data-theme="dark"] {
   --pulse-red: 255 77 109;
   --pulse-on-gradient: 255 255 255;
   --pulse-mark-stroke: 8 11 15;
+  --pulse-mark-outline: 255 255 255;
+  --pulse-mark-outline-alpha: 0.12;
+  --chain-map-surface-alpha: 0.32;
+  --chain-map-purple-alpha: 0.08;
+  --chain-map-pink-alpha: 0.055;
+  --chain-map-grid-opacity: 0.26;
+  --chain-map-scan-opacity: 0.09;
+  --chain-map-mark-opacity: 0.025;
   color-scheme: dark;
 }
 
@@ -53,6 +69,14 @@ html[data-theme="dim"] {
   --pulse-red: 251 113 133;
   --pulse-on-gradient: 255 255 255;
   --pulse-mark-stroke: 18 22 31;
+  --pulse-mark-outline: 255 255 255;
+  --pulse-mark-outline-alpha: 0.1;
+  --chain-map-surface-alpha: 0.22;
+  --chain-map-purple-alpha: 0.06;
+  --chain-map-pink-alpha: 0.04;
+  --chain-map-grid-opacity: 0.2;
+  --chain-map-scan-opacity: 0.07;
+  --chain-map-mark-opacity: 0.02;
   color-scheme: dark;
 }
 
@@ -70,7 +94,15 @@ html[data-theme="light"] {
   --pulse-yellow: 202 138 4;
   --pulse-red: 220 38 70;
   --pulse-on-gradient: 255 255 255;
-  --pulse-mark-stroke: 20 25 38;
+  --pulse-mark-stroke: 255 255 255;
+  --pulse-mark-outline: 15 23 42;
+  --pulse-mark-outline-alpha: 0.22;
+  --chain-map-surface-alpha: 0.2;
+  --chain-map-purple-alpha: 0.055;
+  --chain-map-pink-alpha: 0.04;
+  --chain-map-grid-opacity: 0.18;
+  --chain-map-scan-opacity: 0.055;
+  --chain-map-mark-opacity: 0.018;
   color-scheme: light;
 }
 
@@ -189,17 +221,17 @@ body {
       linear-gradient(
         180deg,
         rgb(var(--pulse-bg)) 0%,
-        rgb(var(--pulse-panel) / 0.52) 44%,
+        rgb(var(--pulse-panel) / var(--chain-map-surface-alpha)) 44%,
         rgb(var(--pulse-bg)) 100%
       ),
       radial-gradient(
         900px 420px at 16% 0%,
-        rgb(var(--pulse-purple) / 0.14),
+        rgb(var(--pulse-purple) / var(--chain-map-purple-alpha)),
         transparent 64%
       ),
       radial-gradient(
         780px 420px at 92% 8%,
-        rgb(var(--pulse-pink) / 0.1),
+        rgb(var(--pulse-pink) / var(--chain-map-pink-alpha)),
         transparent 66%
       );
   }
@@ -216,7 +248,7 @@ body {
     content: "";
     position: absolute;
     inset: -12% -8%;
-    opacity: 0.46;
+    opacity: var(--chain-map-grid-opacity);
     background-image:
       linear-gradient(
         90deg,
@@ -255,7 +287,7 @@ body {
     content: "";
     position: absolute;
     inset: 0;
-    opacity: 0.2;
+    opacity: var(--chain-map-scan-opacity);
     background:
       linear-gradient(
         115deg,
@@ -273,7 +305,7 @@ body {
     right: max(2rem, calc((100vw - 72rem) / 2));
     top: 3rem;
     color: rgb(var(--pulse-purple));
-    opacity: 0.045;
+    opacity: var(--chain-map-mark-opacity);
     transform: rotate(-8deg);
   }
 
