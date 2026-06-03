@@ -22,9 +22,9 @@
   --chain-map-surface-alpha: 0.32;
   --chain-map-purple-alpha: 0.08;
   --chain-map-pink-alpha: 0.055;
-  --chain-map-grid-opacity: 0.26;
-  --chain-map-scan-opacity: 0.09;
-  --chain-map-mark-opacity: 0.025;
+  --chain-map-grid-opacity: 0.34;
+  --chain-map-scan-opacity: 0.14;
+  --chain-map-mark-opacity: 0.065;
   color-scheme: dark;
 }
 
@@ -48,9 +48,9 @@ html[data-theme="dark"] {
   --chain-map-surface-alpha: 0.32;
   --chain-map-purple-alpha: 0.08;
   --chain-map-pink-alpha: 0.055;
-  --chain-map-grid-opacity: 0.26;
-  --chain-map-scan-opacity: 0.09;
-  --chain-map-mark-opacity: 0.025;
+  --chain-map-grid-opacity: 0.34;
+  --chain-map-scan-opacity: 0.14;
+  --chain-map-mark-opacity: 0.065;
   color-scheme: dark;
 }
 
@@ -74,9 +74,9 @@ html[data-theme="dim"] {
   --chain-map-surface-alpha: 0.22;
   --chain-map-purple-alpha: 0.06;
   --chain-map-pink-alpha: 0.04;
-  --chain-map-grid-opacity: 0.2;
-  --chain-map-scan-opacity: 0.07;
-  --chain-map-mark-opacity: 0.02;
+  --chain-map-grid-opacity: 0.3;
+  --chain-map-scan-opacity: 0.12;
+  --chain-map-mark-opacity: 0.055;
   color-scheme: dark;
 }
 
@@ -100,9 +100,9 @@ html[data-theme="light"] {
   --chain-map-surface-alpha: 0.2;
   --chain-map-purple-alpha: 0.055;
   --chain-map-pink-alpha: 0.04;
-  --chain-map-grid-opacity: 0.18;
-  --chain-map-scan-opacity: 0.055;
-  --chain-map-mark-opacity: 0.018;
+  --chain-map-grid-opacity: 0.24;
+  --chain-map-scan-opacity: 0.085;
+  --chain-map-mark-opacity: 0.04;
   color-scheme: light;
 }
 
