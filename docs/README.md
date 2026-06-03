@@ -24,6 +24,7 @@ boundaries or deciding whether to use the app.
 
 - [Product brief](PRODUCT_BRIEF.md)
 - [Roadmap](ROADMAP.md)
+- [PulseChain Intelligence Suite](intel/PULSECHAIN_INTELLIGENCE_SUITE.md)
 - [Phishing link checker](PHISHING-LINK-CHECKER.md)
 - [Wallet Lifeboat master spec](lifeboat/WALLET_LIFEBOAT_MASTER_SPEC.md)
 - [Wallet Lifeboat safety boundaries](lifeboat/SAFETY_BOUNDARIES.md)

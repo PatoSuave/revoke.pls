@@ -174,6 +174,7 @@ export default function LauncherPage() {
         <TrustStrip />
         <AntiPhishingBanner />
         <PulseChainResourceLinks />
+        <IntelPreviewSection />
         <DesktopSection release={release} desktopReady={desktopReady} />
         <IpfsSection release={release} ipfsReady={ipfsReady} />
         <FAQSection />
@@ -482,6 +483,63 @@ function TrustStrip() {
   );
 }
 
+function IntelPreviewSection() {
+  const cards = [
+    {
+      title: "Wallet context",
+      body: "Preview a local demo report with portfolio, decoded activity, and one-hop relationships.",
+    },
+    {
+      title: "Research surfaces",
+      body: "Plan token analytics, workspaces, and network pulse views from the same read-only foundation.",
+    },
+    {
+      title: "Clear boundaries",
+      body: "The first pass adds no live data calls, wallet prompts, or transaction paths.",
+    },
+  ] as const;
+
+  return (
+    <section className="border-b border-pulse-border/60 py-14 sm:py-20">
+      <div className="mx-auto grid max-w-6xl gap-8 px-4 sm:px-6 lg:grid-cols-[0.95fr_1.05fr] lg:items-start">
+        <div>
+          <SectionKicker>PulseChain intelligence</SectionKicker>
+          <h2 className="mt-2 text-3xl font-bold sm:text-4xl">
+            A new research console is taking shape.
+          </h2>
+          <p className="mt-4 text-sm leading-7 text-pulse-muted">
+            The Intelligence Suite starts with a local wallet demo and a roadmap
+            for richer PulseChain research tools. It stays separate from revoke
+            execution and uses labeled sample data in the first pass.
+          </p>
+          <Link
+            href="/intel"
+            className="mt-5 inline-flex items-center justify-center rounded-xl border border-pulse-cyan/35 bg-pulse-cyan/10 px-4 py-2.5 text-sm font-semibold text-pulse-cyan transition hover:bg-pulse-cyan/15"
+          >
+            Explore Intelligence Suite
+          </Link>
+        </div>
+
+        <div className="grid gap-3 sm:grid-cols-3">
+          {cards.map((card) => (
+            <article
+              key={card.title}
+              className="rounded-2xl border border-pulse-border bg-pulse-panel/55 p-5"
+            >
+              <p className="text-sm font-semibold text-pulse-text">
+                {card.title}
+              </p>
+              <p className="mt-2 text-xs leading-5 text-pulse-muted">
+                {card.body}
+              </p>
+            </article>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
+
 function HowItWorks() {
   return (
     <section id="how-it-works" className="border-b border-pulse-border/60 py-16 sm:py-20">
@@ -749,6 +807,9 @@ function SiteFooter({ desktopReady }: { desktopReady: boolean }) {
         <nav className="flex flex-wrap gap-4 text-xs">
           <Link href="/app" className="transition hover:text-pulse-text">
             Launch Scanner
+          </Link>
+          <Link href="/intel" className="transition hover:text-pulse-text">
+            Intelligence Suite
           </Link>
           <Link href="/security" className="transition hover:text-pulse-text">
             Security &amp; Trust

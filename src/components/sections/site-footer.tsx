@@ -35,6 +35,9 @@ export function SiteFooter() {
               {item.label}
             </a>
           ))}
+          <a href="/intel" className="transition hover:text-pulse-text">
+            Intelligence Suite
+          </a>
           <a
             href={siteConfig.links.github}
             target="_blank"

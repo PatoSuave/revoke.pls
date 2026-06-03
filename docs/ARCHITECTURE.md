@@ -53,6 +53,23 @@ revoke. HyperEVM gas is paid in HYPE.
 - `src/lib/wagmi.ts` registers PulseChain, BSC, Base, Polygon, Ethereum
   Mainnet, Arbitrum One, OP Mainnet, and HyperEVM with wagmi. Ethereum,
   Arbitrum, Optimism, and HyperEVM use separate scanner lanes.
+- Browser extension wallets, including new EVM wallets such as Internet Money
+  Wallet and ZKX Wallet, are expected to use standard injected connectors
+  first. When wallets announce through EIP-6963, the connect menu should show
+  separate named wallet rows so users do not get whichever extension wins
+  `window.ethereum`. Wallet-specific connectors should be added only after QA
+  shows the injected path cannot work safely and a dedicated follow-up review
+  approves the change.
+- The connect menu keeps browser-injected wallets compact by showing the first
+  detected set and moving overflow behind `More wallets`. WalletConnect stays a
+  separate connector when `NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID` is configured,
+  and is the preferred compatibility path for mobile and hardware wallets that
+  support WalletConnect.
+- The scanner page exposes a network selector for user-directed chain changes.
+  When disconnected, it changes the default address-only scan network only. When
+  connected, it calls the wallet switch flow and waits for the wallet to confirm
+  the new chain; revoke rows still require the connected wallet chain to match
+  the row chain.
 - PulseChain RPC defaults to `https://rpc.pulsechain.com`.
 - BSC RPC defaults to `https://bsc-dataseed.bnbchain.org`.
 - Base RPC defaults to `https://mainnet.base.org`.
