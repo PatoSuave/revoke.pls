@@ -132,6 +132,11 @@ const FAQ_ITEMS = [
       "No. Pulse Revoke reads public wallet and chain data. Your funds stay in your wallet at all times.",
   },
   {
+    question: "Is Pulse Revoke decentralized?",
+    answer:
+      "Pulse Revoke does not custody funds. It reads public blockchain data and prepares revoke transactions that only your wallet can approve. The website is a hosted interface, but the important actions happen on chain, and you can verify every approval or revoke transaction through your wallet and the relevant block explorer.",
+  },
+  {
     question: "Can it move my tokens?",
     answer:
       "The app cannot move tokens by itself. It only prepares explicit revoke transactions after you click a revoke action and confirm in your wallet.",
