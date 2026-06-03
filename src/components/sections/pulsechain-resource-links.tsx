@@ -14,7 +14,7 @@ export function PulseChainResourceLinks({
   return (
     <section
       id="pulsechain-resources"
-      className={`border-b border-pulse-border/60 bg-pulse-bg ${
+      className={`border-b border-pulse-border/45 bg-transparent ${
         compact ? "py-8 sm:py-10" : "py-12 sm:py-16"
       }`}
     >
@@ -24,7 +24,7 @@ export function PulseChainResourceLinks({
             PulseChain resources
           </p>
           <h2 className="mt-2 text-2xl font-bold text-pulse-text sm:text-3xl">
-            Curated links for common PulseChain destinations.
+            Trusted PulseChain links
           </h2>
           <p className="mt-3 text-sm leading-6 text-pulse-muted">
             {PULSECHAIN_RESOURCE_NOTICE}
@@ -52,10 +52,10 @@ export function PulseChainResourceLinks({
                 target="_blank"
                 rel="noopener noreferrer"
                 style={cardStyle}
-                className="group relative flex min-h-0 flex-col overflow-hidden rounded-xl border border-pulse-border bg-pulse-panel/55 p-4 transition hover:border-[color:var(--accent-border)] hover:bg-pulse-panel/75 sm:min-h-48"
+                className="group relative flex min-h-0 flex-col overflow-hidden rounded-xl border border-pulse-border/75 bg-pulse-panel/50 p-4 shadow-[inset_0_1px_0_rgb(255_255_255/0.03)] transition hover:border-[color:var(--accent-border)] hover:bg-pulse-panel/70 sm:min-h-48"
               >
                 <div
-                  className="pointer-events-none absolute -right-8 -top-8 h-24 w-24 rounded-full bg-[color:var(--accent-color)] opacity-[0.08] blur-2xl transition group-hover:opacity-[0.13]"
+                  className="pointer-events-none absolute inset-x-0 top-0 h-px bg-[color:var(--accent-border)] opacity-70 transition group-hover:opacity-100"
                   aria-hidden
                 />
 
