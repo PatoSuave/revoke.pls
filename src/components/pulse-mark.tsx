@@ -11,8 +11,8 @@ export function PulseMark({ className = "h-8 w-8" }: { className?: string }) {
       <defs>
         <linearGradient id="pulseMarkFill" x1="0" y1="0" x2="1" y2="1">
           <stop offset="0%" stopColor="rgb(var(--pulse-cyan))" />
-          <stop offset="50%" stopColor="rgb(var(--pulse-purple))" />
-          <stop offset="100%" stopColor="rgb(var(--pulse-pink))" />
+          <stop offset="52%" stopColor="rgb(var(--pulse-green))" />
+          <stop offset="100%" stopColor="rgb(var(--pulse-purple))" />
         </linearGradient>
       </defs>
       <rect

@@ -159,23 +159,23 @@ export function ApprovalScanner() {
   return (
     <section
       id="scanner"
-      className="relative bg-gradient-to-b from-pulse-bg via-pulse-panel/20 to-pulse-bg py-7 sm:py-10"
+      className="relative py-7 sm:py-10"
     >
       <div className="mx-auto max-w-6xl px-4 sm:px-6">
         <div className="max-w-3xl">
           <p className="text-xs font-semibold uppercase tracking-[0.18em] text-pulse-cyan">
-            Scanner controls
+            Scanner
           </p>
           <h2 className="mt-2 text-2xl font-bold tracking-tight text-pulse-text sm:text-3xl">
-            Choose a wallet to review
+            Scan first. Revoke only when ready.
           </h2>
           <p className="mt-2 text-sm leading-6 text-pulse-muted">
-            Paste an address for read-only review, or connect the matching
-            wallet when you are ready to revoke verified approvals.
+            Paste a wallet address for read-only review, or connect the
+            matching wallet when you are ready to act on verified approvals.
           </p>
         </div>
 
-        <div className="relative mt-5 overflow-hidden rounded-2xl border border-pulse-border bg-pulse-panel/80 shadow-glow">
+        <div className="scanner-panel-shell relative mt-5 overflow-hidden rounded-2xl border border-pulse-border/80">
           <div
             className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-pulse-cyan/70 to-transparent"
             aria-hidden
@@ -269,7 +269,7 @@ function AddressScanPanel({
   });
 
   return (
-    <div className="mb-6 rounded-2xl border border-pulse-border/80 bg-pulse-bg/45 p-4">
+    <div className="mb-6 rounded-2xl border border-pulse-border/75 bg-pulse-bg/40 p-4 shadow-[inset_0_1px_0_rgb(255_255_255/0.035)]">
       <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
         <div className="min-w-0">
           <p className="text-xs font-semibold uppercase tracking-[0.18em] text-pulse-cyan">
@@ -279,7 +279,7 @@ function AddressScanPanel({
             Review first. Connect only to revoke.
           </h3>
           <p className="mt-2 max-w-2xl text-sm leading-6 text-pulse-muted">
-            Paste any EVM wallet address for read-only approval review. Wallet
+            Paste any EVM wallet address for read-only review. Wallet
             connection is needed only when you choose a verified row to revoke.
           </p>
         </div>
@@ -358,12 +358,12 @@ function ScannerWorkflowStrip() {
       <ScannerWorkflowStep
         label="2"
         title="Review"
-        body="Check spender and risk cues."
+        body="Check live state and spender context."
       />
       <ScannerWorkflowStep
         label="3"
         title="Revoke"
-        body="Connect the matching wallet."
+        body="Connect only the matching wallet."
       />
     </div>
   );
@@ -379,8 +379,8 @@ function ScannerWorkflowStep({
   body: string;
 }) {
   return (
-    <div className="flex items-start gap-3 rounded-xl border border-pulse-border/70 bg-pulse-bg/35 p-3">
-      <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full border border-pulse-cyan/35 bg-pulse-cyan/10 font-mono text-[11px] font-semibold text-pulse-cyan">
+    <div className="flex items-start gap-3 rounded-xl border border-pulse-border/65 bg-pulse-bg/30 p-3 shadow-[inset_0_1px_0_rgb(255_255_255/0.03)]">
+      <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full border border-pulse-cyan/35 bg-pulse-cyan/10 font-mono text-[11px] font-semibold text-pulse-cyan shadow-[0_0_12px_rgb(var(--pulse-cyan)/0.12)]">
         {label}
       </span>
       <span className="min-w-0">
@@ -2453,14 +2453,14 @@ function ScannerState({
         <p className="max-w-xl leading-6 text-pulse-muted">{body}</p>
         {action ? <div>{action}</div> : null}
       </div>
-      <div className="rounded-2xl border border-pulse-border bg-pulse-bg/50 p-4 text-xs text-pulse-muted">
+      <div className="rounded-2xl border border-pulse-border/75 bg-pulse-bg/40 p-4 text-xs text-pulse-muted shadow-[inset_0_1px_0_rgb(255_255_255/0.03)]">
         <p className="font-semibold uppercase tracking-[0.16em] text-pulse-text">
           Safety posture
         </p>
         <ul className="mt-3 space-y-2">
           <li>No private keys or seed phrases.</li>
           <li>Reads are public wallet and chain data.</li>
-          <li>Write requests happen only after you click revoke.</li>
+          <li>Transactions start only after you choose revoke.</li>
         </ul>
       </div>
     </div>

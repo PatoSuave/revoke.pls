@@ -4,9 +4,9 @@ import { OFFICIAL_DOMAIN } from "@/lib/security-content";
 
 export function AntiPhishingBanner() {
   return (
-    <aside className="border-b border-pulse-border/60 bg-pulse-bg">
+    <aside className="border-b border-pulse-border/45 bg-transparent">
       <div className="mx-auto max-w-6xl px-4 py-3 sm:px-6">
-        <div className="flex flex-col gap-3 rounded-2xl border border-pulse-border bg-pulse-panel/55 px-4 py-3 text-sm sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex flex-col gap-3 rounded-2xl border border-pulse-border/75 bg-pulse-panel/48 px-4 py-3 text-sm shadow-[inset_0_1px_0_rgb(255_255_255/0.035)] backdrop-blur sm:flex-row sm:items-center sm:justify-between">
           <div className="flex min-w-0 items-start gap-3">
             <span
               className="mt-2 h-2 w-2 shrink-0 rounded-full bg-pulse-green"
@@ -23,7 +23,7 @@ export function AntiPhishingBanner() {
           </div>
           <Link
             href="/security"
-            className="inline-flex w-full shrink-0 items-center justify-center rounded-xl border border-pulse-cyan/35 bg-pulse-cyan/10 px-3 py-2 text-xs font-semibold text-pulse-cyan transition hover:bg-pulse-cyan/15 sm:w-auto"
+            className="inline-flex w-full shrink-0 items-center justify-center rounded-xl border border-pulse-cyan/35 bg-pulse-cyan/10 px-3 py-2 text-xs font-semibold text-pulse-cyan transition hover:border-pulse-cyan/55 hover:bg-pulse-cyan/15 sm:w-auto"
           >
             Security &amp; Trust
           </Link>

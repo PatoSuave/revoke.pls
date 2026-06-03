@@ -4,6 +4,7 @@ import type { CSSProperties } from "react";
 import { AntiPhishingBanner } from "@/components/sections/anti-phishing-banner";
 import { ApprovalScanner } from "@/components/sections/approval-scanner";
 import { ChainLogo } from "@/components/chains/chain-logo";
+import { PulseMark } from "@/components/pulse-mark";
 import { PulseChainGasTracker } from "@/components/gas/pulsechain-gas-tracker";
 import { PulseChainResourceLinks } from "@/components/sections/pulsechain-resource-links";
 import { getChainVisual } from "@/lib/chain-visuals";
@@ -38,33 +39,47 @@ export default function AppPage() {
   return (
     <>
       <SiteHeader />
-      <main className="bg-pulse-bg">
-        <AppWorkspaceIntro />
-        <AntiPhishingBanner />
-        <ApprovalScanner />
-        <PulseChainGasTracker />
-        <PulseChainResourceLinks compact />
+      <main className="scanner-map-surface overflow-hidden bg-pulse-bg">
+        <ScannerAppBackdrop />
+        <div className="relative z-10">
+          <AppWorkspaceIntro />
+          <AntiPhishingBanner />
+          <ApprovalScanner />
+          <PulseChainGasTracker />
+          <PulseChainResourceLinks compact />
+        </div>
       </main>
       <SiteFooter />
     </>
   );
 }
 
+function ScannerAppBackdrop() {
+  return (
+    <div className="chain-map-backdrop" aria-hidden>
+      <div className="chain-map-mark hidden sm:block">
+        <PulseMark className="h-64 w-64 lg:h-80 lg:w-80" />
+      </div>
+    </div>
+  );
+}
+
 function AppWorkspaceIntro() {
   return (
-    <section className="border-b border-pulse-border/50 bg-pulse-bg">
-      <div className="mx-auto max-w-6xl px-4 py-7 sm:px-6 sm:py-9">
-        <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
+    <section className="border-b border-pulse-border/45 bg-transparent">
+      <div className="mx-auto max-w-6xl px-4 py-8 sm:px-6 sm:py-10">
+        <div className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
           <div className="max-w-3xl">
             <p className="text-xs font-semibold uppercase tracking-[0.18em] text-pulse-cyan">
-              Scanner workspace
+              Approval scanner
             </p>
-            <h1 className="mt-2 text-3xl font-bold text-pulse-text sm:text-4xl">
-              Review active approvals
+            <h1 className="mt-2 max-w-3xl text-3xl font-bold tracking-tight text-pulse-text sm:text-4xl">
+              Review approvals before you revoke
             </h1>
             <p className="mt-3 max-w-2xl text-sm leading-6 text-pulse-muted sm:text-base">
-              Review active token and NFT approvals. Revoke only after live
-              verification confirms the approval is still active.
+              Paste a wallet address to review approvals without connecting.
+              Connect only the matching wallet when you are ready to revoke a
+              live-verified row.
             </p>
             <p className="mt-2 max-w-2xl text-sm leading-6 text-pulse-muted sm:text-base">
               {HYPEREVM_LIVE_NETWORK_NOTE}
@@ -105,7 +120,7 @@ function LiveSupportedChainPill({
   return (
     <span
       style={pillStyle}
-      className="inline-flex max-w-full items-center gap-1.5 rounded-full border border-[color:var(--accent-border)] bg-[color:var(--accent-soft)] px-2.5 py-1 font-medium text-pulse-muted shadow-[0_0_18px_var(--accent-soft)] transition hover:border-[color:var(--accent-color)] hover:bg-pulse-panel/70"
+      className="inline-flex max-w-full items-center gap-1.5 rounded-full border border-[color:var(--accent-border)] bg-pulse-panel/55 px-2.5 py-1 font-medium text-pulse-muted shadow-[0_0_12px_var(--accent-soft)] transition hover:border-[color:var(--accent-color)] hover:bg-pulse-panel/75"
     >
       <span
         className="brand-live-dot h-1.5 w-1.5 shrink-0 rounded-full"
