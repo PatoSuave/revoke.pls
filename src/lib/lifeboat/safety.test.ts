@@ -64,6 +64,8 @@ describe("Wallet Lifeboat safety copy", () => {
       "utf8",
     );
 
+    expect(page).toContain("notFound");
+    expect(page).toContain("isWalletLifeboatEnabled");
     expect(page).toContain("WalletLifeboat");
     expect(page).toContain("LIFEBOAT_ROUTE");
     expect(component).not.toMatch(
