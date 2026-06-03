@@ -5,6 +5,8 @@
  * here so routes, metadata, generated images, and footer copy stay consistent.
  */
 
+import { isWalletLifeboatEnabled } from "@/lib/lifeboat/visibility";
+
 export const DEFAULT_SITE_URL = "https://pulserevoke.com";
 
 export interface SiteUrlResolution {
@@ -87,6 +89,14 @@ if (siteUrlResolution.issue) {
 
 const resolvedUrl = siteUrlResolution.url;
 
+const sharedNav = [
+  { href: "/app#scanner", label: "Scanner" },
+  ...(isWalletLifeboatEnabled()
+    ? [{ href: "/app/wallet-lifeboat", label: "Wallet Lifeboat" }]
+    : []),
+  { href: "/security", label: "Security Guide" },
+] as const;
+
 export const siteConfig = {
   /** Public-facing product name. */
   name: "Pulse Revoke",
@@ -131,11 +141,7 @@ export const siteConfig = {
     "approval revoke tool",
   ] as const,
   /** Shared app-shell nav. Keep these pointed at real routes/anchors. */
-  nav: [
-    { href: "/app#scanner", label: "Scanner" },
-    { href: "/app/wallet-lifeboat", label: "Wallet Lifeboat" },
-    { href: "/security", label: "Security Guide" },
-  ] as const,
+  nav: sharedNav,
   /** External / utility links. */
   links: {
     explorer: "https://scan.pulsechain.com",
