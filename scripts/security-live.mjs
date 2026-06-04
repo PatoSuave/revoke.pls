@@ -10,8 +10,11 @@ const REQUIRED_HEADERS = [
     name: "content-security-policy",
     validate: (value) =>
       value.includes("default-src 'self'") &&
-      value.includes("frame-ancestors 'none'"),
-    expected: "default-src 'self' and frame-ancestors 'none'",
+      value.includes("frame-ancestors 'none'") &&
+      /script-src[^;]*'nonce-[^']+'/.test(value) &&
+      !/script-src[^;]*'unsafe-inline'/.test(value),
+    expected:
+      "default-src 'self', frame-ancestors 'none', and nonce-based script-src without unsafe-inline",
   },
   {
     name: "content-security-policy-report-only",
