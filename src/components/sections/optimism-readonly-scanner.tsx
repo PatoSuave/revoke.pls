@@ -8,6 +8,7 @@ import {
   RevokeReceipt,
   type RevokeReceiptDetails,
 } from "@/components/approvals/revoke-receipt";
+import { AccountCodeDelegationCard } from "@/components/sections/account-code-delegation-card";
 import { TokenAvatar } from "@/components/tokens/token-avatar";
 import { useOptimismApprovalScan } from "@/hooks/use-optimism-approval-scan";
 import { useTokenLogos } from "@/hooks/use-token-logos";
@@ -151,6 +152,12 @@ export function OptimismReadOnlyScanner({
         activeCount={activeCount}
         isFetching={scan.isFetching}
         onRescan={scan.refetch}
+      />
+
+      <AccountCodeDelegationCard
+        owner={owner}
+        chainId={OPTIMISM_CLIENT_CHAIN_ID}
+        chainName={OPTIMISM_DISPLAY_NAME}
       />
 
       {activeCount > 0 ? (

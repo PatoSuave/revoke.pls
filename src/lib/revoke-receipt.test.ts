@@ -3,11 +3,14 @@ import { describe, expect, it } from "vitest";
 import {
   LIVE_VERIFICATION_CONFIRMED_COPY,
   LIVE_VERIFICATION_INCOMPLETE_COPY,
+  PRECONFIRM_TRANSACTION_SEEN_COPY,
   TRANSACTION_SUBMITTED_INCOMPLETE_COPY,
   getRevokeReceiptCopy,
   revokeMethodLabel,
   revokeSummary,
 } from "./revoke-receipt";
+import { BASE_CHAIN_ID } from "./chains";
+import { OPTIMISM_CLIENT_CHAIN_ID } from "./optimism-approval-client";
 
 describe("revoke receipt copy", () => {
   it("builds ERC-20 success receipt copy", () => {
@@ -56,6 +59,32 @@ describe("revoke receipt copy", () => {
     expect(copy.body).toBe(TRANSACTION_SUBMITTED_INCOMPLETE_COPY);
     expect(copy.verification).toContain("Waiting for chain confirmation");
     expect(copy.verification).not.toContain("Confirmed cleared");
+  });
+
+  it("uses preconfirmation-aware pending copy on Base and Optimism", () => {
+    for (const chainId of [BASE_CHAIN_ID, OPTIMISM_CLIENT_CHAIN_ID]) {
+      const copy = getRevokeReceiptCopy({
+        status: "pending",
+        kind: "erc20",
+        chainId,
+      });
+
+      expect(copy.body).toBe(PRECONFIRM_TRANSACTION_SEEN_COPY);
+      expect(copy.verification).toContain("standard confirmation");
+      expect(copy.verification).not.toContain("Confirmed cleared");
+    }
+  });
+
+  it("does not mark preconfirmation-aware success cleared before live re-check", () => {
+    const copy = getRevokeReceiptCopy({
+      status: "success",
+      kind: "erc20",
+      chainId: OPTIMISM_CLIENT_CHAIN_ID,
+      verificationState: "pending",
+    });
+
+    expect(copy.verification).toContain("Re-checking approval state");
+    expect(copy.verification).not.toBe(LIVE_VERIFICATION_CONFIRMED_COPY);
   });
 
   it("only says confirmed cleared when the caller supplies live verification", () => {
@@ -128,6 +157,7 @@ describe("revoke receipt copy", () => {
       revokeSummary("nft-operator"),
       revokeSummary("nft-token"),
       TRANSACTION_SUBMITTED_INCOMPLETE_COPY,
+      PRECONFIRM_TRANSACTION_SEEN_COPY,
       LIVE_VERIFICATION_CONFIRMED_COPY,
       LIVE_VERIFICATION_INCOMPLETE_COPY,
       getRevokeReceiptCopy({ status: "error", kind: "erc20" }).body,
