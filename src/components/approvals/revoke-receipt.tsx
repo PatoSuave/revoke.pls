@@ -36,6 +36,7 @@ export function RevokeReceipt({
   const copy = getRevokeReceiptCopy({
     status,
     kind: details.kind,
+    chainId: details.chainId,
     verificationState: details.verificationState,
   });
   const toneClass = receiptToneClass(status);

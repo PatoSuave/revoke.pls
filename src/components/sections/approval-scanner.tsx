@@ -10,6 +10,7 @@ import {
   BatchActionBar,
   BatchRevokePanel,
 } from "@/components/approvals/batch-revoke-panel";
+import { AccountCodeDelegationCard } from "@/components/sections/account-code-delegation-card";
 import { ChainLogo, ChainLogoBackdrop } from "@/components/chains/chain-logo";
 import { ArbitrumReadOnlyScanner } from "@/components/sections/arbitrum-readonly-scanner";
 import { EthereumReadOnlyScanner } from "@/components/sections/ethereum-readonly-scanner";
@@ -1137,6 +1138,12 @@ function ConnectedScanner({
         isConnected={isConnected}
         walletMatchesScanTarget={walletMatchesScanTarget}
         walletMatchesActiveChain={walletMatchesActiveChain}
+      />
+
+      <AccountCodeDelegationCard
+        owner={owner}
+        chainId={chainConfig.chainId}
+        chainName={chainConfig.displayName}
       />
 
       <ScanContent

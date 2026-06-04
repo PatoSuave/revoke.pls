@@ -1,4 +1,5 @@
 import type { PostRevokeVerificationState } from "@/lib/post-revoke-verification";
+import { chainRequiresPreconfirmAwareCopy } from "@/lib/chain-capabilities";
 
 export type RevokeReceiptKind = "erc20" | "nft-operator" | "nft-token";
 export type RevokeReceiptVerificationState = PostRevokeVerificationState;
@@ -18,6 +19,9 @@ export interface RevokeReceiptCopy {
 export const TRANSACTION_SUBMITTED_INCOMPLETE_COPY =
   "Pulse Revoke submitted the transaction, but live verification could not be completed. View the transaction on the explorer and rescan this wallet.";
 
+export const PRECONFIRM_TRANSACTION_SEEN_COPY =
+  "Transaction seen. Waiting for standard confirmation and live approval re-check before updating the approval state.";
+
 export const LIVE_VERIFICATION_INCOMPLETE_COPY =
   "Live verification incomplete. Rescan this wallet to verify the approval cleared.";
 
@@ -26,19 +30,26 @@ export const LIVE_VERIFICATION_CONFIRMED_COPY = "Confirmed cleared.";
 export function getRevokeReceiptCopy({
   status,
   kind,
+  chainId,
   verificationState = "incomplete",
 }: {
   status: RevokeReceiptStatus;
   kind: RevokeReceiptKind;
+  chainId?: number;
   verificationState?: PostRevokeVerificationState;
 }): RevokeReceiptCopy {
   const method = revokeMethodLabel(kind);
-  const verification = verificationLabel(status, verificationState);
+  const preconfirmAware = chainRequiresPreconfirmAwareCopy(chainId);
+  const verification = verificationLabel(status, verificationState, {
+    preconfirmAware,
+  });
 
   if (status === "pending") {
     return {
       title: "Transaction submitted",
-      body: TRANSACTION_SUBMITTED_INCOMPLETE_COPY,
+      body: preconfirmAware
+        ? PRECONFIRM_TRANSACTION_SEEN_COPY
+        : TRANSACTION_SUBMITTED_INCOMPLETE_COPY,
       method,
       verification,
     };
@@ -91,12 +102,16 @@ export function revokeSummary(kind: RevokeReceiptKind): string {
 function verificationLabel(
   status: RevokeReceiptStatus,
   verificationState: PostRevokeVerificationState,
+  options: { preconfirmAware?: boolean } = {},
 ): string {
   if (status === "success" && verificationState === "confirmed-cleared") {
     return LIVE_VERIFICATION_CONFIRMED_COPY;
   }
 
   if (status === "pending") {
+    if (options.preconfirmAware) {
+      return "Waiting for standard confirmation and live approval re-check.";
+    }
     return "Waiting for chain confirmation. Rescan this wallet after confirmation.";
   }
 
@@ -104,6 +119,9 @@ function verificationLabel(
     status === "success" &&
     (verificationState === "not-run" || verificationState === "pending")
   ) {
+    if (options.preconfirmAware) {
+      return "Transaction confirmed. Re-checking approval state on-chain before marking it revoked.";
+    }
     return "Checking live approval state...";
   }
 
