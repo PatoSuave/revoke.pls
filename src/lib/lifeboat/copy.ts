@@ -1,5 +1,3 @@
-export const LIFEBOAT_ROUTE = "/app/wallet-lifeboat";
-
 export const LIFEBOAT_CRITICAL_WARNINGS = [
   "Never enter your seed phrase or private key anywhere.",
   "This Wallet Lifeboat scan is read-only and does not move assets or submit transactions.",

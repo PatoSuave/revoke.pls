@@ -1,4 +1,4 @@
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 
 import { describe, expect, it } from "vitest";
@@ -48,11 +48,7 @@ describe("Wallet Lifeboat safety copy", () => {
     }
   });
 
-  it("keeps the route wired without adding write-path vocabulary", () => {
-    const page = readFileSync(
-      join(process.cwd(), "src", "app", "app", "wallet-lifeboat", "page.tsx"),
-      "utf8",
-    );
+  it("keeps the route unpublished while preserving read-only component boundaries", () => {
     const component = readFileSync(
       join(
         process.cwd(),
@@ -64,8 +60,11 @@ describe("Wallet Lifeboat safety copy", () => {
       "utf8",
     );
 
-    expect(page).toContain("WalletLifeboat");
-    expect(page).toContain("LIFEBOAT_ROUTE");
+    expect(
+      existsSync(
+        join(process.cwd(), "src", "app", "app", "wallet-lifeboat", "page.tsx"),
+      ),
+    ).toBe(false);
     expect(component).not.toMatch(
       /writeContract|sendTransaction|server signer|server-sign|flashbots|eth_sendBundle|eth_sendPrivateTransaction/i,
     );

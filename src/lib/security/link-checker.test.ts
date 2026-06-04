@@ -1,4 +1,4 @@
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 
 import { describe, expect, it } from "vitest";
@@ -145,7 +145,6 @@ describe("checkCryptoLink", () => {
       "src/lib/security/link-checker.ts",
       "src/components/security/link-checker.tsx",
       "src/components/security/link-checker-result.tsx",
-      "src/app/security/check-link/page.tsx",
     ]
       .map((path) => readFileSync(join(process.cwd(), path), "utf8"))
       .join("\n");
@@ -169,7 +168,6 @@ describe("checkCryptoLink", () => {
     const source = [
       "src/components/security/link-checker.tsx",
       "src/components/security/link-checker-result.tsx",
-      "src/app/security/check-link/page.tsx",
     ]
       .map((path) => readFileSync(join(process.cwd(), path), "utf8"))
       .join("\n");
@@ -184,5 +182,11 @@ describe("checkCryptoLink", () => {
     expect(source).not.toMatch(
       /writeContract|sendTransaction|connectWallet|useAccount|useWalletClient|server signer|server-sign|relayer|flashbots/i,
     );
+  });
+
+  it("keeps the checker route unpublished from main", () => {
+    expect(
+      existsSync(join(process.cwd(), "src", "app", "security", "check-link", "page.tsx")),
+    ).toBe(false);
   });
 });

@@ -51,6 +51,11 @@ const REQUIRED_HEADERS = [
 
 const PAGE_PATHS = ["/", "/app", "/security"];
 
+const UNPUBLISHED_PAGE_PATHS = [
+  "/security/check-link",
+  "/app/wallet-lifeboat",
+];
+
 const API_PROBES = [
   {
     label: "ethereum invalid owner",
@@ -394,6 +399,18 @@ async function checkPages(target) {
   }
 }
 
+async function checkUnpublishedPages(target) {
+  for (const path of UNPUBLISHED_PAGE_PATHS) {
+    const url = withAccessParams(new URL(path, target.baseUrl), target.accessParams);
+    const { response, text } = await fetchText(url.toString());
+    if (response.status !== 404) {
+      fail(`${path} returned ${response.status}; expected 404 because it is not public on main.`);
+    }
+    assertNoSecrets(path, text);
+    console.log(`unpublished page ${path}: 404 ok`);
+  }
+}
+
 async function checkApis(target) {
   for (const probe of API_PROBES) {
     const url = withAccessParams(
@@ -468,6 +485,7 @@ async function main() {
   const target = parseTarget(options.rawUrl, options.accessParams);
   console.log(`Live security smoke: ${target.baseUrl.origin}`);
   await checkPages(target);
+  await checkUnpublishedPages(target);
   await checkApis(target);
   await checkLiveAssets(target);
   console.log("Live security smoke passed.");

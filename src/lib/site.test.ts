@@ -64,7 +64,6 @@ describe("siteConfig nav", () => {
   it("keeps shared app-shell nav pointed at real app routes", () => {
     expect(siteConfig.nav).toEqual([
       { href: "/app#scanner", label: "Scanner" },
-      { href: "/app/wallet-lifeboat", label: "Wallet Lifeboat" },
       { href: "/security", label: "Security Guide" },
     ]);
   });
