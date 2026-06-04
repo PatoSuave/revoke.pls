@@ -37,6 +37,7 @@ import {
   parseNftValidationResults,
   type NftApproval,
 } from "@/lib/nft-approvals";
+import { HYPEREVM_PUBLIC_RPC_URL } from "@/lib/hyperevm-approval-client";
 
 export const HYPEREVM_CHAIN_ID = 999;
 export const HYPEREVM_EXPLORER_API_DEFAULT =
@@ -168,7 +169,8 @@ function validHttpUrl(value: string | undefined): string | undefined {
 export function resolveHyperEVMApiConfig(
   env: NodeJS.ProcessEnv = process.env,
 ): HyperEVMApiConfig {
-  const rpcUrl = validHttpUrl(firstEnv(env, RPC_ENV_NAMES));
+  const rpcUrl =
+    validHttpUrl(firstEnv(env, RPC_ENV_NAMES)) ?? HYPEREVM_PUBLIC_RPC_URL;
   const configuredApiUrl = validHttpUrl(firstEnv(env, API_URL_ENV_NAMES));
   const apiUrl = configuredApiUrl ?? HYPEREVM_EXPLORER_API_DEFAULT;
   const apiKey = cleanEnv(firstEnv(env, API_KEY_ENV_NAMES));
