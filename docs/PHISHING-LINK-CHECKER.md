@@ -6,8 +6,8 @@ The Phishing Link Checker is a read-only URL/domain triage tool for crypto
 links. It helps a user inspect a pasted link before visiting a site or
 connecting a wallet.
 
-The first MVP lives at `/security/check-link` and performs local static
-analysis only.
+The first MVP is currently unpublished from the production app while it is
+being polished. Its implementation remains local static analysis only.
 
 ## MVP Scope
 

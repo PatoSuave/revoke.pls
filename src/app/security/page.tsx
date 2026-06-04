@@ -86,12 +86,6 @@ function SecurityHero() {
             >
               Launch Scanner
             </Link>
-            <Link
-              href="/security/check-link"
-              className="inline-flex items-center justify-center rounded-xl border border-pulse-cyan/35 bg-pulse-cyan/10 px-5 py-3 text-sm font-semibold text-pulse-cyan transition hover:bg-pulse-cyan/15"
-            >
-              Check a Link
-            </Link>
             <a
               href={`https://${OFFICIAL_DOMAIN}`}
               className="inline-flex items-center justify-center rounded-xl border border-pulse-border bg-pulse-text/5 px-5 py-3 text-sm font-semibold text-pulse-text transition hover:bg-pulse-text/10"
