@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Image from "next/image";
 import Link from "next/link";
 import type { CSSProperties, ReactNode } from "react";
 
@@ -526,61 +527,90 @@ function DesktopSection({
 }) {
   return (
     <section id="desktop" className="border-b border-pulse-border/60 py-16 sm:py-20">
-      <div className="mx-auto grid max-w-6xl gap-8 px-4 sm:px-6 lg:grid-cols-[0.95fr_1.05fr] lg:items-start">
+      <div className="mx-auto grid max-w-6xl gap-8 px-4 sm:px-6 lg:grid-cols-[0.9fr_1.1fr] lg:items-start">
         <div>
-          <SectionKicker>Roadmap status</SectionKicker>
+          <SectionKicker>Run your own code</SectionKicker>
           <h2 className="mt-2 text-3xl font-bold sm:text-4xl">
-            Desktop builds are planned, not live yet.
+            Desktop beta for local, browser-based wallet use.
           </h2>
           <p className="mt-4 text-sm leading-7 text-pulse-muted">
-            The live scanner is the hosted /app. The desktop path is scaffolded
-            for a future signed Tauri build, and no public artifact is linked
-            until release files and checksums are real.
+            Decentralization, robustness, and privacy are core principles of
+            real blockchains. Pulse Revoke is a list of ways you can run your
+            own approval scanner.
           </p>
           <div className="mt-5 grid gap-2 text-sm text-pulse-muted">
-            <CheckLine>Future local interface after installation.</CheckLine>
-            <CheckLine>WalletConnect pairing planned for desktop use.</CheckLine>
+            <CheckLine>Self-hosts on 127.0.0.1 from your desktop.</CheckLine>
+            <CheckLine>Opens in your default browser for wallet extensions.</CheckLine>
             <CheckLine>Same approval review and revoke model as /app.</CheckLine>
           </div>
         </div>
 
         <div className="grid gap-3">
-          <div className="rounded-2xl border border-pulse-border bg-pulse-panel/70 p-5">
-            <div className="flex flex-wrap items-center justify-between gap-3">
-              <div>
-                <p className="text-sm font-semibold text-pulse-text">
-                  Desktop release status
-                </p>
-                <p className="mt-1 text-xs text-pulse-muted">
-                  {desktopReady
-                    ? `Artifacts listed for ${release.version}.`
-                    : "No public desktop artifact or checksum is published yet."}
-                </p>
-              </div>
-              <StatusPill tone={desktopReady ? "success" : "neutral"}>
-                {desktopReady ? release.version : "Pending"}
-              </StatusPill>
-            </div>
+          <div className="rounded-2xl border border-pulse-green/35 bg-pulse-green/10 p-5">
+            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-pulse-green">
+              {release.version}
+            </p>
+            <a
+              href="/app"
+              className="group mt-4 block overflow-hidden rounded-xl border border-pulse-border bg-pulse-bg/70 p-5 transition hover:border-pulse-cyan/60 hover:bg-pulse-cyan/10"
+            >
+              <Image
+                src={release.previewImage}
+                alt="Pulse Revoke preview"
+                width={320}
+                height={80}
+                unoptimized
+                className="mx-auto h-12 w-auto transition group-hover:opacity-90"
+              />
+              <p className="mt-4 text-center text-sm font-semibold text-pulse-text">
+                Launch Pulse Revoke
+              </p>
+              <p className="mt-1 text-center text-xs text-pulse-muted">
+                Click to launch the hosted scanner
+              </p>
+            </a>
           </div>
 
-          <div className="grid gap-3 sm:grid-cols-2">
+          <div className="rounded-2xl border border-pulse-border bg-pulse-panel/70 p-5">
+            <h3 className="text-lg font-semibold text-pulse-text">
+              Run it from your desktop
+            </h3>
+            <p className="mt-2 text-sm leading-6 text-pulse-muted">
+              <span className="font-semibold text-pulse-text">
+                Run the original code on your desktop.
+              </span>{" "}
+              Read the{" "}
+              <a
+                href={release.instructions.href}
+                className="font-semibold text-pulse-cyan underline underline-offset-4 hover:text-pulse-text"
+              >
+                Instructions
+              </a>{" "}
+              first, then download the right version for your device.
+            </p>
+            <p className="mt-3 rounded-xl border border-pulse-pink/30 bg-pulse-pink/10 p-3 text-xs leading-5 text-pulse-muted">
+              This is an unsigned Windows beta for testing. Windows may show a
+              SmartScreen warning. Verify the checksum before running it.
+            </p>
+          </div>
+
+          <div className="grid gap-3">
             {release.artifacts.map((artifact) => (
               <ArtifactCard key={artifact.id} artifact={artifact} />
             ))}
+            <ReleaseLink
+              href={release.checksums.href}
+              label="Download Checksums"
+              body={release.checksums.note}
+            />
           </div>
 
-          <div className="rounded-2xl border border-pulse-border bg-pulse-panel/60 p-5">
-            <div>
-              <p className="text-sm font-semibold text-pulse-text">
-                Release guardrail
-              </p>
-              <p className="mt-2 text-xs leading-5 text-pulse-muted">
-                Desktop downloads remain disabled until signed release
-                artifacts and checksums are available. Placeholder manifest
-                values never render as download links.
-              </p>
-            </div>
-          </div>
+          {!desktopReady ? (
+            <p className="rounded-2xl border border-pulse-border bg-pulse-panel/60 p-5 text-xs leading-5 text-pulse-muted">
+              Desktop downloads remain disabled until real artifacts and
+              checksums are available.
+            </p>
+          ) : null}
         </div>
       </div>
     </section>
@@ -593,7 +623,7 @@ function ArtifactCard({ artifact }: { artifact: ReleaseArtifact }) {
   if (!ready) {
     return (
       <div className="rounded-xl border border-pulse-border bg-pulse-bg/55 p-4">
-        <div className="flex items-start justify-between gap-3">
+        <div className="flex items-center justify-between gap-3">
           <div>
             <p className="text-sm font-semibold text-pulse-text">
               {artifact.platform}
@@ -616,11 +646,55 @@ function ArtifactCard({ artifact }: { artifact: ReleaseArtifact }) {
       href={artifact.href}
       className="block rounded-xl border border-pulse-cyan/40 bg-pulse-cyan/10 p-4 transition hover:bg-pulse-cyan/15"
     >
-      <p className="text-sm font-semibold text-pulse-text">
-        {artifact.platform}
-      </p>
-      <p className="mt-1 text-xs text-pulse-muted">{artifact.architecture}</p>
-      <p className="mt-3 text-xs font-semibold text-pulse-cyan">Download</p>
+      <div className="flex items-center justify-between gap-3">
+        <div>
+          <p className="text-sm font-semibold text-pulse-text">
+            {artifact.platform}
+          </p>
+          <p className="mt-1 text-xs text-pulse-muted">
+            {artifact.architecture}
+          </p>
+        </div>
+        <span className="text-lg text-pulse-cyan" aria-hidden>
+          {"->"}
+        </span>
+      </div>
+      {artifact.note ? (
+        <p className="mt-3 text-xs leading-5 text-pulse-muted">
+          {artifact.note}
+        </p>
+      ) : null}
+    </a>
+  );
+}
+
+function ReleaseLink({
+  href,
+  label,
+  body,
+}: {
+  href: string;
+  label: string;
+  body: string;
+}) {
+  const ready = !isPlaceholderUrl(href);
+
+  if (!ready) {
+    return null;
+  }
+
+  return (
+    <a
+      href={href}
+      className="block rounded-xl border border-pulse-border bg-pulse-panel/60 p-4 transition hover:border-pulse-cyan/60 hover:bg-pulse-cyan/10"
+    >
+      <div className="flex items-center justify-between gap-3">
+        <p className="text-sm font-semibold text-pulse-text">{label}</p>
+        <span className="text-lg text-pulse-cyan" aria-hidden>
+          {"->"}
+        </span>
+      </div>
+      <p className="mt-2 text-xs leading-5 text-pulse-muted">{body}</p>
     </a>
   );
 }

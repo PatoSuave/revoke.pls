@@ -1,0 +1,29 @@
+Pulse Revoke desktop beta v0.1.0-beta.1
+
+This beta runs Pulse Revoke from your own computer. It starts a local server on
+127.0.0.1, then opens Pulse Revoke in your default browser so browser wallet
+extensions such as MetaMask or Rabby can connect normally.
+
+Before running
+- This is an unsigned Windows beta. Windows may show a SmartScreen warning.
+- Verify the zip file with the published SHA-256 checksum before running it.
+- Pulse Revoke never asks for seed phrases, private keys, wallet passwords, or
+  remote desktop access.
+
+How to run on Windows
+1. Download pulse-revoke-server_0.1.0-beta.1_windows_amd64.zip.
+2. Download pulse-revoke-server_0.1.0-beta.1_checksums.txt.
+3. Verify the zip checksum with PowerShell:
+
+   Get-FileHash .\pulse-revoke-server_0.1.0-beta.1_windows_amd64.zip -Algorithm SHA256
+
+4. Extract the zip.
+5. Run pulse-revoke-server.exe.
+6. Your default browser should open a local Pulse Revoke URL.
+7. Keep pulse-revoke-server.exe running while you use the browser tab.
+
+What to expect
+- The app serves files only from localhost.
+- Wallet connection happens in your normal browser.
+- Revokes still require wallet-confirmed on-chain transactions.
+- Closing the server process stops the local app.

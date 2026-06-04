@@ -64,6 +64,14 @@ export interface ChecksumsArtifact {
   note: string;
 }
 
+/** Public instructions for running a local desktop build. */
+export interface InstructionsArtifact {
+  /** URL to setup / run instructions. */
+  href: string;
+  /** Short user-facing note shown near the instructions link. */
+  note: string;
+}
+
 /** Full release descriptor. */
 export interface ReleaseManifest {
   /** Semver-style version string, e.g. "v0.1.0". */
@@ -77,6 +85,7 @@ export interface ReleaseManifest {
   repoUrl: string;
   /** Downloadable desktop artifacts. Rendered in array order. */
   artifacts: readonly ReleaseArtifact[];
+  instructions: InstructionsArtifact;
   checksums: ChecksumsArtifact;
   ipfs: {
     /** Content identifier (CIDv1). Placeholder until a build is pinned. */
@@ -95,17 +104,18 @@ export interface ReleaseManifest {
  * each field independently, so partial releases are supported.
  */
 export const currentRelease: ReleaseManifest = {
-  version: "v0.1.0",
-  previewImage: "/launcher-preview.png",
+  version: "v0.1.0-beta.1",
+  previewImage: "/logo.svg",
   releaseNotesUrl: LAUNCHER_PLACEHOLDER_URL,
   repoUrl: siteConfig.links.github,
   artifacts: [
     {
       id: "win-x64",
       platform: "Windows",
-      architecture: "x64",
+      architecture: "x64 beta",
       icon: "windows",
-      href: LAUNCHER_PLACEHOLDER_URL,
+      href: "/downloads/pulse-revoke-server_0.1.0-beta.1_windows_amd64.zip",
+      note: "Unsigned beta. Windows may show a SmartScreen warning.",
     },
     {
       id: "win-arm64",
@@ -129,10 +139,15 @@ export const currentRelease: ReleaseManifest = {
       href: LAUNCHER_PLACEHOLDER_URL,
     },
   ],
-  checksums: {
-    href: LAUNCHER_PLACEHOLDER_URL,
+  instructions: {
+    href: "/downloads/pulse-revoke-server_0.1.0-beta.1_instructions.txt",
     note:
-      "Each public desktop release should include a SHA-256 checksums file. Verify downloads with `sha256sum -c` before installing.",
+      "Read before running the beta. The app self-hosts on localhost and opens in your default browser.",
+  },
+  checksums: {
+    href: "/downloads/pulse-revoke-server_0.1.0-beta.1_checksums.txt",
+    note:
+      "Verify the beta zip with SHA-256 before running it.",
   },
   ipfs: {
     cid: LAUNCHER_PLACEHOLDER_CID,
