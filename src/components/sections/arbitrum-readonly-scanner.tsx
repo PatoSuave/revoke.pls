@@ -8,6 +8,7 @@ import {
   RevokeReceipt,
   type RevokeReceiptDetails,
 } from "@/components/approvals/revoke-receipt";
+import { AccountCodeDelegationCard } from "@/components/sections/account-code-delegation-card";
 import { TokenAvatar } from "@/components/tokens/token-avatar";
 import { useArbitrumApprovalScan } from "@/hooks/use-arbitrum-approval-scan";
 import { useTokenLogos } from "@/hooks/use-token-logos";
@@ -146,6 +147,12 @@ export function ArbitrumReadOnlyScanner({
         scan={scan}
         activeCount={activeCount}
         onRescan={scan.refetch}
+      />
+
+      <AccountCodeDelegationCard
+        owner={owner}
+        chainId={ARBITRUM_ONE_CLIENT_CHAIN_ID}
+        chainName={ARBITRUM_ONE_DISPLAY_NAME}
       />
 
       {activeCount > 0 ? (

@@ -8,6 +8,7 @@ import {
   RevokeReceipt,
   type RevokeReceiptDetails,
 } from "@/components/approvals/revoke-receipt";
+import { AccountCodeDelegationCard } from "@/components/sections/account-code-delegation-card";
 import { TokenAvatar } from "@/components/tokens/token-avatar";
 import { useHyperEVMApprovalScan } from "@/hooks/use-hyperevm-approval-scan";
 import { useTokenLogos } from "@/hooks/use-token-logos";
@@ -16,6 +17,7 @@ import type { RevokeStatus } from "@/hooks/use-revoke-approval";
 import { useRevokeNftApproval } from "@/hooks/use-revoke-nft-approval";
 import type { Approval } from "@/lib/approvals";
 import { shortenAddress } from "@/lib/format";
+import { HYPEREVM_SYSTEM_CONTRACTS } from "@/lib/hyperevm-system-contracts";
 import type { NftApproval } from "@/lib/nft-approvals";
 import type { Erc20PreflightResult, NftPreflightResult } from "@/lib/preflight";
 import { WALLET_PROMPT_SAFETY_COPY } from "@/lib/revoke-gas";
@@ -153,6 +155,14 @@ export function HyperEVMReadOnlyScanner({
         onRescan={scan.refetch}
       />
 
+      <AccountCodeDelegationCard
+        owner={owner}
+        chainId={HYPEREVM_CLIENT_CHAIN_ID}
+        chainName={HYPEREVM_DISPLAY_NAME}
+      />
+
+      <HyperEVMSystemContextNotice />
+
       {activeCount > 0 ? (
         <section className="overflow-hidden rounded-2xl border border-pulse-border bg-pulse-panel/65">
           <div className="border-b border-pulse-border/70 px-4 py-3">
@@ -233,6 +243,34 @@ export function HyperEVMReadOnlyScanner({
         nftRowRevokeDisabledReason={nftRowRevokeDisabledReason}
       />
     </div>
+  );
+}
+
+function HyperEVMSystemContextNotice() {
+  return (
+    <section className="rounded-2xl border border-amber-400/35 bg-amber-400/10 p-4 text-sm">
+      <p className="text-xs font-semibold uppercase tracking-[0.18em] text-amber-200">
+        HyperEVM system context
+      </p>
+      <p className="mt-2 max-w-3xl leading-6 text-pulse-muted">
+        HyperEVM has HyperCore actions that may not appear as standard ERC-20
+        or NFT approvals. Review CoreWriter interactions separately.
+      </p>
+      <dl className="mt-3 grid gap-2 text-xs text-pulse-muted md:grid-cols-3">
+        {Object.values(HYPEREVM_SYSTEM_CONTRACTS).map((contract) => (
+          <div
+            key={contract.address}
+            className="rounded-xl border border-pulse-border/70 bg-pulse-bg/40 p-3"
+          >
+            <dt className="font-semibold text-pulse-text">{contract.label}</dt>
+            <dd className="mt-1 break-all font-mono">{contract.address}</dd>
+            {contract.warning ? (
+              <dd className="mt-2 leading-5">{contract.warning}</dd>
+            ) : null}
+          </div>
+        ))}
+      </dl>
+    </section>
   );
 }
 

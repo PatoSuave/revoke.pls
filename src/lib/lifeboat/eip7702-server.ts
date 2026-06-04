@@ -132,9 +132,9 @@ const CHAIN_CONFIGS: Record<Eip7702DiagnosticChainId, Eip7702ChainConfig> = {
     explorerBaseUrl: "https://scan.pulsechain.com",
     rpcUrl: "https://rpc.pulsechain.com",
     rpcEnvNames: ["PULSECHAIN_RPC_URL", "NEXT_PUBLIC_PULSECHAIN_RPC_URL"],
-    supported: false,
+    supported: true,
     supportNotes: [
-      "PulseChain is not marked as supported for this EIP-7702 diagnostic yet.",
+      "PulseChain is checked with latest account-code reads, but EIP-7702 support is not marked confirmed.",
     ],
   },
   [BSC_CHAIN_ID]: {
@@ -143,9 +143,9 @@ const CHAIN_CONFIGS: Record<Eip7702DiagnosticChainId, Eip7702ChainConfig> = {
     explorerBaseUrl: "https://bscscan.com",
     rpcUrl: "https://bsc-dataseed.bnbchain.org",
     rpcEnvNames: ["BSC_RPC_URL", "NEXT_PUBLIC_BSC_RPC_URL"],
-    supported: false,
+    supported: true,
     supportNotes: [
-      "BNB Smart Chain is not marked as supported for this EIP-7702 diagnostic yet.",
+      "BNB Smart Chain Pascal added EIP-7702 compatibility.",
     ],
   },
   [HYPEREVM_CHAIN_ID]: {
@@ -158,9 +158,9 @@ const CHAIN_CONFIGS: Record<Eip7702DiagnosticChainId, Eip7702ChainConfig> = {
       "HYPEREVM_MAINNET_RPC_URL",
       "HYPERLIQUID_EVM_RPC_URL",
     ],
-    supported: false,
+    supported: true,
     supportNotes: [
-      "HyperEVM is not marked as supported for this EIP-7702 diagnostic yet.",
+      "HyperEVM is checked with latest account-code reads, but EIP-7702 support is not marked confirmed.",
     ],
   },
 };

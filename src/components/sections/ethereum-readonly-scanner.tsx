@@ -21,6 +21,7 @@ import {
   RevokeReceipt,
   type RevokeReceiptDetails,
 } from "@/components/approvals/revoke-receipt";
+import { AccountCodeDelegationCard } from "@/components/sections/account-code-delegation-card";
 import { TokenAvatar } from "@/components/tokens/token-avatar";
 import { useEthereumApprovalScan } from "@/hooks/use-ethereum-approval-scan";
 import { useTokenLogos } from "@/hooks/use-token-logos";
@@ -161,6 +162,12 @@ export function EthereumReadOnlyScanner({
         revokeEnabled={revokeEnabled}
         rowRevokeEnabled={rowRevokeEnabled}
         revokeDisabledReason={revokeDisabledReason}
+      />
+
+      <AccountCodeDelegationCard
+        owner={owner}
+        chainId={ETHEREUM_MAINNET_CLIENT_CHAIN_ID}
+        chainName={ETHEREUM_MAINNET_DISPLAY_NAME}
       />
 
       <EthereumScanContent
