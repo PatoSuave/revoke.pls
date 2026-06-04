@@ -1,0 +1,7 @@
+.env
+.env*.local
+.git
+.next
+node_modules
+out
+src-tauri/target
