@@ -207,7 +207,7 @@ describe("HyperEVM approval API foundation", () => {
     ]);
   });
 
-  it("reports missing HyperEVM RPC config without returning a false clear", async () => {
+  it("falls back to the public HyperEVM RPC without returning a config error", async () => {
     const result = await scanHyperEVMApprovals(OWNER, {
       env: env({
         HYPEREVM_RPC_URL: undefined,
@@ -218,13 +218,13 @@ describe("HyperEVM approval API foundation", () => {
       reader: { readContract: vi.fn() },
     });
 
-    expect(result.status).toBe("config-missing");
-    expect(result.ok).toBe(false);
-    expect(result.diagnostics.rpcConfigured).toBe(false);
-    expect(result.missingConfig.join(" ")).toContain("HYPEREVM_RPC_URL");
+    expect(result.status).toBe("complete-clear");
+    expect(result.ok).toBe(true);
+    expect(result.diagnostics.rpcConfigured).toBe(true);
+    expect(result.missingConfig.join(" ")).not.toContain("HYPEREVM_RPC_URL");
   });
 
-  it("requires server-only HyperEVM RPC and API key names", async () => {
+  it("requires server-only HyperEVM API key names while using the public RPC fallback", async () => {
     const publicHyperEVMRpcEnv = ["NEXT_PUBLIC", "HyperEVM", "RPC_URL"].join(
       "_",
     );
@@ -245,9 +245,9 @@ describe("HyperEVM approval API foundation", () => {
     });
 
     expect(result.status).toBe("config-missing");
-    expect(result.diagnostics.rpcConfigured).toBe(false);
+    expect(result.diagnostics.rpcConfigured).toBe(true);
     expect(result.diagnostics.explorerConfigured).toBe(false);
-    expect(result.missingConfig.join(" ")).toContain("HYPEREVM_RPC_URL");
+    expect(result.missingConfig.join(" ")).not.toContain("HYPEREVM_RPC_URL");
     expect(result.missingConfig.join(" ")).toContain("HYPEREVM_EXPLORER_API_KEY");
   });
 
