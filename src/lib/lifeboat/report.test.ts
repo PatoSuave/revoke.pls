@@ -513,4 +513,20 @@ describe("Wallet Lifeboat report", () => {
     expect(markdown).not.toContain("private key:");
     expect(markdown).not.toContain("seed phrase:");
   });
+
+  it("does not print complete overall status when diagnostics are incomplete", () => {
+    const markdown = buildWalletLifeboatReportMarkdown({
+      ...REPORT,
+      status: "complete",
+      completeness: {
+        ...REPORT.completeness,
+        nftApprovalsComplete: false,
+      },
+    });
+
+    expect(markdown).toContain(
+      "Overall status: Partial - incomplete diagnostics remain",
+    );
+    expect(markdown).not.toContain("Overall status: Complete");
+  });
 });

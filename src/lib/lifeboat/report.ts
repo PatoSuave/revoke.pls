@@ -59,7 +59,7 @@ export function buildWalletLifeboatReportMarkdown(
 Generated: ${report.generatedAt}
 Scanned address: ${report.owner}
 Network(s): ${chains}
-Overall status: ${formatScanStatus(report.status)}
+Overall status: ${formatOverallReportStatus(report)}
 
 ## Critical warnings
 
@@ -713,6 +713,13 @@ function formatScanStatus(status: LifeboatReport["status"]): string {
     default:
       return "Not scanned";
   }
+}
+
+function formatOverallReportStatus(report: LifeboatReport): string {
+  if (report.status !== "complete") return formatScanStatus(report.status);
+  return Object.values(report.completeness).every(Boolean)
+    ? "Complete"
+    : "Partial - incomplete diagnostics remain";
 }
 
 function formatModuleStatus(

@@ -136,6 +136,7 @@ import {
 } from "@/lib/lifeboat/visible-assets";
 import type {
   LifeboatChainReport,
+  LifeboatCompleteness,
   LifeboatModuleStatus,
   LifeboatReport,
   LifeboatScanSnapshot,
@@ -723,6 +724,23 @@ function TriageSummary({
   hexStake: LifeboatHexStakeApiResponse;
   goodAccountingAssist: GoodAccountingAssistAnalysis;
 }) {
+  const completeness = buildCompletenessFromDiagnostics(
+    scan,
+    sweeper,
+    pendingNonce,
+    timeline,
+    addressPoisoning,
+    spenderRisk,
+    knownRiskRegistry,
+    eip7702,
+    smartWallet,
+    erc4337,
+    erc6909,
+    dustTrap,
+    hexStake,
+    goodAccountingAssist,
+  );
+  const reportStatus = statusFromCompleteness(scan.status, completeness);
   const cards: {
     label: string;
     value: string;
@@ -819,19 +837,19 @@ function TriageSummary({
     {
       label: "Report completeness",
       value:
-        scan.status === "complete"
-          ? "Approval scan complete"
-          : scan.status === "partial"
+        reportStatus === "complete"
+          ? "All diagnostics complete"
+          : reportStatus === "partial"
             ? "Incomplete diagnostics"
-            : scan.status === "failed"
+            : reportStatus === "failed"
               ? "Upstream unavailable"
-              : scan.status === "scanning"
+              : reportStatus === "scanning"
                 ? "Scanning"
                 : "Not scanned",
       tone:
-        scan.status === "complete"
+        reportStatus === "complete"
           ? "success"
-          : scan.status === "partial" || scan.status === "failed"
+          : reportStatus === "partial" || reportStatus === "failed"
             ? "warning"
             : "neutral",
     },
@@ -4055,6 +4073,22 @@ function buildReportFromSnapshot(
   hexStake: LifeboatHexStakeApiResponse,
   goodAccountingAssist: GoodAccountingAssistAnalysis,
 ): LifeboatReport {
+  const completeness = buildCompletenessFromDiagnostics(
+    scan,
+    sweeper,
+    pendingNonce,
+    timeline,
+    addressPoisoning,
+    spenderRisk,
+    knownRiskRegistry,
+    eip7702,
+    smartWallet,
+    erc4337,
+    erc6909,
+    dustTrap,
+    hexStake,
+    goodAccountingAssist,
+  );
   const chain: LifeboatChainReport = {
     chainId: scan.chainId,
     chainName: scan.chainName,
@@ -4128,29 +4162,62 @@ function buildReportFromSnapshot(
     owner,
     chains: [chain],
     generatedAt,
-    status: scan.status,
+    status: statusFromCompleteness(scan.status, completeness),
     warnings: [...LIFEBOAT_CRITICAL_WARNINGS],
-    completeness: {
-      approvalsComplete: scan.approvalsStatus === "complete",
-      nftApprovalsComplete: scan.nftApprovalsStatus === "complete",
-      sweeperCheckComplete: sweeper.status === "complete",
-      pendingNonceCheckComplete: pendingNonce.status === "complete",
-      timelineCheckComplete: timeline.status === "complete",
-      addressPoisoningCheckComplete: addressPoisoning.status === "complete",
-      spenderRiskCheckComplete: spenderRisk.status === "complete",
-      hexStakeCheckComplete: hexStake.status === "complete",
-      goodAccountingAssistComplete:
-        goodAccountingAssist.summary.sourceComplete,
-      knownRiskRegistryComplete: knownRiskRegistry.status === "complete",
-      permit2Complete: scan.approvalsStatus === "complete",
-      eip7702Complete: eip7702.status === "complete",
-      smartWalletComplete: smartWallet.status === "complete",
-      erc4337Complete: erc4337.status === "complete",
-      erc6909Complete: erc6909.status === "complete",
-      dustTrapCheckComplete: dustTrap.status === "complete",
-      visibleAssetsComplete: moduleStatusFromVisibleAssets(scan) === "complete",
-    },
+    completeness,
   };
+}
+
+function buildCompletenessFromDiagnostics(
+  scan: LifeboatScanSnapshot,
+  sweeper: LifeboatSweeperApiResponse,
+  pendingNonce: LifeboatPendingNonceApiResponse,
+  timeline: LifeboatTimelineApiResponse,
+  addressPoisoning: LifeboatAddressPoisoningApiResponse,
+  spenderRisk: LifeboatSpenderRiskApiResponse,
+  knownRiskRegistry: KnownRiskRegistryAnalysis,
+  eip7702: LifeboatEip7702ApiResponse,
+  smartWallet: LifeboatSmartWalletApiResponse,
+  erc4337: LifeboatErc4337ApiResponse,
+  erc6909: LifeboatErc6909ApiResponse,
+  dustTrap: LifeboatDustTrapApiResponse,
+  hexStake: LifeboatHexStakeApiResponse,
+  goodAccountingAssist: GoodAccountingAssistAnalysis,
+): LifeboatCompleteness {
+  return {
+    approvalsComplete: scan.approvalsStatus === "complete",
+    nftApprovalsComplete: scan.nftApprovalsStatus === "complete",
+    sweeperCheckComplete: sweeper.status === "complete",
+    pendingNonceCheckComplete: pendingNonce.status === "complete",
+    timelineCheckComplete: timeline.status === "complete",
+    addressPoisoningCheckComplete: addressPoisoning.status === "complete",
+    spenderRiskCheckComplete: spenderRisk.status === "complete",
+    hexStakeCheckComplete: hexStake.status === "complete",
+    goodAccountingAssistComplete:
+      goodAccountingAssist.summary.sourceComplete,
+    knownRiskRegistryComplete: knownRiskRegistry.status === "complete",
+    permit2Complete: scan.approvalsStatus === "complete",
+    eip7702Complete: eip7702.status === "complete",
+    smartWalletComplete: smartWallet.status === "complete",
+    erc4337Complete: erc4337.status === "complete",
+    erc6909Complete: erc6909.status === "complete",
+    dustTrapCheckComplete: dustTrap.status === "complete",
+    visibleAssetsComplete: moduleStatusFromVisibleAssets(scan) === "complete",
+  };
+}
+
+function statusFromCompleteness(
+  scanStatus: LifeboatScanStatus,
+  completeness: LifeboatCompleteness,
+): LifeboatScanStatus {
+  if (
+    scanStatus === "idle" ||
+    scanStatus === "scanning" ||
+    scanStatus === "failed"
+  ) {
+    return scanStatus;
+  }
+  return Object.values(completeness).every(Boolean) ? "complete" : "partial";
 }
 
 function moduleStatusFromSweeperResponse(
