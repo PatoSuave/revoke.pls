@@ -20,6 +20,7 @@ import { NftApprovalRow } from "@/components/approvals/nft-approval-row";
 import { ConnectWalletButton } from "@/components/connect-wallet-button";
 import { ScannerDiagnosticsPanel } from "@/components/sections/scanner-diagnostics";
 import { useApprovalDiscovery } from "@/hooks/use-approval-discovery";
+import { useApprovalAgeLookup } from "@/hooks/use-approval-age-lookup";
 import { useBatchRevoke } from "@/hooks/use-batch-revoke";
 import { useNftApprovalDiscovery } from "@/hooks/use-nft-approval-discovery";
 import { useTokenLogos } from "@/hooks/use-token-logos";
@@ -51,6 +52,11 @@ import {
 } from "@/lib/hyperevm-approval-client";
 import { explorerAddressUrl } from "@/lib/explorer";
 import { shortenAddress } from "@/lib/format";
+import { summarizeApprovalAges } from "@/lib/approval-age/summary";
+import type {
+  ApprovalAgeInfo,
+  ApprovalAgeSummary,
+} from "@/lib/approval-age/types";
 import type { NftApproval } from "@/lib/nft-approvals";
 import {
   filterAndSortScoredApprovals,
@@ -1024,6 +1030,20 @@ function ConnectedScanner({
     () => nft.approvals.filter((approval) => approval.risk.level === "high").length,
     [nft.approvals],
   );
+  const approvalAgeRows = useMemo(
+    () => [...scored, ...nft.approvals],
+    [nft.approvals, scored],
+  );
+  const approvalAgeByKey = useApprovalAgeLookup(approvalAgeRows);
+  const approvalAgeSummary = useMemo(
+    () =>
+      summarizeApprovalAges({
+        approvals: scored,
+        nftApprovals: nft.approvals,
+        ageInfoByKey: approvalAgeByKey,
+      }),
+    [approvalAgeByKey, nft.approvals, scored],
+  );
 
   // Prune selections when the underlying scan loses an approval (e.g. after
   // a successful revoke triggers a rescan).
@@ -1111,6 +1131,7 @@ function ConnectedScanner({
         nftActiveCount={nft.stats.active}
         candidateCount={scan.stats.candidates + nft.stats.candidates}
         highRiskCount={highRiskCount + nftHighRiskCount}
+        ageSummary={approvalAgeSummary}
         status={scan.status}
         isFetching={scan.isFetching}
         incomplete={Boolean(scanRevokeDisabledReason)}
@@ -1168,6 +1189,7 @@ function ConnectedScanner({
         onReviewBatch={onReviewBatch}
         revokeDisabledReason={erc20RevokeDisabledReason}
         batch={batch}
+        approvalAgeByKey={approvalAgeByKey}
         debugMode={debugMode}
       />
 
@@ -1197,6 +1219,7 @@ function ConnectedScanner({
         owner={owner}
         chainConfig={chainConfig}
         walletRevokeDisabledReason={walletRevokeDisabledReason}
+        approvalAgeByKey={approvalAgeByKey}
         debugMode={debugMode}
       />
     </div>
@@ -1210,6 +1233,7 @@ function ScannerSummary({
   nftActiveCount,
   candidateCount,
   highRiskCount,
+  ageSummary,
   status,
   isFetching,
   incomplete,
@@ -1228,6 +1252,7 @@ function ScannerSummary({
   nftActiveCount: number;
   candidateCount: number;
   highRiskCount: number;
+  ageSummary: ApprovalAgeSummary;
   status: ReturnType<typeof useApprovalDiscovery>["status"];
   isFetching: boolean;
   incomplete: boolean;
@@ -1329,6 +1354,43 @@ function ScannerSummary({
           value={isFetching ? "Scanning" : formatCompletedAt(completedAt)}
           detail={formatElapsedMs(elapsedMs)}
           tone={isFetching ? "info" : status === "error" ? "error" : "neutral"}
+        />
+        <SummaryMetric
+          label="Oldest approval"
+          value={
+            ageSummary.oldestApprovalAgeDays !== undefined
+              ? `${ageSummary.oldestApprovalAgeDays.toLocaleString()}d`
+              : "Unknown"
+          }
+          detail={ageSummary.oldestApprovalLabel ?? "Approval age unavailable"}
+          tone={
+            ageSummary.oldestApprovalAgeDays !== undefined &&
+            ageSummary.oldestApprovalAgeDays >= 365
+              ? "warning"
+              : "neutral"
+          }
+        />
+        <SummaryMetric
+          label="30d+ approvals"
+          value={ageSummary.approvalsThirtyDaysPlus.toString()}
+          detail={`${ageSummary.approvalsOneYearPlus} older than 1 year`}
+          tone={ageSummary.approvalsThirtyDaysPlus > 0 ? "warning" : "neutral"}
+        />
+        <SummaryMetric
+          label="Ancient approvals"
+          value={ageSummary.ancientApprovals.toString()}
+          detail="Open for 3 years or more"
+          tone={ageSummary.ancientApprovals > 0 ? "error" : "neutral"}
+        />
+        <SummaryMetric
+          label="Age coverage"
+          value={`${ageSummary.rowsWithAge}/${ageSummary.totalRows}`}
+          detail={
+            ageSummary.rowsWithoutAge > 0
+              ? `${ageSummary.rowsWithoutAge} unavailable`
+              : "All active rows have age data"
+          }
+          tone={ageSummary.rowsWithoutAge > 0 ? "warning" : "neutral"}
         />
       </div>
     </div>
@@ -1628,12 +1690,14 @@ function NftSection({
   owner,
   chainConfig,
   walletRevokeDisabledReason,
+  approvalAgeByKey,
   debugMode,
 }: {
   nft: ReturnType<typeof useNftApprovalDiscovery>;
   owner: `0x${string}`;
   chainConfig: SupportedChainConfig;
   walletRevokeDisabledReason: string | null;
+  approvalAgeByKey: ReadonlyMap<string, ApprovalAgeInfo>;
   debugMode: boolean;
 }) {
   const sorted = useMemo(() => sortNftApprovals(nft.approvals), [nft.approvals]);
@@ -1691,6 +1755,7 @@ function NftSection({
         chainConfig={chainConfig}
         scanRevokeDisabledReason={scanRevokeDisabledReason}
         revokeDisabledReason={revokeDisabledReason}
+        approvalAgeByKey={approvalAgeByKey}
         debugMode={debugMode}
       />
 
@@ -1720,6 +1785,7 @@ function NftSectionBody({
   chainConfig,
   scanRevokeDisabledReason,
   revokeDisabledReason,
+  approvalAgeByKey,
   debugMode,
 }: {
   nft: ReturnType<typeof useNftApprovalDiscovery>;
@@ -1728,6 +1794,7 @@ function NftSectionBody({
   chainConfig: SupportedChainConfig;
   scanRevokeDisabledReason: string | null;
   revokeDisabledReason: string | null;
+  approvalAgeByKey: ReadonlyMap<string, ApprovalAgeInfo>;
   debugMode: boolean;
 }) {
   if (nft.status === "pending") {
@@ -1825,6 +1892,7 @@ function NftSectionBody({
             <NftApprovalRow
               key={approval.key}
               approval={approval}
+              approvalAge={approvalAgeByKey.get(approval.key)}
               ownerAddress={owner}
               onRevoked={nft.refetch}
               revokeDisabledReason={revokeDisabledReason}
@@ -1904,6 +1972,7 @@ function ScanContent({
   onReviewBatch,
   batch,
   revokeDisabledReason,
+  approvalAgeByKey,
   debugMode,
 }: {
   scan: ReturnType<typeof useApprovalDiscovery>;
@@ -1927,6 +1996,7 @@ function ScanContent({
   onReviewBatch: () => void;
   batch: ReturnType<typeof useBatchRevoke>;
   revokeDisabledReason: string | null;
+  approvalAgeByKey: ReadonlyMap<string, ApprovalAgeInfo>;
   debugMode: boolean;
 }) {
   const tokenLogoAddresses = useMemo(
@@ -2092,6 +2162,7 @@ function ScanContent({
               <ApprovalRow
                 key={approval.key}
                 approval={approval}
+                approvalAge={approvalAgeByKey.get(approval.key)}
                 tokenLogoUrl={
                   tokenLogos.logos[tokenLogoAddressKey(approval.tokenAddress)]
                     ?.imageUrl

@@ -107,4 +107,30 @@ describe("NFT revoke builders", () => {
       },
     });
   });
+
+  it("preserves discovery metadata on active NFT approval rows", () => {
+    const candidate: NftDiscoveredApproval = {
+      chainId: BSC_CHAIN_ID,
+      kind: "approvalForAll",
+      collectionAddress: COLLECTION,
+      ownerAddress: OWNER,
+      operatorAddress: OPERATOR,
+      blockNumber: 789n,
+      transactionHash: "0xabc",
+      logIndex: "0x7",
+    };
+
+    const parsed = parseNftValidationResults(
+      [success(true), success(false), success("Collection"), success(true)],
+      OWNER,
+      BSC_CHAIN_ID,
+      [candidate],
+    );
+
+    expect(parsed.approvals[0]).toMatchObject({
+      approvalBlockNumber: 789n,
+      approvalTxHash: "0xabc",
+      approvalLogIndex: "0x7",
+    });
+  });
 });

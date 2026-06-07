@@ -88,7 +88,10 @@ describe("approval discovery API serialization", () => {
     const hydrated = hydrateDiscoveryResult(serialized);
     expect(hydrated.pairs[0].rawApprovalValue).toBe(123n);
     expect(hydrated.pairs[0].blockNumber).toBe(456n);
+    expect(hydrated.pairs[0].transactionHash).toBe("0xabc");
+    expect(hydrated.pairs[0].logIndex).toBe("0x1");
     expect(hydrated.erc20Parse.samplePairs[0].rawApprovalValue).toBe(123n);
+    expect(hydrated.erc20Parse.samplePairs[0].transactionHash).toBe("0xabc");
   });
 
   it("round-trips Permit2 and NFT bigint fields through JSON-safe strings", () => {
@@ -104,6 +107,8 @@ describe("approval discovery API serialization", () => {
       expiration: 111n,
       nonce: 222n,
       blockNumber: 333n,
+      transactionHash: "0xdef",
+      logIndex: "0x2",
     };
     const permit2Result: Permit2DiscoveryResult = {
       allowances: [permit2],
@@ -121,6 +126,8 @@ describe("approval discovery API serialization", () => {
       operatorAddress: SPENDER,
       tokenId: 42n,
       blockNumber: 43n,
+      transactionHash: "0x456",
+      logIndex: "0x3",
     };
     const nftResult: NftDiscoveryResult = {
       approvals: [nft],
@@ -142,8 +149,16 @@ describe("approval discovery API serialization", () => {
     expect(
       hydratePermit2DiscoveryResult(serializedPermit2).allowances[0].rawAmount,
     ).toBe(789n);
-    expect(hydrateNftDiscoveryResult(serializedNft).approvals[0].tokenId).toBe(
-      42n,
-    );
+    const hydratedPermit2 =
+      hydratePermit2DiscoveryResult(serializedPermit2).allowances[0];
+    const hydratedNft =
+      hydrateNftDiscoveryResult(serializedNft).approvals[0];
+    expect(hydratedPermit2.blockNumber).toBe(333n);
+    expect(hydratedPermit2.transactionHash).toBe("0xdef");
+    expect(hydratedPermit2.logIndex).toBe("0x2");
+    expect(hydratedNft.tokenId).toBe(42n);
+    expect(hydratedNft.blockNumber).toBe(43n);
+    expect(hydratedNft.transactionHash).toBe("0x456");
+    expect(hydratedNft.logIndex).toBe("0x3");
   });
 });

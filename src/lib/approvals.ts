@@ -59,6 +59,9 @@ export interface Approval {
   /** Unix timestamp after which a Permit2 nested allowance is no longer valid. */
   permit2Expiration?: number;
   permit2Nonce?: number;
+  approvalBlockNumber?: bigint;
+  approvalTxHash?: `0x${string}`;
+  approvalLogIndex?: string;
   rawAllowance: bigint;
   formattedAllowance: string;
   unlimited: boolean;
@@ -675,6 +678,9 @@ export function parseDiscoveryResults(
       spenderNotes: spenderEntry?.notes,
       spenderVerificationMethod: spenderEntry?.verificationMethod,
       spenderProtocolMetadata: spenderEntry?.protocolMetadata,
+      approvalBlockNumber: pair.blockNumber,
+      approvalTxHash: pair.transactionHash,
+      approvalLogIndex: pair.logIndex,
       rawAllowance: raw,
       formattedAllowance: formatValidatedAllowance(
         raw,
@@ -784,6 +790,9 @@ export function parsePermit2AllowanceResults(
       approvalContractAddress: candidate.permit2Address ?? PERMIT2_ADDRESS,
       permit2Expiration: Number(permit2Read.expiration),
       permit2Nonce: Number(permit2Read.nonce),
+      approvalBlockNumber: candidate.blockNumber,
+      approvalTxHash: candidate.transactionHash,
+      approvalLogIndex: candidate.logIndex,
       rawAllowance: permit2Read.amount,
       formattedAllowance: formatValidatedAllowance(
         permit2Read.amount,
