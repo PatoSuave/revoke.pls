@@ -14,6 +14,7 @@ import {
   riskSignalItems,
   type ApprovalVerificationKind,
 } from "@/components/approvals/approval-readability";
+import { ApprovalAgeBadge } from "@/components/approvals/approval-age-badge";
 import {
   GasEstimateDebugDetails,
   GasEstimateDetails,
@@ -33,6 +34,7 @@ import {
   explorerTxUrl,
 } from "@/lib/explorer";
 import { shortenAddress } from "@/lib/format";
+import type { ApprovalAgeInfo } from "@/lib/approval-age/types";
 import {
   BSC_GAS_CAP_BODY,
   BSC_GAS_CAP_HELPER,
@@ -54,6 +56,7 @@ export function ApprovalRow({
   batchResult,
   revokeDisabledReason,
   debugMode = false,
+  approvalAge,
 }: {
   approval: ScoredApproval;
   tokenLogoUrl?: string;
@@ -66,6 +69,7 @@ export function ApprovalRow({
   batchResult?: BatchItemResult;
   revokeDisabledReason?: string | null;
   debugMode?: boolean;
+  approvalAge?: ApprovalAgeInfo;
 }) {
   const [confirming, setConfirming] = useState(false);
 
@@ -196,6 +200,7 @@ export function ApprovalRow({
               max uint256
             </span>
           ) : null}
+          <ApprovalAgeBadge approvalAge={approvalAge} />
         </div>
 
         <div className="flex justify-stretch sm:justify-end">
@@ -277,6 +282,19 @@ export function ApprovalRow({
                 },
               ]
             : []),
+          {
+            label: "Approval age",
+            value: (
+              <SummaryText
+                primary={approvalAge?.label ?? "Approval age unavailable"}
+                secondary={
+                  approvalAge?.approvalBlockNumber
+                    ? `Source block ${approvalAge.approvalBlockNumber.toString()}`
+                    : "Approval event timestamp unavailable"
+                }
+              />
+            ),
+          },
           {
             label: "Risk level",
             value: (

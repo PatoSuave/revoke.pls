@@ -101,6 +101,9 @@ export interface NftApproval {
   operatorProtocolMetadata?: SpenderProtocolMetadata;
   /** Present only for per-token ERC-721 approvals. */
   tokenId?: bigint;
+  approvalBlockNumber?: bigint;
+  approvalTxHash?: `0x${string}`;
+  approvalLogIndex?: string;
   risk: RiskAssessment;
 }
 
@@ -353,6 +356,9 @@ export function parseNftValidationResults(
       operatorUrl: registry?.url,
       operatorProtocolMetadata: registry?.protocolMetadata,
       tokenId: candidate.tokenId,
+      approvalBlockNumber: candidate.blockNumber,
+      approvalTxHash: candidate.transactionHash,
+      approvalLogIndex: candidate.logIndex,
       risk: classifyNftRisk({
         kind: candidate.kind,
         trusted: registry?.isTrusted ?? false,

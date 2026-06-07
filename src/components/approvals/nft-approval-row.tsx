@@ -16,6 +16,7 @@ import {
   riskSignalItems,
   type ApprovalVerificationKind,
 } from "@/components/approvals/approval-readability";
+import { ApprovalAgeBadge } from "@/components/approvals/approval-age-badge";
 import {
   GasEstimateDebugDetails,
   GasEstimateDetails,
@@ -29,6 +30,7 @@ import { useRevokeNftApproval } from "@/hooks/use-revoke-nft-approval";
 import { getChainConfig, type SupportedChainConfig } from "@/lib/chains";
 import { explorerAddressUrl, explorerTxUrl } from "@/lib/explorer";
 import { shortenAddress } from "@/lib/format";
+import type { ApprovalAgeInfo } from "@/lib/approval-age/types";
 import { ZERO_ADDRESS, type NftApproval, type NftStandard } from "@/lib/nft-approvals";
 import {
   BSC_GAS_CAP_BODY,
@@ -45,12 +47,14 @@ export function NftApprovalRow({
   onRevoked,
   revokeDisabledReason,
   debugMode = false,
+  approvalAge,
 }: {
   approval: NftApproval;
   ownerAddress: Address;
   onRevoked?: (hash: `0x${string}`) => void;
   revokeDisabledReason?: string | null;
   debugMode?: boolean;
+  approvalAge?: ApprovalAgeInfo;
 }) {
   const [confirming, setConfirming] = useState(false);
 
@@ -149,6 +153,7 @@ export function NftApprovalRow({
               ? "Collection-wide"
               : "Single NFT"}
           </span>
+          <ApprovalAgeBadge approvalAge={approvalAge} />
         </div>
 
         <div className="flex justify-stretch sm:justify-end">
@@ -232,6 +237,19 @@ export function NftApprovalRow({
                 },
               ]
             : []),
+          {
+            label: "Approval age",
+            value: (
+              <SummaryText
+                primary={approvalAge?.label ?? "Approval age unavailable"}
+                secondary={
+                  approvalAge?.approvalBlockNumber
+                    ? `Source block ${approvalAge.approvalBlockNumber.toString()}`
+                    : "Approval event timestamp unavailable"
+                }
+              />
+            ),
+          },
           {
             label: "Risk level",
             value: (

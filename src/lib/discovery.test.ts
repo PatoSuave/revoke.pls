@@ -135,6 +135,55 @@ describe("createBlockscoutDiscoverySource", () => {
     expect(result.erc20Parse.erc721TokenApprovalShape).toBe(0);
   });
 
+  it("attributes duplicate ERC-20 approvals to the newest block and log index", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () =>
+        jsonResponse({
+          status: "1",
+          message: "OK",
+          result: [
+            {
+              address: TOKEN,
+              data: "0x1",
+              blockNumber: "0x1",
+              transactionHash: "0x1",
+              logIndex: "0x0",
+              topics: [ERC20_APPROVAL_TOPIC0, pad(OWNER), pad(SPENDER), null],
+            },
+            {
+              address: TOKEN,
+              data: "0x2",
+              blockNumber: "0x2",
+              transactionHash: "0x2",
+              logIndex: "0x0",
+              topics: [ERC20_APPROVAL_TOPIC0, pad(OWNER), pad(SPENDER), null],
+            },
+            {
+              address: TOKEN,
+              data: "0x3",
+              blockNumber: "0x2",
+              transactionHash: "0x3",
+              logIndex: "0x4",
+              topics: [ERC20_APPROVAL_TOPIC0, pad(OWNER), pad(SPENDER), null],
+            },
+          ],
+        }),
+      ),
+    );
+
+    const result = await source().discover(OWNER);
+
+    expect(result.pairs).toEqual([
+      expect.objectContaining({
+        rawApprovalValue: 3n,
+        blockNumber: 2n,
+        transactionHash: "0x3",
+        logIndex: "0x4",
+      }),
+    ]);
+  });
+
   it("decodes NFT ApprovalForAll logs that include a trailing null topic", async () => {
     vi.stubGlobal(
       "fetch",
@@ -175,6 +224,71 @@ describe("createBlockscoutDiscoverySource", () => {
         collectionAddress: COLLECTION,
         ownerAddress: CHECKSUM_OWNER,
         operatorAddress: SPENDER,
+      }),
+    ]);
+  });
+
+  it("attributes NFT operator age from the newest approved=true ApprovalForAll event", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (input: RequestInfo | URL) => {
+        const url = new URL(String(input));
+        const topic0 = url.searchParams.get("topic0");
+        if (topic0 === ERC_APPROVAL_FOR_ALL_TOPIC0) {
+          return jsonResponse({
+            status: "1",
+            message: "OK",
+            result: [
+              {
+                address: COLLECTION,
+                data: `0x${word(1n)}`,
+                blockNumber: "0x1",
+                transactionHash: "0x1",
+                logIndex: "0x0",
+                topics: [ERC_APPROVAL_FOR_ALL_TOPIC0, pad(OWNER), pad(SPENDER)],
+              },
+              {
+                address: COLLECTION,
+                data: `0x${word(0n)}`,
+                blockNumber: "0x2",
+                transactionHash: "0x2",
+                logIndex: "0x1",
+                topics: [ERC_APPROVAL_FOR_ALL_TOPIC0, pad(OWNER), pad(SPENDER)],
+              },
+              {
+                address: COLLECTION,
+                data: `0x${word(1n)}`,
+                blockNumber: "0x3",
+                transactionHash: "0x3",
+                logIndex: "0x2",
+                topics: [ERC_APPROVAL_FOR_ALL_TOPIC0, pad(OWNER), pad(SPENDER)],
+              },
+              {
+                address: COLLECTION,
+                data: `0x${word(0n)}`,
+                blockNumber: "0x4",
+                transactionHash: "0x4",
+                logIndex: "0x3",
+                topics: [ERC_APPROVAL_FOR_ALL_TOPIC0, pad(OWNER), pad(SPENDER)],
+              },
+            ],
+          });
+        }
+
+        return jsonResponse({ status: "0", message: "No logs found", result: [] });
+      }),
+    );
+
+    const result = await source().discoverNftApprovals(OWNER);
+
+    expect(result.approvals).toEqual([
+      expect.objectContaining({
+        kind: "approvalForAll",
+        collectionAddress: COLLECTION,
+        operatorAddress: SPENDER,
+        blockNumber: 3n,
+        transactionHash: "0x3",
+        logIndex: "0x2",
       }),
     ]);
   });
@@ -244,9 +358,13 @@ describe("createBlockscoutDiscoverySource", () => {
       ownerAddress: CHECKSUM_OWNER,
       tokenAddress: TOKEN,
       spenderAddress: SPENDER,
-      sourceEvent: "Approval",
-      rawAmount: 123n,
-      expiration: 2000n,
+      sourceEvent: "Permit",
+      rawAmount: 456n,
+      expiration: 3000n,
+      nonce: 9n,
+      blockNumber: 2n,
+      transactionHash: "0x4",
+      logIndex: "0x1",
     });
   });
 

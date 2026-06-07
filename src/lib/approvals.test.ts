@@ -136,6 +136,30 @@ describe("ERC-20 discovery live-read diagnostics", () => {
     });
   });
 
+  it("preserves discovery metadata on active ERC-20 approval rows", () => {
+    const pairs: DiscoveredPair[] = [
+      {
+        ...pair(TOKEN, SPENDER),
+        blockNumber: 123n,
+        transactionHash: "0xabc",
+        logIndex: "0x5",
+      },
+    ];
+
+    const parsed = parseDiscoveryResults(
+      [success("TOK"), success(18), success("Token"), success(123n)],
+      OWNER,
+      CHAIN_ID,
+      pairs,
+    );
+
+    expect(parsed.approvals[0]).toMatchObject({
+      approvalBlockNumber: 123n,
+      approvalTxHash: "0xabc",
+      approvalLogIndex: "0x5",
+    });
+  });
+
   it("enriches discovered approvals with LibertySwap protocol metadata", () => {
     const pairs: DiscoveredPair[] = [
       pair(TOKEN, LIBERTYSWAP_BSC_USDT, BSC_CHAIN_ID),
@@ -255,6 +279,36 @@ describe("Permit2 nested allowance parsing", () => {
       formattedAllowance: "~0 TOK",
       permit2Expiration: 2000,
       permit2Nonce: 7,
+    });
+  });
+
+  it("preserves discovery metadata on active Permit2 approval rows", () => {
+    const candidates: Permit2DiscoveredAllowance[] = [
+      {
+        ...permit2Candidate(TOKEN, SPENDER),
+        blockNumber: 456n,
+        transactionHash: "0xdef",
+        logIndex: "0x6",
+      },
+    ];
+    const parsed = parsePermit2AllowanceResults(
+      [
+        success("TOK"),
+        success(18),
+        success("Token"),
+        success([123n, 2_000n, 7n]),
+      ],
+      OWNER,
+      CHAIN_ID,
+      candidates,
+      { nowUnix: 1_000 },
+    );
+
+    expect(parsed.approvals[0]).toMatchObject({
+      approvalKind: "permit2",
+      approvalBlockNumber: 456n,
+      approvalTxHash: "0xdef",
+      approvalLogIndex: "0x6",
     });
   });
 

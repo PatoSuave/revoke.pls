@@ -329,37 +329,36 @@ export function discoveredPairDedupeKey(
 }
 
 function dedupePairs(pairs: DiscoveredPair[]): DiscoveredPair[] {
-  const seen = new Set<string>();
-  const out: DiscoveredPair[] = [];
+  const byKey = new Map<string, DiscoveredPair>();
   for (const p of pairs) {
     const key = discoveredPairDedupeKey(p);
-    if (seen.has(key)) continue;
-    seen.add(key);
-    out.push(p);
+    const existing = byKey.get(key);
+    if (!existing || isNewerApprovalEvent(p, existing)) {
+      byKey.set(key, p);
+    }
   }
-  return out;
+  return [...byKey.values()];
 }
 
 function dedupeNftApprovals(
   items: NftDiscoveredApproval[],
 ): NftDiscoveredApproval[] {
-  const seen = new Set<string>();
-  const out: NftDiscoveredApproval[] = [];
+  const byKey = new Map<string, NftDiscoveredApproval>();
   for (const a of items) {
     const idPart = a.kind === "tokenApproval" ? a.tokenId?.toString() : "all";
     const key = `${a.chainId}:${a.kind}:${a.collectionAddress.toLowerCase()}:${a.operatorAddress.toLowerCase()}:${idPart}`;
-    if (seen.has(key)) continue;
-    seen.add(key);
-    out.push(a);
+    const existing = byKey.get(key);
+    if (!existing || isNewerApprovalEvent(a, existing)) {
+      byKey.set(key, a);
+    }
   }
-  return out;
+  return [...byKey.values()];
 }
 
 function dedupePermit2Allowances(
   items: Permit2DiscoveredAllowance[],
 ): Permit2DiscoveredAllowance[] {
-  const seen = new Set<string>();
-  const out: Permit2DiscoveredAllowance[] = [];
+  const byKey = new Map<string, Permit2DiscoveredAllowance>();
   for (const a of items) {
     const key = [
       a.chainId,
@@ -368,11 +367,35 @@ function dedupePermit2Allowances(
       a.tokenAddress.toLowerCase(),
       a.spenderAddress.toLowerCase(),
     ].join(":");
-    if (seen.has(key)) continue;
-    seen.add(key);
-    out.push(a);
+    const existing = byKey.get(key);
+    if (!existing || isNewerApprovalEvent(a, existing)) {
+      byKey.set(key, a);
+    }
   }
-  return out;
+  return [...byKey.values()];
+}
+
+function isNewerApprovalEvent(
+  candidate: Pick<DiscoveredPair, "blockNumber" | "logIndex">,
+  existing: Pick<DiscoveredPair, "blockNumber" | "logIndex">,
+): boolean {
+  if (candidate.blockNumber !== undefined || existing.blockNumber !== undefined) {
+    if (candidate.blockNumber === undefined) return false;
+    if (existing.blockNumber === undefined) return true;
+    if (candidate.blockNumber !== existing.blockNumber) {
+      return candidate.blockNumber > existing.blockNumber;
+    }
+  }
+
+  const candidateLogIndex = optionalNumber(candidate.logIndex);
+  const existingLogIndex = optionalNumber(existing.logIndex);
+  if (candidateLogIndex !== undefined || existingLogIndex !== undefined) {
+    if (candidateLogIndex === undefined) return false;
+    if (existingLogIndex === undefined) return true;
+    return candidateLogIndex > existingLogIndex;
+  }
+
+  return false;
 }
 
 function buildLogsUrl(
@@ -1007,13 +1030,14 @@ function extractNftApprovalForAll(
   const out: NftDiscoveredApproval[] = [];
   for (const log of logs) {
     const topics = normalizeTopics(log.topics);
-    // ApprovalForAll: 3 indexed topics (sig + owner + operator). We don't
-    // distinguish `approved=true` vs `approved=false` here — the live
-    // `isApprovedForAll` check filters inactive ones downstream.
+    // ApprovalForAll: 3 indexed topics (sig + owner + operator). Skip explicit
+    // false clears so age attribution points at the latest known grant event.
     if (!topics || topics.length !== 3) continue;
     const collectionRaw = log.address;
     const ownerRaw = topics[1];
     const operatorRaw = topics[2];
+    const approved = dataWord(log.data, 0);
+    if (approved === 0n) continue;
     if (typeof collectionRaw !== "string") continue;
     const collectionAddress = safeChecksum(collectionRaw);
     const ownerAddress = ownerRaw ? topicToAddress(ownerRaw) : null;
