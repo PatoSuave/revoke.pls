@@ -5,6 +5,7 @@ import { useAccount, useChainId } from "wagmi";
 import type { Address } from "viem";
 
 import { ApprovalFilters } from "@/components/approvals/approval-filters";
+import { ApprovalWrappedCard } from "@/components/approvals/approval-wrapped-card";
 import { ApprovalRow } from "@/components/approvals/approval-row";
 import { WalletRoastPanel } from "@/components/approvals/wallet-roast-panel";
 import {
@@ -55,6 +56,7 @@ import { explorerAddressUrl } from "@/lib/explorer";
 import { shortenAddress } from "@/lib/format";
 import { generateApprovalRoasts } from "@/lib/approval-age/roasts";
 import { summarizeApprovalAges } from "@/lib/approval-age/summary";
+import { buildApprovalWrappedSummary } from "@/lib/approval-age/wrapped";
 import type {
   ApprovalAgeInfo,
   ApprovalAgeSummary,
@@ -1051,6 +1053,32 @@ function ConnectedScanner({
     () => generateApprovalRoasts(approvalAgeSummary),
     [approvalAgeSummary],
   );
+  const chainNameById = useMemo(
+    () => new Map([[chainConfig.chainId, chainConfig.displayName]]),
+    [chainConfig.chainId, chainConfig.displayName],
+  );
+  const wrappedSummary = useMemo(
+    () =>
+      buildApprovalWrappedSummary({
+        owner,
+        approvals: scored,
+        nftApprovals: nft.approvals,
+        ageInfoByKey: approvalAgeByKey,
+        chainNameById,
+        chainsScanned: [chainConfig.chainId],
+        roastLine: roastVisible ? roastLines[0] : undefined,
+      }),
+    [
+      approvalAgeByKey,
+      chainConfig.chainId,
+      chainNameById,
+      nft.approvals,
+      owner,
+      roastLines,
+      roastVisible,
+      scored,
+    ],
+  );
   const scanCompleted =
     (scan.status === "success" || scan.status === "error") &&
     (nft.status === "success" || nft.status === "error") &&
@@ -1182,6 +1210,11 @@ function ConnectedScanner({
         revealed={roastVisible}
         roastLines={roastLines}
         onReveal={() => setRoastVisible(true)}
+      />
+
+      <ApprovalWrappedCard
+        completed={scanCompleted}
+        summary={wrappedSummary}
       />
 
       <AccountCodeDelegationCard
