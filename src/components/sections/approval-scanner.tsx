@@ -6,6 +6,7 @@ import type { Address } from "viem";
 
 import { ApprovalFilters } from "@/components/approvals/approval-filters";
 import { ApprovalRow } from "@/components/approvals/approval-row";
+import { WalletRoastPanel } from "@/components/approvals/wallet-roast-panel";
 import {
   BatchActionBar,
   BatchRevokePanel,
@@ -52,6 +53,7 @@ import {
 } from "@/lib/hyperevm-approval-client";
 import { explorerAddressUrl } from "@/lib/explorer";
 import { shortenAddress } from "@/lib/format";
+import { generateApprovalRoasts } from "@/lib/approval-age/roasts";
 import { summarizeApprovalAges } from "@/lib/approval-age/summary";
 import type {
   ApprovalAgeInfo,
@@ -1011,6 +1013,7 @@ function ConnectedScanner({
   const [sort, setSort] = useState<ApprovalSort>("risk");
   const [filter, setFilter] = useState<ApprovalFilter>("all");
   const [selected, setSelected] = useState<Set<string>>(() => new Set());
+  const [roastVisible, setRoastVisible] = useState(false);
 
   const scored = useMemo(
     () => scoreApprovals(scan.approvals),
@@ -1044,6 +1047,19 @@ function ConnectedScanner({
       }),
     [approvalAgeByKey, nft.approvals, scored],
   );
+  const roastLines = useMemo(
+    () => generateApprovalRoasts(approvalAgeSummary),
+    [approvalAgeSummary],
+  );
+  const scanCompleted =
+    (scan.status === "success" || scan.status === "error") &&
+    (nft.status === "success" || nft.status === "error") &&
+    !scan.isFetching &&
+    !nft.isFetching;
+
+  useEffect(() => {
+    setRoastVisible(false);
+  }, [chainConfig.chainId, owner]);
 
   // Prune selections when the underlying scan loses an approval (e.g. after
   // a successful revoke triggers a rescan).
@@ -1159,6 +1175,13 @@ function ConnectedScanner({
         isConnected={isConnected}
         walletMatchesScanTarget={walletMatchesScanTarget}
         walletMatchesActiveChain={walletMatchesActiveChain}
+      />
+
+      <WalletRoastPanel
+        completed={scanCompleted}
+        revealed={roastVisible}
+        roastLines={roastLines}
+        onReveal={() => setRoastVisible(true)}
       />
 
       <AccountCodeDelegationCard
