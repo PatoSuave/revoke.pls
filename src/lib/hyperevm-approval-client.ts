@@ -75,11 +75,19 @@ export interface HyperEVMApprovalApiDiagnostics {
   incompleteReasons: string[];
 }
 
-export type HyperEVMErc20ApprovalApi = Omit<Approval, "rawAllowance"> & {
+export type HyperEVMErc20ApprovalApi = Omit<
+  Approval,
+  "approvalBlockNumber" | "rawAllowance"
+> & {
+  approvalBlockNumber?: string;
   rawAllowance: string;
 };
 
-export type HyperEVMNftApprovalApi = Omit<NftApproval, "tokenId"> & {
+export type HyperEVMNftApprovalApi = Omit<
+  NftApproval,
+  "approvalBlockNumber" | "tokenId"
+> & {
+  approvalBlockNumber?: string;
   tokenId?: string;
 };
 
@@ -209,18 +217,53 @@ export function mapHyperEVMApprovalApiResponse(
   let malformedResponse = false;
   const erc20: Approval[] = [];
   for (const approval of response.approvals.erc20) {
-    const rawAllowance = parseBigIntOrNull(approval.rawAllowance);
+    const {
+      approvalBlockNumber,
+      rawAllowance: rawAllowanceValue,
+      ...rest
+    } = approval;
+    const rawAllowance = parseBigIntOrNull(rawAllowanceValue);
     if (rawAllowance === null) {
       malformedResponse = true;
       warnings.push("HyperEVM API returned a malformed ERC-20 allowance.");
       continue;
     }
-    erc20.push({ ...approval, rawAllowance });
+    const parsedApprovalBlockNumber =
+      parseOptionalBigIntOrNull(approvalBlockNumber);
+    if (parsedApprovalBlockNumber === null) {
+      malformedResponse = true;
+      warnings.push(
+        "HyperEVM API returned a malformed approval block number.",
+      );
+      continue;
+    }
+    erc20.push({
+      ...rest,
+      ...(parsedApprovalBlockNumber !== undefined
+        ? { approvalBlockNumber: parsedApprovalBlockNumber }
+        : {}),
+      rawAllowance,
+    });
   }
 
   const nft: NftApproval[] = [];
   for (const approval of response.approvals.nft) {
-    const { tokenId, ...rest } = approval;
+    const { approvalBlockNumber, tokenId, ...rest } = approval;
+    const parsedApprovalBlockNumber =
+      parseOptionalBigIntOrNull(approvalBlockNumber);
+    if (parsedApprovalBlockNumber === null) {
+      malformedResponse = true;
+      warnings.push(
+        "HyperEVM API returned a malformed approval block number.",
+      );
+      continue;
+    }
+    const hydrated = {
+      ...rest,
+      ...(parsedApprovalBlockNumber !== undefined
+        ? { approvalBlockNumber: parsedApprovalBlockNumber }
+        : {}),
+    };
     if (tokenId === undefined) {
       if (approval.kind === "tokenApproval") {
         malformedResponse = true;
@@ -229,7 +272,7 @@ export function mapHyperEVMApprovalApiResponse(
         );
         continue;
       }
-      nft.push(rest);
+      nft.push(hydrated);
       continue;
     }
 
@@ -239,7 +282,7 @@ export function mapHyperEVMApprovalApiResponse(
       warnings.push("HyperEVM API returned a malformed NFT token ID.");
       continue;
     }
-    nft.push({ ...rest, tokenId: parsedTokenId });
+    nft.push({ ...hydrated, tokenId: parsedTokenId });
   }
 
   const activeApprovalCount = erc20.length + nft.length;
@@ -599,6 +642,12 @@ function parseBigIntOrNull(value: string): bigint | null {
   } catch {
     return null;
   }
+}
+
+function parseOptionalBigIntOrNull(
+  value: string | undefined,
+): bigint | undefined | null {
+  return value === undefined ? undefined : parseBigIntOrNull(value);
 }
 
 export function hyperevmExplorerAddressUrl(address: Address | string): string {

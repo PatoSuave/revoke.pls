@@ -95,6 +95,9 @@ function fakeSource(options?: {
               ownerAddress: getAddress(OWNER),
               spenderAddress: SPENDER,
               rawApprovalValue: 100n,
+              blockNumber: 123n,
+              transactionHash: "0x1" as const,
+              logIndex: "0x1",
             },
           ]
         : [];
@@ -118,6 +121,9 @@ function fakeSource(options?: {
                 collectionAddress: COLLECTION,
                 ownerAddress: getAddress(OWNER),
                 operatorAddress: SPENDER,
+                blockNumber: 456n,
+                transactionHash: "0x2" as const,
+                logIndex: "0x2",
               },
             ]
           : []),
@@ -130,6 +136,9 @@ function fakeSource(options?: {
                 ownerAddress: getAddress(OWNER),
                 operatorAddress: SPENDER,
                 tokenId: TOKEN_ID,
+                blockNumber: 789n,
+                transactionHash: "0x3" as const,
+                logIndex: "0x3",
               },
             ]
           : []),
@@ -383,9 +392,12 @@ describe("Arbitrum approval API foundation", () => {
       chainId: ARBITRUM_ONE_CHAIN_ID,
       tokenSymbol: "ARB",
       rawAllowance: "5",
+      approvalBlockNumber: "123",
+      approvalTxHash: "0x1",
       spenderLabel: "Unknown spender",
     });
     expect(result.diagnostics.liveReadFailureCount).toBe(0);
+    expect(() => JSON.stringify(result)).not.toThrow();
   });
 
   it("returns active Arbitrum NFT approvals only after live NFT validation", async () => {

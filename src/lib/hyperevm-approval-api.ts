@@ -92,11 +92,19 @@ export interface HyperEVMApprovalApiDiagnostics {
   incompleteReasons: string[];
 }
 
-export type HyperEVMErc20ApprovalApi = Omit<Approval, "rawAllowance"> & {
+export type HyperEVMErc20ApprovalApi = Omit<
+  Approval,
+  "approvalBlockNumber" | "rawAllowance"
+> & {
+  approvalBlockNumber?: string;
   rawAllowance: string;
 };
 
-export type HyperEVMNftApprovalApi = Omit<NftApproval, "tokenId"> & {
+export type HyperEVMNftApprovalApi = Omit<
+  NftApproval,
+  "approvalBlockNumber" | "tokenId"
+> & {
+  approvalBlockNumber?: string;
   tokenId?: string;
 };
 
@@ -492,16 +500,23 @@ function redactSensitiveErrorText(value: string): string {
 }
 
 function serializeErc20Approval(approval: Approval): HyperEVMErc20ApprovalApi {
+  const { approvalBlockNumber, rawAllowance, ...rest } = approval;
   return {
-    ...approval,
-    rawAllowance: approval.rawAllowance.toString(),
+    ...rest,
+    ...(approvalBlockNumber !== undefined
+      ? { approvalBlockNumber: approvalBlockNumber.toString() }
+      : {}),
+    rawAllowance: rawAllowance.toString(),
   };
 }
 
 function serializeNftApproval(approval: NftApproval): HyperEVMNftApprovalApi {
-  const { tokenId, ...rest } = approval;
+  const { approvalBlockNumber, tokenId, ...rest } = approval;
   return {
     ...rest,
+    ...(approvalBlockNumber !== undefined
+      ? { approvalBlockNumber: approvalBlockNumber.toString() }
+      : {}),
     ...(tokenId !== undefined ? { tokenId: tokenId.toString() } : {}),
   };
 }
