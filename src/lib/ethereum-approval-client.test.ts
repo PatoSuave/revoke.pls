@@ -182,6 +182,8 @@ describe("Ethereum approval client mapping", () => {
               protocol: "Unknown",
               spenderCategory: "unknown",
               trusted: false,
+              approvalBlockNumber: "123",
+              approvalTxHash: "0x1",
               rawAllowance: "1000000000000000000",
               formattedAllowance: "1 TKN",
               unlimited: false,
@@ -199,6 +201,8 @@ describe("Ethereum approval client mapping", () => {
               operatorLabel: "Unknown operator",
               protocol: "Unknown",
               trusted: false,
+              approvalBlockNumber: "456",
+              approvalTxHash: "0x2",
               tokenId: "7",
               risk: {
                 level: "medium",
@@ -222,7 +226,9 @@ describe("Ethereum approval client mapping", () => {
     expect(mapped.rowRevokeDisabledReason).toBeNull();
     expect(mapped.activeApprovalCount).toBe(2);
     expect(mapped.approvals.erc20[0]?.rawAllowance).toBe(1000000000000000000n);
+    expect(mapped.approvals.erc20[0]?.approvalBlockNumber).toBe(123n);
     expect(mapped.approvals.nft[0]?.tokenId).toBe(7n);
+    expect(mapped.approvals.nft[0]?.approvalBlockNumber).toBe(456n);
     expect(
       canEnableEthereumWalletRevoke({
         mapping: mapped,

@@ -82,11 +82,19 @@ export interface ArbitrumApprovalApiDiagnostics {
   incompleteReasons: string[];
 }
 
-export type ArbitrumErc20ApprovalApi = Omit<Approval, "rawAllowance"> & {
+export type ArbitrumErc20ApprovalApi = Omit<
+  Approval,
+  "approvalBlockNumber" | "rawAllowance"
+> & {
+  approvalBlockNumber?: string;
   rawAllowance: string;
 };
 
-export type ArbitrumNftApprovalApi = Omit<NftApproval, "tokenId"> & {
+export type ArbitrumNftApprovalApi = Omit<
+  NftApproval,
+  "approvalBlockNumber" | "tokenId"
+> & {
+  approvalBlockNumber?: string;
   tokenId?: string;
 };
 
@@ -481,16 +489,23 @@ function redactSensitiveErrorText(value: string): string {
 }
 
 function serializeErc20Approval(approval: Approval): ArbitrumErc20ApprovalApi {
+  const { approvalBlockNumber, rawAllowance, ...rest } = approval;
   return {
-    ...approval,
-    rawAllowance: approval.rawAllowance.toString(),
+    ...rest,
+    ...(approvalBlockNumber !== undefined
+      ? { approvalBlockNumber: approvalBlockNumber.toString() }
+      : {}),
+    rawAllowance: rawAllowance.toString(),
   };
 }
 
 function serializeNftApproval(approval: NftApproval): ArbitrumNftApprovalApi {
-  const { tokenId, ...rest } = approval;
+  const { approvalBlockNumber, tokenId, ...rest } = approval;
   return {
     ...rest,
+    ...(approvalBlockNumber !== undefined
+      ? { approvalBlockNumber: approvalBlockNumber.toString() }
+      : {}),
     ...(tokenId !== undefined ? { tokenId: tokenId.toString() } : {}),
   };
 }

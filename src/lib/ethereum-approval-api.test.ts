@@ -95,6 +95,9 @@ function fakeSource(options?: {
               ownerAddress: getAddress(OWNER),
               spenderAddress: SPENDER,
               rawApprovalValue: 100n,
+              blockNumber: 123n,
+              transactionHash: "0x1" as const,
+              logIndex: "0x1",
             },
           ]
         : [];
@@ -117,6 +120,9 @@ function fakeSource(options?: {
               collectionAddress: COLLECTION,
               ownerAddress: getAddress(OWNER),
               operatorAddress: SPENDER,
+              blockNumber: 456n,
+              transactionHash: "0x2" as const,
+              logIndex: "0x2",
             },
           ]
         : [];
@@ -140,6 +146,9 @@ function fakeSource(options?: {
               tokenAddress: TOKEN,
               spenderAddress: SPENDER,
               sourceEvent: "Approval" as const,
+              blockNumber: 789n,
+              transactionHash: "0x3" as const,
+              logIndex: "0x3",
             },
           ]
         : [];
@@ -383,6 +392,8 @@ describe("Ethereum approval API foundation", () => {
       chainId: ETHEREUM_MAINNET_CHAIN_ID,
       tokenSymbol: "TOK",
       rawAllowance: "5",
+      approvalBlockNumber: "123",
+      approvalTxHash: "0x1",
       spenderLabel: "Unknown spender",
     });
     expect(result.diagnostics.liveReadFailureCount).toBe(0);
@@ -422,6 +433,8 @@ describe("Ethereum approval API foundation", () => {
       chainId: ETHEREUM_MAINNET_CHAIN_ID,
       tokenSymbol: "TOK",
       rawAllowance: "7",
+      approvalBlockNumber: "789",
+      approvalTxHash: "0x3",
       permit2Expiration: expiration,
       permit2Nonce: 3,
     });

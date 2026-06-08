@@ -95,6 +95,9 @@ function fakeSource(options?: {
               ownerAddress: getAddress(OWNER),
               spenderAddress: SPENDER,
               rawApprovalValue: 100n,
+              blockNumber: 123n,
+              transactionHash: "0x1" as const,
+              logIndex: "0x1",
             },
           ]
         : [];
@@ -118,6 +121,9 @@ function fakeSource(options?: {
                 collectionAddress: COLLECTION,
                 ownerAddress: getAddress(OWNER),
                 operatorAddress: SPENDER,
+                blockNumber: 456n,
+                transactionHash: "0x2" as const,
+                logIndex: "0x2",
               },
             ]
           : []),
@@ -130,6 +136,9 @@ function fakeSource(options?: {
                 ownerAddress: getAddress(OWNER),
                 operatorAddress: SPENDER,
                 tokenId: TOKEN_ID,
+                blockNumber: 789n,
+                transactionHash: "0x3" as const,
+                logIndex: "0x3",
               },
             ]
           : []),
@@ -390,9 +399,12 @@ describe("Optimism approval API foundation", () => {
       chainId: OPTIMISM_CHAIN_ID,
       tokenSymbol: "OP",
       rawAllowance: "5",
+      approvalBlockNumber: "123",
+      approvalTxHash: "0x1",
       spenderLabel: "Unknown spender",
     });
     expect(result.diagnostics.liveReadFailureCount).toBe(0);
+    expect(() => JSON.stringify(result)).not.toThrow();
   });
 
   it("returns active Optimism NFT approvals only after live NFT validation", async () => {
