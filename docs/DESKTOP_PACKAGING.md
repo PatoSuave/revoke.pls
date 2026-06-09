@@ -1,199 +1,135 @@
-# Desktop Packaging Plan
+# Desktop Packaging
 
-## Recommendation: Tauri + Next.js static export
+## Current beta model
 
-Ship the desktop app as a **Tauri shell** wrapping a **statically-exported
-Next.js build**. This is the smallest path to a signed, distributable
-binary on all three platforms with no changes to the existing web product or
-scanner logic.
+Pulse Revoke's Windows x64 internal beta is packaged like the official
+PulseChain server projects: a zip contains one executable. The executable
+embeds the static `out/` build, starts a loopback server on
+`127.0.0.1:<dynamic-port>`, and opens the user's default browser to `/app/`.
 
----
+This keeps browser wallet extensions available. The desktop beta is not a
+WebView-only wallet surface.
 
-## Option comparison
+## Official source pattern
 
-| Criterion | Tauri | Electron | PWA |
-|---|---|---|---|
-| Binary size | ~15–30 MB | ~120–150 MB | no binary |
-| Rendering engine | OS webview | bundled Chromium | browser tab |
-| Windows | WebView2 (pre-installed Win10/11) | always works | Chrome/Edge |
-| macOS | WKWebView (always available) | always works | Safari/Chrome |
-| Linux | WebKit2GTK (must be installed) | always works | Chrome/Firefox |
-| Wallet: injected ext | ✗ extensions don't work in webview | ✓ via `loadExtension()` | ✓ same as web |
-| Wallet: WalletConnect | ✓ outbound WS works | ✓ | ✓ |
-| Offline / local | ✓ no server needed | ✓ no server needed | ✗ (RPC still needed) |
-| Language requirement | Rust (config only for MVP) | JS/Node.js | none |
-| IPFS distribution fit | ✓ small binary | ✗ 150 MB limit | n/a |
-| Maintenance burden | Low (wagmi handles most; Rust only for native extras) | Medium (Chromium release cadence) | None |
+The reference PulseChain server READMEs use the same simple distribution
+shape:
 
-### Why not Electron
+- offer a pre-built binary package
+- let advanced users build from source
+- run a lightweight local web server
 
-Electron is defensible if wallet extension injection is a hard requirement
-(MetaMask browser extension running inside the app). For this app it is
-not — WalletConnect covers the primary mobile + hardware wallet case for
-PulseChain, BSC, Base, and Polygon users, and the target audience is comfortable with QR
-pairing. Electron's 150 MB binary also works against IPFS distribution
-credibility.
+Source anchors:
 
-### Why not PWA
+- PulseChain GitLab group: <https://gitlab.com/pulsechaincom>
+- PulseX server README:
+  <https://gitlab.com/pulsechaincom/pulsex-server/-/raw/master/README.md>
+- HEX server README:
+  <https://gitlab.com/pulsechaincom/hex-server/-/raw/master/README.md>
+- Bridge server README:
+  <https://gitlab.com/pulsechaincom/pulsechain-bridge-server/-/raw/master/README.md>
+- Explorer server README:
+  <https://gitlab.com/pulsechaincom/pulsechain-explorer-server/-/raw/master/README.md>
+- PulseChain mainnet README:
+  <https://gitlab.com/pulsechaincom/pulsechain-mainnet/-/raw/master/README.md>
 
-PWA is a useful zero-cost supplement (add a `manifest.json` and a service
-worker) but does not meet the goal of a signed downloadable binary with an
-entry in the launcher's downloads grid.
+The mainnet README is also the source for the displayed PulseChain facts:
+chain ID `369`, RPC `https://rpc.pulsechain.com`, explorer
+`https://scan.pulsechain.com`, and native symbol `PLS`.
 
----
+## Build flow
 
-## Codebase suitability
+PowerShell:
 
-The current `/app` build is nearly ideal for Tauri wrapping:
-
-- **No server-side code.** No API routes exist. All blockchain reads go
-  directly from wagmi/viem through HTTP RPC. `output: 'export'` can be
-  enabled with one line.
-- **No browser-API coupling in hooks.** The six hooks in `src/hooks/`
-  use only `fetch()`, wagmi hooks, and React state. The only `document`
-  usage is `document.addEventListener` in `connect-wallet-button.tsx`
-  for menu dismiss — a non-issue in the Tauri webview.
-- **Configurable network access.** PulseChain, BSC, Base, and Polygon RPC/explorer values are
-  env-variable-driven and baked into the desktop build at compile time.
-
----
-
-## Wallet connectivity in the webview — main risk
-
-This is the most important architectural difference from the web product.
-
-| Connector | Web `/app` | Tauri webview |
-|---|---|---|
-| Injected (EIP-6963) — MetaMask, Rabby | ✓ extension injects `window.ethereum` | ✗ browser extensions don't run inside webviews |
-| WalletConnect v2 QR | ✓ | ✓ outbound WebSocket works |
-| Hardware via WalletConnect | ✓ | ✓ |
-
-**Practical consequence for v1:** the desktop build should ship with
-`NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID` baked in. WalletConnect covers common
-PulseChain, BSC, Base, and Polygon wallet use cases (MetaMask Mobile, Rabby Mobile, hardware
-wallets).
-Pure MetaMask-desktop-only users are not served by the injected path in a
-webview — they must scan a QR or use the web app instead.
-
-**Future path for injected wallets:** Tauri supports custom protocol
-handlers and initialization scripts. A preload bridge can expose
-`window.ethereum` backed by a Tauri sidecar (e.g., a local wallet unlock
-or hardware wallet passthrough). This is out of scope for v1.
-
----
-
-## Structural changes required
-
-| Change | Risk | Notes |
-|---|---|---|
-| Add `output: 'export'` to `next.config.ts` | Low | No SSR used; all pages are already static. ImageResponse icon routes (`icon.tsx`, `apple-icon.tsx`, `opengraph-image.tsx`) pre-render fine. `sitemap.ts` and `robots.ts` export to `sitemap.xml` / `robots.txt`. |
-| Bake `NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID` at desktop build time | Low | Already optional; just must be present for desktop. |
-| `src-tauri/` scaffold | Isolated | New directory, no coupling to web code. |
-| macOS notarization + Windows signing | Medium | Standard for distribution; Apple notarization requires a paid developer account. |
-
-No changes to scanner logic, telemetry, `/app` route, or `src/lib/release.ts`.
-
----
-
-## Implementation status
-
-The scaffold is in place. `next.config.ts` conditionally enables static
-export when `TAURI_BUILD=1`, `src-tauri/` holds a minimal Tauri v2 app, and
-`npm run build:desktop` produces `out/` for Tauri to bundle.
-
-```
-# One-time prerequisites
-rustup install stable                     # Rust toolchain
-npm install                               # picks up @tauri-apps/cli@^2
-
-# Dev (hot-reload against Next.js dev server)
-NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID=... npx tauri dev
-
-# Production bundle (icons must exist under src-tauri/icons/ first)
-npx tauri icon path/to/icon-1024.png
-NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID=... npm run build:desktop
-npx tauri build
+```powershell
+npm.cmd install
+npm.cmd run build:desktop
+cargo build --manifest-path src-tauri\Cargo.toml --release --bin pulse-revoke-server
 ```
 
-### Desktop runtime detection
+`npm run build:desktop` sets `TAURI_BUILD=1` and
+`NEXT_PUBLIC_TAURI_BUILD=1`, which tells `next.config.ts` to export the static
+app to `out/`. During the Rust build, `include_dir` embeds that `out/`
+directory into the executable.
 
-`npm run build:desktop` sets `NEXT_PUBLIC_TAURI_BUILD=1`. The frontend reads
-this via `src/lib/platform.ts` (`isDesktopBuild`) — Next.js inlines it at
-build time, so the desktop and web branches are tree-shaken away
-respectively. UI copy that differs between desktop and web (connect menu,
-launcher downloads section) branches on this constant only.
+The raw Windows build output with the default MSVC toolchain is:
 
-### CSP
-
-`tauri.conf.json` now sets an explicit CSP:
-
-```
-default-src 'self';
-script-src  'self' 'unsafe-inline' 'wasm-unsafe-eval';
-style-src   'self' 'unsafe-inline';
-img-src     'self' data: blob:;
-font-src    'self' data:;
-connect-src 'self' https: wss:;
-frame-src   'self' https:;
-object-src  'none';
-base-uri    'self';
-form-action 'self';
-frame-ancestors 'none';
+```text
+src-tauri\target\release\pulse-revoke-server.exe
 ```
 
-Notes on unavoidable looseness:
+The GNU toolchain output is:
 
-- `script-src 'unsafe-inline'`: Next.js static export emits inline hydration
-  scripts. Nonce-based CSP is not available for `output: 'export'`.
-- `script-src 'wasm-unsafe-eval'`: reserved for wallet crypto libraries that
-  may ship wasm. `'unsafe-eval'` is deliberately omitted.
-- `connect-src https: wss:`: wagmi/viem talks to user-configurable RPC
-  endpoints, the explorer API, and the WalletConnect relay (multiple hosts).
-  Pinning to specific hostnames would break custom RPC overrides.
-- `frame-src https:`: WalletConnect's verify.walletconnect.com iframe.
-
-Key `tauri.conf.json` settings:
-```json
-{
-  "build": {
-    "beforeBuildCommand": "npm run build",
-    "frontendDist": "../out"
-  },
-  "app": {
-    "windows": [{ "title": "Pulse Revoke", "width": 1200, "height": 800 }]
-  }
-}
+```text
+src-tauri\target\x86_64-pc-windows-gnu\release\pulse-revoke-server.exe
 ```
 
-After that, `npx tauri build` produces:
-- Windows: `.msi` + `.exe` (NSIS)
-- macOS: `.dmg` + `.app` (notarize with `tauri-action` on GitHub Actions)
-- Linux: `.AppImage` + `.deb`
+Release packaging copies that executable to a staging directory without
+renaming it.
 
-These map directly to the four `id` values already declared in
-`currentRelease.artifacts` in `src/lib/release.ts`.
+The published beta package is:
 
----
+```text
+public\downloads\pulse-revoke-server_0.1.0-beta.1_windows_amd64.zip
+```
 
-## GitHub Actions
+The zip must contain exactly one file:
 
-Tauri's official `tauri-apps/tauri-action` covers all three platforms via a
-matrix build on `ubuntu-latest`, `macos-latest`, `windows-latest`. It handles
-code signing secrets, notarization tokens, and uploads artifacts. This is
-the recommended CI path.
+```text
+pulse-revoke-server.exe
+```
 
----
+## Runtime behavior
 
-## Open questions before implementation
+The executable:
 
-1. **WalletConnect project ID for desktop** — use the same Reown project as
-   the web app, or register a separate one? Separate is cleaner (allows
-   per-platform analytics and revocation).
-2. **macOS Developer ID** — notarization requires an Apple Developer Program
-   account ($99/year). Required for Gatekeeper pass without user override.
-3. **Windows signing cert** — EV cert recommended to avoid SmartScreen
-   warnings. Optional for initial release.
-4. **Auto-update** — Tauri's `tauri-plugin-updater` can point at GitHub
-   Releases for OTA updates. Opt-in; not required for v1.
-5. **IPFS build** — the `out/` static bundle can be pinned directly to IPFS.
-   The CID then replaces `LAUNCHER_PLACEHOLDER_CID` in `src/lib/release.ts`.
+- binds only to `127.0.0.1` on a dynamic port
+- prints the local launch URL
+- opens `/app/` in the default browser
+- serves only embedded static files
+- supports `GET` and `HEAD`
+- redirects `/app` to `/app/`
+- returns `404` for routes not present in the static bundle
+- sends defensive static-server headers
+
+The executable does not add API routes, custody, server-side signing, relayers,
+wallet recovery, rescue contracts, gas funding, or automatic transfer flows.
+
+## Verification
+
+Run the repo validation suite:
+
+```powershell
+git diff --check
+npm.cmd run lint
+npm.cmd run typecheck
+npm.cmd test
+npm.cmd run build
+npm.cmd run build:desktop
+```
+
+Run desktop artifact checks:
+
+```powershell
+cargo build --manifest-path src-tauri\Cargo.toml --release --bin pulse-revoke-server
+```
+
+Then verify:
+
+- the zip contains exactly one `.exe`
+- the zip and EXE SHA-256 hashes match the published checksum file
+- the EXE runs from a temp folder
+- local `/app/` returns `200`
+- local `/app/wallet-lifeboat` returns `404`
+- local `/security/check-link` returns `404`
+- local API-like routes return `404`
+
+## Release guardrails
+
+- Windows x64 is the only beta artifact for `0.1.0-beta.1`.
+- The beta is unsigned; Windows may show a SmartScreen warning.
+- Production should not show the beta until the branch is merged and the live
+  site is verified.
+- The release manifest may show branch-preview beta links, but the production
+  live claim must only be made after `https://pulserevoke.com` is verified.
+- Placeholder IPFS CIDs stay unchanged until a real pinned release exists.

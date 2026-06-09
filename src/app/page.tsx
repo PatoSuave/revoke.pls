@@ -154,12 +154,52 @@ const FAQ_ITEMS = [
   {
     question: "Is the desktop app available yet?",
     answer:
-      "Not yet. The Tauri desktop path is scaffolded, but public desktop artifacts are still pending release.",
+      "A Windows x64 internal beta is available on this branch preview. It runs a local Pulse Revoke server on 127.0.0.1 and opens your default browser so browser wallet extensions can keep working.",
   },
   {
     question: "What chains are supported?",
     answer: `${LIVE_SUPPORTED_CHAIN_LIST} are live in the scanner. ${VERIFIED_ROW_SUPPORT_NOTE} Results should still be checked on the relevant explorer before signing.`,
   },
+] as const;
+
+const OFFICIAL_PULSECHAIN_FACTS = [
+  { label: "Network", value: "PulseChain" },
+  { label: "Chain ID", value: "369" },
+  { label: "RPC", value: "https://rpc.pulsechain.com" },
+  { label: "Explorer", value: "https://scan.pulsechain.com" },
+] as const;
+
+const OFFICIAL_SOURCE_LINKS = [
+  {
+    label: "PulseChain GitLab group",
+    href: "https://gitlab.com/pulsechaincom",
+  },
+  {
+    label: "PulseChain mainnet README",
+    href: "https://gitlab.com/pulsechaincom/pulsechain-mainnet/-/raw/master/README.md",
+  },
+  {
+    label: "PulseX server README",
+    href: "https://gitlab.com/pulsechaincom/pulsex-server/-/raw/master/README.md",
+  },
+  {
+    label: "HEX server README",
+    href: "https://gitlab.com/pulsechaincom/hex-server/-/raw/master/README.md",
+  },
+  {
+    label: "Bridge server README",
+    href: "https://gitlab.com/pulsechaincom/pulsechain-bridge-server/-/raw/master/README.md",
+  },
+  {
+    label: "Explorer server README",
+    href: "https://gitlab.com/pulsechaincom/pulsechain-explorer-server/-/raw/master/README.md",
+  },
+] as const;
+
+const LOCAL_RUN_POINTS = [
+  "Download the Windows x64 zip and verify the SHA-256 checksum.",
+  "Extract the zip, then run pulse-revoke-server.exe.",
+  "The beta serves bundled files on 127.0.0.1 and opens /app/ in your default browser.",
 ] as const;
 
 export default function LauncherPage() {
@@ -347,8 +387,9 @@ function ScannerPathPanel() {
       </div>
 
       <p className="rounded-2xl border border-pulse-border bg-pulse-bg/55 p-4 text-xs leading-5 text-pulse-muted">
-        Desktop and IPFS releases are tracked below as roadmap status. The live
-        product action is the web scanner.
+        Desktop and IPFS releases are tracked below. The live product action is
+        still the scanner, with wallet-confirmed revokes only after row
+        verification.
       </p>
     </aside>
   );
@@ -524,24 +565,33 @@ function DesktopSection({
   release: ReleaseManifest;
   desktopReady: boolean;
 }) {
+  const checksumsReady = !isPlaceholderUrl(release.checksums.href);
+  const instructionsReady = !isPlaceholderUrl(release.instructions.href);
+
   return (
     <section id="desktop" className="border-b border-pulse-border/60 py-16 sm:py-20">
       <div className="mx-auto grid max-w-6xl gap-8 px-4 sm:px-6 lg:grid-cols-[0.95fr_1.05fr] lg:items-start">
         <div>
-          <SectionKicker>Roadmap status</SectionKicker>
+          <SectionKicker>Desktop beta</SectionKicker>
           <h2 className="mt-2 text-3xl font-bold sm:text-4xl">
-            Desktop builds are planned, not live yet.
+            Windows x64 internal beta available on preview.
           </h2>
           <p className="mt-4 text-sm leading-7 text-pulse-muted">
-            The live scanner is the hosted /app. The desktop path is scaffolded
-            for a future signed Tauri build, and no public artifact is linked
-            until release files and checksums are real.
+            This beta follows the PulseChain server-project pattern: use a
+            pre-built binary, or build from source. The executable serves the
+            bundled Pulse Revoke static app on 127.0.0.1 and opens /app/ in your
+            default browser so browser wallet extensions remain available.
           </p>
           <div className="mt-5 grid gap-2 text-sm text-pulse-muted">
-            <CheckLine>Future local interface after installation.</CheckLine>
-            <CheckLine>WalletConnect pairing planned for desktop use.</CheckLine>
-            <CheckLine>Same approval review and revoke model as /app.</CheckLine>
+            {LOCAL_RUN_POINTS.map((point) => (
+              <CheckLine key={point}>{point}</CheckLine>
+            ))}
           </div>
+          <p className="mt-5 rounded-xl border border-pulse-border bg-pulse-panel/55 p-4 text-xs leading-5 text-pulse-muted">
+            Unsigned internal beta: Windows may show a SmartScreen warning.
+            Pulse Revoke never needs seed phrases, private keys, wallet
+            passwords, custody, relayers, or rescue transfers.
+          </p>
         </div>
 
         <div className="grid gap-3">
@@ -553,7 +603,7 @@ function DesktopSection({
                 </p>
                 <p className="mt-1 text-xs text-pulse-muted">
                   {desktopReady
-                    ? `Artifacts listed for ${release.version}.`
+                    ? `Windows x64 artifact listed for ${release.version}.`
                     : "No public desktop artifact or checksum is published yet."}
                 </p>
               </div>
@@ -570,15 +620,85 @@ function DesktopSection({
           </div>
 
           <div className="rounded-2xl border border-pulse-border bg-pulse-panel/60 p-5">
-            <div>
-              <p className="text-sm font-semibold text-pulse-text">
-                Release guardrail
-              </p>
-              <p className="mt-2 text-xs leading-5 text-pulse-muted">
-                Desktop downloads remain disabled until signed release
-                artifacts and checksums are available. Placeholder manifest
-                values never render as download links.
-              </p>
+            <p className="text-sm font-semibold text-pulse-text">
+              Verify and run
+            </p>
+            <p className="mt-2 text-xs leading-5 text-pulse-muted">
+              Check the zip checksum before running the beta. The package is a
+              zip containing one executable.
+            </p>
+            <div className="mt-4 flex flex-wrap gap-2">
+              {checksumsReady ? (
+                <a
+                  href={release.checksums.href}
+                  className="inline-flex items-center justify-center rounded-lg border border-pulse-border bg-pulse-bg/55 px-3 py-2 text-xs font-semibold text-pulse-text transition hover:bg-pulse-text/10"
+                >
+                  Checksums
+                </a>
+              ) : null}
+              {instructionsReady ? (
+                <a
+                  href={release.instructions.href}
+                  className="inline-flex items-center justify-center rounded-lg border border-pulse-border bg-pulse-bg/55 px-3 py-2 text-xs font-semibold text-pulse-text transition hover:bg-pulse-text/10"
+                >
+                  Instructions
+                </a>
+              ) : null}
+              <a
+                href={`${release.repoUrl}#desktop-beta-build-from-source`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center justify-center rounded-lg border border-pulse-border bg-pulse-bg/55 px-3 py-2 text-xs font-semibold text-pulse-text transition hover:bg-pulse-text/10"
+              >
+                Build from source
+              </a>
+            </div>
+            <p className="mt-4 text-xs leading-5 text-pulse-muted">
+              {release.instructions.note} {release.checksums.note}
+            </p>
+          </div>
+
+          <div className="rounded-2xl border border-pulse-border bg-pulse-panel/60 p-5">
+            <p className="text-sm font-semibold text-pulse-text">
+              Official PulseChain network facts
+            </p>
+            <dl className="mt-4 grid gap-2">
+              {OFFICIAL_PULSECHAIN_FACTS.map((fact) => (
+                <div
+                  key={fact.label}
+                  className="grid gap-1 rounded-xl border border-pulse-border bg-pulse-bg/45 p-3 sm:grid-cols-[8rem_1fr]"
+                >
+                  <dt className="text-xs font-semibold text-pulse-muted">
+                    {fact.label}
+                  </dt>
+                  <dd className="break-all font-mono text-xs text-pulse-text">
+                    {fact.value}
+                  </dd>
+                </div>
+              ))}
+            </dl>
+          </div>
+
+          <div className="rounded-2xl border border-pulse-border bg-pulse-panel/60 p-5">
+            <p className="text-sm font-semibold text-pulse-text">
+              Official source links
+            </p>
+            <p className="mt-2 text-xs leading-5 text-pulse-muted">
+              Source and review links only. These references do not create an
+              endorsement or a safety guarantee for Pulse Revoke.
+            </p>
+            <div className="mt-4 flex flex-wrap gap-2">
+              {OFFICIAL_SOURCE_LINKS.map((source) => (
+                <a
+                  key={source.href}
+                  href={source.href}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center justify-center rounded-lg border border-pulse-border bg-pulse-bg/55 px-3 py-2 text-xs font-semibold text-pulse-text transition hover:bg-pulse-text/10"
+                >
+                  {source.label}
+                </a>
+              ))}
             </div>
           </div>
         </div>
@@ -620,6 +740,11 @@ function ArtifactCard({ artifact }: { artifact: ReleaseArtifact }) {
         {artifact.platform}
       </p>
       <p className="mt-1 text-xs text-pulse-muted">{artifact.architecture}</p>
+      {artifact.note ? (
+        <p className="mt-2 text-xs leading-5 text-pulse-muted">
+          {artifact.note}
+        </p>
+      ) : null}
       <p className="mt-3 text-xs font-semibold text-pulse-cyan">Download</p>
     </a>
   );

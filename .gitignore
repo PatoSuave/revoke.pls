@@ -16,6 +16,7 @@ build
 
 # production
 dist
+src-tauri/target
 
 # misc
 .DS_Store

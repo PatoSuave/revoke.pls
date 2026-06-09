@@ -1,0 +1,24 @@
+Pulse Revoke Windows x64 internal beta
+Version: 0.1.0-beta.1
+
+Package:
+pulse-revoke-server_0.1.0-beta.1_windows_amd64.zip
+
+How to run:
+1. Download the zip.
+2. Verify the zip SHA-256 against pulse-revoke-server_0.1.0-beta.1_checksums.txt.
+3. Extract the zip.
+4. Run pulse-revoke-server.exe.
+5. The app starts a local server on 127.0.0.1 and opens /app/ in your default browser.
+
+Notes:
+- This is an unsigned internal beta. Windows may show a SmartScreen warning.
+- The zip should contain exactly one file: pulse-revoke-server.exe.
+- Keep the browser pointed at the local 127.0.0.1 URL while using the beta.
+- Close the pulse-revoke-server.exe console/process when finished.
+
+Safety:
+- Pulse Revoke never asks for seed phrases, private keys, recovery phrases, keystore JSON, or wallet passwords.
+- Pulse Revoke does not custody funds.
+- Pulse Revoke does not add server-side signing, relayers, rescue wallets, rescue contracts, gas funding, or automatic transfer flows.
+- Every revoke remains a transaction you approve in your own wallet.

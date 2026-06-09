@@ -142,6 +142,38 @@ npm run dev
 
 Open <http://localhost:3000>.
 
+## Desktop Beta: Build From Source
+
+The Windows x64 internal beta uses the same local-server model as the official
+PulseChain server projects: build a static web bundle, embed it in a small
+executable, serve it on `127.0.0.1`, and open the default browser to `/app/`.
+
+Prerequisites:
+
+- Node.js 20+
+- Rust stable MSVC toolchain
+- Microsoft C++ Build Tools with "Desktop development with C++"
+- Microsoft Edge WebView2 Runtime
+
+PowerShell:
+
+```powershell
+npm.cmd install
+npm.cmd run build:desktop
+cargo build --manifest-path src-tauri\Cargo.toml --release --bin pulse-revoke-server
+```
+
+The raw Windows executable is produced under
+`src-tauri\target\release\pulse-revoke-server.exe` when using the default
+MSVC toolchain, or
+`src-tauri\target\x86_64-pc-windows-gnu\release\pulse-revoke-server.exe` when
+using the GNU toolchain. Release packaging zips exactly that one file and
+publishes a SHA-256 checksum beside the zip.
+
+The desktop beta must preserve the hosted app safety model. It does not add
+custody, server-side signing, relayers, rescue wallets, rescue contracts, gas
+funding, or automatic transfer flows.
+
 ## Environment Variables
 
 Copy [.env.example](.env.example) to `.env.local` and fill only the values you

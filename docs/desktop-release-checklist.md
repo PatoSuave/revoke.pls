@@ -1,108 +1,86 @@
 # Desktop Release Checklist
 
-This checklist prepares Pulse Revoke for a future local desktop executable. It
-does not mean a desktop release exists today.
+This checklist covers the Windows x64 internal beta package:
+`pulse-revoke-server_0.1.0-beta.1_windows_amd64.zip`.
 
 ## Windows prerequisites
 
-- Install Rust stable MSVC toolchain.
-- Confirm `cargo` and `rustc` are available on `PATH`.
-- Install Microsoft C++ Build Tools with "Desktop development with C++".
-- Confirm Microsoft Edge WebView2 Runtime is installed.
-- If building MSI packages, confirm the Windows VBSCRIPT optional feature is
-  enabled. This matters because `src-tauri/tauri.conf.json` currently uses
-  `"targets": "all"`, which may include MSI output on Windows.
-- Confirm Node.js and npm match the web app support target.
+- Rust stable MSVC toolchain is installed.
+- `cargo` and `rustc` are available on `PATH`.
+- Microsoft C++ Build Tools with "Desktop development with C++" are installed.
+- Microsoft Edge WebView2 Runtime is installed.
+- Node.js and npm match the web app support target.
 
 ## Required build environment
 
-- `NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID` is required for practical desktop
-  wallet pairing. Browser-extension injected wallets usually do not run inside
-  the Tauri WebView.
+- `NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID` is recommended for WalletConnect
+  pairing.
 - `NEXT_PUBLIC_PULSECHAIN_RPC_URL` is optional. If unset, the PulseChain
-  default RPC from `src/lib/chains.ts` is used.
-- `NEXT_PUBLIC_BSC_RPC_URL` is optional. If unset, the BSC public fallback RPC
-  from `src/lib/chains.ts` is used.
-- `NEXT_PUBLIC_BASE_RPC_URL` is optional. If unset, the Base public fallback
-  RPC from `src/lib/chains.ts` is used.
-- `NEXT_PUBLIC_POLYGON_RPC_URL` is optional. If unset, the Polygon public
-  fallback RPC from `src/lib/chains.ts` is used.
-- `NEXT_PUBLIC_PULSECHAIN_EXPLORER_API` is optional. If unset, the PulseScan
-  API default is used.
-- `NEXT_PUBLIC_BSC_EXPLORER_API_URL` is an optional BSC historical logs API
-  override. It defaults to Etherscan API V2 at
-  `https://api.etherscan.io/v2/api`; the old BscScan V1 endpoint is deprecated
-  for this logs flow.
-- `NEXT_PUBLIC_BSC_EXPLORER_CHAIN_ID` should be unset or set to `56`.
-- `NEXT_PUBLIC_BSC_EXPLORER_API_KEY` is required for desktop/static BSC
-  discovery. It should be an Etherscan API V2 key with BNB Smart Chain access.
-- `NEXT_PUBLIC_BSCSCAN_API_KEY` remains a deprecated fallback key name for older
-  deploys.
-- `NEXT_PUBLIC_BASE_EXPLORER_API_URL` is an optional Base historical logs API
-  override. It defaults to Etherscan API V2 at
-  `https://api.etherscan.io/v2/api`.
-- `NEXT_PUBLIC_BASE_EXPLORER_CHAIN_ID` should be unset or set to `8453`.
-- `NEXT_PUBLIC_BASE_EXPLORER_API_KEY` is required for desktop/static Base
-  discovery. It should be an Etherscan API V2 key with Base Mainnet access.
-- `NEXT_PUBLIC_POLYGON_EXPLORER_API_URL` is an optional Polygon historical logs
-  API override. It defaults to Etherscan API V2 at
-  `https://api.etherscan.io/v2/api`.
-- `NEXT_PUBLIC_POLYGON_EXPLORER_CHAIN_ID` should be unset or set to `137`.
-- `NEXT_PUBLIC_POLYGON_EXPLORER_API_KEY` is required for desktop/static Polygon
-  discovery. It should be an Etherscan API V2 key with Polygon Mainnet access.
+  default RPC from source is used.
+- `NEXT_PUBLIC_*` explorer API keys are public in a static desktop build. Use
+  only keys intended for public client-side use.
+- Do not commit local `.env` files or release secrets.
 
-Do not commit local `.env` files or release secrets.
+## Build sequence
 
-## Icon requirements
-
-- `src-tauri/icons` currently contains only `.gitkeep`.
-- Add real generated icon assets before any desktop release:
-  - `32x32.png`
-  - `128x128.png`
-  - `128x128@2x.png`
-  - `icon.ico`
-  - `icon.icns`
-- Keep icon generation reproducible from a source image committed or archived
-  with the release process.
-
-## Build verification sequence
-
-Run these before packaging:
+PowerShell:
 
 ```powershell
-npm run lint
-npm run typecheck
-npm run build
-npm run build:desktop
+git diff --check
+npm.cmd run lint
+npm.cmd run typecheck
+npm.cmd test
+npm.cmd run build
+npm.cmd run build:desktop
+cargo build --manifest-path src-tauri\Cargo.toml --release --bin pulse-revoke-server
 ```
 
-Only after Rust, Cargo, native Windows prerequisites, icons, and release
-policy are ready, run:
+## Packaging sequence
 
-```powershell
-npm run tauri -- build
-```
+1. Copy the built `pulse-revoke-server.exe` to a staging directory.
+2. Create
+   `public\downloads\pulse-revoke-server_0.1.0-beta.1_windows_amd64.zip`.
+3. Confirm the zip contains exactly one file:
+   `pulse-revoke-server.exe`.
+4. Compute SHA-256 for the zip and the staged EXE.
+5. Publish
+   `public\downloads\pulse-revoke-server_0.1.0-beta.1_checksums.txt`.
+6. Publish
+   `public\downloads\pulse-revoke-server_0.1.0-beta.1_instructions.txt`.
 
-Do not run a production Tauri build for release from a machine with missing
-prerequisites or incomplete release metadata.
+## Runtime verification
 
-## Release artifact policy
+Run the EXE from a temp folder and verify:
 
-- Do not publish desktop download links until real artifacts exist.
-- Do not replace the placeholder IPFS CID until a real build is pinned.
-- Publish SHA-256 checksums with every public desktop artifact.
-- Decide the signing policy before public distribution. Code signing is not
-  currently configured.
-- Verify EXE/MSI artifacts on a clean Windows machine before announcing them.
-- Update `src/lib/release.ts` only with real URLs, checksums, and CID values.
+- `/app/` returns `200`
+- `/app/wallet-lifeboat` returns `404`
+- `/security/check-link` returns `404`
+- `/api/lifeboat/sweeper` returns `404`
+- the server is bound to `127.0.0.1`
+- bundled static assets load
+
+Stop the test process before packaging handoff.
+
+## Preview verification
+
+- Push the branch.
+- Capture the Vercel preview URL if available.
+- Verify the launcher renders the Windows beta download, checksum, and
+  instructions links.
+- Download the preview zip and confirm its SHA-256 matches the preview checksum
+  file.
+- Do not claim production is live until `main` is merged and
+  `https://pulserevoke.com` is verified.
 
 ## Security notes
 
 - Pulse Revoke is non-custodial and must never ask for seed phrases or private
   keys.
 - Users approve every revoke transaction in their own wallet.
-- The scanner should stay read-only until the user clicks a revoke action.
-- Keep Tauri permissions minimal. Do not add shell or filesystem permissions
-  unless a reviewed feature explicitly requires them.
-- Preserve scanner logic, wallet logic, revoke transaction logic, chain IDs,
-  ABIs, registries, and approval discovery logic during packaging work.
+- Address-only scans stay read-only.
+- Revoke actions remain gated by wallet match, chain match, live row
+  verification, preflight, and gas checks.
+- Wallet Lifeboat remains frozen.
+- Link Checker remains removed.
+- Do not add custody, server-side signing, relayers, rescue wallets, rescue
+  contracts, gas funding, private bundles, or automatic asset transfers.
