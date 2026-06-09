@@ -27,7 +27,7 @@ using the app.
 | Preflight checks | [../src/lib/preflight.ts](../src/lib/preflight.ts) |
 | Read-only discovery | [../src/lib/ethereum-approval-api.ts](../src/lib/ethereum-approval-api.ts), [../src/lib/arbitrum-approval-api.ts](../src/lib/arbitrum-approval-api.ts), [../src/lib/optimism-approval-api.ts](../src/lib/optimism-approval-api.ts), [../src/lib/hyperevm-approval-api.ts](../src/lib/hyperevm-approval-api.ts) |
 | Registry context | [../src/lib/registry](../src/lib/registry), [../src/lib/security](../src/lib/security) |
-| Wallet Lifeboat | [lifeboat/WALLET_LIFEBOAT_MASTER_SPEC.md](lifeboat/WALLET_LIFEBOAT_MASTER_SPEC.md), [../src/lib/lifeboat](../src/lib/lifeboat), [../src/components/sections/wallet-lifeboat.tsx](../src/components/sections/wallet-lifeboat.tsx) |
+| Wallet Lifeboat freeze | [lifeboat/FREEZE.md](lifeboat/FREEZE.md), [lifeboat/SAFETY_BOUNDARIES.md](lifeboat/SAFETY_BOUNDARIES.md), [../src/middleware.ts](../src/middleware.ts) |
 
 ## Suggested Local Checks
 

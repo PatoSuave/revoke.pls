@@ -5,8 +5,8 @@
 Candidate source context only.
 
 This source packet does not make any listed hostname official, endorsed,
-current, or free of risk. Matches from this source may appear in the phishing
-link checker as source context beside the normal result status.
+current, or free of risk. Matches from this source are candidate-domain context
+only.
 
 ## Source
 
