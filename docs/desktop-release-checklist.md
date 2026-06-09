@@ -5,10 +5,9 @@ This checklist covers the Windows x64 internal beta package:
 
 ## Windows prerequisites
 
-- Rust stable MSVC toolchain is installed.
+- Rust stable MSVC or GNU Windows x64 toolchain is installed.
 - `cargo` and `rustc` are available on `PATH`.
-- Microsoft C++ Build Tools with "Desktop development with C++" are installed.
-- Microsoft Edge WebView2 Runtime is installed.
+- Matching native build tools are installed for the selected Rust toolchain.
 - Node.js and npm match the web app support target.
 
 ## Required build environment

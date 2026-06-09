@@ -68,10 +68,10 @@ const themeInitScript = `
 })();
 `;
 
-const isDesktopBuild = process.env.NEXT_PUBLIC_TAURI_BUILD === "1";
+const isStaticExportBuild = process.env.TAURI_BUILD === "1";
 
 async function getCspNonce(): Promise<string | undefined> {
-  if (isDesktopBuild) return undefined;
+  if (isStaticExportBuild) return undefined;
 
   const { headers } = await import("next/headers");
   return (await headers()).get("x-nonce") ?? undefined;

@@ -11,7 +11,7 @@ import {
 } from "wagmi";
 
 import { shortenAddress } from "@/lib/format";
-import { isDesktopBuild } from "@/lib/platform";
+import { isTauriWebViewBuild } from "@/lib/platform";
 import { trackEvent } from "@/lib/telemetry";
 import { resolveHeaderNetworkStatus } from "@/lib/wallet-network-status";
 
@@ -39,7 +39,7 @@ function describeConnector(c: Connector): { label: string; sub: string } {
   if (c.type === "walletConnect") {
     return {
       label: "WalletConnect",
-      sub: isDesktopBuild
+      sub: isTauriWebViewBuild
         ? "Scan a QR code with a mobile or hardware wallet (recommended)"
         : "Scan a QR code with a mobile wallet",
     };
@@ -47,7 +47,7 @@ function describeConnector(c: Connector): { label: string; sub: string } {
   if (c.type === "injected") {
     return {
       label: "Browser wallet",
-      sub: isDesktopBuild
+      sub: isTauriWebViewBuild
         ? "Browser extensions run only in the web app — use the web version for MetaMask, Rabby, etc."
         : "MetaMask, Rabby, Brave, and similar",
     };
@@ -250,7 +250,7 @@ export function ConnectWalletButton({
           <span className="hidden sm:inline">Connect Wallet</span>
         </button>
         <span className="text-xs text-pulse-muted">
-          {isDesktopBuild
+          {isTauriWebViewBuild
             ? "Configure a WalletConnect project ID to enable pairing"
             : "Install a browser wallet to continue"}
         </span>

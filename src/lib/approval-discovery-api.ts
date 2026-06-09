@@ -11,7 +11,7 @@ import type {
   Permit2DiscoveryResult,
 } from "@/lib/discovery";
 import type { Permit2DiscoveredAllowance } from "@/lib/permit2";
-import { isDesktopBuild } from "@/lib/platform";
+import { isStaticExportBuild } from "@/lib/platform";
 
 type SerializedBigInt = string;
 
@@ -100,7 +100,7 @@ export type ServerApprovalDiscoveryChainId =
 export function usesServerApprovalDiscovery(
   chainId: number | undefined,
 ): chainId is ServerApprovalDiscoveryChainId {
-  if (isDesktopBuild) return false;
+  if (isStaticExportBuild) return false;
   return (
     chainId === BSC_CHAIN_ID ||
     chainId === BASE_CHAIN_ID ||

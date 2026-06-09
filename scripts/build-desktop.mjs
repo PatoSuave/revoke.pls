@@ -8,7 +8,8 @@ const child = spawn(process.execPath, [nextBin, "build"], {
   env: {
     ...process.env,
     TAURI_BUILD: "1",
-    NEXT_PUBLIC_TAURI_BUILD: "1",
+    NEXT_PUBLIC_STATIC_EXPORT_BUILD: "1",
+    NEXT_PUBLIC_DESKTOP_LOCAL_SERVER_BUILD: "1",
   },
   shell: false,
   stdio: "inherit",

@@ -47,9 +47,12 @@ npm.cmd run build:desktop
 cargo build --manifest-path src-tauri\Cargo.toml --release --bin pulse-revoke-server
 ```
 
-`npm run build:desktop` sets `TAURI_BUILD=1` and
-`NEXT_PUBLIC_TAURI_BUILD=1`, which tells `next.config.ts` to export the static
-app to `out/`. During the Rust build, `include_dir` embeds that `out/`
+`npm run build:desktop` sets `TAURI_BUILD=1`, which tells `next.config.ts` to
+export the static app to `out/`. It also sets
+`NEXT_PUBLIC_STATIC_EXPORT_BUILD=1` and
+`NEXT_PUBLIC_DESKTOP_LOCAL_SERVER_BUILD=1` so the client knows hosted API routes
+are unavailable while browser wallet extensions remain available in the user's
+default browser. During the Rust build, `include_dir` embeds that `out/`
 directory into the executable.
 
 The raw Windows build output with the default MSVC toolchain is:
