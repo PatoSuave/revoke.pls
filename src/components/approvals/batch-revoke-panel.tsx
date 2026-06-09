@@ -3,6 +3,7 @@
 import { useMemo } from "react";
 
 import { ChainLogo } from "@/components/chains/chain-logo";
+import { HardwareWalletGuidance } from "@/components/approvals/hardware-wallet-guidance";
 import { TokenAvatar } from "@/components/tokens/token-avatar";
 import type {
   BatchItemResult,
@@ -208,6 +209,7 @@ function ConfirmingCard({
         Pulse Revoke never batches funds, never uses a proxy contract, and never
         signs for you. Your wallet prompts once per approval.
       </p>
+      <HardwareWalletGuidance className="max-w-2xl" />
       {batch.blockedReason ? (
         <p className="mt-2 rounded-xl border border-amber-400/40 bg-amber-400/10 p-3 text-xs leading-5 text-amber-200">
           {batch.blockedReason}

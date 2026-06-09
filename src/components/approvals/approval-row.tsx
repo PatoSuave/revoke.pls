@@ -20,6 +20,7 @@ import {
   GasEstimateDetails,
   GasWarningDetails,
 } from "@/components/approvals/gas-estimate-details";
+import { HardwareWalletGuidance } from "@/components/approvals/hardware-wallet-guidance";
 import {
   RevokeReceipt,
   type RevokeReceiptDetails,
@@ -793,6 +794,7 @@ function ConfirmPanel({
             Pulse Revoke cannot move funds. Your wallet shows the final
             transaction before you sign.
           </p>
+          <HardwareWalletGuidance />
           <PreflightNotice
             preflight={preflight}
             isRefreshingApproval={isRefreshingApproval}

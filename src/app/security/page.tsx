@@ -14,6 +14,15 @@ import {
   WALLET_SAFETY_RECOMMENDATIONS,
   WALLET_VERIFICATION_ITEMS,
 } from "@/lib/security-content";
+import {
+  HARDWARE_WALLET_CANCEL_COPY,
+  HARDWARE_WALLET_COMPATIBILITY_ROWS,
+  HARDWARE_WALLET_EXPECTED_REVOKE_FUNCTIONS,
+  HARDWARE_WALLET_PROVIDER_COPY,
+  HARDWARE_WALLET_REVIEW_COPY,
+  HARDWARE_WALLET_SECTION_TITLE,
+  HARDWARE_WALLET_SIGNING_LIMIT_COPY,
+} from "@/lib/hardware-wallet-guidance";
 import { absoluteUrl, siteConfig } from "@/lib/site";
 
 const title = "Security & Trust";
@@ -49,6 +58,7 @@ export default function SecurityPage() {
         <CorePromises />
         <ConnectionAndRevoke />
         <VerificationSection />
+        <HardwareWalletSection />
         <PrivacySection />
         <SupportedChainsSection />
         <AddressOnlySection />
@@ -176,6 +186,78 @@ function VerificationSection() {
           </p>
         </div>
         <Checklist items={WALLET_VERIFICATION_ITEMS} />
+      </div>
+    </section>
+  );
+}
+
+function HardwareWalletSection() {
+  return (
+    <section className="border-b border-pulse-border/60 bg-pulse-bg py-16 sm:py-20">
+      <div className="mx-auto grid max-w-6xl gap-8 px-4 sm:px-6 lg:grid-cols-[0.9fr_1.1fr] lg:items-start">
+        <div>
+          <SectionKicker>Device review</SectionKicker>
+          <h2 className="mt-2 text-3xl font-bold sm:text-4xl">
+            {HARDWARE_WALLET_SECTION_TITLE}
+          </h2>
+          <p className="mt-4 text-sm leading-7 text-pulse-muted">
+            {HARDWARE_WALLET_SIGNING_LIMIT_COPY}
+          </p>
+          <p className="mt-4 text-sm leading-7 text-pulse-muted">
+            {HARDWARE_WALLET_PROVIDER_COPY}
+          </p>
+          <p className="mt-4 text-sm leading-7 text-pulse-muted">
+            {HARDWARE_WALLET_REVIEW_COPY}
+          </p>
+          <p className="mt-4 rounded-2xl border border-amber-400/35 bg-amber-400/10 p-4 text-sm leading-7 text-amber-100">
+            {HARDWARE_WALLET_CANCEL_COPY}
+          </p>
+        </div>
+        <div className="grid gap-5">
+          <InfoBlock title="Expected revoke functions">
+            <ul className="grid gap-3">
+              {HARDWARE_WALLET_EXPECTED_REVOKE_FUNCTIONS.map((item) => (
+                <li key={item} className="flex items-start gap-2">
+                  <span
+                    className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-pulse-green"
+                    aria-hidden
+                  />
+                  <span className="font-mono text-pulse-text">{item}</span>
+                </li>
+              ))}
+            </ul>
+          </InfoBlock>
+          <section className="overflow-hidden rounded-2xl border border-pulse-border bg-pulse-panel/65 text-sm text-pulse-muted">
+            <div className="overflow-x-auto">
+              <table className="w-full min-w-[520px] border-collapse text-left">
+                <thead className="border-b border-pulse-border/70 text-xs uppercase tracking-[0.16em] text-pulse-cyan">
+                  <tr>
+                    <th scope="col" className="px-4 py-3 font-semibold">
+                      Setup
+                    </th>
+                    <th scope="col" className="px-4 py-3 font-semibold">
+                      Handling
+                    </th>
+                    <th scope="col" className="px-4 py-3 font-semibold">
+                      Review
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-pulse-border/60">
+                  {HARDWARE_WALLET_COMPATIBILITY_ROWS.map((row) => (
+                    <tr key={row.setup}>
+                      <td className="px-4 py-3 font-medium text-pulse-text">
+                        {row.setup}
+                      </td>
+                      <td className="px-4 py-3">{row.handling}</td>
+                      <td className="px-4 py-3">{row.review}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </section>
+        </div>
       </div>
     </section>
   );

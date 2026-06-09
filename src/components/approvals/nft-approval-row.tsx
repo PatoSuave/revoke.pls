@@ -22,6 +22,7 @@ import {
   GasEstimateDetails,
   GasWarningDetails,
 } from "@/components/approvals/gas-estimate-details";
+import { HardwareWalletGuidance } from "@/components/approvals/hardware-wallet-guidance";
 import {
   RevokeReceipt,
   type RevokeReceiptDetails,
@@ -695,6 +696,7 @@ function ConfirmPanel({
             Pulse Revoke cannot transfer NFTs. Your wallet shows the final
             transaction before you sign.
           </p>
+          <HardwareWalletGuidance />
           <NftPreflightNotice
             approval={approval}
             preflight={preflight}
