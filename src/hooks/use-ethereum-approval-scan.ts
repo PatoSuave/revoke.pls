@@ -11,6 +11,7 @@ import {
   type EthereumApprovalApiResponse,
   type EthereumApprovalClientMapping,
 } from "@/lib/ethereum-approval-client";
+import { isStaticExportBuild } from "@/lib/platform";
 
 export type EthereumApprovalScanStatus =
   | "idle"
@@ -36,7 +37,7 @@ export function useEthereumApprovalScan({
 }): UseEthereumApprovalScanResult {
   const query = useQuery({
     queryKey: ["ethereum-approval-api", owner?.toLowerCase() ?? null],
-    enabled: enabled && Boolean(owner),
+    enabled: enabled && Boolean(owner) && !isStaticExportBuild,
     staleTime: 60_000,
     gcTime: 5 * 60_000,
     queryFn: async ({ signal }) => {
@@ -46,6 +47,14 @@ export function useEthereumApprovalScan({
   });
 
   const response = useMemo(() => {
+    if (owner && isStaticExportBuild) {
+      return {
+        ...emptyEthereumApprovalApiResponse("config-missing", [
+          "Ethereum hosted approval discovery is not available in the desktop beta.",
+        ]),
+        missingConfig: ["Hosted Ethereum approvals API"],
+      };
+    }
     if (query.data) return query.data;
     if (query.error) {
       return emptyEthereumApprovalApiResponse("upstream-failure", [
@@ -55,7 +64,7 @@ export function useEthereumApprovalScan({
       ]);
     }
     return null;
-  }, [query.data, query.error]);
+  }, [owner, query.data, query.error]);
 
   const mapped = useMemo(
     () => (response ? mapEthereumApprovalApiResponse(response) : null),
@@ -64,6 +73,8 @@ export function useEthereumApprovalScan({
 
   const status: EthereumApprovalScanStatus = !enabled || !owner
     ? "idle"
+    : isStaticExportBuild
+      ? "success"
     : query.status === "pending"
       ? "pending"
       : query.status === "error"
@@ -77,6 +88,7 @@ export function useEthereumApprovalScan({
     isFetching: query.isFetching,
     error: (query.error as Error | null) ?? null,
     refetch: () => {
+      if (isStaticExportBuild) return;
       void query.refetch();
     },
   };

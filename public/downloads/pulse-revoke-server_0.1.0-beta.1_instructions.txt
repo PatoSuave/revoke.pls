@@ -15,6 +15,10 @@ Notes:
 - This is an unsigned internal beta. Windows may show a SmartScreen warning.
 - The zip should contain exactly one file: pulse-revoke-server.exe.
 - Keep the browser pointed at the local 127.0.0.1 URL while using the beta.
+- Browser wallet extensions can connect because the beta opens your normal browser.
+- The desktop beta is a static local build. It has no hosted API routes.
+- Gas context and account-code/delegation checks use public read-only RPC calls locally.
+- Ethereum hosted approval discovery is web-app only in this beta.
 - Close the pulse-revoke-server.exe console/process when finished.
 
 Safety:

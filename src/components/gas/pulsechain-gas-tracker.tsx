@@ -11,8 +11,11 @@ import {
 import {
   formatBlockNumber,
   formatRelativeTime,
+  buildTypicalGasTransactions,
+  weiToGweiString,
 } from "@/lib/gas/gas-format";
 import {
+  classifyGasStatus,
   gasStatusCopy,
   gasStatusChartColor,
   gasStatusLabel,
@@ -30,6 +33,7 @@ import {
   type GasTrackerChainConfig,
   type GasTrackerChainId,
 } from "@/lib/gas/gas-chains";
+import { isStaticExportBuild } from "@/lib/platform";
 
 type LoadState = "loading" | "available" | "unavailable";
 
@@ -78,12 +82,9 @@ export function PulseChainGasTracker() {
     abortRef.current = controller;
 
     try {
-      const response = await fetch(`/api/gas?chainId=${chainId}`, {
-        cache: "no-store",
-        headers: { Accept: "application/json" },
-        signal: controller.signal,
-      });
-      const payload = (await response.json()) as GasApiResponse;
+      const payload = isStaticExportBuild
+        ? await fetchStaticExportGasData(selectedChain, controller.signal)
+        : await fetchHostedGasData(chainId, controller.signal);
       if (activeChainIdRef.current !== chainId) return;
       setSample(payload);
       setState(payload.available ? "available" : "unavailable");
@@ -207,6 +208,105 @@ export function PulseChainGasTracker() {
       now={now}
     />
   );
+}
+
+async function fetchHostedGasData(
+  chainId: GasTrackerChainId,
+  signal: AbortSignal,
+): Promise<GasApiResponse> {
+  const response = await fetch(`/api/gas?chainId=${chainId}`, {
+    cache: "no-store",
+    headers: { Accept: "application/json" },
+    signal,
+  });
+  return (await response.json()) as GasApiResponse;
+}
+
+async function fetchStaticExportGasData(
+  chain: GasTrackerChainConfig,
+  signal: AbortSignal,
+): Promise<GasApiResponse> {
+  const updatedAt = new Date().toISOString();
+  const client = createPublicClient({
+    chain: chain.viemChain,
+    transport: http(chain.publicRpcUrl, {
+      timeout: 4_000,
+    }),
+  });
+
+  try {
+    const [latestBlock, gasPriceWei] = await Promise.all([
+      client.getBlock({ blockTag: "latest" }),
+      client.getGasPrice(),
+    ]);
+    if (signal.aborted) throw new DOMException("Aborted", "AbortError");
+    const baseFeeWei = latestBlock.baseFeePerGas ?? undefined;
+    const priorityFeeWei =
+      baseFeeWei !== undefined && gasPriceWei > baseFeeWei
+        ? gasPriceWei - baseFeeWei
+        : undefined;
+    const gasPriceGwei = weiToGweiString(gasPriceWei);
+
+    return {
+      chainId: chain.chainId,
+      chainName: chain.chainName,
+      nativeCurrency: chain.nativeCurrency,
+      blockNumber: latestBlock.number?.toString() ?? null,
+      source: "rpc-gas-price",
+      status: classifyGasStatus({
+        gasPriceGwei: Number(gasPriceGwei),
+        thresholds: chain.statusThresholds,
+      }),
+      updatedAt,
+      available: latestBlock.number !== null,
+      gasPriceGwei,
+      baseFeeGwei:
+        baseFeeWei !== undefined ? weiToGweiString(baseFeeWei) : null,
+      priorityFeeGwei:
+        priorityFeeWei !== undefined ? weiToGweiString(priorityFeeWei) : null,
+      nativeTokenPriceUsd: null,
+      nativeTokenPriceSource: "unavailable",
+      nativeTokenPriceUpdatedAt: null,
+      typicalTransactions: buildTypicalGasTransactions({
+        gasPriceWei,
+        nativeCurrency: chain.nativeCurrency,
+      }),
+      ...(chain.estimateNote ? { estimateNote: chain.estimateNote } : {}),
+    };
+  } catch (error) {
+    if (error instanceof DOMException && error.name === "AbortError") {
+      throw error;
+    }
+    return unavailableGasResponseForTrackerChain(chain, updatedAt, [
+      `${chain.chainName} gas data is unavailable from the public RPC right now.`,
+    ]);
+  }
+}
+
+function unavailableGasResponseForTrackerChain(
+  chain: GasTrackerChainConfig,
+  updatedAt: string,
+  errors: string[],
+): GasApiResponse {
+  return {
+    chainId: chain.chainId,
+    chainName: chain.chainName,
+    nativeCurrency: chain.nativeCurrency,
+    blockNumber: null,
+    source: "unavailable",
+    status: "unavailable",
+    updatedAt,
+    available: false,
+    gasPriceGwei: null,
+    baseFeeGwei: null,
+    priorityFeeGwei: null,
+    nativeTokenPriceUsd: null,
+    nativeTokenPriceSource: "unavailable",
+    nativeTokenPriceUpdatedAt: null,
+    typicalTransactions: [],
+    ...(chain.estimateNote ? { estimateNote: chain.estimateNote } : {}),
+    errors,
+  };
 }
 
 export function PulseChainGasTrackerView({

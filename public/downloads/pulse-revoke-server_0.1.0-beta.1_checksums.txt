@@ -1,5 +1,5 @@
 # Pulse Revoke Windows x64 internal beta SHA-256 checksums
 # Version: 0.1.0-beta.1
 
-de007e183631ef82c2ff339670066a2e1e091f81d2b6c96007bb79319686ccad  pulse-revoke-server_0.1.0-beta.1_windows_amd64.zip
-00b7d9d29b56f064e2e30ee5245359f037e9370225e34b46107458d6ad307920  pulse-revoke-server.exe
+e757f56de0eae7e60819c5807fdb917c10a1526a7601f26de826fd4128114353  pulse-revoke-server_0.1.0-beta.1_windows_amd64.zip
+ce0461028725957c673dc721eb39ad373827f62274b2797870f2a3186490ae6a  pulse-revoke-server.exe

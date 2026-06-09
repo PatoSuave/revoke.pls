@@ -57,6 +57,7 @@ import {
 } from "@/lib/revoke-gas";
 import { scoreApprovals, type RiskAssessment, type ScoredApproval } from "@/lib/risk";
 import { addressesEqual } from "@/lib/scan-target";
+import { isStaticExportBuild } from "@/lib/platform";
 import { tokenLogoAddressKey } from "@/lib/token-logos";
 
 export function EthereumReadOnlyScanner({
@@ -231,7 +232,9 @@ function ReadOnlyNotice({
           ? "These Ethereum approvals were live-validated before revoke became available. Transactions still come from your connected wallet on Ethereum Mainnet; the API cannot sign, submit, or move funds."
           : rowRevokeEnabled
             ? `Ethereum verification is incomplete because some live contract reads failed or discovery did not finish. Rows that were individually confirmed by a live read can still be revoked one at a time from your connected wallet. Global scan status: ${formatGlobalScanReason(revokeDisabledReason)}`
-          : `Ethereum approvals are checked through a read-only API and live RPC validation. ${revokeDisabledReason} Revoke stays disabled until current approval state can be confirmed.`}
+          : isStaticExportBuild
+            ? "Ethereum hosted approval discovery is not included in this desktop beta. Use the web app for Ethereum discovery and live validation. Revoke stays disabled until current approval state can be confirmed."
+            : `Ethereum approvals are checked through a read-only API and live RPC validation. ${revokeDisabledReason} Revoke stays disabled until current approval state can be confirmed.`}
       </p>
     </div>
   );
@@ -271,6 +274,26 @@ function EthereumScanContent({
   const warnings = scan.mapped.warnings ?? [];
 
   if (scan.mapped.state === "config-missing") {
+    if (isStaticExportBuild) {
+      return (
+        <StatePanel
+          tone="warning"
+          eyebrow="Desktop beta limitation"
+          title="Ethereum discovery is web-only in this beta"
+          body="The Windows desktop beta serves a static local copy and does not include the hosted Ethereum approvals API. Use the web app for Ethereum approval discovery and live validation."
+        >
+          <DetailList
+            title="Desktop note"
+            items={
+              errors.length > 0
+                ? errors
+                : ["Ethereum hosted approval discovery is not available in the desktop beta."]
+            }
+          />
+        </StatePanel>
+      );
+    }
+
     return (
       <StatePanel
         tone="warning"
@@ -1422,7 +1445,12 @@ function EthereumDiagnostics({
     ["Connected wallet chain ID", walletChainId?.toString() ?? "Unknown"],
     ["Wagmi state chain ID", wagmiChainId?.toString() ?? "Unknown"],
     ["Discovery target chain", ETHEREUM_MAINNET_DISPLAY_NAME],
-    ["API route", "/api/ethereum/approvals"],
+    [
+      "API route",
+      isStaticExportBuild
+        ? "Hosted API unavailable in desktop beta"
+        : "/api/ethereum/approvals",
+    ],
     ["API status", response?.status ?? scan.status],
     ["Global scan revoke enabled", revokeEnabled ? "Yes" : "No"],
     ["Revoke unavailable reason", revokeEnabled ? "None" : revokeDisabledReason],

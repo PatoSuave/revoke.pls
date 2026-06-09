@@ -160,6 +160,14 @@ describe("approval row readability copy", () => {
     expect(ethereumSource).toContain("VerificationTechnicalExplainer");
   });
 
+  it("explains desktop beta Ethereum discovery without exposing a raw API failure", () => {
+    expect(ethereumSource).toContain("Ethereum discovery is web-only in this beta");
+    expect(ethereumSource).toContain("Hosted API unavailable in desktop beta");
+    expect(ethereumSource).toContain(
+      "Ethereum hosted approval discovery is not included in this desktop beta",
+    );
+  });
+
   it("detects only verification-related disabled reasons for row hints", () => {
     expect(
       isCurrentApprovalStateUnverifiedReason(

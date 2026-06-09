@@ -14,10 +14,22 @@ describe("account-code delegation scanner card source", () => {
     ),
     "utf8",
   );
+  const hookSource = readFileSync(
+    join(process.cwd(), "src", "hooks", "use-lifeboat-eip7702-scan.ts"),
+    "utf8",
+  );
 
   it("uses the existing read-only Lifeboat diagnostic hook", () => {
     expect(source).toContain("useLifeboatEip7702Scan");
     expect(source).not.toMatch(/writeContract|sendTransaction|signTransaction/);
+  });
+
+  it("keeps the desktop beta on a local read-only account-code path", () => {
+    expect(hookSource).toContain("isStaticExportBuild");
+    expect(hookSource).toContain("fetchStaticExportEip7702Scan");
+    expect(hookSource).toContain("getCode");
+    expect(hookSource).toContain("analyzeEip7702Delegation");
+    expect(hookSource).not.toMatch(/writeContract|sendTransaction|signTransaction/);
   });
 
   it("keeps incomplete checks separate from no-delegation copy", () => {

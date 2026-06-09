@@ -90,6 +90,8 @@ The executable:
 - prints the local launch URL
 - opens `/app/` in the default browser
 - serves only embedded static files
+- reads gas context from public RPC endpoints in the browser
+- reads account-code/delegation status from public RPC endpoints in the browser
 - supports `GET` and `HEAD`
 - redirects `/app` to `/app/`
 - returns `404` for routes not present in the static bundle
@@ -97,6 +99,8 @@ The executable:
 
 The executable does not add API routes, custody, server-side signing, relayers,
 wallet recovery, rescue contracts, gas funding, or automatic transfer flows.
+Ethereum hosted approval discovery depends on the web app API and is labeled as
+web-only in this desktop beta.
 
 ## Verification
 
@@ -126,6 +130,9 @@ Then verify:
 - local `/app/wallet-lifeboat` returns `404`
 - local `/security/check-link` returns `404`
 - local API-like routes return `404`
+- desktop gas code uses the static-export public RPC path
+- desktop account-code/delegation code uses the static-export public RPC path
+- desktop Ethereum discovery copy explains that hosted discovery is web-only
 
 ## Release guardrails
 

@@ -16,6 +16,9 @@ describe("PulseChain gas tracker component source", () => {
   it("keeps gas tracking informational and block-driven", () => {
     expect(SOURCE).toContain("watchBlockNumber");
     expect(SOURCE).toContain("/api/gas?chainId=${chainId}");
+    expect(SOURCE).toContain("isStaticExportBuild");
+    expect(SOURCE).toContain("fetchStaticExportGasData");
+    expect(SOURCE).toContain("getGasPrice");
     expect(SOURCE).toContain("does not add fees");
     expect(SOURCE).not.toMatch(/writeContract|sendTransaction|signTransaction/);
   });

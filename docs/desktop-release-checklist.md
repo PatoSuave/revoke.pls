@@ -57,6 +57,11 @@ Run the EXE from a temp folder and verify:
 - `/api/lifeboat/sweeper` returns `404`
 - the server is bound to `127.0.0.1`
 - bundled static assets load
+- gas context uses the desktop public-RPC fallback instead of `/api/gas`
+- account-code/delegation checks use the desktop public-RPC fallback instead
+  of `/api/lifeboat/eip7702`
+- Ethereum approval discovery shows the desktop web-only limitation instead of
+  a raw `/api/ethereum/approvals` failure
 
 Stop the test process before packaging handoff.
 
