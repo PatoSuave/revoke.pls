@@ -170,6 +170,12 @@ const API_PROBES = [
     noStore: true,
     allowEmptyBody: true,
   },
+  {
+    label: "lifeboat api frozen",
+    path: `/api/lifeboat/sweeper?chainId=369&owner=${DEFAULT_OWNER}`,
+    status: 404,
+    noStore: true,
+  },
 ];
 
 const SECRET_PATTERNS = [

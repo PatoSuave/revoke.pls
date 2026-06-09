@@ -3,6 +3,10 @@
 This record tracks the Lifeboat branch preview QA pass after the read-only
 Wallet Lifeboat modules and Lifeboat-specific preview smoke command were added.
 
+Update: Wallet Lifeboat is now frozen and unpublished on `main`. The
+Lifeboat-specific smoke command in this historical record has been removed from
+active scripts.
+
 ## Branch And Preview
 
 - Branch: `Lifeboat`
@@ -27,10 +31,12 @@ npm.cmd run lint
 npm.cmd run typecheck
 git diff --check
 npm.cmd run smoke:preview -- https://revoke-h7wcp2zv0-squikyus-8256s-projects.vercel.app
-npm.cmd run smoke:lifeboat -- https://revoke-h7wcp2zv0-squikyus-8256s-projects.vercel.app
+# Historical Lifeboat preview smoke command removed while the feature is frozen.
 npm.cmd run smoke:preview -- https://revoke-pls-git-lifeboat-squikyus-8256s-projects.vercel.app
-npm.cmd run smoke:lifeboat -- https://revoke-pls-git-lifeboat-squikyus-8256s-projects.vercel.app
+# Historical Lifeboat preview smoke command removed while the feature is frozen.
 ```
+
+The removed Lifeboat-specific smoke commands are historical evidence only.
 
 Results:
 
@@ -70,7 +76,7 @@ Authenticated fetch evidence for `/app/wallet-lifeboat`:
 
 ## Lifeboat Smoke Matrix
 
-Default public owner used by `smoke:lifeboat`:
+Default public owner used by the historical Lifeboat smoke command:
 `0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045`
 
 Default public spender used for spender-risk context:

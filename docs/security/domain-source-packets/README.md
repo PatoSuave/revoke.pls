@@ -1,7 +1,7 @@
 # Domain Source Packets
 
-Domain source packets document reviewed source snapshots for the phishing link
-checker candidate registry.
+Domain source packets document reviewed source snapshots for candidate-domain
+context.
 
 Candidate sources are context only. They do not make a hostname official,
 endorsed, current, or free of risk.
@@ -26,7 +26,7 @@ endorsed, current, or free of risk.
 6. Run:
 
    ```bash
-   npx vitest run src/lib/security/candidate-source-extractor.test.ts src/lib/security/candidate-domain-registry.test.ts src/lib/security/link-checker.test.ts src/lib/security/official-domain-registry.test.ts
+   npx vitest run src/lib/security/candidate-source-extractor.test.ts src/lib/security/candidate-domain-registry.test.ts src/lib/security/official-domain-registry.test.ts
    npm run lint
    npm run typecheck
    npm run test

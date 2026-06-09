@@ -69,4 +69,18 @@ describe("Wallet Lifeboat safety copy", () => {
       /writeContract|sendTransaction|server signer|server-sign|flashbots|eth_sendBundle|eth_sendPrivateTransaction/i,
     );
   });
+
+  it("keeps Wallet Lifeboat locked at the routing boundary", () => {
+    const middleware = readFileSync(
+      join(process.cwd(), "src", "middleware.ts"),
+      "utf8",
+    );
+
+    expect(middleware).toContain("/app/wallet-lifeboat");
+    expect(middleware).toContain("/api/lifeboat");
+    expect(middleware).toContain("status: 404");
+    expect(middleware).toContain("Cache-Control");
+    expect(middleware).toContain("no-store");
+    expect(middleware).toContain("frozen");
+  });
 });

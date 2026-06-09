@@ -24,7 +24,7 @@ boundaries or deciding whether to use the app.
 
 - [Product brief](PRODUCT_BRIEF.md)
 - [Roadmap](ROADMAP.md)
-- [Phishing link checker](PHISHING-LINK-CHECKER.md)
+- [Wallet Lifeboat freeze](lifeboat/FREEZE.md)
 - [Wallet Lifeboat master spec](lifeboat/WALLET_LIFEBOAT_MASTER_SPEC.md)
 - [Wallet Lifeboat safety boundaries](lifeboat/SAFETY_BOUNDARIES.md)
 - [Wallet Lifeboat phases](lifeboat/PHASES.md)
