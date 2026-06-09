@@ -27,6 +27,7 @@ import {
 import { explorerAddressUrl, explorerTokenUrl, explorerTxUrl } from "./explorer";
 import { ARBITRUM_ONE_CLIENT_CHAIN_ID } from "./arbitrum-approval-client";
 import { ETHEREUM_MAINNET_CLIENT_CHAIN_ID } from "./ethereum-approval-client";
+import { HYPEREVM_CLIENT_CHAIN_ID } from "./hyperevm-approval-client";
 import { OPTIMISM_CLIENT_CHAIN_ID } from "./optimism-approval-client";
 import {
   getSpenderEntry,
@@ -275,6 +276,19 @@ describe("supported chain config", () => {
     );
     expect(explorerTxUrl(OPTIMISM_CLIENT_CHAIN_ID, "0xabc")).toBe(
       "https://optimistic.etherscan.io/tx/0xabc",
+    );
+  });
+
+  it("builds Hyperevmscan links for separate-lane HyperEVM without activating HyperEVM", () => {
+    expect(isSupportedChainId(HYPEREVM_CLIENT_CHAIN_ID)).toBe(false);
+    expect(explorerAddressUrl(HYPEREVM_CLIENT_CHAIN_ID, SPENDER)).toBe(
+      `https://hyperevmscan.io/address/${SPENDER}`,
+    );
+    expect(explorerTokenUrl(HYPEREVM_CLIENT_CHAIN_ID, TOKEN)).toBe(
+      `https://hyperevmscan.io/token/${TOKEN}`,
+    );
+    expect(explorerTxUrl(HYPEREVM_CLIENT_CHAIN_ID, "0xabc")).toBe(
+      "https://hyperevmscan.io/tx/0xabc",
     );
   });
 

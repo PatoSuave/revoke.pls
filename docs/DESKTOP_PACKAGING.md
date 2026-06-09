@@ -137,6 +137,8 @@ connect-src 'self' https: wss:;
 frame-src   'self' https:;
 object-src  'none';
 base-uri    'self';
+form-action 'self';
+frame-ancestors 'none';
 ```
 
 Notes on unavoidable looseness:

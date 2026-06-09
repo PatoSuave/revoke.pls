@@ -18,6 +18,14 @@ import {
   ethereumExplorerTxUrl,
 } from "@/lib/ethereum-approval-client";
 import {
+  HYPEREVM_CLIENT_CHAIN_ID,
+  HYPEREVM_EXPLORER_BASE_URL,
+  HYPEREVM_EXPLORER_NAME,
+  hyperevmExplorerAddressUrl,
+  hyperevmExplorerTokenUrl,
+  hyperevmExplorerTxUrl,
+} from "@/lib/hyperevm-approval-client";
+import {
   OPTIMISM_CLIENT_CHAIN_ID,
   OPTIMISM_EXPLORER_BASE_URL,
   OPTIMISM_EXPLORER_NAME,
@@ -35,6 +43,9 @@ function baseUrlFor(chainId: number | undefined): string {
   }
   if (chainId === OPTIMISM_CLIENT_CHAIN_ID) {
     return OPTIMISM_EXPLORER_BASE_URL;
+  }
+  if (chainId === HYPEREVM_CLIENT_CHAIN_ID) {
+    return HYPEREVM_EXPLORER_BASE_URL;
   }
   const config = getChainConfig(chainId);
   const base = config?.explorer.baseUrl ?? pulsechain.blockExplorers.default.url;
@@ -54,6 +65,9 @@ export function explorerAddressUrl(
   if (chainId === OPTIMISM_CLIENT_CHAIN_ID) {
     return optimismExplorerAddressUrl(address);
   }
+  if (chainId === HYPEREVM_CLIENT_CHAIN_ID) {
+    return hyperevmExplorerAddressUrl(address);
+  }
   const config = getChainConfig(chainId);
   return config?.explorer.urls.address(address) ?? `${baseUrlFor(chainId)}/address/${address}`;
 }
@@ -70,6 +84,9 @@ export function explorerTokenUrl(
   }
   if (chainId === OPTIMISM_CLIENT_CHAIN_ID) {
     return optimismExplorerTokenUrl(address);
+  }
+  if (chainId === HYPEREVM_CLIENT_CHAIN_ID) {
+    return hyperevmExplorerTokenUrl(address);
   }
   const config = getChainConfig(chainId);
   return config?.explorer.urls.token(address) ?? `${baseUrlFor(chainId)}/token/${address}`;
@@ -88,6 +105,9 @@ export function explorerTxUrl(
   if (chainId === OPTIMISM_CLIENT_CHAIN_ID) {
     return optimismExplorerTxUrl(hash);
   }
+  if (chainId === HYPEREVM_CLIENT_CHAIN_ID) {
+    return hyperevmExplorerTxUrl(hash);
+  }
   const config = getChainConfig(chainId);
   return config?.explorer.urls.transaction(hash) ?? `${baseUrlFor(chainId)}/tx/${hash}`;
 }
@@ -102,6 +122,9 @@ export function explorerName(chainId: number | undefined): string {
   }
   if (chainId === OPTIMISM_CLIENT_CHAIN_ID) {
     return OPTIMISM_EXPLORER_NAME;
+  }
+  if (chainId === HYPEREVM_CLIENT_CHAIN_ID) {
+    return HYPEREVM_EXPLORER_NAME;
   }
   return getChainConfig(chainId)?.explorer.name ?? "PulseScan";
 }
