@@ -1,5 +1,4 @@
 import type { Metadata, Viewport } from "next";
-import { headers } from "next/headers";
 
 import "@/app/globals.css";
 import { Providers } from "@/components/providers";
@@ -69,12 +68,21 @@ const themeInitScript = `
 })();
 `;
 
+const isDesktopBuild = process.env.NEXT_PUBLIC_TAURI_BUILD === "1";
+
+async function getCspNonce(): Promise<string | undefined> {
+  if (isDesktopBuild) return undefined;
+
+  const { headers } = await import("next/headers");
+  return (await headers()).get("x-nonce") ?? undefined;
+}
+
 export default async function RootLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  const nonce = (await headers()).get("x-nonce") ?? undefined;
+  const nonce = await getCspNonce();
 
   return (
     <html
