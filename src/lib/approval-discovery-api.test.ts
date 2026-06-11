@@ -11,8 +11,10 @@ import {
   usesServerApprovalDiscovery,
 } from "@/lib/approval-discovery-api";
 import {
+  AVALANCHE_CHAIN_ID,
   BASE_CHAIN_ID,
   BSC_CHAIN_ID,
+  MANTLE_CHAIN_ID,
   POLYGON_CHAIN_ID,
   PULSECHAIN_CHAIN_ID,
 } from "@/lib/chains";
@@ -37,10 +39,12 @@ const SOURCE = {
 };
 
 describe("approval discovery API serialization", () => {
-  it("uses server discovery for hosted BSC, Base, and Polygon scans", () => {
+  it("uses server discovery for hosted Etherscan V2 generic scans", () => {
     expect(usesServerApprovalDiscovery(BSC_CHAIN_ID)).toBe(true);
     expect(usesServerApprovalDiscovery(BASE_CHAIN_ID)).toBe(true);
     expect(usesServerApprovalDiscovery(POLYGON_CHAIN_ID)).toBe(true);
+    expect(usesServerApprovalDiscovery(AVALANCHE_CHAIN_ID)).toBe(true);
+    expect(usesServerApprovalDiscovery(MANTLE_CHAIN_ID)).toBe(true);
     expect(usesServerApprovalDiscovery(PULSECHAIN_CHAIN_ID)).toBe(false);
     expect(usesServerApprovalDiscovery(undefined)).toBe(false);
   });

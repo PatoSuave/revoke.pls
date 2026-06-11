@@ -13,27 +13,39 @@ export const PULSECHAIN_CHAIN_ID = 369;
 export const BSC_CHAIN_ID = 56;
 export const BASE_CHAIN_ID = 8453;
 export const POLYGON_CHAIN_ID = 137;
+export const AVALANCHE_CHAIN_ID = 43114;
+export const MANTLE_CHAIN_ID = 5000;
 export type SupportedChainId =
   | typeof PULSECHAIN_CHAIN_ID
   | typeof BSC_CHAIN_ID
   | typeof BASE_CHAIN_ID
-  | typeof POLYGON_CHAIN_ID;
+  | typeof POLYGON_CHAIN_ID
+  | typeof AVALANCHE_CHAIN_ID
+  | typeof MANTLE_CHAIN_ID;
 
 const PULSECHAIN_RPC_DEFAULT = "https://rpc.pulsechain.com";
 const BSC_RPC_DEFAULT = "https://bsc-dataseed.bnbchain.org";
 const BASE_RPC_DEFAULT = "https://mainnet.base.org";
 const POLYGON_RPC_DEFAULT = "https://polygon.drpc.org";
+const AVALANCHE_RPC_DEFAULT = "https://api.avax.network/ext/bc/C/rpc";
+const MANTLE_RPC_DEFAULT = "https://rpc.mantle.xyz";
 
 const PULSECHAIN_EXPLORER_BASE_URL = "https://scan.pulsechain.com";
 const BSC_EXPLORER_BASE_URL = "https://bscscan.com";
 const BASE_EXPLORER_BASE_URL = "https://basescan.org";
 const POLYGON_EXPLORER_BASE_URL = "https://polygonscan.com";
+const AVALANCHE_EXPLORER_BASE_URL = "https://snowscan.xyz";
+const MANTLE_EXPLORER_BASE_URL = "https://explorer.mantle.xyz";
 
 export const PULSECHAIN_EXPLORER_API_DEFAULT =
   "https://api.scan.pulsechain.com/api";
 export const BSC_EXPLORER_API_DEFAULT = "https://api.etherscan.io/v2/api";
 export const BASE_EXPLORER_API_DEFAULT = "https://api.etherscan.io/v2/api";
 export const POLYGON_EXPLORER_API_DEFAULT =
+  "https://api.etherscan.io/v2/api";
+export const AVALANCHE_EXPLORER_API_DEFAULT =
+  "https://api.etherscan.io/v2/api";
+export const MANTLE_EXPLORER_API_DEFAULT =
   "https://api.etherscan.io/v2/api";
 export const BSC_DEPRECATED_V1_EXPLORER_API_URL =
   "https://api.bscscan.com/api";
@@ -45,10 +57,19 @@ export const BSC_EXPLORER_CHAIN_ID_DEFAULT = BSC_CHAIN_ID.toString();
 export const BASE_EXPLORER_CHAIN_ID_DEFAULT = BASE_CHAIN_ID.toString();
 export const POLYGON_EXPLORER_CHAIN_ID_DEFAULT =
   POLYGON_CHAIN_ID.toString();
+export const AVALANCHE_EXPLORER_CHAIN_ID_DEFAULT =
+  AVALANCHE_CHAIN_ID.toString();
+export const MANTLE_EXPLORER_CHAIN_ID_DEFAULT = MANTLE_CHAIN_ID.toString();
 export const BSC_OSAKA_MAX_TRANSACTION_GAS = 16_777_216n;
 export const BSC_HIGH_GAS_WARNING_THRESHOLD = 1_000_000n;
 
-export type SupportedChainKey = "pulsechain" | "bsc" | "base" | "polygon";
+export type SupportedChainKey =
+  | "pulsechain"
+  | "bsc"
+  | "base"
+  | "polygon"
+  | "avalanche"
+  | "mantle";
 
 function cleanEnv(value: string | undefined): string | undefined {
   const trimmed = value?.trim();
@@ -60,9 +81,13 @@ function cleanApiKey(value: string | undefined): string | undefined {
   if (!cleaned) return undefined;
   if (cleaned === "PASTE_YOUR_BSCSCAN_KEY_HERE") return undefined;
   if (cleaned === "PASTE_YOUR_POLYGONSCAN_KEY_HERE") return undefined;
+  if (cleaned === "PASTE_YOUR_AVALANCHE_EXPLORER_KEY_HERE") return undefined;
+  if (cleaned === "PASTE_YOUR_MANTLE_EXPLORER_KEY_HERE") return undefined;
   if (cleaned === "PASTE_YOUR_ETHERSCAN_V2_KEY_HERE") return undefined;
   if (cleaned === "your_bscscan_key") return undefined;
   if (cleaned === "your_polygonscan_key") return undefined;
+  if (cleaned === "your_avalanche_explorer_key") return undefined;
+  if (cleaned === "your_mantle_explorer_key") return undefined;
   if (cleaned === "YOUR_ETHERSCAN_V2_KEY") return undefined;
   return cleaned;
 }
@@ -96,6 +121,8 @@ const pulsechainRpcEnv = cleanEnv(process.env.NEXT_PUBLIC_PULSECHAIN_RPC_URL);
 const bscRpcEnv = cleanEnv(process.env.NEXT_PUBLIC_BSC_RPC_URL);
 const baseRpcEnv = cleanEnv(process.env.NEXT_PUBLIC_BASE_RPC_URL);
 const polygonRpcEnv = cleanEnv(process.env.NEXT_PUBLIC_POLYGON_RPC_URL);
+const avalancheRpcEnv = cleanEnv(process.env.NEXT_PUBLIC_AVALANCHE_RPC_URL);
+const mantleRpcEnv = cleanEnv(process.env.NEXT_PUBLIC_MANTLE_RPC_URL);
 const pulsechainExplorerApiEnv = cleanEnv(
   process.env.NEXT_PUBLIC_PULSECHAIN_EXPLORER_API,
 );
@@ -108,6 +135,12 @@ const baseExplorerApiEnv = cleanEnv(
 const polygonExplorerApiEnv = cleanEnv(
   process.env.NEXT_PUBLIC_POLYGON_EXPLORER_API_URL,
 );
+const avalancheExplorerApiEnv = cleanEnv(
+  process.env.NEXT_PUBLIC_AVALANCHE_EXPLORER_API_URL,
+);
+const mantleExplorerApiEnv = cleanEnv(
+  process.env.NEXT_PUBLIC_MANTLE_EXPLORER_API_URL,
+);
 const bscExplorerChainIdEnv = cleanEnv(
   process.env.NEXT_PUBLIC_BSC_EXPLORER_CHAIN_ID,
 );
@@ -116,6 +149,12 @@ const baseExplorerChainIdEnv = cleanEnv(
 );
 const polygonExplorerChainIdEnv = cleanEnv(
   process.env.NEXT_PUBLIC_POLYGON_EXPLORER_CHAIN_ID,
+);
+const avalancheExplorerChainIdEnv = cleanEnv(
+  process.env.NEXT_PUBLIC_AVALANCHE_EXPLORER_CHAIN_ID,
+);
+const mantleExplorerChainIdEnv = cleanEnv(
+  process.env.NEXT_PUBLIC_MANTLE_EXPLORER_CHAIN_ID,
 );
 const bscPreferredApiKeyEnv = cleanApiKey(
   process.env.NEXT_PUBLIC_BSC_EXPLORER_API_KEY,
@@ -126,6 +165,12 @@ const baseExplorerApiKeyEnv = cleanApiKey(
 );
 const polygonExplorerApiKeyEnv = cleanApiKey(
   process.env.NEXT_PUBLIC_POLYGON_EXPLORER_API_KEY,
+);
+const avalancheExplorerApiKeyEnv = cleanApiKey(
+  process.env.NEXT_PUBLIC_AVALANCHE_EXPLORER_API_KEY,
+);
+const mantleExplorerApiKeyEnv = cleanApiKey(
+  process.env.NEXT_PUBLIC_MANTLE_EXPLORER_API_KEY,
 );
 const bscDeprecatedV1ApiConfigured = isDeprecatedBscV1ApiUrl(bscExplorerApiEnv);
 const baseDeprecatedV1ApiConfigured =
@@ -144,6 +189,14 @@ const polygonExplorerChainId =
   polygonExplorerChainIdEnv === POLYGON_EXPLORER_CHAIN_ID_DEFAULT
     ? polygonExplorerChainIdEnv
     : POLYGON_EXPLORER_CHAIN_ID_DEFAULT;
+const avalancheExplorerChainId =
+  avalancheExplorerChainIdEnv === AVALANCHE_EXPLORER_CHAIN_ID_DEFAULT
+    ? avalancheExplorerChainIdEnv
+    : AVALANCHE_EXPLORER_CHAIN_ID_DEFAULT;
+const mantleExplorerChainId =
+  mantleExplorerChainIdEnv === MANTLE_EXPLORER_CHAIN_ID_DEFAULT
+    ? mantleExplorerChainIdEnv
+    : MANTLE_EXPLORER_CHAIN_ID_DEFAULT;
 const bscExplorerApiKeyEnv = bscPreferredApiKeyEnv ?? bscScanApiKeyEnv;
 const bscDiscoveryWarnings = [
   bscDeprecatedV1ApiConfigured
@@ -173,6 +226,18 @@ const polygonDiscoveryWarnings = [
   polygonExplorerChainIdEnv &&
   polygonExplorerChainIdEnv !== POLYGON_EXPLORER_CHAIN_ID_DEFAULT
     ? `NEXT_PUBLIC_POLYGON_EXPLORER_CHAIN_ID must be ${POLYGON_EXPLORER_CHAIN_ID_DEFAULT} for Polygon Mainnet. The app is using chainid=${POLYGON_EXPLORER_CHAIN_ID_DEFAULT}.`
+    : null,
+].filter((warning): warning is string => Boolean(warning));
+const avalancheDiscoveryWarnings = [
+  avalancheExplorerChainIdEnv &&
+  avalancheExplorerChainIdEnv !== AVALANCHE_EXPLORER_CHAIN_ID_DEFAULT
+    ? `NEXT_PUBLIC_AVALANCHE_EXPLORER_CHAIN_ID must be ${AVALANCHE_EXPLORER_CHAIN_ID_DEFAULT} for Avalanche C-Chain. The app is using chainid=${AVALANCHE_EXPLORER_CHAIN_ID_DEFAULT}.`
+    : null,
+].filter((warning): warning is string => Boolean(warning));
+const mantleDiscoveryWarnings = [
+  mantleExplorerChainIdEnv &&
+  mantleExplorerChainIdEnv !== MANTLE_EXPLORER_CHAIN_ID_DEFAULT
+    ? `NEXT_PUBLIC_MANTLE_EXPLORER_CHAIN_ID must be ${MANTLE_EXPLORER_CHAIN_ID_DEFAULT} for Mantle Mainnet. The app is using chainid=${MANTLE_EXPLORER_CHAIN_ID_DEFAULT}.`
     : null,
 ].filter((warning): warning is string => Boolean(warning));
 
@@ -274,6 +339,60 @@ export const polygon = defineChain({
     default: {
       name: "PolygonScan",
       url: POLYGON_EXPLORER_BASE_URL,
+    },
+  },
+  contracts: {
+    multicall3: {
+      address: "0xcA11bde05977b3631167028862bE2a173976CA11",
+    },
+  },
+  testnet: false,
+});
+
+export const avalanche = defineChain({
+  id: AVALANCHE_CHAIN_ID,
+  name: "Avalanche C-Chain",
+  nativeCurrency: {
+    name: "Avalanche",
+    symbol: "AVAX",
+    decimals: 18,
+  },
+  rpcUrls: {
+    default: {
+      http: [avalancheRpcEnv ?? AVALANCHE_RPC_DEFAULT],
+    },
+  },
+  blockExplorers: {
+    default: {
+      name: "SnowScan",
+      url: AVALANCHE_EXPLORER_BASE_URL,
+    },
+  },
+  contracts: {
+    multicall3: {
+      address: "0xcA11bde05977b3631167028862bE2a173976CA11",
+    },
+  },
+  testnet: false,
+});
+
+export const mantle = defineChain({
+  id: MANTLE_CHAIN_ID,
+  name: "Mantle",
+  nativeCurrency: {
+    name: "Mantle",
+    symbol: "MNT",
+    decimals: 18,
+  },
+  rpcUrls: {
+    default: {
+      http: [mantleRpcEnv ?? MANTLE_RPC_DEFAULT],
+    },
+  },
+  blockExplorers: {
+    default: {
+      name: "Mantle Explorer",
+      url: MANTLE_EXPLORER_BASE_URL,
     },
   },
   contracts: {
@@ -481,6 +600,16 @@ const polygonRpc = buildRpcConfig(
   POLYGON_RPC_DEFAULT,
   polygonRpcEnv,
 );
+const avalancheRpc = buildRpcConfig(
+  "NEXT_PUBLIC_AVALANCHE_RPC_URL",
+  AVALANCHE_RPC_DEFAULT,
+  avalancheRpcEnv,
+);
+const mantleRpc = buildRpcConfig(
+  "NEXT_PUBLIC_MANTLE_RPC_URL",
+  MANTLE_RPC_DEFAULT,
+  mantleRpcEnv,
+);
 
 const pulsechainDiscovery = buildDiscoveryConfig({
   id: "blockscout-pulsescan",
@@ -572,6 +701,56 @@ const polygonDiscovery = buildDiscoveryConfig({
   missingApiKeyMessage:
     "Polygon historical discovery uses Etherscan API V2. Set NEXT_PUBLIC_POLYGON_EXPLORER_API_KEY only for desktop/static builds without API routes. Hosted web deployments should use POLYGON_EXPLORER_API_KEY or ETHERSCAN_API_KEY server-side.",
   warnings: polygonDiscoveryWarnings,
+});
+
+const avalancheDiscovery = buildDiscoveryConfig({
+  id: "etherscan-v2-avalanche",
+  name: "Etherscan API V2 (Avalanche logs)",
+  apiProviderKind: "etherscan-v2",
+  apiProviderName: "Etherscan API V2",
+  url: AVALANCHE_EXPLORER_BASE_URL,
+  apiUrlEnvVar: "NEXT_PUBLIC_AVALANCHE_EXPLORER_API_URL",
+  apiUrlDefault: AVALANCHE_EXPLORER_API_DEFAULT,
+  apiChainId: avalancheExplorerChainId,
+  apiChainIdEnvVar: "NEXT_PUBLIC_AVALANCHE_EXPLORER_CHAIN_ID",
+  apiKeyEnvVar: "NEXT_PUBLIC_AVALANCHE_EXPLORER_API_KEY",
+  apiKeyEnvVars: ["NEXT_PUBLIC_AVALANCHE_EXPLORER_API_KEY"],
+  apiUrlEnv: avalancheExplorerApiEnv,
+  apiKeyEnv: avalancheExplorerApiKeyEnv,
+  requiresApiKey: true,
+  queryParams: {
+    chainid: avalancheExplorerChainId,
+  },
+  limitations:
+    "Etherscan API V2 can rate-limit, cap responses, or require smaller block windows for Avalanche C-Chain logs.",
+  missingApiKeyMessage:
+    "Avalanche historical discovery uses Etherscan API V2. Set NEXT_PUBLIC_AVALANCHE_EXPLORER_API_KEY only for desktop/static builds without API routes. Hosted web deployments should use AVALANCHE_EXPLORER_API_KEY or ETHERSCAN_API_KEY server-side.",
+  warnings: avalancheDiscoveryWarnings,
+});
+
+const mantleDiscovery = buildDiscoveryConfig({
+  id: "etherscan-v2-mantle",
+  name: "Etherscan API V2 (Mantle logs)",
+  apiProviderKind: "etherscan-v2",
+  apiProviderName: "Etherscan API V2",
+  url: MANTLE_EXPLORER_BASE_URL,
+  apiUrlEnvVar: "NEXT_PUBLIC_MANTLE_EXPLORER_API_URL",
+  apiUrlDefault: MANTLE_EXPLORER_API_DEFAULT,
+  apiChainId: mantleExplorerChainId,
+  apiChainIdEnvVar: "NEXT_PUBLIC_MANTLE_EXPLORER_CHAIN_ID",
+  apiKeyEnvVar: "NEXT_PUBLIC_MANTLE_EXPLORER_API_KEY",
+  apiKeyEnvVars: ["NEXT_PUBLIC_MANTLE_EXPLORER_API_KEY"],
+  apiUrlEnv: mantleExplorerApiEnv,
+  apiKeyEnv: mantleExplorerApiKeyEnv,
+  requiresApiKey: true,
+  queryParams: {
+    chainid: mantleExplorerChainId,
+  },
+  limitations:
+    "Etherscan API V2 can rate-limit, cap responses, or require smaller block windows for Mantle logs.",
+  missingApiKeyMessage:
+    "Mantle historical discovery uses Etherscan API V2. Set NEXT_PUBLIC_MANTLE_EXPLORER_API_KEY only for desktop/static builds without API routes. Hosted web deployments should use MANTLE_EXPLORER_API_KEY or ETHERSCAN_API_KEY server-side.",
+  warnings: mantleDiscoveryWarnings,
 });
 
 export const supportedChainConfigs = {
@@ -716,9 +895,86 @@ export const supportedChainConfigs = {
       nftOperator: "ERC-721/ERC-1155",
     },
   },
+  [AVALANCHE_CHAIN_ID]: {
+    key: "avalanche",
+    chain: avalanche,
+    chainId: AVALANCHE_CHAIN_ID,
+    displayName: "Avalanche C-Chain",
+    shortName: "Avalanche",
+    nativeSymbol: "AVAX",
+    rpc: avalancheRpc,
+    explorer: {
+      name: "SnowScan",
+      baseUrl: AVALANCHE_EXPLORER_BASE_URL,
+      apiUrl: avalancheDiscovery.apiUrl,
+      apiUrlEnvVar: avalancheDiscovery.apiUrlEnvVar,
+      apiKeyEnvVar: avalancheDiscovery.apiKeyEnvVar,
+      urls: explorerUrls(AVALANCHE_EXPLORER_BASE_URL),
+    },
+    discovery: avalancheDiscovery,
+    discoverySettings: {
+      sourceKind: "explorer-logs",
+      providerName: "Etherscan API V2",
+      approvalEventTopicMode: "topic0-topic1-owner",
+      defaultFromBlock: "0",
+      defaultToBlock: "latest",
+      pageSize: 1000,
+      historicalRpcLogs: "disabled",
+      capWarning:
+        "Etherscan API V2 may rate-limit, cap pages, or require smaller windows for Avalanche logs; incomplete discovery is surfaced to the user.",
+    },
+    standardLabels: {
+      fungible: "ERC-20",
+      nft: "ERC-721",
+      multiToken: "ERC-1155",
+      nftOperator: "ERC-721/ERC-1155",
+    },
+  },
+  [MANTLE_CHAIN_ID]: {
+    key: "mantle",
+    chain: mantle,
+    chainId: MANTLE_CHAIN_ID,
+    displayName: "Mantle",
+    shortName: "Mantle",
+    nativeSymbol: "MNT",
+    rpc: mantleRpc,
+    explorer: {
+      name: "Mantle Explorer",
+      baseUrl: MANTLE_EXPLORER_BASE_URL,
+      apiUrl: mantleDiscovery.apiUrl,
+      apiUrlEnvVar: mantleDiscovery.apiUrlEnvVar,
+      apiKeyEnvVar: mantleDiscovery.apiKeyEnvVar,
+      urls: explorerUrls(MANTLE_EXPLORER_BASE_URL),
+    },
+    discovery: mantleDiscovery,
+    discoverySettings: {
+      sourceKind: "explorer-logs",
+      providerName: "Etherscan API V2",
+      approvalEventTopicMode: "topic0-topic1-owner",
+      defaultFromBlock: "0",
+      defaultToBlock: "latest",
+      pageSize: 1000,
+      historicalRpcLogs: "disabled",
+      capWarning:
+        "Etherscan API V2 may rate-limit, cap pages, or require smaller windows for Mantle logs; incomplete discovery is surfaced to the user.",
+    },
+    standardLabels: {
+      fungible: "ERC-20",
+      nft: "ERC-721",
+      multiToken: "ERC-1155",
+      nftOperator: "ERC-721/ERC-1155",
+    },
+  },
 } as const satisfies Record<number, SupportedChainConfig>;
 
-export const supportedChains = [pulsechain, bsc, base, polygon] as const;
+export const supportedChains = [
+  pulsechain,
+  bsc,
+  base,
+  polygon,
+  avalanche,
+  mantle,
+] as const;
 
 export function isSupportedChainId(
   id: number | undefined,
@@ -740,6 +996,8 @@ export const supportedChainConfigList = [
   supportedChainConfigs[BSC_CHAIN_ID],
   supportedChainConfigs[BASE_CHAIN_ID],
   supportedChainConfigs[POLYGON_CHAIN_ID],
+  supportedChainConfigs[AVALANCHE_CHAIN_ID],
+  supportedChainConfigs[MANTLE_CHAIN_ID],
 ] as const;
 
 function joinNames(names: readonly string[]): string {

@@ -1,7 +1,9 @@
 import {
+  AVALANCHE_CHAIN_ID,
   BASE_CHAIN_ID,
   BSC_CHAIN_ID,
   BSC_OSAKA_MAX_TRANSACTION_GAS,
+  MANTLE_CHAIN_ID,
   POLYGON_CHAIN_ID,
   PULSECHAIN_CHAIN_ID,
 } from "@/lib/chains";
@@ -75,6 +77,26 @@ export const CHAIN_CAPABILITIES: Record<number, ChainCapability> = {
     websocketSupport: "unknown",
     confirmationStrategy: "receipt-plus-live-recheck",
     notes: ["Use standard RPC methods where possible."],
+  },
+  [AVALANCHE_CHAIN_ID]: {
+    chainId: AVALANCHE_CHAIN_ID,
+    name: "Avalanche C-Chain",
+    supportsEip7702: "unknown",
+    batchRevokeEnabled: true,
+    websocketSupport: "unknown",
+    confirmationStrategy: "receipt-plus-live-recheck",
+    notes: ["Use standard RPC methods where possible."],
+  },
+  [MANTLE_CHAIN_ID]: {
+    chainId: MANTLE_CHAIN_ID,
+    name: "Mantle",
+    supportsEip7702: "unknown",
+    batchRevokeEnabled: true,
+    websocketSupport: "unknown",
+    confirmationStrategy: "receipt-plus-live-recheck",
+    notes: [
+      "Mantle wallet estimates may include L1 data fees beyond gas-price estimates.",
+    ],
   },
   [ARBITRUM_ONE_CLIENT_CHAIN_ID]: {
     chainId: ARBITRUM_ONE_CLIENT_CHAIN_ID,

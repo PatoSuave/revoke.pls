@@ -2,8 +2,10 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { getAddress, type Address } from "viem";
 
 import {
+  AVALANCHE_CHAIN_ID,
   BASE_CHAIN_ID,
   BSC_CHAIN_ID,
+  MANTLE_CHAIN_ID,
   POLYGON_CHAIN_ID,
   PULSECHAIN_CHAIN_ID,
   isSupportedChainId,
@@ -213,6 +215,8 @@ describe("Arbitrum approval API foundation", () => {
       BSC_CHAIN_ID,
       BASE_CHAIN_ID,
       POLYGON_CHAIN_ID,
+      AVALANCHE_CHAIN_ID,
+      MANTLE_CHAIN_ID,
     ]);
   });
 

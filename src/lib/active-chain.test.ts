@@ -1,8 +1,10 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  AVALANCHE_CHAIN_ID,
   BASE_CHAIN_ID,
   BSC_CHAIN_ID,
+  MANTLE_CHAIN_ID,
   POLYGON_CHAIN_ID,
   PULSECHAIN_CHAIN_ID,
   getSupportedChainShortNames,
@@ -63,6 +65,28 @@ describe("active chain resolution", () => {
     expect(result.walletMatchesActiveChain).toBe(true);
   });
 
+  it("resolves connected Avalanche and Mantle wallets without falling back to PulseChain", () => {
+    const avalancheResult = resolveActiveChain({
+      isConnected: true,
+      walletChainId: AVALANCHE_CHAIN_ID,
+      wagmiChainId: PULSECHAIN_CHAIN_ID,
+    });
+    const mantleResult = resolveActiveChain({
+      isConnected: true,
+      walletChainId: MANTLE_CHAIN_ID,
+      wagmiChainId: PULSECHAIN_CHAIN_ID,
+    });
+
+    expect(avalancheResult.status).toBe("supported");
+    expect(avalancheResult.activeChainId).toBe(AVALANCHE_CHAIN_ID);
+    expect(avalancheResult.activeChainConfig?.displayName).toBe(
+      "Avalanche C-Chain",
+    );
+    expect(mantleResult.status).toBe("supported");
+    expect(mantleResult.activeChainId).toBe(MANTLE_CHAIN_ID);
+    expect(mantleResult.activeChainConfig?.displayName).toBe("Mantle");
+  });
+
   it("does not default to PulseChain when disconnected", () => {
     const result = resolveActiveChain({
       isConnected: false,
@@ -89,9 +113,9 @@ describe("active chain resolution", () => {
     expect(isSupportedChainId(1)).toBe(false);
   });
 
-  it("uses PulseChain, BSC, Base, and Polygon in supported-network copy", () => {
+  it("uses all generic supported chains in supported-network copy", () => {
     expect(getSupportedChainShortNames()).toBe(
-      "PulseChain, BSC, Base, or Polygon",
+      "PulseChain, BSC, Base, Polygon, Avalanche, or Mantle",
     );
   });
 

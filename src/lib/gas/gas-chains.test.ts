@@ -8,7 +8,7 @@ import {
 describe("gas tracker chain registry", () => {
   it("supports the app's EVM gas tracker chains", () => {
     expect(GAS_TRACKER_CHAINS.map((chain) => chain.chainId)).toEqual([
-      369, 56, 8453, 137, 1, 42161, 10, 999,
+      369, 56, 8453, 137, 43114, 5000, 1, 42161, 10, 999,
     ]);
   });
 
@@ -38,6 +38,8 @@ describe("gas tracker chain registry", () => {
       [56, "binancecoin"],
       [8453, "ethereum"],
       [137, "polygon-ecosystem-token"],
+      [43114, "avalanche-2"],
+      [5000, "mantle"],
       [1, "ethereum"],
       [42161, "ethereum"],
       [10, "ethereum"],

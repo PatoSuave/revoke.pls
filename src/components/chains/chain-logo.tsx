@@ -1,8 +1,10 @@
 "use client";
 
 import {
+  AVALANCHE_CHAIN_ID,
   BASE_CHAIN_ID,
   BSC_CHAIN_ID,
+  MANTLE_CHAIN_ID,
   POLYGON_CHAIN_ID,
   PULSECHAIN_CHAIN_ID,
 } from "@/lib/chains";
@@ -22,6 +24,8 @@ const CHAIN_LOGO_LABELS: Readonly<Record<number, string>> = {
   [BSC_CHAIN_ID]: "BNB Smart Chain",
   [BASE_CHAIN_ID]: "Base",
   [POLYGON_CHAIN_ID]: "Polygon",
+  [AVALANCHE_CHAIN_ID]: "Avalanche C-Chain",
+  [MANTLE_CHAIN_ID]: "Mantle",
 };
 
 export function chainLogoLabel(chainId: number): string {
@@ -86,6 +90,10 @@ function renderChainMark(chainId: number, muted: boolean) {
       return <BaseMark muted={muted} />;
     case POLYGON_CHAIN_ID:
       return <PolygonMark muted={muted} />;
+    case AVALANCHE_CHAIN_ID:
+      return <AvalancheMark muted={muted} />;
+    case MANTLE_CHAIN_ID:
+      return <MantleMark muted={muted} />;
     default:
       return <DefaultMark muted={muted} />;
   }
@@ -210,6 +218,41 @@ function PolygonMark({ muted }: { muted: boolean }) {
       strokeLinejoin="round"
       strokeWidth="4"
     />
+  );
+}
+
+function AvalancheMark({ muted }: { muted: boolean }) {
+  return (
+    <>
+      <circle cx="24" cy="24" r="21" fill={muted ? "currentColor" : "#E84142"} />
+      <path
+        d="M24 10 12 34h8l4-8 4 8h8L24 10Z"
+        fill={muted ? "#0B0A14" : "#FFFFFF"}
+      />
+      <path
+        d="M34 34h6l-5-10-3 6 2 4Z"
+        fill={muted ? "#0B0A14" : "#FFFFFF"}
+        opacity="0.9"
+      />
+    </>
+  );
+}
+
+function MantleMark({ muted }: { muted: boolean }) {
+  return (
+    <>
+      <circle cx="24" cy="24" r="21" fill={muted ? "currentColor" : "#111827"} />
+      <path
+        d="M12 33V15h6l6 9 6-9h6v18h-6V25l-4 6h-4l-4-6v8h-6Z"
+        fill={muted ? "#0B0A14" : "#FFFFFF"}
+      />
+      <path
+        d="M15 12h18"
+        stroke={muted ? "#0B0A14" : "#67E8F9"}
+        strokeLinecap="round"
+        strokeWidth="3"
+      />
+    </>
   );
 }
 
