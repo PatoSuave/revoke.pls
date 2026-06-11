@@ -1,8 +1,9 @@
 # Scanner QA Checklist
 
 Use this checklist to verify that Pulse Revoke reads approval state correctly on
-PulseChain, BSC, Base, Polygon, Ethereum, Arbitrum One verified-row revoke, and
-Optimism verified-row revoke.
+PulseChain, BSC, Base, Polygon, Avalanche, Mantle, Ethereum, Arbitrum One
+verified-row revoke, Optimism verified-row revoke, and HyperEVM verified-row
+revoke.
 Keep all testing low-risk and manual.
 
 ## Safety Setup
@@ -36,11 +37,14 @@ Run the scanner flow on all supported chains:
 - BSC / BNB Smart Chain, chain ID `56`, gas token `BNB`.
 - Base, chain ID `8453`, gas token `ETH`.
 - Polygon, chain ID `137`, gas token `POL`.
+- Avalanche C-Chain, chain ID `43114`, gas token `AVAX`.
+- Mantle, chain ID `5000`, gas token `MNT`.
 - Ethereum Mainnet, chain ID `1`, gas token `ETH`.
 - Arbitrum One, chain ID `42161`, gas token `ETH`, ERC-20/NFT verified-row
   lane.
 - Optimism / OP Mainnet, chain ID `10`, gas token `ETH`, ERC-20/NFT verified-row
   lane.
+- HyperEVM, chain ID `999`, gas token `HYPE`, ERC-20/NFT verified-row lane.
 
 For each chain, confirm diagnostics show:
 
@@ -54,8 +58,11 @@ For each chain, confirm diagnostics show:
 - BSC API chain ID `56` when testing BNB Smart Chain.
 - Base API chain ID `8453` when testing Base.
 - Polygon API chain ID `137` when testing Polygon.
+- Avalanche API chain ID `43114` when testing Avalanche C-Chain.
+- Mantle API chain ID `5000` when testing Mantle.
 - Arbitrum API chain ID `42161` when testing Arbitrum One.
 - Optimism API chain ID `10` when testing OP Mainnet.
+- HyperEVM API chain ID `999` when testing HyperEVM.
 - Fungible token and NFT scan status.
 - Explorer request/window counts.
 - Any truncation, explorer/API error, or RPC/live-read error.
@@ -136,6 +143,40 @@ For each chain, confirm diagnostics show:
 - Polygon scans use Etherscan API V2 logs with `chainid=137` for historical
   approval discovery through `/api/discovery/approvals`.
 - The app does not rely on public Polygon RPC `eth_getLogs` for historical
+  approval discovery.
+- Rate limits, malformed responses, missing API keys, and capped responses are
+  shown as incomplete/error states, not as "clear".
+
+## Avalanche Discovery Checks
+
+- `AVALANCHE_EXPLORER_API_URL` is either unset or points to a compatible
+  Etherscan API V2 endpoint. The default is
+  `https://api.etherscan.io/v2/api`.
+- `AVALANCHE_EXPLORER_CHAIN_ID` is unset or set to `43114`.
+- `AVALANCHE_EXPLORER_API_KEY` or `ETHERSCAN_API_KEY` is set server-side to an
+  Etherscan API V2 key with Avalanche C-Chain access.
+- `NEXT_PUBLIC_AVALANCHE_EXPLORER_API_KEY` is unset in hosted web deployments;
+  it is a desktop/static-only fallback.
+- Avalanche scans use Etherscan API V2 logs with `chainid=43114` for
+  historical approval discovery through `/api/discovery/approvals`.
+- The app does not rely on public Avalanche RPC `eth_getLogs` for historical
+  approval discovery.
+- Rate limits, malformed responses, missing API keys, and capped responses are
+  shown as incomplete/error states, not as "clear".
+
+## Mantle Discovery Checks
+
+- `MANTLE_EXPLORER_API_URL` is either unset or points to a compatible
+  Etherscan API V2 endpoint. The default is
+  `https://api.etherscan.io/v2/api`.
+- `MANTLE_EXPLORER_CHAIN_ID` is unset or set to `5000`.
+- `MANTLE_EXPLORER_API_KEY` or `ETHERSCAN_API_KEY` is set server-side to an
+  Etherscan API V2 key with Mantle Mainnet access.
+- `NEXT_PUBLIC_MANTLE_EXPLORER_API_KEY` is unset in hosted web deployments; it
+  is a desktop/static-only fallback.
+- Mantle scans use Etherscan API V2 logs with `chainid=5000` for historical
+  approval discovery through `/api/discovery/approvals`.
+- The app does not rely on public Mantle RPC `eth_getLogs` for historical
   approval discovery.
 - Rate limits, malformed responses, missing API keys, and capped responses are
   shown as incomplete/error states, not as "clear".
@@ -258,6 +299,8 @@ For per-token approvals:
 - Single BSC revoke confirm panel says BSC or BNB Smart Chain and BNB.
 - Single Base revoke confirm panel says Base and ETH.
 - Single Polygon revoke confirm panel says Polygon and POL.
+- Single Avalanche revoke confirm panel says Avalanche and AVAX.
+- Single Mantle revoke confirm panel says Mantle and MNT.
 - Permit2 revoke confirm panel clearly identifies a Permit2 delegated allowance
   and clears it through the Permit2 contract.
 - Arbitrum One shows a revoke confirm panel only for live-verified ERC-20 and
@@ -269,6 +312,8 @@ For per-token approvals:
 - BSC transaction links open BscScan.
 - Base transaction links open BaseScan.
 - Polygon transaction links open PolygonScan.
+- Avalanche transaction links open SnowScan.
+- Mantle transaction links open Mantle Explorer.
 - Arbitrum address and token links open Arbiscan.
 - Optimism address and token links open Optimistic Etherscan.
 - Batch revoke submits one transaction at a time.
@@ -279,8 +324,9 @@ For per-token approvals:
 ## Unsupported Network Checks
 
 - Connect to an unsupported chain.
-- Confirm the app lists PulseChain, BSC, Base, Polygon, Ethereum, Arbitrum, and
-  Optimism with the correct scan/revoke statuses.
+- Confirm the app lists PulseChain, BSC, Base, Polygon, Avalanche, Mantle,
+  Ethereum, Arbitrum, Optimism, and HyperEVM with the correct scan/revoke
+  statuses.
 - Confirm no scan starts.
 - Confirm no revoke action is available.
 - Confirm stale approvals from a previous chain are not shown as current.
@@ -293,4 +339,4 @@ For per-token approvals:
 - Wallet with historical approvals that validate to zero shows a clear state.
 - Failed live reads show verification incomplete, not clear.
 - Etherscan API V2 rate limits, the BscScan V1 deprecation error, or a missing
-  BSC/Base/Polygon API key show an actionable error.
+  BSC/Base/Polygon/Avalanche/Mantle API key show an actionable error.

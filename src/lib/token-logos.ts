@@ -1,8 +1,10 @@
 import { getAddress, isAddress, type Address } from "viem";
 
 import {
+  AVALANCHE_CHAIN_ID,
   BASE_CHAIN_ID,
   BSC_CHAIN_ID,
+  MANTLE_CHAIN_ID,
   POLYGON_CHAIN_ID,
   PULSECHAIN_CHAIN_ID,
 } from "@/lib/chains";
@@ -21,6 +23,8 @@ const DEXSCREENER_CHAIN_SLUG_BY_CHAIN_ID: Readonly<Record<number, string>> = {
   [BSC_CHAIN_ID]: "bsc",
   [BASE_CHAIN_ID]: "base",
   [POLYGON_CHAIN_ID]: "polygon",
+  [AVALANCHE_CHAIN_ID]: "avalanche",
+  [MANTLE_CHAIN_ID]: "mantle",
   [ARBITRUM_TOKEN_LOGO_CHAIN_ID]: "arbitrum",
   [HYPEREVM_TOKEN_LOGO_CHAIN_ID]: "hyperevm",
 };
@@ -53,6 +57,8 @@ export function supportedTokenLogoChainSummary(): string {
     "Optimism chainId=10",
     "BSC chainId=56",
     "Polygon chainId=137",
+    "Avalanche chainId=43114",
+    "Mantle chainId=5000",
     "PulseChain chainId=369",
     "Base chainId=8453",
     "Arbitrum chainId=42161",

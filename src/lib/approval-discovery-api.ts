@@ -1,6 +1,12 @@
 import type { Address } from "viem";
 
-import { BASE_CHAIN_ID, BSC_CHAIN_ID, POLYGON_CHAIN_ID } from "@/lib/chains";
+import {
+  AVALANCHE_CHAIN_ID,
+  BASE_CHAIN_ID,
+  BSC_CHAIN_ID,
+  MANTLE_CHAIN_ID,
+  POLYGON_CHAIN_ID,
+} from "@/lib/chains";
 import type {
   DiscoveredPair,
   DiscoveryResult,
@@ -95,7 +101,9 @@ export interface ServerNftDiscoveryResponse {
 export type ServerApprovalDiscoveryChainId =
   | typeof BSC_CHAIN_ID
   | typeof BASE_CHAIN_ID
-  | typeof POLYGON_CHAIN_ID;
+  | typeof POLYGON_CHAIN_ID
+  | typeof AVALANCHE_CHAIN_ID
+  | typeof MANTLE_CHAIN_ID;
 
 export function usesServerApprovalDiscovery(
   chainId: number | undefined,
@@ -104,7 +112,9 @@ export function usesServerApprovalDiscovery(
   return (
     chainId === BSC_CHAIN_ID ||
     chainId === BASE_CHAIN_ID ||
-    chainId === POLYGON_CHAIN_ID
+    chainId === POLYGON_CHAIN_ID ||
+    chainId === AVALANCHE_CHAIN_ID ||
+    chainId === MANTLE_CHAIN_ID
   );
 }
 

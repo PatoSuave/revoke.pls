@@ -7,8 +7,8 @@ or unverified token lists.
 
 The discovery-first scanner does not depend on this registry for coverage. A
 bad entry still becomes a user-facing labeling mistake, so favor correctness
-over coverage. BSC, Base, and Polygon registries start empty; add labels only after
-explicit explorer/source verification.
+over coverage. BSC, Base, Polygon, Avalanche, and Mantle registries start
+empty; add labels only after explicit explorer/source verification.
 
 ## File layout
 
@@ -80,7 +80,8 @@ a documented address without expanding scanner coverage.
 
 Before merging a registry change:
 
-- [ ] Address checked on PulseScan, BscScan, BaseScan, or PolygonScan
+- [ ] Address checked on PulseScan, BscScan, BaseScan, PolygonScan, SnowScan,
+      or Mantle Explorer
 - [ ] Address sourced from an official doc / site / repo (linked in `source`)
 - [ ] Category set accurately, or `unknown`
 - [ ] `isTrusted` set conservatively
@@ -91,7 +92,8 @@ Before merging a registry change:
 
 **In scope**
 - Tokens with live circulating supply on PulseChain, verified BSC tokens,
-  verified Base tokens, or verified Polygon tokens
+  verified Base tokens, verified Polygon tokens, verified Avalanche tokens, or
+  verified Mantle tokens
 - Spenders that commonly hold user approvals (routers, farms, bridges)
 - Entries verified from public documentation
 

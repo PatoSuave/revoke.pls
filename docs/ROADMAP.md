@@ -10,11 +10,13 @@ ship.
 - BSC / BNB Smart Chain support
 - Base support
 - Polygon support
+- Avalanche C-Chain support
+- Mantle support
 - Ethereum Mainnet read-only discovery and wallet-side revoke
 - Arbitrum One ERC-20/NFT verified-row revoke
 - Optimism / OP Mainnet ERC-20/NFT verified-row revoke
 - HyperEVM ERC-20/NFT verified-row revoke
-- First-class product copy and wallet switching for all eight live chains
+- First-class product copy and wallet switching for all ten live chains
 - Browser wallet connection
 - WalletConnect when configured
 - Historical approval log discovery
@@ -26,6 +28,8 @@ ship.
 - BSC Etherscan API V2 discovery with `chainid=56`
 - Base Etherscan API V2 discovery with `chainid=8453`
 - Polygon Etherscan API V2 discovery with `chainid=137`
+- Avalanche Etherscan API V2 discovery with `chainid=43114`
+- Mantle Etherscan API V2 discovery with `chainid=5000`
 - Ethereum server-read-only Etherscan API V2 discovery with `chainid=1`
 - Arbitrum server-read-only Etherscan API V2 discovery with `chainid=42161`
 - Optimism server-read-only Etherscan API V2 discovery with `chainid=10`
@@ -59,7 +63,8 @@ ship.
 
 ## Future Ideas Requiring Review
 
-- More manually verified PulseChain, BSC, Base, and Polygon registry labels
+- More manually verified PulseChain, BSC, Base, Polygon, Avalanche, and Mantle
+  registry labels
 - Future Arbitrum batch revoke only after separate planning and QA
 - Future Optimism batch revoke only after separate planning and QA
 - Future HyperEVM batch revoke only after separate planning and QA

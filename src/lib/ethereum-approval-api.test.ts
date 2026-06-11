@@ -7,8 +7,10 @@ import {
   type DiscoverySource,
 } from "@/lib/discovery";
 import {
+  AVALANCHE_CHAIN_ID,
   BASE_CHAIN_ID,
   BSC_CHAIN_ID,
+  MANTLE_CHAIN_ID,
   POLYGON_CHAIN_ID,
   PULSECHAIN_CHAIN_ID,
   isSupportedChainId,
@@ -223,6 +225,8 @@ describe("Ethereum approval API foundation", () => {
       BSC_CHAIN_ID,
       BASE_CHAIN_ID,
       POLYGON_CHAIN_ID,
+      AVALANCHE_CHAIN_ID,
+      MANTLE_CHAIN_ID,
     ]);
   });
 

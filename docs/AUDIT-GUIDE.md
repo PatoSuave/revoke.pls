@@ -11,6 +11,8 @@ Current active supported networks should be exactly:
 - BSC / BNB Smart Chain, chain ID `56`
 - Base, chain ID `8453`
 - Polygon, chain ID `137`
+- Avalanche C-Chain, chain ID `43114`
+- Mantle, chain ID `5000`
 - Ethereum Mainnet, chain ID `1`
 - Arbitrum One, chain ID `42161`, ERC-20/NFT verified-row revoke
 - Optimism / OP Mainnet, chain ID `10`, ERC-20/NFT verified-row revoke
@@ -62,11 +64,12 @@ submission must stay unavailable.
 
 ## Chain Safety Questions
 
-- Are active supported chains exactly PulseChain, BSC, Base, Polygon, wallet-enabled
-  Ethereum Mainnet, Arbitrum One's separate verified-row revoke lane, and
-  Optimism's separate verified-row lane?
-- Does `src/lib/wagmi.ts` register Ethereum, Arbitrum, and Optimism only for
-  their separate lanes and keep chain lists scoped correctly?
+- Are active supported chains exactly PulseChain, BSC, Base, Polygon,
+  Avalanche, Mantle, wallet-enabled Ethereum Mainnet, Arbitrum One's separate
+  verified-row revoke lane, Optimism's separate verified-row lane, and
+  HyperEVM's separate verified-row lane?
+- Does `src/lib/wagmi.ts` register Ethereum, Arbitrum, Optimism, and HyperEVM
+  only for their separate lanes and keep chain lists scoped correctly?
 - Is Ethereum Mainnet protected by owner, chain, preflight, gas, and row-level
   verification gates?
 - Do approval records carry `chainId` through discovery, validation, display,
@@ -185,6 +188,26 @@ submission must stay unavailable.
   as the approval source of truth?
 - Does public Polygon RPC avoid historical `eth_getLogs` discovery?
 
+## Avalanche Discovery Questions
+
+- Do Avalanche historical log requests use Etherscan API V2 at
+  `https://api.etherscan.io/v2/api`?
+- Does every Avalanche log request include `chainid=43114`?
+- Are Avalanche explorer links built with `https://snowscan.xyz`?
+- Does Avalanche discovery use approval logs rather than token-transfer
+  endpoints as the approval source of truth?
+- Does public Avalanche RPC avoid historical `eth_getLogs` discovery?
+
+## Mantle Discovery Questions
+
+- Do Mantle historical log requests use Etherscan API V2 at
+  `https://api.etherscan.io/v2/api`?
+- Does every Mantle log request include `chainid=5000`?
+- Are Mantle explorer links built with the configured Mantle explorer base?
+- Does Mantle discovery use approval logs rather than token-transfer endpoints
+  as the approval source of truth?
+- Does public Mantle RPC avoid historical `eth_getLogs` discovery?
+
 ## Live Validation Questions
 
 - Are discovered fungible token candidates rechecked with `allowance(owner,
@@ -210,6 +233,8 @@ submission must stay unavailable.
 - Do PulseChain revokes use PLS wording and PulseScan links?
 - Do Base revokes use ETH wording and BaseScan links?
 - Do Polygon revokes use POL wording and PolygonScan links?
+- Do Avalanche revokes use AVAX wording and SnowScan links?
+- Do Mantle revokes use MNT wording and Mantle explorer links?
 - Does Arbitrum show only ERC-20/NFT verified-row revoke while batch
   revoke remains unavailable?
 - Does Optimism show only ERC-20/NFT verified-row revoke while batch and global
@@ -233,16 +258,20 @@ submission must stay unavailable.
 - Do PulseChain labels avoid leaking onto BSC approvals?
 - Do PulseChain or BSC labels avoid leaking onto Base approvals?
 - Do PulseChain, BSC, or Base labels avoid leaking onto Polygon approvals?
+- Do existing registry labels avoid leaking onto Avalanche or Mantle approvals?
 - Are BSC labels empty unless manually verified?
 - Are Base labels empty unless manually verified?
 - Are Polygon labels empty unless manually verified?
-- Are unknown BSC, Base, and Polygon spenders shown as unknown rather than guessed?
+- Are Avalanche labels empty unless manually verified?
+- Are Mantle labels empty unless manually verified?
+- Are unknown BSC, Base, Polygon, Avalanche, and Mantle spenders shown as
+  unknown rather than guessed?
 - Is registry data treated only as enrichment, not discovery truth?
 
 ## Token Logo Questions
 
-- Is token-logo lookup scoped to PulseChain, BSC, and Polygon only until each additional
-  chain is explicitly enabled and reviewed?
+- Is token-logo lookup scoped to PulseChain, BSC, Polygon, Avalanche, and
+  Mantle only until each additional chain is explicitly enabled and reviewed?
 - Does the logo resolver send only token contract addresses, not scanned owner
   addresses, spender addresses, allowances, or wallet connection state?
 - Does the UI keep text symbol/address data visible when no logo exists or the

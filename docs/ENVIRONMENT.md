@@ -1,15 +1,15 @@
 # Environment Variables
 
 Pulse Revoke is primarily a wallet-side frontend app, with server-side BSC,
-Base, Polygon, Ethereum, Arbitrum, Optimism, and HyperEVM API routes for
-discovery plus a server-side gas tracker route. Variables prefixed with
+Base, Polygon, Avalanche, Mantle, Ethereum, Arbitrum, Optimism, and HyperEVM
+API routes for discovery plus a server-side gas tracker route. Variables prefixed with
 `NEXT_PUBLIC_` are embedded into the browser bundle and are visible to users. Do
 not store private secrets in these variables.
 
 ## Production Requirements
 
-For the live PulseChain, BSC, Base, Polygon, Ethereum, Arbitrum, Optimism, and
-HyperEVM product, configure:
+For the live PulseChain, BSC, Base, Polygon, Avalanche, Mantle, Ethereum,
+Arbitrum, Optimism, and HyperEVM product, configure:
 
 | Variable | Production status | Notes |
 | --- | --- | --- |
@@ -29,6 +29,16 @@ HyperEVM product, configure:
 | `POLYGON_EXPLORER_API_KEY` / `ETHERSCAN_API_KEY` | Required for reliable Polygon discovery | Server-only Etherscan API V2 key with Polygon Mainnet access. |
 | `POLYGON_RPC_URL` / `POLYGON_MAINNET_RPC_URL` | Optional | Server-only Polygon gas tracker RPC override for `/api/gas`. |
 | `NEXT_PUBLIC_POLYGON_RPC_URL` | Recommended | Public fallback is available, but production should prefer a reliable RPC for wallet reads and browser block watching. |
+| `AVALANCHE_EXPLORER_API_URL` | Optional | Server-only Avalanche C-Chain logs API. Defaults to `https://api.etherscan.io/v2/api`. |
+| `AVALANCHE_EXPLORER_CHAIN_ID` | Optional | Must be `43114` for Avalanche C-Chain Etherscan API V2 logs. Defaults to `43114`. |
+| `AVALANCHE_EXPLORER_API_KEY` / `ETHERSCAN_API_KEY` | Required for reliable Avalanche discovery | Server-only Etherscan API V2 key with Avalanche C-Chain access. Etherscan lists Avalanche C-Chain as paid-tier API access. |
+| `AVALANCHE_RPC_URL` / `AVALANCHE_C_CHAIN_RPC_URL` / `AVALANCHE_MAINNET_RPC_URL` | Optional | Server-only Avalanche gas tracker RPC override for `/api/gas`. |
+| `NEXT_PUBLIC_AVALANCHE_RPC_URL` | Recommended | Public fallback is available, but production should prefer a reliable RPC for wallet reads and browser block watching. |
+| `MANTLE_EXPLORER_API_URL` | Optional | Server-only Mantle logs API. Defaults to `https://api.etherscan.io/v2/api`. |
+| `MANTLE_EXPLORER_CHAIN_ID` | Optional | Must be `5000` for Mantle Etherscan API V2 logs. Defaults to `5000`. |
+| `MANTLE_EXPLORER_API_KEY` / `ETHERSCAN_API_KEY` | Required for reliable Mantle discovery | Server-only Etherscan API V2 key with Mantle Mainnet access. |
+| `MANTLE_RPC_URL` / `MANTLE_MAINNET_RPC_URL` | Optional | Server-only Mantle gas tracker RPC override for `/api/gas`. |
+| `NEXT_PUBLIC_MANTLE_RPC_URL` | Recommended | Public fallback is available, but production should prefer a reliable RPC for wallet reads and browser block watching. |
 | `MAINNET_RPC_URL` / `ETHEREUM_RPC_URL` | Required for Ethereum scan | Server-only Ethereum RPC URL for `/api/ethereum/approvals` and `/api/gas`. |
 | `ETHERSCAN_API_KEY` | Required for Ethereum scan | Server-only Etherscan API key. Do not use a `NEXT_PUBLIC_` key for Ethereum server discovery. |
 | `ARBITRUM_ONE_RPC_URL` / `ARBITRUM_RPC_URL` | Required for Arbitrum scan | Server-only Arbitrum RPC URL for `/api/arbitrum/approvals` and `/api/gas`. |
@@ -43,11 +53,11 @@ override them for reliability. The gas tracker prefers unprefixed server RPC
 variables, then browser-safe `NEXT_PUBLIC_*` RPC values, then code defaults.
 Keep private RPC URLs server-only.
 
-PulseChain, BSC, and Polygon token logos use Dex Screener's public token lookup
-endpoint through `/api/token-logos`. No API key is required. The app sends token
-contract addresses only, caps each request at `30` addresses, caches successful
-display metadata at the CDN, and falls back to symbol initials when no logo is
-returned.
+PulseChain, BSC, Polygon, Avalanche, and Mantle token logos use Dex Screener's
+public token lookup endpoint through `/api/token-logos`. No API key is required.
+The app sends token contract addresses only, caps each request at `30`
+addresses, caches successful display metadata at the CDN, and falls back to
+symbol initials when no logo is returned.
 
 Gas tracker USD estimates use CoinGecko's public `/simple/price` endpoint for
 the selected chain's native token. No environment variable or API key is
@@ -66,8 +76,10 @@ uses `https://rpc.pulsechain.com`.
 Optional. `/api/gas` uses these unprefixed RPC variables before browser-visible
 fallbacks: `PULSECHAIN_RPC_URL`, `PULSECHAIN_MAINNET_RPC_URL`, `BSC_RPC_URL`,
 `BSC_MAINNET_RPC_URL`, `BASE_RPC_URL`, `BASE_MAINNET_RPC_URL`,
-`POLYGON_RPC_URL`, `POLYGON_MAINNET_RPC_URL`, `MAINNET_RPC_URL`,
-`ETHEREUM_RPC_URL`, `ARBITRUM_ONE_RPC_URL`, `ARBITRUM_RPC_URL`,
+`POLYGON_RPC_URL`, `POLYGON_MAINNET_RPC_URL`, `AVALANCHE_RPC_URL`,
+`AVALANCHE_C_CHAIN_RPC_URL`, `AVALANCHE_MAINNET_RPC_URL`, `MANTLE_RPC_URL`,
+`MANTLE_MAINNET_RPC_URL`, `MAINNET_RPC_URL`, `ETHEREUM_RPC_URL`,
+`ARBITRUM_ONE_RPC_URL`, `ARBITRUM_RPC_URL`,
 `OPTIMISM_RPC_URL`, `OPTIMISM_MAINNET_RPC_URL`, `OP_MAINNET_RPC_URL`,
 `HYPEREVM_RPC_URL`, `HYPEREVM_MAINNET_RPC_URL`, and
 `HYPERLIQUID_EVM_RPC_URL`.
@@ -107,6 +119,26 @@ Hosted web Polygon approval discovery does not rely on public Polygon RPC
 `eth_getLogs`; it uses the server-side `/api/discovery/approvals` route with
 Etherscan API V2 logs.
 
+### `NEXT_PUBLIC_AVALANCHE_RPC_URL`
+
+Recommended for production. Overrides the Avalanche C-Chain RPC used by
+wagmi/viem for live validation and transaction submission. If unset, the app
+uses `https://api.avax.network/ext/bc/C/rpc`.
+
+Hosted web Avalanche approval discovery does not rely on public Avalanche RPC
+`eth_getLogs`; it uses the server-side `/api/discovery/approvals` route with
+Etherscan API V2 logs.
+
+### `NEXT_PUBLIC_MANTLE_RPC_URL`
+
+Recommended for production. Overrides the Mantle RPC used by wagmi/viem for
+live validation and transaction submission. If unset, the app uses
+`https://rpc.mantle.xyz`.
+
+Hosted web Mantle approval discovery does not rely on public Mantle RPC
+`eth_getLogs`; it uses the server-side `/api/discovery/approvals` route with
+Etherscan API V2 logs.
+
 ### `NEXT_PUBLIC_MAINNET_RPC_URL` / `NEXT_PUBLIC_ETHEREUM_RPC_URL`
 
 Optional browser-visible Ethereum wallet transport overrides. These are used by
@@ -128,10 +160,13 @@ discovery. If unset, the app uses `https://api.scan.pulsechain.com/api`.
 
 ### Token Logo Lookup
 
-No environment variable is required for PulseChain, BSC, or Polygon token
-logos. The server route `/api/token-logos?chainId=369&addresses=...`,
-`/api/token-logos?chainId=56&addresses=...`, or
-`/api/token-logos?chainId=137&addresses=...` calls Dex Screener for display
+No environment variable is required for PulseChain, BSC, Polygon, Avalanche,
+or Mantle token logos. The server route
+`/api/token-logos?chainId=369&addresses=...`,
+`/api/token-logos?chainId=56&addresses=...`,
+`/api/token-logos?chainId=137&addresses=...`,
+`/api/token-logos?chainId=43114&addresses=...`, or
+`/api/token-logos?chainId=5000&addresses=...` calls Dex Screener for display
 metadata and does not receive wallet owner, spender, or allowance data. Treat
 logos as visual convenience only; explorer links and live chain reads remain
 the source of verification.
@@ -246,6 +281,80 @@ Do not configure this value as `NEXT_PUBLIC_*`; the frontend does not need a
 Polygon explorer key in hosted web deployments.
 
 ### `NEXT_PUBLIC_POLYGON_EXPLORER_API_KEY`
+
+Desktop/static-only fallback value for builds without API routes. Hosted web
+deployments should leave it unset.
+
+### `AVALANCHE_EXPLORER_API_URL`
+
+Optional server-only Avalanche C-Chain historical logs API base URL. Default:
+
+```text
+https://api.etherscan.io/v2/api
+```
+
+SnowScan remains the user-facing explorer for links, but historical Avalanche
+log reads use Etherscan API V2.
+
+### `AVALANCHE_EXPLORER_CHAIN_ID`
+
+Optional server-only Etherscan API V2 chain ID parameter for Avalanche C-Chain
+logs. Default:
+
+```text
+43114
+```
+
+Every Avalanche historical log request should include `chainid=43114`.
+
+### `AVALANCHE_EXPLORER_API_KEY`
+
+Required for reliable hosted web Avalanche discovery unless `ETHERSCAN_API_KEY`
+is used as the shared server-side Etherscan API V2 key. Etherscan lists
+Avalanche C-Chain API access as paid-tier, and plan limits can affect whether
+logs are available and how quickly requests are served.
+
+Do not configure this value as `NEXT_PUBLIC_*`; the frontend does not need an
+Avalanche explorer key in hosted web deployments.
+
+### `NEXT_PUBLIC_AVALANCHE_EXPLORER_API_KEY`
+
+Desktop/static-only fallback value for builds without API routes. Hosted web
+deployments should leave it unset.
+
+### `MANTLE_EXPLORER_API_URL`
+
+Optional server-only Mantle historical logs API base URL. Default:
+
+```text
+https://api.etherscan.io/v2/api
+```
+
+Mantle explorer links remain user-facing, but historical Mantle log reads use
+Etherscan API V2.
+
+### `MANTLE_EXPLORER_CHAIN_ID`
+
+Optional server-only Etherscan API V2 chain ID parameter for Mantle logs.
+Default:
+
+```text
+5000
+```
+
+Every Mantle historical log request should include `chainid=5000`.
+
+### `MANTLE_EXPLORER_API_KEY`
+
+Required for reliable hosted web Mantle discovery unless `ETHERSCAN_API_KEY`
+is used as the shared server-side Etherscan API V2 key. Etherscan plan limits
+can affect whether Mantle logs are available and how quickly requests are
+served.
+
+Do not configure this value as `NEXT_PUBLIC_*`; the frontend does not need a
+Mantle explorer key in hosted web deployments.
+
+### `NEXT_PUBLIC_MANTLE_EXPLORER_API_KEY`
 
 Desktop/static-only fallback value for builds without API routes. Hosted web
 deployments should leave it unset.
@@ -418,6 +527,8 @@ NEXT_PUBLIC_PULSECHAIN_RPC_URL=
 NEXT_PUBLIC_BSC_RPC_URL=
 NEXT_PUBLIC_BASE_RPC_URL=
 NEXT_PUBLIC_POLYGON_RPC_URL=
+NEXT_PUBLIC_AVALANCHE_RPC_URL=
+NEXT_PUBLIC_MANTLE_RPC_URL=
 NEXT_PUBLIC_MAINNET_RPC_URL=
 NEXT_PUBLIC_ETHEREUM_RPC_URL=
 NEXT_PUBLIC_PULSECHAIN_EXPLORER_API=
@@ -431,6 +542,12 @@ NEXT_PUBLIC_BASE_EXPLORER_API_KEY=
 NEXT_PUBLIC_POLYGON_EXPLORER_API_URL=
 NEXT_PUBLIC_POLYGON_EXPLORER_CHAIN_ID=137
 NEXT_PUBLIC_POLYGON_EXPLORER_API_KEY=
+NEXT_PUBLIC_AVALANCHE_EXPLORER_API_URL=
+NEXT_PUBLIC_AVALANCHE_EXPLORER_CHAIN_ID=43114
+NEXT_PUBLIC_AVALANCHE_EXPLORER_API_KEY=
+NEXT_PUBLIC_MANTLE_EXPLORER_API_URL=
+NEXT_PUBLIC_MANTLE_EXPLORER_CHAIN_ID=5000
+NEXT_PUBLIC_MANTLE_EXPLORER_API_KEY=
 NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID=
 NEXT_PUBLIC_TELEMETRY_ENABLED=
 
@@ -444,6 +561,17 @@ BASE_EXPLORER_API_KEY=
 POLYGON_EXPLORER_API_URL=
 POLYGON_EXPLORER_CHAIN_ID=137
 POLYGON_EXPLORER_API_KEY=
+AVALANCHE_RPC_URL=
+AVALANCHE_C_CHAIN_RPC_URL=
+AVALANCHE_MAINNET_RPC_URL=
+AVALANCHE_EXPLORER_API_URL=
+AVALANCHE_EXPLORER_CHAIN_ID=43114
+AVALANCHE_EXPLORER_API_KEY=
+MANTLE_RPC_URL=
+MANTLE_MAINNET_RPC_URL=
+MANTLE_EXPLORER_API_URL=
+MANTLE_EXPLORER_CHAIN_ID=5000
+MANTLE_EXPLORER_API_KEY=
 MAINNET_RPC_URL=
 ETHEREUM_RPC_URL=
 ETHEREUM_EXPLORER_API_URL=
@@ -473,9 +601,10 @@ HYPEREVM_ETHERSCAN_API_KEY=
 
 Explorer APIs and public RPC endpoints can rate-limit, cap responses, or fail.
 The app should surface incomplete discovery or validation instead of displaying
-a false "clear" state. For production BSC, Base, and Polygon discovery, use
-Etherscan API V2 keys server-side and account plans that support BNB Smart
-Chain, Base Mainnet, and Polygon Mainnet logs.
+a false "clear" state. For production BSC, Base, Polygon, Avalanche, and
+Mantle discovery, use Etherscan API V2 keys server-side and account plans that
+support BNB Smart Chain, Base Mainnet, Polygon Mainnet, Avalanche C-Chain, and
+Mantle Mainnet logs.
 For Arbitrum, configure server-only managed RPC plus an Arbiscan or
 Etherscan-compatible API key with Arbitrum One log access. For Optimism,
 configure server-only managed RPC plus an Etherscan API V2 key with OP Mainnet

@@ -8,8 +8,10 @@ import {
   ARBITRUM_ONE_SHORT_NAME,
 } from "@/lib/arbitrum-approval-client";
 import {
+  AVALANCHE_CHAIN_ID,
   BASE_CHAIN_ID,
   BSC_CHAIN_ID,
+  MANTLE_CHAIN_ID,
   POLYGON_CHAIN_ID,
   PULSECHAIN_CHAIN_ID,
 } from "@/lib/chains";
@@ -41,6 +43,8 @@ export type GasTrackerChainId =
   | typeof BSC_CHAIN_ID
   | typeof BASE_CHAIN_ID
   | typeof POLYGON_CHAIN_ID
+  | typeof AVALANCHE_CHAIN_ID
+  | typeof MANTLE_CHAIN_ID
   | typeof ETHEREUM_MAINNET_CLIENT_CHAIN_ID
   | typeof ARBITRUM_ONE_CLIENT_CHAIN_ID
   | typeof OPTIMISM_CLIENT_CHAIN_ID
@@ -67,6 +71,8 @@ const PULSECHAIN_RPC_DEFAULT = "https://rpc.pulsechain.com";
 const BSC_RPC_DEFAULT = "https://bsc-dataseed.bnbchain.org";
 const BASE_RPC_DEFAULT = "https://mainnet.base.org";
 const POLYGON_RPC_DEFAULT = "https://polygon.drpc.org";
+const AVALANCHE_RPC_DEFAULT = "https://api.avax.network/ext/bc/C/rpc";
+const MANTLE_RPC_DEFAULT = "https://rpc.mantle.xyz";
 
 const ethereumGasChain = defineGasChain({
   id: ETHEREUM_MAINNET_CLIENT_CHAIN_ID,
@@ -129,6 +135,30 @@ const polygonGasChain = defineGasChain({
   },
   rpcUrl: process.env.NEXT_PUBLIC_POLYGON_RPC_URL ?? POLYGON_RPC_DEFAULT,
   explorerUrl: "https://polygonscan.com",
+});
+
+const avalancheGasChain = defineGasChain({
+  id: AVALANCHE_CHAIN_ID,
+  name: "Avalanche C-Chain",
+  nativeCurrency: {
+    name: "Avalanche",
+    symbol: "AVAX",
+    decimals: 18,
+  },
+  rpcUrl: process.env.NEXT_PUBLIC_AVALANCHE_RPC_URL ?? AVALANCHE_RPC_DEFAULT,
+  explorerUrl: "https://snowscan.xyz",
+});
+
+const mantleGasChain = defineGasChain({
+  id: MANTLE_CHAIN_ID,
+  name: "Mantle",
+  nativeCurrency: {
+    name: "Mantle",
+    symbol: "MNT",
+    decimals: 18,
+  },
+  rpcUrl: process.env.NEXT_PUBLIC_MANTLE_RPC_URL ?? MANTLE_RPC_DEFAULT,
+  explorerUrl: "https://explorer.mantle.xyz",
 });
 
 const arbitrumGasChain = defineGasChain({
@@ -226,6 +256,40 @@ export const GAS_TRACKER_CHAINS = [
     publicRpcEnvNames: ["NEXT_PUBLIC_POLYGON_RPC_URL"],
     statusThresholds: { elevatedGwei: 100, highGwei: 300 },
     coingeckoId: "polygon-ecosystem-token",
+  },
+  {
+    chainId: AVALANCHE_CHAIN_ID,
+    chainName: "Avalanche C-Chain",
+    shortName: "Avalanche",
+    nativeCurrency: "AVAX",
+    nativeCurrencyName: "Avalanche",
+    viemChain: avalancheGasChain,
+    defaultRpcUrl: AVALANCHE_RPC_DEFAULT,
+    publicRpcUrl: avalancheGasChain.rpcUrls.default.http[0],
+    serverRpcEnvNames: [
+      "AVALANCHE_RPC_URL",
+      "AVALANCHE_C_CHAIN_RPC_URL",
+      "AVALANCHE_MAINNET_RPC_URL",
+    ],
+    publicRpcEnvNames: ["NEXT_PUBLIC_AVALANCHE_RPC_URL"],
+    statusThresholds: { elevatedGwei: 1, highGwei: 5 },
+    coingeckoId: "avalanche-2",
+  },
+  {
+    chainId: MANTLE_CHAIN_ID,
+    chainName: "Mantle",
+    shortName: "Mantle",
+    nativeCurrency: "MNT",
+    nativeCurrencyName: "Mantle",
+    viemChain: mantleGasChain,
+    defaultRpcUrl: MANTLE_RPC_DEFAULT,
+    publicRpcUrl: mantleGasChain.rpcUrls.default.http[0],
+    serverRpcEnvNames: ["MANTLE_RPC_URL", "MANTLE_MAINNET_RPC_URL"],
+    publicRpcEnvNames: ["NEXT_PUBLIC_MANTLE_RPC_URL"],
+    statusThresholds: { elevatedGwei: 100, highGwei: 300 },
+    coingeckoId: "mantle",
+    estimateNote:
+      "Mantle wallet estimates may include L1 data fees beyond this gas-price estimate.",
   },
   {
     chainId: ETHEREUM_MAINNET_CLIENT_CHAIN_ID,
