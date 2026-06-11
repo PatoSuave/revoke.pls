@@ -4,6 +4,10 @@ import nextConfig from "../../next.config";
 import { buildContentSecurityPolicy } from "@/lib/security/content-security-policy";
 
 describe("security headers", () => {
+  it("does not advertise the framework in production responses", () => {
+    expect(nextConfig.poweredByHeader).toBe(false);
+  });
+
   it("sets browser hardening headers for every route", async () => {
     const headers = await nextConfig.headers?.();
     const globalHeaders = headers?.find((entry) => entry.source === "/:path*")

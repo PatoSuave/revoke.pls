@@ -23,6 +23,7 @@ const securityHeaders = [
 
 const nextConfig: NextConfig = {
   reactStrictMode: true,
+  poweredByHeader: false,
   ...(isDesktopBuild && {
     // Desktop export only needs TSX app pages. Omitting `.ts` route files keeps
     // hosted-only server APIs out of the static Tauri bundle.

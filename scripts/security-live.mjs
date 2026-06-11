@@ -49,6 +49,13 @@ const REQUIRED_HEADERS = [
   },
 ];
 
+const FORBIDDEN_PAGE_HEADERS = [
+  {
+    name: "x-powered-by",
+    reason: "framework fingerprinting header should stay disabled",
+  },
+];
+
 const PAGE_PATHS = ["/", "/app", "/security"];
 
 const UNPUBLISHED_PAGE_PATHS = [
@@ -398,6 +405,11 @@ async function checkPages(target) {
         fail(`${path} has unexpected ${header.name}.`, {
           expected: header.expected,
         });
+      }
+    }
+    for (const header of FORBIDDEN_PAGE_HEADERS) {
+      if (response.headers.has(header.name)) {
+        fail(`${path} exposes ${header.name}; ${header.reason}.`);
       }
     }
     assertNoSecrets(path, text);
