@@ -43,6 +43,20 @@ export const CHAIN_VISUALS: Record<string, ChainVisual> = {
     accentBorder: "rgba(165, 107, 255, 0.36)",
     accentShadow: "0 0 20px rgba(130, 71, 229, 0.28)",
   },
+  "Avalanche C-Chain": {
+    accent: "#FF6B6B",
+    accentReadable: "#C81E1E",
+    accentSoft: "rgba(232, 65, 66, 0.12)",
+    accentBorder: "rgba(255, 107, 107, 0.35)",
+    accentShadow: "0 0 20px rgba(232, 65, 66, 0.24)",
+  },
+  Mantle: {
+    accent: "#67E8F9",
+    accentReadable: "#0891B2",
+    accentSoft: "rgba(103, 232, 249, 0.11)",
+    accentBorder: "rgba(103, 232, 249, 0.34)",
+    accentShadow: "0 0 20px rgba(103, 232, 249, 0.23)",
+  },
   "Ethereum Mainnet": {
     accent: "#8EA5FF",
     accentReadable: "#4F67D8",

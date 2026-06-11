@@ -304,7 +304,7 @@ function SupportedChainsSection() {
             Current production scope, not future promises.
           </h2>
           <p className="mt-4 text-sm leading-7 text-pulse-muted">
-            The matrix reflects the 8 live EVM networks and scanner/revoke
+            The matrix reflects the 10 live EVM networks and scanner/revoke
             paths present in the app today. It does not enable any new network,
             mark any spender as safe, or imply support for chains that need
             separate approval mechanics.

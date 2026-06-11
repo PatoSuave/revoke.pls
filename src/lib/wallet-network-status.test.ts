@@ -2,8 +2,10 @@ import { describe, expect, it } from "vitest";
 
 import { ARBITRUM_ONE_CLIENT_CHAIN_ID } from "@/lib/arbitrum-approval-client";
 import {
+  AVALANCHE_CHAIN_ID,
   BASE_CHAIN_ID,
   BSC_CHAIN_ID,
+  MANTLE_CHAIN_ID,
   POLYGON_CHAIN_ID,
   PULSECHAIN_CHAIN_ID,
   supportedChainConfigList,
@@ -54,6 +56,8 @@ describe("wallet header network status", () => {
         BSC_CHAIN_ID,
         BASE_CHAIN_ID,
         POLYGON_CHAIN_ID,
+        AVALANCHE_CHAIN_ID,
+        MANTLE_CHAIN_ID,
         ETHEREUM_MAINNET_CLIENT_CHAIN_ID,
         ARBITRUM_ONE_CLIENT_CHAIN_ID,
         OPTIMISM_CLIENT_CHAIN_ID,
@@ -108,20 +112,28 @@ describe("wallet header network status", () => {
     expect(status.label).toBe("Ethereum Mainnet");
   });
 
-  it("keeps PulseChain, BSC, Base, and Polygon as generic supported product chains", () => {
+  it("keeps the generic scanner chains as supported product chains", () => {
     expect(
-      [PULSECHAIN_CHAIN_ID, BSC_CHAIN_ID, BASE_CHAIN_ID, POLYGON_CHAIN_ID].map(
-        (chainId) =>
-          resolveHeaderNetworkStatus({
-            walletChainId: chainId,
-            wagmiChainId: chainId,
-          }),
+      [
+        PULSECHAIN_CHAIN_ID,
+        BSC_CHAIN_ID,
+        BASE_CHAIN_ID,
+        POLYGON_CHAIN_ID,
+        AVALANCHE_CHAIN_ID,
+        MANTLE_CHAIN_ID,
+      ].map((chainId) =>
+        resolveHeaderNetworkStatus({
+          walletChainId: chainId,
+          wagmiChainId: chainId,
+        }),
       ),
     ).toEqual([
       expect.objectContaining({ kind: "supported", label: "PulseChain" }),
       expect.objectContaining({ kind: "supported", label: "BNB Smart Chain" }),
       expect.objectContaining({ kind: "supported", label: "Base" }),
       expect.objectContaining({ kind: "supported", label: "Polygon" }),
+      expect.objectContaining({ kind: "supported", label: "Avalanche C-Chain" }),
+      expect.objectContaining({ kind: "supported", label: "Mantle" }),
     ]);
   });
 
@@ -131,6 +143,8 @@ describe("wallet header network status", () => {
       BSC_CHAIN_ID,
       BASE_CHAIN_ID,
       POLYGON_CHAIN_ID,
+      AVALANCHE_CHAIN_ID,
+      MANTLE_CHAIN_ID,
     ]);
     expect(supportedChainConfigList.map((chain) => chain.chainId)).not.toContain(
       ARBITRUM_ONE_CLIENT_CHAIN_ID,

@@ -57,8 +57,8 @@ export function SiteFooter() {
           <p>Informational and transactional. Not financial advice.</p>
           <p>
             Always verify spender addresses on the relevant explorer for
-            PulseChain, BSC, Base, Polygon, Ethereum, Arbitrum, Optimism, or
-            HyperEVM before signing.
+            PulseChain, BSC, Base, Polygon, Avalanche, Mantle, Ethereum,
+            Arbitrum, Optimism, or HyperEVM before signing.
           </p>
           <p className="mt-1">
             Copyright {year} {siteConfig.name} - {siteConfig.attribution}

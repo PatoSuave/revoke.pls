@@ -9,13 +9,16 @@
 
 ## Active Chains
 
-Eight live product chains are surfaced across the app:
+Ten live product chains are surfaced across the app:
 
 - PulseChain, chain ID `369`, native gas token `PLS`, explorer `PulseScan`
 - BSC / BNB Smart Chain, chain ID `56`, native gas token `BNB`, explorer
   `BscScan`
 - Base, chain ID `8453`, native gas token `ETH`, explorer `BaseScan`
 - Polygon, chain ID `137`, native gas token `POL`, explorer `PolygonScan`
+- Avalanche C-Chain, chain ID `43114`, native gas token `AVAX`, explorer
+  `SnowScan`
+- Mantle, chain ID `5000`, native gas token `MNT`, explorer `Mantle Explorer`
 - Ethereum Mainnet, chain ID `1`, native gas token `ETH`, explorer `Etherscan`
 - Arbitrum One, chain ID `42161`, native gas token `ETH`, explorer `Arbiscan`
 - Optimism / OP Mainnet, chain ID `10`, native gas token `ETH`, explorer
@@ -23,7 +26,7 @@ Eight live product chains are surfaced across the app:
 - HyperEVM, chain ID `999`, native gas token `HYPE`, explorer `Hyperevmscan`,
   verified ERC-20/NFT row revoke
 
-PulseChain, BSC, Base, and Polygon use the generic scanner registry in
+PulseChain, BSC, Base, Polygon, Avalanche, and Mantle use the generic scanner registry in
 `src/lib/chains.ts`, including the shared scan, revoke, and batch lane.
 
 Ethereum Mainnet is wallet-enabled for the Ethereum read-only discovery and
@@ -50,13 +53,16 @@ revoke. HyperEVM gas is paid in HYPE.
 
 ## Web3 Layer
 
-- `src/lib/wagmi.ts` registers PulseChain, BSC, Base, Polygon, Ethereum
-  Mainnet, Arbitrum One, OP Mainnet, and HyperEVM with wagmi. Ethereum,
+- `src/lib/wagmi.ts` registers PulseChain, BSC, Base, Polygon, Avalanche
+  C-Chain, Mantle, Ethereum Mainnet, Arbitrum One, OP Mainnet, and HyperEVM with wagmi. Ethereum,
   Arbitrum, Optimism, and HyperEVM use separate scanner lanes.
 - PulseChain RPC defaults to `https://rpc.pulsechain.com`.
 - BSC RPC defaults to `https://bsc-dataseed.bnbchain.org`.
 - Base RPC defaults to `https://mainnet.base.org`.
 - Polygon RPC defaults to `https://polygon.drpc.org`.
+- Avalanche C-Chain RPC defaults to
+  `https://api.avax.network/ext/bc/C/rpc`.
+- Mantle RPC defaults to `https://rpc.mantle.xyz`.
 - Ethereum wallet RPC defaults to `https://ethereum-rpc.publicnode.com` unless
   overridden for the wallet client.
 - Arbitrum wallet chain recognition uses `https://arb1.arbitrum.io/rpc`.
@@ -68,7 +74,7 @@ revoke. HyperEVM gas is paid in HYPE.
 - HyperEVM wallet chain recognition uses `https://rpc.hyperliquid.xyz/evm`.
   Production HyperEVM approval discovery uses server-only RPC/API settings
   through `/api/hyperevm/approvals`.
-- PulseChain, BSC, Base, Polygon, and Ethereum wallet RPCs can be overridden
+- PulseChain, BSC, Base, Polygon, Avalanche, Mantle, and Ethereum wallet RPCs can be overridden
   with browser-visible public env vars. Server-side discovery RPCs use
   unprefixed server-only env vars.
 - Live reads and writes always include the approval record's `chainId`.
@@ -113,6 +119,16 @@ Polygon hosted web discovery uses the same server route and Etherscan API V2
 logs path with `chainid=137`. Public Polygon RPC `eth_getLogs` is not used for
 historical approval discovery. PolygonScan remains the explorer for address,
 token, and transaction links.
+
+Avalanche hosted web discovery uses the same server route and Etherscan API V2
+logs path with `chainid=43114`. Public Avalanche RPC `eth_getLogs` is not used
+for historical approval discovery. SnowScan remains the explorer for address,
+token, and transaction links.
+
+Mantle hosted web discovery uses the same server route and Etherscan API V2
+logs path with `chainid=5000`. Public Mantle RPC `eth_getLogs` is not used for
+historical approval discovery. Mantle Explorer remains the explorer for
+address, token, and transaction links.
 
 Ethereum historical discovery is exposed through `/api/ethereum/approvals` so
 the Etherscan key stays server-only. The route is read-only, uses bounded
@@ -168,6 +184,22 @@ row-level revoke stays limited to verified ERC-20 and NFT rows.
   `POLYGON_EXPLORER_API_KEY` / `ETHERSCAN_API_KEY`
 - Desktop/static Polygon fallback key env var:
   `NEXT_PUBLIC_POLYGON_EXPLORER_API_KEY`
+- Avalanche server discovery API default:
+  `https://api.etherscan.io/v2/api`
+- Avalanche server discovery API chain id:
+  `AVALANCHE_EXPLORER_CHAIN_ID=43114`
+- Avalanche server API key env vars:
+  `AVALANCHE_EXPLORER_API_KEY` / `ETHERSCAN_API_KEY`
+- Desktop/static Avalanche fallback key env var:
+  `NEXT_PUBLIC_AVALANCHE_EXPLORER_API_KEY`
+- Mantle server discovery API default:
+  `https://api.etherscan.io/v2/api`
+- Mantle server discovery API chain id:
+  `MANTLE_EXPLORER_CHAIN_ID=5000`
+- Mantle server API key env vars:
+  `MANTLE_EXPLORER_API_KEY` / `ETHERSCAN_API_KEY`
+- Desktop/static Mantle fallback key env var:
+  `NEXT_PUBLIC_MANTLE_EXPLORER_API_KEY`
 - Ethereum server RPC env vars:
   `MAINNET_RPC_URL` / `ETHEREUM_RPC_URL`
 - Ethereum server API key env var:
@@ -231,6 +263,20 @@ User-facing Polygon copy uses:
 - `ERC-1155` for multi-token NFT / semi-fungible approvals
 - `POL` for gas
 
+User-facing Avalanche copy uses:
+
+- `ERC-20` for fungible token approvals
+- `ERC-721` for NFT approvals
+- `ERC-1155` for multi-token NFT / semi-fungible approvals
+- `AVAX` for gas
+
+User-facing Mantle copy uses:
+
+- `ERC-20` for fungible token approvals
+- `ERC-721` for NFT approvals
+- `ERC-1155` for multi-token NFT / semi-fungible approvals
+- `MNT` for gas
+
 User-facing Arbitrum copy uses:
 
 - `ERC-20` for fungible token approvals
@@ -274,8 +320,8 @@ Fungible token revoke:
 3. App prepares `approve(spender, 0)`.
 4. Wallet signs and submits on the approval's `chainId`.
 5. UI links the transaction to PulseScan, BscScan, BaseScan, PolygonScan,
-   Etherscan, Arbiscan, Optimistic Etherscan, or Hyperevmscan and rescans after
-   success.
+   SnowScan, Mantle Explorer, Etherscan, Arbiscan, Optimistic Etherscan, or
+   Hyperevmscan and rescans after success.
 
 Permit2 delegated allowance revoke:
 

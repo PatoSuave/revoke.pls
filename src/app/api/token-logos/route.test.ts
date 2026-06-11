@@ -2,8 +2,10 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { getAddress } from "viem";
 
 import {
+  AVALANCHE_CHAIN_ID,
   BASE_CHAIN_ID,
   BSC_CHAIN_ID,
+  MANTLE_CHAIN_ID,
   POLYGON_CHAIN_ID,
   PULSECHAIN_CHAIN_ID,
 } from "@/lib/chains";
@@ -25,6 +27,8 @@ const PLSX = getAddress("0x95B303987A60C71504D99Aa1b13B4DA07b0790ab");
 const WBNB = getAddress("0xBB4CdB9CBd36B01bD1cBaEBF2De08d9173bc095c");
 const WPOL = getAddress("0x0d500B1d8E8eF31E21C99d1Db9A6444d3ADf1270");
 const WETH = getAddress("0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2");
+const WAVAX = getAddress("0xB31f66AA3C1e785363F0875A1B74E27b85FD66c7");
+const WMNT = getAddress("0x78c1b0C915c4FAA5FffA6CAbf0219DA63d7f4cb8");
 
 afterEach(() => {
   vi.unstubAllGlobals();
@@ -153,6 +157,8 @@ describe("token logo API route", () => {
   it.each([
     [ETHEREUM_TOKEN_LOGO_CHAIN_ID, "ethereum", WETH],
     [BASE_CHAIN_ID, "base", WETH],
+    [AVALANCHE_CHAIN_ID, "avalanche", WAVAX],
+    [MANTLE_CHAIN_ID, "mantle", WMNT],
     [ARBITRUM_TOKEN_LOGO_CHAIN_ID, "arbitrum", WETH],
     [OPTIMISM_TOKEN_LOGO_CHAIN_ID, "optimism", WETH],
     [HYPEREVM_TOKEN_LOGO_CHAIN_ID, "hyperevm", WETH],

@@ -3,12 +3,18 @@ import "server-only";
 import { getAddress, isAddress, type Address } from "viem";
 
 import {
+  AVALANCHE_CHAIN_ID,
+  AVALANCHE_EXPLORER_API_DEFAULT,
+  AVALANCHE_EXPLORER_CHAIN_ID_DEFAULT,
   BASE_CHAIN_ID,
   BASE_EXPLORER_API_DEFAULT,
   BASE_EXPLORER_CHAIN_ID_DEFAULT,
   BSC_CHAIN_ID,
   BSC_EXPLORER_API_DEFAULT,
   BSC_EXPLORER_CHAIN_ID_DEFAULT,
+  MANTLE_CHAIN_ID,
+  MANTLE_EXPLORER_API_DEFAULT,
+  MANTLE_EXPLORER_CHAIN_ID_DEFAULT,
   POLYGON_CHAIN_ID,
   POLYGON_EXPLORER_API_DEFAULT,
   POLYGON_EXPLORER_CHAIN_ID_DEFAULT,
@@ -63,6 +69,24 @@ const CHAIN_CONFIGS = {
     apiUrlEnvNames: ["POLYGON_EXPLORER_API_URL"],
     apiKeyEnvNames: ["POLYGON_EXPLORER_API_KEY", "ETHERSCAN_API_KEY"],
     apiChainIdEnvNames: ["POLYGON_EXPLORER_CHAIN_ID"],
+  },
+  [AVALANCHE_CHAIN_ID]: {
+    displayName: "Avalanche",
+    explorerBaseUrl: "https://snowscan.xyz",
+    apiUrlDefault: AVALANCHE_EXPLORER_API_DEFAULT,
+    apiChainIdDefault: AVALANCHE_EXPLORER_CHAIN_ID_DEFAULT,
+    apiUrlEnvNames: ["AVALANCHE_EXPLORER_API_URL"],
+    apiKeyEnvNames: ["AVALANCHE_EXPLORER_API_KEY", "ETHERSCAN_API_KEY"],
+    apiChainIdEnvNames: ["AVALANCHE_EXPLORER_CHAIN_ID"],
+  },
+  [MANTLE_CHAIN_ID]: {
+    displayName: "Mantle",
+    explorerBaseUrl: "https://explorer.mantle.xyz",
+    apiUrlDefault: MANTLE_EXPLORER_API_DEFAULT,
+    apiChainIdDefault: MANTLE_EXPLORER_CHAIN_ID_DEFAULT,
+    apiUrlEnvNames: ["MANTLE_EXPLORER_API_URL"],
+    apiKeyEnvNames: ["MANTLE_EXPLORER_API_KEY", "ETHERSCAN_API_KEY"],
+    apiChainIdEnvNames: ["MANTLE_EXPLORER_CHAIN_ID"],
   },
 } as const;
 

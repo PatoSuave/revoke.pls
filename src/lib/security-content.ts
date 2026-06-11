@@ -84,6 +84,22 @@ export const SECURITY_CHAIN_STATUS_ROWS: readonly ChainStatusRow[] = [
     note: "Shared scanner and wallet-side revoke flow using PolygonScan/Etherscan API V2 discovery and live verification.",
   },
   {
+    chain: "Avalanche C-Chain",
+    chainId: "43114",
+    scan: "Yes",
+    revoke: "Yes",
+    status: "Live",
+    note: "Shared scanner and wallet-side revoke flow using SnowScan/Etherscan API V2 discovery and live verification. Gas is paid in AVAX.",
+  },
+  {
+    chain: "Mantle",
+    chainId: "5000",
+    scan: "Yes",
+    revoke: "Yes",
+    status: "Live",
+    note: "Shared scanner and wallet-side revoke flow using Mantle explorer links, Etherscan API V2 discovery, and live verification. Gas is paid in MNT.",
+  },
+  {
     chain: "Ethereum Mainnet",
     chainId: "1",
     scan: "Yes",
