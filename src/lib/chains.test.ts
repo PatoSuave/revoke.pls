@@ -21,6 +21,9 @@ import {
   POLYGON_EXPLORER_API_DEFAULT,
   POLYGON_EXPLORER_CHAIN_ID_DEFAULT,
   PULSECHAIN_CHAIN_ID,
+  SONIC_CHAIN_ID,
+  SONIC_EXPLORER_API_DEFAULT,
+  SONIC_EXPLORER_CHAIN_ID_DEFAULT,
   avalanche,
   base,
   bsc,
@@ -29,6 +32,7 @@ import {
   isSupportedChainId,
   mantle,
   polygon,
+  sonic,
   supportedChainConfigList,
   supportedChains,
 } from "./chains";
@@ -63,6 +67,7 @@ describe("supported chain config", () => {
       BSC_CHAIN_ID,
       BASE_CHAIN_ID,
       POLYGON_CHAIN_ID,
+      SONIC_CHAIN_ID,
       AVALANCHE_CHAIN_ID,
       MANTLE_CHAIN_ID,
     ]);
@@ -71,6 +76,7 @@ describe("supported chain config", () => {
       BSC_CHAIN_ID,
       BASE_CHAIN_ID,
       POLYGON_CHAIN_ID,
+      SONIC_CHAIN_ID,
       AVALANCHE_CHAIN_ID,
       MANTLE_CHAIN_ID,
     ]);
@@ -79,11 +85,12 @@ describe("supported chain config", () => {
       "BSC",
       "Base",
       "Polygon",
+      "Sonic",
       "Avalanche",
       "Mantle",
     ]);
     expect(getSupportedChainShortNames()).toBe(
-      "PulseChain, BSC, Base, Polygon, Avalanche, or Mantle",
+      "PulseChain, BSC, Base, Polygon, Sonic, Avalanche, or Mantle",
     );
     expect(isSupportedChainId(1)).toBe(false);
     expect(isSupportedChainId(ARBITRUM_ONE_CLIENT_CHAIN_ID)).toBe(false);
@@ -206,6 +213,46 @@ describe("supported chain config", () => {
     ]);
     expect(polygon.id).toBe(137);
     expect(polygon.nativeCurrency.symbol).toBe("POL");
+  });
+
+  it("configures Sonic identity, S gas, standards, and API defaults", () => {
+    const config = getChainConfig(SONIC_CHAIN_ID);
+
+    expect(config?.chainId).toBe(146);
+    expect(config?.displayName).toBe("Sonic Mainnet");
+    expect(config?.shortName).toBe("Sonic");
+    expect(config?.nativeSymbol).toBe("S");
+    expect(config?.maxTransactionGas).toBeUndefined();
+    expect(config?.highGasWarningThreshold).toBeUndefined();
+    expect(config?.standardLabels).toMatchObject({
+      fungible: "ERC-20",
+      nft: "ERC-721",
+      multiToken: "ERC-1155",
+    });
+    expect(config?.discovery.apiProviderKind).toBe("etherscan-v2");
+    expect(config?.discovery.apiProviderName).toBe("Etherscan API V2");
+    expect(config?.explorer.baseUrl).toBe("https://sonicscan.org");
+    expect(config?.explorer.name).toBe("SonicScan");
+    expect(config?.rpc.defaultUrl).toBe("https://rpc.soniclabs.com");
+    expect(config?.discovery.apiUrl).toBe(SONIC_EXPLORER_API_DEFAULT);
+    expect(config?.discovery.apiChainId).toBe(
+      SONIC_EXPLORER_CHAIN_ID_DEFAULT,
+    );
+    expect(config?.discovery.queryParams).toMatchObject({ chainid: "146" });
+    expect(config?.discovery.apiUrlEnvVar).toBe(
+      "NEXT_PUBLIC_SONIC_EXPLORER_API_URL",
+    );
+    expect(config?.discovery.apiChainIdEnvVar).toBe(
+      "NEXT_PUBLIC_SONIC_EXPLORER_CHAIN_ID",
+    );
+    expect(config?.discovery.apiKeyEnvVar).toBe(
+      "NEXT_PUBLIC_SONIC_EXPLORER_API_KEY",
+    );
+    expect(config?.discovery.apiKeyEnvVars).toEqual([
+      "NEXT_PUBLIC_SONIC_EXPLORER_API_KEY",
+    ]);
+    expect(sonic.id).toBe(146);
+    expect(sonic.nativeCurrency.symbol).toBe("S");
   });
 
   it("configures Avalanche identity, AVAX gas, standards, and API defaults", () => {
@@ -336,6 +383,18 @@ describe("supported chain config", () => {
     );
   });
 
+  it("builds SonicScan explorer links", () => {
+    expect(explorerAddressUrl(SONIC_CHAIN_ID, SPENDER)).toBe(
+      `https://sonicscan.org/address/${SPENDER}`,
+    );
+    expect(explorerTokenUrl(SONIC_CHAIN_ID, TOKEN)).toBe(
+      `https://sonicscan.org/token/${TOKEN}`,
+    );
+    expect(explorerTxUrl(SONIC_CHAIN_ID, "0xabc")).toBe(
+      "https://sonicscan.org/tx/0xabc",
+    );
+  });
+
   it("builds SnowScan explorer links", () => {
     expect(explorerAddressUrl(AVALANCHE_CHAIN_ID, SPENDER)).toBe(
       `https://snowscan.xyz/address/${SPENDER}`,
@@ -431,8 +490,12 @@ describe("supported chain config", () => {
     expect(getSpendersForChain(POLYGON_CHAIN_ID)).toEqual([]);
   });
 
-  it("does not leak existing registry labels onto Avalanche or Mantle", () => {
-    for (const chainId of [AVALANCHE_CHAIN_ID, MANTLE_CHAIN_ID]) {
+  it("does not leak existing registry labels onto Sonic, Avalanche, or Mantle", () => {
+    for (const chainId of [
+      SONIC_CHAIN_ID,
+      AVALANCHE_CHAIN_ID,
+      MANTLE_CHAIN_ID,
+    ]) {
       expect(getSpenderEntry(chainId, PULSEX_ROUTER)).toBeUndefined();
       expect(getTokensForChain(chainId)).toEqual([]);
       expect(getSpendersForChain(chainId)).toEqual([]);
@@ -514,8 +577,12 @@ describe("supported chain config", () => {
     });
   });
 
-  it("builds Avalanche and Mantle ERC-20-compatible revoke calls with approve(spender, 0)", () => {
-    for (const chainId of [AVALANCHE_CHAIN_ID, MANTLE_CHAIN_ID]) {
+  it("builds Sonic, Avalanche, and Mantle ERC-20-compatible revoke calls with approve(spender, 0)", () => {
+    for (const chainId of [
+      SONIC_CHAIN_ID,
+      AVALANCHE_CHAIN_ID,
+      MANTLE_CHAIN_ID,
+    ]) {
       const request = {
         ...buildRevokeCall({
           chainId,
@@ -584,6 +651,7 @@ describe("supported chain config", () => {
     expect(copy).toContain("BSC");
     expect(copy).toContain("Base");
     expect(copy).toContain("Polygon");
+    expect(copy).toContain("Sonic");
     expect(copy).toContain("Avalanche");
     expect(copy).toContain("Mantle");
     expect(copy).toContain("Ethereum");
@@ -672,6 +740,26 @@ describe("supported chain config", () => {
     } finally {
       if (original !== undefined) {
         process.env.NEXT_PUBLIC_POLYGON_EXPLORER_CHAIN_ID = original;
+      }
+      vi.resetModules();
+    }
+  });
+
+  it("defaults the Sonic explorer API chain ID to 146 when the env var is absent", async () => {
+    const original = process.env.NEXT_PUBLIC_SONIC_EXPLORER_CHAIN_ID;
+    delete process.env.NEXT_PUBLIC_SONIC_EXPLORER_CHAIN_ID;
+    vi.resetModules();
+
+    try {
+      const chains = await import("./chains");
+      const config = chains.getChainConfig(chains.SONIC_CHAIN_ID);
+
+      expect(config?.discovery.apiProviderKind).toBe("etherscan-v2");
+      expect(config?.discovery.apiChainId).toBe("146");
+      expect(config?.discovery.queryParams).toMatchObject({ chainid: "146" });
+    } finally {
+      if (original !== undefined) {
+        process.env.NEXT_PUBLIC_SONIC_EXPLORER_CHAIN_ID = original;
       }
       vi.resetModules();
     }

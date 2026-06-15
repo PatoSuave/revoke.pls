@@ -1,14 +1,14 @@
 # Environment Variables
 
 Pulse Revoke is primarily a wallet-side frontend app, with server-side BSC,
-Base, Polygon, Avalanche, Mantle, Ethereum, Arbitrum, Optimism, and HyperEVM
+Base, Polygon, Sonic, Avalanche, Mantle, Ethereum, Arbitrum, Optimism, and HyperEVM
 API routes for discovery plus a server-side gas tracker route. Variables prefixed with
 `NEXT_PUBLIC_` are embedded into the browser bundle and are visible to users. Do
 not store private secrets in these variables.
 
 ## Production Requirements
 
-For the live PulseChain, BSC, Base, Polygon, Avalanche, Mantle, Ethereum,
+For the live PulseChain, BSC, Base, Polygon, Sonic, Avalanche, Mantle, Ethereum,
 Arbitrum, Optimism, and HyperEVM product, configure:
 
 | Variable | Production status | Notes |
@@ -29,6 +29,11 @@ Arbitrum, Optimism, and HyperEVM product, configure:
 | `POLYGON_EXPLORER_API_KEY` / `ETHERSCAN_API_KEY` | Required for reliable Polygon discovery | Server-only Etherscan API V2 key with Polygon Mainnet access. |
 | `POLYGON_RPC_URL` / `POLYGON_MAINNET_RPC_URL` | Optional | Server-only Polygon gas tracker RPC override for `/api/gas`. |
 | `NEXT_PUBLIC_POLYGON_RPC_URL` | Recommended | Public fallback is available, but production should prefer a reliable RPC for wallet reads and browser block watching. |
+| `SONIC_EXPLORER_API_URL` | Optional | Server-only Sonic logs API. Defaults to `https://api.etherscan.io/v2/api`. |
+| `SONIC_EXPLORER_CHAIN_ID` | Optional | Must be `146` for Sonic Mainnet Etherscan API V2 logs. Defaults to `146`. |
+| `SONIC_EXPLORER_API_KEY` / `ETHERSCAN_API_KEY` | Required for reliable Sonic discovery | Server-only Etherscan API V2 key with Sonic Mainnet access. |
+| `SONIC_RPC_URL` / `SONIC_MAINNET_RPC_URL` | Optional | Server-only Sonic gas tracker RPC override for `/api/gas`. |
+| `NEXT_PUBLIC_SONIC_RPC_URL` | Recommended | Public fallback is available, but production should prefer a reliable RPC for wallet reads and browser block watching. |
 | `AVALANCHE_EXPLORER_API_URL` | Optional | Server-only Avalanche C-Chain logs API. Defaults to `https://api.etherscan.io/v2/api`. |
 | `AVALANCHE_EXPLORER_CHAIN_ID` | Optional | Must be `43114` for Avalanche C-Chain Etherscan API V2 logs. Defaults to `43114`. |
 | `AVALANCHE_EXPLORER_API_KEY` / `ETHERSCAN_API_KEY` | Required for reliable Avalanche discovery | Server-only Etherscan API V2 key with Avalanche C-Chain access. Etherscan lists Avalanche C-Chain as paid-tier API access. |
@@ -53,7 +58,7 @@ override them for reliability. The gas tracker prefers unprefixed server RPC
 variables, then browser-safe `NEXT_PUBLIC_*` RPC values, then code defaults.
 Keep private RPC URLs server-only.
 
-PulseChain, BSC, Polygon, Avalanche, and Mantle token logos use Dex Screener's
+PulseChain, BSC, Polygon, Sonic, Avalanche, and Mantle token logos use Dex Screener's
 public token lookup endpoint through `/api/token-logos`. No API key is required.
 The app sends token contract addresses only, caps each request at `30`
 addresses, caches successful display metadata at the CDN, and falls back to
@@ -76,9 +81,10 @@ uses `https://rpc.pulsechain.com`.
 Optional. `/api/gas` uses these unprefixed RPC variables before browser-visible
 fallbacks: `PULSECHAIN_RPC_URL`, `PULSECHAIN_MAINNET_RPC_URL`, `BSC_RPC_URL`,
 `BSC_MAINNET_RPC_URL`, `BASE_RPC_URL`, `BASE_MAINNET_RPC_URL`,
-`POLYGON_RPC_URL`, `POLYGON_MAINNET_RPC_URL`, `AVALANCHE_RPC_URL`,
-`AVALANCHE_C_CHAIN_RPC_URL`, `AVALANCHE_MAINNET_RPC_URL`, `MANTLE_RPC_URL`,
-`MANTLE_MAINNET_RPC_URL`, `MAINNET_RPC_URL`, `ETHEREUM_RPC_URL`,
+`POLYGON_RPC_URL`, `POLYGON_MAINNET_RPC_URL`, `SONIC_RPC_URL`,
+`SONIC_MAINNET_RPC_URL`, `AVALANCHE_RPC_URL`, `AVALANCHE_C_CHAIN_RPC_URL`,
+`AVALANCHE_MAINNET_RPC_URL`, `MANTLE_RPC_URL`, `MANTLE_MAINNET_RPC_URL`,
+`MAINNET_RPC_URL`, `ETHEREUM_RPC_URL`,
 `ARBITRUM_ONE_RPC_URL`, `ARBITRUM_RPC_URL`,
 `OPTIMISM_RPC_URL`, `OPTIMISM_MAINNET_RPC_URL`, `OP_MAINNET_RPC_URL`,
 `HYPEREVM_RPC_URL`, `HYPEREVM_MAINNET_RPC_URL`, and
@@ -116,6 +122,16 @@ live validation and transaction submission. If unset, the app uses
 `https://polygon.drpc.org`.
 
 Hosted web Polygon approval discovery does not rely on public Polygon RPC
+`eth_getLogs`; it uses the server-side `/api/discovery/approvals` route with
+Etherscan API V2 logs.
+
+### `NEXT_PUBLIC_SONIC_RPC_URL`
+
+Recommended for production. Overrides the Sonic RPC used by wagmi/viem for
+live validation and transaction submission. If unset, the app uses
+`https://rpc.soniclabs.com`.
+
+Hosted web Sonic approval discovery does not rely on public Sonic RPC
 `eth_getLogs`; it uses the server-side `/api/discovery/approvals` route with
 Etherscan API V2 logs.
 
@@ -160,11 +176,12 @@ discovery. If unset, the app uses `https://api.scan.pulsechain.com/api`.
 
 ### Token Logo Lookup
 
-No environment variable is required for PulseChain, BSC, Polygon, Avalanche,
-or Mantle token logos. The server route
+No environment variable is required for PulseChain, BSC, Polygon, Sonic,
+Avalanche, or Mantle token logos. The server route
 `/api/token-logos?chainId=369&addresses=...`,
 `/api/token-logos?chainId=56&addresses=...`,
 `/api/token-logos?chainId=137&addresses=...`,
+`/api/token-logos?chainId=146&addresses=...`,
 `/api/token-logos?chainId=43114&addresses=...`, or
 `/api/token-logos?chainId=5000&addresses=...` calls Dex Screener for display
 metadata and does not receive wallet owner, spender, or allowance data. Treat
@@ -281,6 +298,42 @@ Do not configure this value as `NEXT_PUBLIC_*`; the frontend does not need a
 Polygon explorer key in hosted web deployments.
 
 ### `NEXT_PUBLIC_POLYGON_EXPLORER_API_KEY`
+
+Desktop/static-only fallback value for builds without API routes. Hosted web
+deployments should leave it unset.
+
+### `SONIC_EXPLORER_API_URL`
+
+Optional server-only Sonic historical logs API base URL. Default:
+
+```text
+https://api.etherscan.io/v2/api
+```
+
+SonicScan remains the user-facing explorer for links, but historical Sonic log
+reads use Etherscan API V2.
+
+### `SONIC_EXPLORER_CHAIN_ID`
+
+Optional server-only Etherscan API V2 chain ID parameter for Sonic Mainnet
+logs. Default:
+
+```text
+146
+```
+
+Every Sonic historical log request should include `chainid=146`.
+
+### `SONIC_EXPLORER_API_KEY`
+
+Required for reliable hosted web Sonic discovery unless `ETHERSCAN_API_KEY` is
+used as the shared server-side Etherscan API V2 key. Etherscan plan limits can
+affect whether Sonic logs are available and how quickly requests are served.
+
+Do not configure this value as `NEXT_PUBLIC_*`; the frontend does not need a
+Sonic explorer key in hosted web deployments.
+
+### `NEXT_PUBLIC_SONIC_EXPLORER_API_KEY`
 
 Desktop/static-only fallback value for builds without API routes. Hosted web
 deployments should leave it unset.
@@ -527,6 +580,7 @@ NEXT_PUBLIC_PULSECHAIN_RPC_URL=
 NEXT_PUBLIC_BSC_RPC_URL=
 NEXT_PUBLIC_BASE_RPC_URL=
 NEXT_PUBLIC_POLYGON_RPC_URL=
+NEXT_PUBLIC_SONIC_RPC_URL=
 NEXT_PUBLIC_AVALANCHE_RPC_URL=
 NEXT_PUBLIC_MANTLE_RPC_URL=
 NEXT_PUBLIC_MAINNET_RPC_URL=
@@ -542,6 +596,9 @@ NEXT_PUBLIC_BASE_EXPLORER_API_KEY=
 NEXT_PUBLIC_POLYGON_EXPLORER_API_URL=
 NEXT_PUBLIC_POLYGON_EXPLORER_CHAIN_ID=137
 NEXT_PUBLIC_POLYGON_EXPLORER_API_KEY=
+NEXT_PUBLIC_SONIC_EXPLORER_API_URL=
+NEXT_PUBLIC_SONIC_EXPLORER_CHAIN_ID=146
+NEXT_PUBLIC_SONIC_EXPLORER_API_KEY=
 NEXT_PUBLIC_AVALANCHE_EXPLORER_API_URL=
 NEXT_PUBLIC_AVALANCHE_EXPLORER_CHAIN_ID=43114
 NEXT_PUBLIC_AVALANCHE_EXPLORER_API_KEY=
@@ -561,6 +618,11 @@ BASE_EXPLORER_API_KEY=
 POLYGON_EXPLORER_API_URL=
 POLYGON_EXPLORER_CHAIN_ID=137
 POLYGON_EXPLORER_API_KEY=
+SONIC_RPC_URL=
+SONIC_MAINNET_RPC_URL=
+SONIC_EXPLORER_API_URL=
+SONIC_EXPLORER_CHAIN_ID=146
+SONIC_EXPLORER_API_KEY=
 AVALANCHE_RPC_URL=
 AVALANCHE_C_CHAIN_RPC_URL=
 AVALANCHE_MAINNET_RPC_URL=
@@ -601,10 +663,10 @@ HYPEREVM_ETHERSCAN_API_KEY=
 
 Explorer APIs and public RPC endpoints can rate-limit, cap responses, or fail.
 The app should surface incomplete discovery or validation instead of displaying
-a false "clear" state. For production BSC, Base, Polygon, Avalanche, and
-Mantle discovery, use Etherscan API V2 keys server-side and account plans that
-support BNB Smart Chain, Base Mainnet, Polygon Mainnet, Avalanche C-Chain, and
-Mantle Mainnet logs.
+a false "clear" state. For production BSC, Base, Polygon, Sonic, Avalanche,
+and Mantle discovery, use Etherscan API V2 keys server-side and account plans
+that support BNB Smart Chain, Base Mainnet, Polygon Mainnet, Sonic Mainnet,
+Avalanche C-Chain, and Mantle Mainnet logs.
 For Arbitrum, configure server-only managed RPC plus an Arbiscan or
 Etherscan-compatible API key with Arbitrum One log access. For Optimism,
 configure server-only managed RPC plus an Etherscan API V2 key with OP Mainnet

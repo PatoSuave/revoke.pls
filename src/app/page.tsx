@@ -82,6 +82,8 @@ const CHAIN_CARD_COPY: Record<string, string> = {
   Base: "Shared scanner and wallet-side revoke flow using Base explorer discovery.",
   Polygon:
     "Shared scanner and wallet-side revoke flow using PolygonScan and live checks.",
+  "Sonic Mainnet":
+    "Shared scanner and wallet-side revoke flow using SonicScan and live checks.",
   "Avalanche C-Chain":
     "Shared scanner and wallet-side revoke flow using SnowScan and live checks.",
   Mantle:

@@ -17,6 +17,7 @@ import {
   MANTLE_CHAIN_ID,
   POLYGON_CHAIN_ID,
   PULSECHAIN_CHAIN_ID,
+  SONIC_CHAIN_ID,
 } from "@/lib/chains";
 import type {
   DiscoveredPair,
@@ -43,6 +44,7 @@ describe("approval discovery API serialization", () => {
     expect(usesServerApprovalDiscovery(BSC_CHAIN_ID)).toBe(true);
     expect(usesServerApprovalDiscovery(BASE_CHAIN_ID)).toBe(true);
     expect(usesServerApprovalDiscovery(POLYGON_CHAIN_ID)).toBe(true);
+    expect(usesServerApprovalDiscovery(SONIC_CHAIN_ID)).toBe(true);
     expect(usesServerApprovalDiscovery(AVALANCHE_CHAIN_ID)).toBe(true);
     expect(usesServerApprovalDiscovery(MANTLE_CHAIN_ID)).toBe(true);
     expect(usesServerApprovalDiscovery(PULSECHAIN_CHAIN_ID)).toBe(false);

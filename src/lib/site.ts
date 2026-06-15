@@ -98,10 +98,10 @@ export const siteConfig = {
   tagline: "Scan, review, revoke.",
   /** Single-sentence meta description (used for SEO + OG). */
   description:
-    "Pulse Revoke helps users review and revoke token and NFT approvals on PulseChain, BSC, Base, Polygon, Avalanche C-Chain, Mantle, Ethereum Mainnet, Arbitrum One, Optimism, and HyperEVM. Arbitrum, Optimism, and HyperEVM revoke support is limited to verified ERC-20/NFT rows.",
+    "Pulse Revoke helps users review and revoke token and NFT approvals on PulseChain, BSC, Base, Polygon, Sonic Mainnet, Avalanche C-Chain, Mantle, Ethereum Mainnet, Arbitrum One, Optimism, and HyperEVM. Arbitrum, Optimism, and HyperEVM revoke support is limited to verified ERC-20/NFT rows.",
   /** Longer paragraph for hero copy and social previews. */
   longDescription:
-    "Review token allowances and NFT operator approvals on PulseChain, BSC, Base, Polygon, Avalanche, Mantle, Ethereum Mainnet, Arbitrum One, Optimism, or HyperEVM. Clear approvals you no longer trust with wallet-signed revoke transactions.",
+    "Review token allowances and NFT operator approvals on PulseChain, BSC, Base, Polygon, Sonic Mainnet, Avalanche, Mantle, Ethereum Mainnet, Arbitrum One, Optimism, or HyperEVM. Clear approvals you no longer trust with wallet-signed revoke transactions.",
   /** Canonical public URL. Override at build time with NEXT_PUBLIC_SITE_URL. */
   url: resolvedUrl,
   /** Keywords for search engines. Keep conservative and factual. */
@@ -111,6 +111,8 @@ export const siteConfig = {
     "BNB Smart Chain",
     "Base",
     "Polygon",
+    "Sonic",
+    "Sonic Mainnet",
     "Avalanche",
     "Avalanche C-Chain",
     "Mantle",
@@ -121,6 +123,7 @@ export const siteConfig = {
     "BSC approvals",
     "Base approvals",
     "Polygon approvals",
+    "Sonic approvals",
     "Avalanche approvals",
     "Mantle approvals",
     "Arbitrum approvals",
@@ -146,6 +149,7 @@ export const siteConfig = {
     bscscan: "https://bscscan.com",
     basescan: "https://basescan.org",
     polygonscan: "https://polygonscan.com",
+    sonicscan: "https://sonicscan.org",
     snowscan: "https://snowscan.xyz",
     mantleExplorer: "https://explorer.mantle.xyz",
     hyperevmscan: "https://hyperevmscan.io",
@@ -156,7 +160,7 @@ export const siteConfig = {
   },
   /** Short attribution line shown in the footer. */
   attribution:
-    "Built for users on PulseChain, BSC, Base, Polygon, Avalanche, Mantle, Ethereum, Arbitrum, Optimism, and HyperEVM.",
+    "Built for users on PulseChain, BSC, Base, Polygon, Sonic, Avalanche, Mantle, Ethereum, Arbitrum, Optimism, and HyperEVM.",
   /** Brand accent colors used by the OG image and icon renderers. */
   brandColors: {
     background: "#07070b",

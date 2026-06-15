@@ -34,6 +34,9 @@ the final checkpoint before submission.
 | BNB Smart Chain | 56 | Wallet-side revoke |
 | Base | 8453 | Wallet-side revoke |
 | Polygon | 137 | Wallet-side revoke |
+| Sonic Mainnet | 146 | Wallet-side revoke |
+| Avalanche C-Chain | 43114 | Wallet-side revoke |
+| Mantle | 5000 | Wallet-side revoke |
 | Ethereum Mainnet | 1 | Live-verified rows |
 | Arbitrum One | 42161 | ERC-20/NFT verified rows only |
 | Optimism / OP Mainnet | 10 | ERC-20/NFT verified rows only |

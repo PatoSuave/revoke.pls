@@ -14,6 +14,7 @@ import {
   MANTLE_CHAIN_ID,
   POLYGON_CHAIN_ID,
   PULSECHAIN_CHAIN_ID,
+  SONIC_CHAIN_ID,
 } from "@/lib/chains";
 import { ARBITRUM_ONE_CLIENT_CHAIN_ID } from "@/lib/arbitrum-approval-client";
 import { ETHEREUM_MAINNET_CLIENT_CHAIN_ID } from "@/lib/ethereum-approval-client";
@@ -28,6 +29,7 @@ describe("chain capability metadata", () => {
         OPTIMISM_CLIENT_CHAIN_ID,
         BSC_CHAIN_ID,
         POLYGON_CHAIN_ID,
+        SONIC_CHAIN_ID,
         AVALANCHE_CHAIN_ID,
         MANTLE_CHAIN_ID,
         PULSECHAIN_CHAIN_ID,
@@ -49,6 +51,7 @@ describe("chain capability metadata", () => {
       false,
     );
     expect(CHAIN_CAPABILITIES[BSC_CHAIN_ID].batchRevokeEnabled).toBe(true);
+    expect(CHAIN_CAPABILITIES[SONIC_CHAIN_ID].batchRevokeEnabled).toBe(true);
     expect(CHAIN_CAPABILITIES[AVALANCHE_CHAIN_ID].batchRevokeEnabled).toBe(
       true,
     );
@@ -69,6 +72,7 @@ describe("chain capability metadata", () => {
     expect(CHAIN_CAPABILITIES[AVALANCHE_CHAIN_ID].supportsEip7702).toBe(
       "unknown",
     );
+    expect(CHAIN_CAPABILITIES[SONIC_CHAIN_ID].supportsEip7702).toBe("unknown");
     expect(CHAIN_CAPABILITIES[MANTLE_CHAIN_ID].supportsEip7702).toBe(
       "unknown",
     );
@@ -83,6 +87,7 @@ describe("chain capability metadata", () => {
     );
     expect(CHAIN_CAPABILITIES[BASE_CHAIN_ID].hasPerTxGasMaximum).toBe(true);
     expect(CHAIN_CAPABILITIES[POLYGON_CHAIN_ID].perTxGasCap).toBeUndefined();
+    expect(CHAIN_CAPABILITIES[SONIC_CHAIN_ID].perTxGasCap).toBeUndefined();
     expect(CHAIN_CAPABILITIES[AVALANCHE_CHAIN_ID].perTxGasCap).toBeUndefined();
     expect(CHAIN_CAPABILITIES[MANTLE_CHAIN_ID].perTxGasCap).toBeUndefined();
   });

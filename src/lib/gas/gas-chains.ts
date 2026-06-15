@@ -14,6 +14,7 @@ import {
   MANTLE_CHAIN_ID,
   POLYGON_CHAIN_ID,
   PULSECHAIN_CHAIN_ID,
+  SONIC_CHAIN_ID,
 } from "@/lib/chains";
 import {
   ETHEREUM_MAINNET_CLIENT_CHAIN_ID,
@@ -43,6 +44,7 @@ export type GasTrackerChainId =
   | typeof BSC_CHAIN_ID
   | typeof BASE_CHAIN_ID
   | typeof POLYGON_CHAIN_ID
+  | typeof SONIC_CHAIN_ID
   | typeof AVALANCHE_CHAIN_ID
   | typeof MANTLE_CHAIN_ID
   | typeof ETHEREUM_MAINNET_CLIENT_CHAIN_ID
@@ -71,6 +73,7 @@ const PULSECHAIN_RPC_DEFAULT = "https://rpc.pulsechain.com";
 const BSC_RPC_DEFAULT = "https://bsc-dataseed.bnbchain.org";
 const BASE_RPC_DEFAULT = "https://mainnet.base.org";
 const POLYGON_RPC_DEFAULT = "https://polygon.drpc.org";
+const SONIC_RPC_DEFAULT = "https://rpc.soniclabs.com";
 const AVALANCHE_RPC_DEFAULT = "https://api.avax.network/ext/bc/C/rpc";
 const MANTLE_RPC_DEFAULT = "https://rpc.mantle.xyz";
 
@@ -135,6 +138,18 @@ const polygonGasChain = defineGasChain({
   },
   rpcUrl: process.env.NEXT_PUBLIC_POLYGON_RPC_URL ?? POLYGON_RPC_DEFAULT,
   explorerUrl: "https://polygonscan.com",
+});
+
+const sonicGasChain = defineGasChain({
+  id: SONIC_CHAIN_ID,
+  name: "Sonic Mainnet",
+  nativeCurrency: {
+    name: "Sonic",
+    symbol: "S",
+    decimals: 18,
+  },
+  rpcUrl: process.env.NEXT_PUBLIC_SONIC_RPC_URL ?? SONIC_RPC_DEFAULT,
+  explorerUrl: "https://sonicscan.org",
 });
 
 const avalancheGasChain = defineGasChain({
@@ -256,6 +271,20 @@ export const GAS_TRACKER_CHAINS = [
     publicRpcEnvNames: ["NEXT_PUBLIC_POLYGON_RPC_URL"],
     statusThresholds: { elevatedGwei: 100, highGwei: 300 },
     coingeckoId: "polygon-ecosystem-token",
+  },
+  {
+    chainId: SONIC_CHAIN_ID,
+    chainName: "Sonic Mainnet",
+    shortName: "Sonic",
+    nativeCurrency: "S",
+    nativeCurrencyName: "Sonic",
+    viemChain: sonicGasChain,
+    defaultRpcUrl: SONIC_RPC_DEFAULT,
+    publicRpcUrl: sonicGasChain.rpcUrls.default.http[0],
+    serverRpcEnvNames: ["SONIC_RPC_URL", "SONIC_MAINNET_RPC_URL"],
+    publicRpcEnvNames: ["NEXT_PUBLIC_SONIC_RPC_URL"],
+    statusThresholds: { elevatedGwei: 100, highGwei: 300 },
+    coingeckoId: "sonic",
   },
   {
     chainId: AVALANCHE_CHAIN_ID,

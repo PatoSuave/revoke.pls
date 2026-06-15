@@ -218,6 +218,7 @@ describe("hardening source invariants", () => {
     expect(liveScript).toContain("_vercel_share");
     expect(envScript).toContain("NEXT_PUBLIC_BSC_EXPLORER_API_KEY");
     expect(envScript).toContain("NEXT_PUBLIC_BSCSCAN_API_KEY");
+    expect(envScript).toContain("NEXT_PUBLIC_SONIC_EXPLORER_API_KEY");
     expect(envScript).toContain("NEXT_PUBLIC_AVALANCHE_EXPLORER_API_KEY");
     expect(envScript).toContain("NEXT_PUBLIC_MANTLE_EXPLORER_API_KEY");
     expect(envScript).toContain("NEXT_PUBLIC_ETHERSCAN_API_KEY");

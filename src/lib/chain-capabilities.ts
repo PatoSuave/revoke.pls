@@ -6,6 +6,7 @@ import {
   MANTLE_CHAIN_ID,
   POLYGON_CHAIN_ID,
   PULSECHAIN_CHAIN_ID,
+  SONIC_CHAIN_ID,
 } from "@/lib/chains";
 import { ARBITRUM_ONE_CLIENT_CHAIN_ID } from "@/lib/arbitrum-approval-client";
 import { ETHEREUM_MAINNET_CLIENT_CHAIN_ID } from "@/lib/ethereum-approval-client";
@@ -72,6 +73,15 @@ export const CHAIN_CAPABILITIES: Record<number, ChainCapability> = {
   [POLYGON_CHAIN_ID]: {
     chainId: POLYGON_CHAIN_ID,
     name: "Polygon",
+    supportsEip7702: "unknown",
+    batchRevokeEnabled: true,
+    websocketSupport: "unknown",
+    confirmationStrategy: "receipt-plus-live-recheck",
+    notes: ["Use standard RPC methods where possible."],
+  },
+  [SONIC_CHAIN_ID]: {
+    chainId: SONIC_CHAIN_ID,
+    name: "Sonic Mainnet",
     supportsEip7702: "unknown",
     batchRevokeEnabled: true,
     websocketSupport: "unknown",

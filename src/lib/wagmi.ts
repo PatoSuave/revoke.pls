@@ -12,6 +12,7 @@ import {
   mantle,
   polygon,
   pulsechain,
+  sonic,
   supportedChains,
 } from "@/lib/chains";
 import {
@@ -35,6 +36,7 @@ import {
  *  - BNB Smart Chain mainnet (56)
  *  - Base mainnet (8453)
  *  - Polygon mainnet (137)
+ *  - Sonic Mainnet (146)
  *  - Avalanche C-Chain (43114)
  *  - Mantle mainnet (5000)
  *
@@ -71,7 +73,7 @@ export const hasWalletConnect: boolean = Boolean(walletConnectProjectId);
 const WALLETCONNECT_METADATA = {
   name: "Pulse Revoke",
   description:
-    "Review token approvals on PulseChain, BSC, Base, Polygon, Avalanche, Mantle, Ethereum, Arbitrum, Optimism, and HyperEVM.",
+    "Review token approvals on PulseChain, BSC, Base, Polygon, Sonic, Avalanche, Mantle, Ethereum, Arbitrum, Optimism, and HyperEVM.",
   url: "https://pulserevoke.com",
   icons: ["https://pulserevoke.com/icon.png"],
 };
@@ -107,6 +109,7 @@ export const wagmiConfig = createConfig({
     [bsc.id]: http(process.env.NEXT_PUBLIC_BSC_RPC_URL ?? undefined),
     [base.id]: http(process.env.NEXT_PUBLIC_BASE_RPC_URL ?? undefined),
     [polygon.id]: http(process.env.NEXT_PUBLIC_POLYGON_RPC_URL ?? undefined),
+    [sonic.id]: http(process.env.NEXT_PUBLIC_SONIC_RPC_URL ?? undefined),
     [avalanche.id]: http(
       process.env.NEXT_PUBLIC_AVALANCHE_RPC_URL ?? undefined,
     ),

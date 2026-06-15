@@ -13,6 +13,7 @@ export const PULSECHAIN_CHAIN_ID = 369;
 export const BSC_CHAIN_ID = 56;
 export const BASE_CHAIN_ID = 8453;
 export const POLYGON_CHAIN_ID = 137;
+export const SONIC_CHAIN_ID = 146;
 export const AVALANCHE_CHAIN_ID = 43114;
 export const MANTLE_CHAIN_ID = 5000;
 export type SupportedChainId =
@@ -20,6 +21,7 @@ export type SupportedChainId =
   | typeof BSC_CHAIN_ID
   | typeof BASE_CHAIN_ID
   | typeof POLYGON_CHAIN_ID
+  | typeof SONIC_CHAIN_ID
   | typeof AVALANCHE_CHAIN_ID
   | typeof MANTLE_CHAIN_ID;
 
@@ -27,6 +29,7 @@ const PULSECHAIN_RPC_DEFAULT = "https://rpc.pulsechain.com";
 const BSC_RPC_DEFAULT = "https://bsc-dataseed.bnbchain.org";
 const BASE_RPC_DEFAULT = "https://mainnet.base.org";
 const POLYGON_RPC_DEFAULT = "https://polygon.drpc.org";
+const SONIC_RPC_DEFAULT = "https://rpc.soniclabs.com";
 const AVALANCHE_RPC_DEFAULT = "https://api.avax.network/ext/bc/C/rpc";
 const MANTLE_RPC_DEFAULT = "https://rpc.mantle.xyz";
 
@@ -34,6 +37,7 @@ const PULSECHAIN_EXPLORER_BASE_URL = "https://scan.pulsechain.com";
 const BSC_EXPLORER_BASE_URL = "https://bscscan.com";
 const BASE_EXPLORER_BASE_URL = "https://basescan.org";
 const POLYGON_EXPLORER_BASE_URL = "https://polygonscan.com";
+const SONIC_EXPLORER_BASE_URL = "https://sonicscan.org";
 const AVALANCHE_EXPLORER_BASE_URL = "https://snowscan.xyz";
 const MANTLE_EXPLORER_BASE_URL = "https://explorer.mantle.xyz";
 
@@ -43,6 +47,7 @@ export const BSC_EXPLORER_API_DEFAULT = "https://api.etherscan.io/v2/api";
 export const BASE_EXPLORER_API_DEFAULT = "https://api.etherscan.io/v2/api";
 export const POLYGON_EXPLORER_API_DEFAULT =
   "https://api.etherscan.io/v2/api";
+export const SONIC_EXPLORER_API_DEFAULT = "https://api.etherscan.io/v2/api";
 export const AVALANCHE_EXPLORER_API_DEFAULT =
   "https://api.etherscan.io/v2/api";
 export const MANTLE_EXPLORER_API_DEFAULT =
@@ -57,6 +62,7 @@ export const BSC_EXPLORER_CHAIN_ID_DEFAULT = BSC_CHAIN_ID.toString();
 export const BASE_EXPLORER_CHAIN_ID_DEFAULT = BASE_CHAIN_ID.toString();
 export const POLYGON_EXPLORER_CHAIN_ID_DEFAULT =
   POLYGON_CHAIN_ID.toString();
+export const SONIC_EXPLORER_CHAIN_ID_DEFAULT = SONIC_CHAIN_ID.toString();
 export const AVALANCHE_EXPLORER_CHAIN_ID_DEFAULT =
   AVALANCHE_CHAIN_ID.toString();
 export const MANTLE_EXPLORER_CHAIN_ID_DEFAULT = MANTLE_CHAIN_ID.toString();
@@ -68,6 +74,7 @@ export type SupportedChainKey =
   | "bsc"
   | "base"
   | "polygon"
+  | "sonic"
   | "avalanche"
   | "mantle";
 
@@ -81,11 +88,13 @@ function cleanApiKey(value: string | undefined): string | undefined {
   if (!cleaned) return undefined;
   if (cleaned === "PASTE_YOUR_BSCSCAN_KEY_HERE") return undefined;
   if (cleaned === "PASTE_YOUR_POLYGONSCAN_KEY_HERE") return undefined;
+  if (cleaned === "PASTE_YOUR_SONIC_EXPLORER_KEY_HERE") return undefined;
   if (cleaned === "PASTE_YOUR_AVALANCHE_EXPLORER_KEY_HERE") return undefined;
   if (cleaned === "PASTE_YOUR_MANTLE_EXPLORER_KEY_HERE") return undefined;
   if (cleaned === "PASTE_YOUR_ETHERSCAN_V2_KEY_HERE") return undefined;
   if (cleaned === "your_bscscan_key") return undefined;
   if (cleaned === "your_polygonscan_key") return undefined;
+  if (cleaned === "your_sonic_explorer_key") return undefined;
   if (cleaned === "your_avalanche_explorer_key") return undefined;
   if (cleaned === "your_mantle_explorer_key") return undefined;
   if (cleaned === "YOUR_ETHERSCAN_V2_KEY") return undefined;
@@ -121,6 +130,7 @@ const pulsechainRpcEnv = cleanEnv(process.env.NEXT_PUBLIC_PULSECHAIN_RPC_URL);
 const bscRpcEnv = cleanEnv(process.env.NEXT_PUBLIC_BSC_RPC_URL);
 const baseRpcEnv = cleanEnv(process.env.NEXT_PUBLIC_BASE_RPC_URL);
 const polygonRpcEnv = cleanEnv(process.env.NEXT_PUBLIC_POLYGON_RPC_URL);
+const sonicRpcEnv = cleanEnv(process.env.NEXT_PUBLIC_SONIC_RPC_URL);
 const avalancheRpcEnv = cleanEnv(process.env.NEXT_PUBLIC_AVALANCHE_RPC_URL);
 const mantleRpcEnv = cleanEnv(process.env.NEXT_PUBLIC_MANTLE_RPC_URL);
 const pulsechainExplorerApiEnv = cleanEnv(
@@ -134,6 +144,9 @@ const baseExplorerApiEnv = cleanEnv(
 );
 const polygonExplorerApiEnv = cleanEnv(
   process.env.NEXT_PUBLIC_POLYGON_EXPLORER_API_URL,
+);
+const sonicExplorerApiEnv = cleanEnv(
+  process.env.NEXT_PUBLIC_SONIC_EXPLORER_API_URL,
 );
 const avalancheExplorerApiEnv = cleanEnv(
   process.env.NEXT_PUBLIC_AVALANCHE_EXPLORER_API_URL,
@@ -150,6 +163,9 @@ const baseExplorerChainIdEnv = cleanEnv(
 const polygonExplorerChainIdEnv = cleanEnv(
   process.env.NEXT_PUBLIC_POLYGON_EXPLORER_CHAIN_ID,
 );
+const sonicExplorerChainIdEnv = cleanEnv(
+  process.env.NEXT_PUBLIC_SONIC_EXPLORER_CHAIN_ID,
+);
 const avalancheExplorerChainIdEnv = cleanEnv(
   process.env.NEXT_PUBLIC_AVALANCHE_EXPLORER_CHAIN_ID,
 );
@@ -165,6 +181,9 @@ const baseExplorerApiKeyEnv = cleanApiKey(
 );
 const polygonExplorerApiKeyEnv = cleanApiKey(
   process.env.NEXT_PUBLIC_POLYGON_EXPLORER_API_KEY,
+);
+const sonicExplorerApiKeyEnv = cleanApiKey(
+  process.env.NEXT_PUBLIC_SONIC_EXPLORER_API_KEY,
 );
 const avalancheExplorerApiKeyEnv = cleanApiKey(
   process.env.NEXT_PUBLIC_AVALANCHE_EXPLORER_API_KEY,
@@ -189,6 +208,10 @@ const polygonExplorerChainId =
   polygonExplorerChainIdEnv === POLYGON_EXPLORER_CHAIN_ID_DEFAULT
     ? polygonExplorerChainIdEnv
     : POLYGON_EXPLORER_CHAIN_ID_DEFAULT;
+const sonicExplorerChainId =
+  sonicExplorerChainIdEnv === SONIC_EXPLORER_CHAIN_ID_DEFAULT
+    ? sonicExplorerChainIdEnv
+    : SONIC_EXPLORER_CHAIN_ID_DEFAULT;
 const avalancheExplorerChainId =
   avalancheExplorerChainIdEnv === AVALANCHE_EXPLORER_CHAIN_ID_DEFAULT
     ? avalancheExplorerChainIdEnv
@@ -226,6 +249,12 @@ const polygonDiscoveryWarnings = [
   polygonExplorerChainIdEnv &&
   polygonExplorerChainIdEnv !== POLYGON_EXPLORER_CHAIN_ID_DEFAULT
     ? `NEXT_PUBLIC_POLYGON_EXPLORER_CHAIN_ID must be ${POLYGON_EXPLORER_CHAIN_ID_DEFAULT} for Polygon Mainnet. The app is using chainid=${POLYGON_EXPLORER_CHAIN_ID_DEFAULT}.`
+    : null,
+].filter((warning): warning is string => Boolean(warning));
+const sonicDiscoveryWarnings = [
+  sonicExplorerChainIdEnv &&
+  sonicExplorerChainIdEnv !== SONIC_EXPLORER_CHAIN_ID_DEFAULT
+    ? `NEXT_PUBLIC_SONIC_EXPLORER_CHAIN_ID must be ${SONIC_EXPLORER_CHAIN_ID_DEFAULT} for Sonic Mainnet. The app is using chainid=${SONIC_EXPLORER_CHAIN_ID_DEFAULT}.`
     : null,
 ].filter((warning): warning is string => Boolean(warning));
 const avalancheDiscoveryWarnings = [
@@ -339,6 +368,33 @@ export const polygon = defineChain({
     default: {
       name: "PolygonScan",
       url: POLYGON_EXPLORER_BASE_URL,
+    },
+  },
+  contracts: {
+    multicall3: {
+      address: "0xcA11bde05977b3631167028862bE2a173976CA11",
+    },
+  },
+  testnet: false,
+});
+
+export const sonic = defineChain({
+  id: SONIC_CHAIN_ID,
+  name: "Sonic Mainnet",
+  nativeCurrency: {
+    name: "Sonic",
+    symbol: "S",
+    decimals: 18,
+  },
+  rpcUrls: {
+    default: {
+      http: [sonicRpcEnv ?? SONIC_RPC_DEFAULT],
+    },
+  },
+  blockExplorers: {
+    default: {
+      name: "SonicScan",
+      url: SONIC_EXPLORER_BASE_URL,
     },
   },
   contracts: {
@@ -600,6 +656,11 @@ const polygonRpc = buildRpcConfig(
   POLYGON_RPC_DEFAULT,
   polygonRpcEnv,
 );
+const sonicRpc = buildRpcConfig(
+  "NEXT_PUBLIC_SONIC_RPC_URL",
+  SONIC_RPC_DEFAULT,
+  sonicRpcEnv,
+);
 const avalancheRpc = buildRpcConfig(
   "NEXT_PUBLIC_AVALANCHE_RPC_URL",
   AVALANCHE_RPC_DEFAULT,
@@ -701,6 +762,31 @@ const polygonDiscovery = buildDiscoveryConfig({
   missingApiKeyMessage:
     "Polygon historical discovery uses Etherscan API V2. Set NEXT_PUBLIC_POLYGON_EXPLORER_API_KEY only for desktop/static builds without API routes. Hosted web deployments should use POLYGON_EXPLORER_API_KEY or ETHERSCAN_API_KEY server-side.",
   warnings: polygonDiscoveryWarnings,
+});
+
+const sonicDiscovery = buildDiscoveryConfig({
+  id: "etherscan-v2-sonic",
+  name: "Etherscan API V2 (Sonic logs)",
+  apiProviderKind: "etherscan-v2",
+  apiProviderName: "Etherscan API V2",
+  url: SONIC_EXPLORER_BASE_URL,
+  apiUrlEnvVar: "NEXT_PUBLIC_SONIC_EXPLORER_API_URL",
+  apiUrlDefault: SONIC_EXPLORER_API_DEFAULT,
+  apiChainId: sonicExplorerChainId,
+  apiChainIdEnvVar: "NEXT_PUBLIC_SONIC_EXPLORER_CHAIN_ID",
+  apiKeyEnvVar: "NEXT_PUBLIC_SONIC_EXPLORER_API_KEY",
+  apiKeyEnvVars: ["NEXT_PUBLIC_SONIC_EXPLORER_API_KEY"],
+  apiUrlEnv: sonicExplorerApiEnv,
+  apiKeyEnv: sonicExplorerApiKeyEnv,
+  requiresApiKey: true,
+  queryParams: {
+    chainid: sonicExplorerChainId,
+  },
+  limitations:
+    "Etherscan API V2 can rate-limit, cap responses, or require smaller block windows for Sonic logs.",
+  missingApiKeyMessage:
+    "Sonic historical discovery uses Etherscan API V2. Set NEXT_PUBLIC_SONIC_EXPLORER_API_KEY only for desktop/static builds without API routes. Hosted web deployments should use SONIC_EXPLORER_API_KEY or ETHERSCAN_API_KEY server-side.",
+  warnings: sonicDiscoveryWarnings,
 });
 
 const avalancheDiscovery = buildDiscoveryConfig({
@@ -895,6 +981,41 @@ export const supportedChainConfigs = {
       nftOperator: "ERC-721/ERC-1155",
     },
   },
+  [SONIC_CHAIN_ID]: {
+    key: "sonic",
+    chain: sonic,
+    chainId: SONIC_CHAIN_ID,
+    displayName: "Sonic Mainnet",
+    shortName: "Sonic",
+    nativeSymbol: "S",
+    rpc: sonicRpc,
+    explorer: {
+      name: "SonicScan",
+      baseUrl: SONIC_EXPLORER_BASE_URL,
+      apiUrl: sonicDiscovery.apiUrl,
+      apiUrlEnvVar: sonicDiscovery.apiUrlEnvVar,
+      apiKeyEnvVar: sonicDiscovery.apiKeyEnvVar,
+      urls: explorerUrls(SONIC_EXPLORER_BASE_URL),
+    },
+    discovery: sonicDiscovery,
+    discoverySettings: {
+      sourceKind: "explorer-logs",
+      providerName: "Etherscan API V2",
+      approvalEventTopicMode: "topic0-topic1-owner",
+      defaultFromBlock: "0",
+      defaultToBlock: "latest",
+      pageSize: 1000,
+      historicalRpcLogs: "disabled",
+      capWarning:
+        "Etherscan API V2 may rate-limit, cap pages, or require smaller windows for Sonic logs; incomplete discovery is surfaced to the user.",
+    },
+    standardLabels: {
+      fungible: "ERC-20",
+      nft: "ERC-721",
+      multiToken: "ERC-1155",
+      nftOperator: "ERC-721/ERC-1155",
+    },
+  },
   [AVALANCHE_CHAIN_ID]: {
     key: "avalanche",
     chain: avalanche,
@@ -972,6 +1093,7 @@ export const supportedChains = [
   bsc,
   base,
   polygon,
+  sonic,
   avalanche,
   mantle,
 ] as const;
@@ -996,6 +1118,7 @@ export const supportedChainConfigList = [
   supportedChainConfigs[BSC_CHAIN_ID],
   supportedChainConfigs[BASE_CHAIN_ID],
   supportedChainConfigs[POLYGON_CHAIN_ID],
+  supportedChainConfigs[SONIC_CHAIN_ID],
   supportedChainConfigs[AVALANCHE_CHAIN_ID],
   supportedChainConfigs[MANTLE_CHAIN_ID],
 ] as const;

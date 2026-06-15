@@ -1,8 +1,9 @@
 # Transparency Notes
 
 Pulse Revoke is public code for reviewing and clearing wallet approvals on
-PulseChain, BSC / BNB Smart Chain, Base, Polygon, Avalanche C-Chain, Mantle,
-Ethereum Mainnet, Arbitrum One, Optimism / OP Mainnet, and HyperEVM.
+PulseChain, BSC / BNB Smart Chain, Base, Polygon, Sonic Mainnet, Avalanche
+C-Chain, Mantle, Ethereum Mainnet, Arbitrum One, Optimism / OP Mainnet, and
+HyperEVM.
 
 ## What The App Does
 
@@ -12,11 +13,11 @@ Ethereum Mainnet, Arbitrum One, Optimism / OP Mainnet, and HyperEVM.
 - Rechecks live on-chain state before display
 - Shows active approvals only
 - Adds chain-scoped registry labels where known
-- Looks up PulseChain, BSC, Polygon, Avalanche, and Mantle token logos by token
+- Looks up PulseChain, BSC, Polygon, Sonic, Avalanche, and Mantle token logos by token
   contract address for display only
 - Prepares standard approval-clearing transactions when the user chooses to
   revoke
-- Scans BSC, Base, Polygon, Avalanche, and Mantle through a server-side
+- Scans BSC, Base, Polygon, Sonic, Avalanche, and Mantle through a server-side
   read-only API in hosted web builds
 - Scans Arbitrum One through a server-side read-only API and enables only
   live-verified ERC-20 and NFT row revoke
@@ -45,13 +46,14 @@ Ethereum Mainnet, Arbitrum One, Optimism / OP Mainnet, and HyperEVM.
 
 - Review the active chain shown in the app.
 - Open token and spender links on PulseScan, BscScan, BaseScan, PolygonScan,
-  SnowScan, Mantle Explorer, Etherscan, Arbiscan, Optimistic Etherscan, or
-  Hyperevmscan.
+  SonicScan, SnowScan, Mantle Explorer, Etherscan, Arbiscan, Optimistic
+  Etherscan, or Hyperevmscan.
 - Check that revoke wallet prompts match the intended approval-clearing call.
 - Confirm BSC transactions use BNB gas and BscScan links.
 - Confirm PulseChain transactions use PLS gas and PulseScan links.
 - Confirm Base transactions use ETH gas and BaseScan links.
 - Confirm Polygon transactions use POL gas and PolygonScan links.
+- Confirm Sonic transactions use S gas and SonicScan links.
 - Confirm Avalanche transactions use AVAX gas and SnowScan links.
 - Confirm Mantle transactions use MNT gas and Mantle explorer links.
 - Use `/app?debug=1` for diagnostic information about discovery source,
@@ -61,7 +63,7 @@ Ethereum Mainnet, Arbitrum One, Optimism / OP Mainnet, and HyperEVM.
 
 Approval discovery starts from historical events. Public RPC providers can be
 unreliable or impractical for large historical `eth_getLogs` scans, especially
-on BSC, Base, Polygon, Avalanche, and Mantle. Pulse Revoke uses explorer log
+on BSC, Base, Polygon, Sonic, Avalanche, and Mantle. Pulse Revoke uses explorer log
 APIs for historical discovery and then uses live RPC reads to validate current
 state.
 
@@ -71,9 +73,11 @@ links. For Base, hosted web historical discovery uses the same server-side
 route backed by Etherscan API V2 with `chainid=8453`. BaseScan is still used
 for public explorer links. Polygon hosted web historical discovery uses the same
 server-side route backed by Etherscan API V2 with `chainid=137`. PolygonScan is
-still used for public explorer links. Avalanche hosted web historical discovery
-uses the same server-side route backed by Etherscan API V2 with
-`chainid=43114`. SnowScan is still used for public explorer links. Mantle
+still used for public explorer links. Sonic hosted web historical discovery
+uses the same server-side route backed by Etherscan API V2 with `chainid=146`.
+SonicScan is still used for public explorer links. Avalanche hosted web
+historical discovery uses the same server-side route backed by Etherscan API V2
+with `chainid=43114`. SnowScan is still used for public explorer links. Mantle
 hosted web historical discovery uses the same server-side route backed by
 Etherscan API V2 with `chainid=5000`. Mantle Explorer is still used for public
 explorer links. Ethereum, Arbitrum, Optimism, and HyperEVM discovery use
@@ -104,7 +108,7 @@ not automatically mean safe.
 
 ## Token Logos
 
-PulseChain, BSC, Polygon, Avalanche, and Mantle token logos are optional
+PulseChain, BSC, Polygon, Sonic, Avalanche, and Mantle token logos are optional
 display metadata resolved through the server-side `/api/token-logos` route. The
 resolver sends token contract addresses only, not wallet owner addresses,
 spender addresses, allowance amounts, or revoke state.

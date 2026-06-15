@@ -33,7 +33,7 @@ export async function GET(request: Request) {
   const chainId = Number(url.searchParams.get("chainId"));
   if (!Number.isInteger(chainId) || !isServerDiscoveryChainId(chainId)) {
     return badRequest(
-      "Server discovery currently supports chainId=56, 8453, 137, 43114, and 5000.",
+      "Server discovery currently supports chainId=56, 8453, 137, 146, 43114, and 5000.",
     );
   }
 

@@ -1,7 +1,8 @@
 # Scanner QA Checklist
 
 Use this checklist to verify that Pulse Revoke reads approval state correctly on
-PulseChain, BSC, Base, Polygon, Avalanche, Mantle, Ethereum, Arbitrum One
+PulseChain, BSC, Base, Polygon, Sonic Mainnet, Avalanche, Mantle, Ethereum,
+Arbitrum One
 verified-row revoke, Optimism verified-row revoke, and HyperEVM verified-row
 revoke.
 Keep all testing low-risk and manual.
@@ -37,6 +38,7 @@ Run the scanner flow on all supported chains:
 - BSC / BNB Smart Chain, chain ID `56`, gas token `BNB`.
 - Base, chain ID `8453`, gas token `ETH`.
 - Polygon, chain ID `137`, gas token `POL`.
+- Sonic Mainnet, chain ID `146`, gas token `S`.
 - Avalanche C-Chain, chain ID `43114`, gas token `AVAX`.
 - Mantle, chain ID `5000`, gas token `MNT`.
 - Ethereum Mainnet, chain ID `1`, gas token `ETH`.
@@ -58,6 +60,7 @@ For each chain, confirm diagnostics show:
 - BSC API chain ID `56` when testing BNB Smart Chain.
 - Base API chain ID `8453` when testing Base.
 - Polygon API chain ID `137` when testing Polygon.
+- Sonic API chain ID `146` when testing Sonic Mainnet.
 - Avalanche API chain ID `43114` when testing Avalanche C-Chain.
 - Mantle API chain ID `5000` when testing Mantle.
 - Arbitrum API chain ID `42161` when testing Arbitrum One.
@@ -143,6 +146,22 @@ For each chain, confirm diagnostics show:
 - Polygon scans use Etherscan API V2 logs with `chainid=137` for historical
   approval discovery through `/api/discovery/approvals`.
 - The app does not rely on public Polygon RPC `eth_getLogs` for historical
+  approval discovery.
+- Rate limits, malformed responses, missing API keys, and capped responses are
+  shown as incomplete/error states, not as "clear".
+
+## Sonic Discovery Checks
+
+- `SONIC_EXPLORER_API_URL` is either unset or points to a compatible Etherscan
+  API V2 endpoint. The default is `https://api.etherscan.io/v2/api`.
+- `SONIC_EXPLORER_CHAIN_ID` is unset or set to `146`.
+- `SONIC_EXPLORER_API_KEY` or `ETHERSCAN_API_KEY` is set server-side to an
+  Etherscan API V2 key with Sonic Mainnet access.
+- `NEXT_PUBLIC_SONIC_EXPLORER_API_KEY` is unset in hosted web deployments; it
+  is a desktop/static-only fallback.
+- Sonic scans use Etherscan API V2 logs with `chainid=146` for historical
+  approval discovery through `/api/discovery/approvals`.
+- The app does not rely on public Sonic RPC `eth_getLogs` for historical
   approval discovery.
 - Rate limits, malformed responses, missing API keys, and capped responses are
   shown as incomplete/error states, not as "clear".
@@ -299,6 +318,7 @@ For per-token approvals:
 - Single BSC revoke confirm panel says BSC or BNB Smart Chain and BNB.
 - Single Base revoke confirm panel says Base and ETH.
 - Single Polygon revoke confirm panel says Polygon and POL.
+- Single Sonic revoke confirm panel says Sonic Mainnet and S.
 - Single Avalanche revoke confirm panel says Avalanche and AVAX.
 - Single Mantle revoke confirm panel says Mantle and MNT.
 - Permit2 revoke confirm panel clearly identifies a Permit2 delegated allowance
@@ -312,6 +332,7 @@ For per-token approvals:
 - BSC transaction links open BscScan.
 - Base transaction links open BaseScan.
 - Polygon transaction links open PolygonScan.
+- Sonic transaction links open SonicScan.
 - Avalanche transaction links open SnowScan.
 - Mantle transaction links open Mantle Explorer.
 - Arbitrum address and token links open Arbiscan.
@@ -324,9 +345,9 @@ For per-token approvals:
 ## Unsupported Network Checks
 
 - Connect to an unsupported chain.
-- Confirm the app lists PulseChain, BSC, Base, Polygon, Avalanche, Mantle,
-  Ethereum, Arbitrum, Optimism, and HyperEVM with the correct scan/revoke
-  statuses.
+- Confirm the app lists PulseChain, BSC, Base, Polygon, Sonic Mainnet,
+  Avalanche, Mantle, Ethereum, Arbitrum, Optimism, and HyperEVM with the
+  correct scan/revoke statuses.
 - Confirm no scan starts.
 - Confirm no revoke action is available.
 - Confirm stale approvals from a previous chain are not shown as current.
@@ -339,4 +360,4 @@ For per-token approvals:
 - Wallet with historical approvals that validate to zero shows a clear state.
 - Failed live reads show verification incomplete, not clear.
 - Etherscan API V2 rate limits, the BscScan V1 deprecation error, or a missing
-  BSC/Base/Polygon/Avalanche/Mantle API key show an actionable error.
+  BSC/Base/Polygon/Sonic/Avalanche/Mantle API key show an actionable error.

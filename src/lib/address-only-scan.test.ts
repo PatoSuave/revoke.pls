@@ -14,6 +14,7 @@ import {
   MANTLE_CHAIN_ID,
   POLYGON_CHAIN_ID,
   PULSECHAIN_CHAIN_ID,
+  SONIC_CHAIN_ID,
 } from "@/lib/chains";
 import { ETHEREUM_MAINNET_CLIENT_CHAIN_ID } from "@/lib/ethereum-approval-client";
 import { HYPEREVM_CLIENT_CHAIN_ID } from "@/lib/hyperevm-approval-client";
@@ -85,6 +86,7 @@ describe("address-only scan selection", () => {
       BSC_CHAIN_ID,
       BASE_CHAIN_ID,
       POLYGON_CHAIN_ID,
+      SONIC_CHAIN_ID,
       AVALANCHE_CHAIN_ID,
       MANTLE_CHAIN_ID,
     ]);
