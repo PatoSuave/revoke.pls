@@ -5,11 +5,15 @@ import {
   TOKEN_LOGO_MAX_ADDRESSES,
   TOKEN_LOGO_REQUEST_TIMEOUT_MS,
   extractTokenLogosFromDexScreenerPairs,
+  extractTokenLogosFromNineMmTokenList,
   getDexScreenerChainSlugForTokenLogos,
+  getNineMmTokenListUrlForTokenLogos,
   isTokenLogoSupportedChain,
   normalizeLogoAddress,
   normalizeLogoAddresses,
   supportedTokenLogoChainSummary,
+  tokenLogoAddressKey,
+  type TokenLogoMap,
 } from "@/lib/token-logos";
 import {
   TOKEN_LOGO_API_RATE_LIMIT,
@@ -117,26 +121,46 @@ export async function GET(request: Request) {
     );
   } catch {
     clearTimeout(timeout);
-    return upstreamFailure("Dex Screener token logo lookup failed.");
+    return upstreamFailureWithFallback({
+      chainId,
+      addresses,
+      rawAddressCount: rawAddresses.length,
+      message: "Dex Screener token logo lookup failed.",
+    });
   }
   clearTimeout(timeout);
 
   if (!upstream.ok) {
-    return upstreamFailure("Dex Screener token logo lookup returned an error.");
+    return upstreamFailureWithFallback({
+      chainId,
+      addresses,
+      rawAddressCount: rawAddresses.length,
+      message: "Dex Screener token logo lookup returned an error.",
+    });
   }
 
   let payload: unknown;
   try {
     payload = await upstream.json();
   } catch {
-    return upstreamFailure("Dex Screener token logo lookup returned invalid JSON.");
+    return upstreamFailureWithFallback({
+      chainId,
+      addresses,
+      rawAddressCount: rawAddresses.length,
+      message: "Dex Screener token logo lookup returned invalid JSON.",
+    });
   }
 
-  const logos = extractTokenLogosFromDexScreenerPairs({
+  const dexScreenerLogos = extractTokenLogosFromDexScreenerPairs({
     chainId,
     requestedAddresses: addresses,
     payload,
   });
+  const nineMmLogos = await fetchNineMmTokenListLogos({
+    chainId,
+    addresses: missingLogoAddresses(addresses, dexScreenerLogos),
+  });
+  const logos = { ...nineMmLogos, ...dexScreenerLogos };
 
   return NextResponse.json(
     {
@@ -144,6 +168,7 @@ export async function GET(request: Request) {
       status: "complete",
       chainId,
       source: "dexscreener",
+      sources: logoSources(logos, "dexscreener"),
       requested: addresses.length,
       truncated: rawAddresses.length > TOKEN_LOGO_MAX_ADDRESSES,
       logos,
@@ -174,6 +199,94 @@ function upstreamFailure(message: string) {
     },
     { status: 502, headers: tokenLogoNoStoreHeaders() },
   );
+}
+
+async function upstreamFailureWithFallback({
+  chainId,
+  addresses,
+  rawAddressCount,
+  message,
+}: {
+  chainId: number;
+  addresses: readonly `0x${string}`[];
+  rawAddressCount: number;
+  message: string;
+}) {
+  const fallbackLogos = await fetchNineMmTokenListLogos({ chainId, addresses });
+  if (Object.keys(fallbackLogos).length === 0) {
+    return upstreamFailure(message);
+  }
+
+  return NextResponse.json(
+    {
+      ok: true,
+      status: "complete",
+      chainId,
+      source: "9mm-tokenlist",
+      sources: ["9mm-tokenlist"],
+      requested: addresses.length,
+      truncated: rawAddressCount > TOKEN_LOGO_MAX_ADDRESSES,
+      logos: fallbackLogos,
+    },
+    { headers: tokenLogoCacheHeaders() },
+  );
+}
+
+async function fetchNineMmTokenListLogos({
+  chainId,
+  addresses,
+}: {
+  chainId: number;
+  addresses: readonly `0x${string}`[];
+}): Promise<TokenLogoMap> {
+  if (addresses.length === 0) return {};
+
+  const sourceUrl = getNineMmTokenListUrlForTokenLogos(chainId);
+  if (!sourceUrl) return {};
+
+  const controller = new AbortController();
+  const timeout = setTimeout(
+    () => controller.abort(),
+    TOKEN_LOGO_REQUEST_TIMEOUT_MS,
+  );
+
+  try {
+    const response = await fetch(sourceUrl, {
+      headers: { Accept: "application/json" },
+      signal: controller.signal,
+    });
+    if (!response.ok) return {};
+
+    const payload = await response.json();
+    return extractTokenLogosFromNineMmTokenList({
+      chainId,
+      requestedAddresses: addresses,
+      payload,
+      sourceUrl,
+    });
+  } catch {
+    return {};
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
+function missingLogoAddresses(
+  addresses: readonly `0x${string}`[],
+  logos: TokenLogoMap,
+): readonly `0x${string}`[] {
+  return addresses.filter((address) => !logos[tokenLogoAddressKey(address)]);
+}
+
+function logoSources(logos: TokenLogoMap, primary: string): string[] {
+  return [
+    primary,
+    ...new Set(
+      Object.values(logos)
+        .map((logo) => logo.source)
+        .filter((source) => source !== primary),
+    ),
+  ];
 }
 
 function tokenLogoCacheHeaders(): HeadersInit {

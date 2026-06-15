@@ -31,7 +31,18 @@ const DEXSCREENER_CHAIN_SLUG_BY_CHAIN_ID: Readonly<Record<number, string>> = {
   [HYPEREVM_TOKEN_LOGO_CHAIN_ID]: "hyperevm",
 };
 
-export type TokenLogoSource = "dexscreener";
+const NINEMM_TOKEN_LIST_URL_BY_CHAIN_ID: Readonly<Record<number, string>> = {
+  [ETHEREUM_TOKEN_LOGO_CHAIN_ID]:
+    "https://raw.githubusercontent.com/9mm-exchange/app-tokens/main/eth-tokenlist.json",
+  [PULSECHAIN_CHAIN_ID]:
+    "https://raw.githubusercontent.com/9mm-exchange/app-tokens/main/9mm-tokenlist.json",
+  [BASE_CHAIN_ID]:
+    "https://raw.githubusercontent.com/9mm-exchange/app-tokens/main/base-tokenlist.json",
+  [SONIC_CHAIN_ID]:
+    "https://raw.githubusercontent.com/9mm-exchange/app-tokens/main/sonic-tokenlist.json",
+};
+
+export type TokenLogoSource = "dexscreener" | "9mm-tokenlist";
 
 export type TokenLogoMetadata = {
   chainId: number;
@@ -51,6 +62,12 @@ export function getDexScreenerChainSlugForTokenLogos(
   chainId: number,
 ): string | null {
   return DEXSCREENER_CHAIN_SLUG_BY_CHAIN_ID[chainId] ?? null;
+}
+
+export function getNineMmTokenListUrlForTokenLogos(
+  chainId: number,
+): string | null {
+  return NINEMM_TOKEN_LIST_URL_BY_CHAIN_ID[chainId] ?? null;
 }
 
 export function supportedTokenLogoChainSummary(): string {
@@ -147,6 +164,47 @@ export function extractTokenLogosFromDexScreenerPairs({
       imageUrl,
       source: "dexscreener",
       ...(sourceUrl ? { sourceUrl } : {}),
+    };
+  }
+
+  return logos;
+}
+
+export function extractTokenLogosFromNineMmTokenList({
+  chainId,
+  requestedAddresses,
+  payload,
+  sourceUrl,
+}: {
+  chainId: number;
+  requestedAddresses: readonly Address[];
+  payload: unknown;
+  sourceUrl: string;
+}): TokenLogoMap {
+  if (!isRecord(payload) || !Array.isArray(payload.tokens)) return {};
+
+  const requestedByKey = new Map(
+    requestedAddresses.map((address) => [tokenLogoAddressKey(address), address]),
+  );
+  const logos: TokenLogoMap = {};
+
+  for (const item of payload.tokens) {
+    if (!isRecord(item)) continue;
+    if (item.chainId !== chainId) continue;
+    if (typeof item.address !== "string") continue;
+
+    const tokenAddress = requestedByKey.get(tokenLogoAddressKey(item.address));
+    if (!tokenAddress || logos[tokenLogoAddressKey(tokenAddress)]) continue;
+
+    const imageUrl = typeof item.logoURI === "string" ? item.logoURI : null;
+    if (!imageUrl || !isAllowedTokenLogoUrl(imageUrl)) continue;
+
+    logos[tokenLogoAddressKey(tokenAddress)] = {
+      chainId,
+      tokenAddress,
+      imageUrl,
+      source: "9mm-tokenlist",
+      sourceUrl,
     };
   }
 
