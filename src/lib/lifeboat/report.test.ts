@@ -460,7 +460,7 @@ describe("Wallet Lifeboat report", () => {
     expect(markdown).toContain("Do not add gas");
     expect(markdown).toContain("Visible assets at risk");
     expect(markdown).toContain("High exposure summary");
-    expect(markdown).toContain("unlimited-token-allowance");
+    expect(markdown).toContain("unlimited\\-token\\-allowance");
     expect(markdown).toContain("Possible pattern");
     expect(markdown).toContain("0xin");
     expect(markdown).toContain("0xout");
@@ -498,7 +498,7 @@ describe("Wallet Lifeboat report", () => {
     expect(markdown).toContain("0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa");
     expect(markdown).toContain("Token/NFT dust traps");
     expect(markdown).toContain("Multiple dust/bait signals");
-    expect(markdown).toContain("Claim [link removed]");
+    expect(markdown).toContain("Claim \\[link removed\\]");
     expect(markdown).toContain("0xdust");
     expect(markdown).toContain("1 NFT live read failed");
   });
@@ -528,5 +528,35 @@ describe("Wallet Lifeboat report", () => {
       "Overall status: Partial - incomplete diagnostics remain",
     );
     expect(markdown).not.toContain("Overall status: Complete");
+  });
+
+  it("escapes token-provided metadata before exporting Markdown", () => {
+    const report = structuredClone(REPORT) as LifeboatReport;
+    const chain = report.chains[0]!;
+    chain.visibleAssetsEvidence[0]!.assetLabel =
+      "[Verify wallet](https://attacker.example)";
+    chain.visibleAssetsEvidence[0]!.amount = "unlimited <img src=x>";
+    chain.permit2Evidence[0]!.tokenSymbol =
+      "[Permit](https://attacker.example)";
+    chain.permit2Evidence[0]!.formattedAllowance = "5 <b>PRM</b>";
+    chain.dustTrapEvidence[0]!.displayName =
+      "# Claim [link](https://attacker.example)";
+
+    const markdown = buildWalletLifeboatReportMarkdown(report);
+
+    expect(markdown).not.toContain("[Verify wallet](https://attacker.example)");
+    expect(markdown).not.toContain("[Permit](https://attacker.example)");
+    expect(markdown).not.toContain("<img src=x>");
+    expect(markdown).not.toContain("<b>PRM</b>");
+    expect(markdown).not.toContain("# Claim [link](https://attacker.example)");
+    expect(markdown).toContain(
+      "\\[Verify wallet\\]\\(https://attacker\\.example\\)",
+    );
+    expect(markdown).toContain("\\[Permit\\]\\(https://attacker\\.example\\)");
+    expect(markdown).toContain("unlimited \\<img src=x\\>");
+    expect(markdown).toContain("5 \\<b\\>PRM\\</b\\>");
+    expect(markdown).toContain(
+      "\\# Claim \\[link\\]\\(https://attacker\\.example\\)",
+    );
   });
 });
