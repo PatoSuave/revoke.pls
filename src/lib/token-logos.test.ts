@@ -8,6 +8,7 @@ import {
   MANTLE_CHAIN_ID,
   POLYGON_CHAIN_ID,
   PULSECHAIN_CHAIN_ID,
+  SONIC_CHAIN_ID,
 } from "@/lib/chains";
 import {
   ARBITRUM_TOKEN_LOGO_CHAIN_ID,
@@ -53,6 +54,8 @@ describe("token logo helpers", () => {
     expect(getDexScreenerChainSlugForTokenLogos(POLYGON_CHAIN_ID)).toBe(
       "polygon",
     );
+    expect(isTokenLogoSupportedChain(SONIC_CHAIN_ID)).toBe(true);
+    expect(getDexScreenerChainSlugForTokenLogos(SONIC_CHAIN_ID)).toBe("sonic");
     expect(isTokenLogoSupportedChain(AVALANCHE_CHAIN_ID)).toBe(true);
     expect(getDexScreenerChainSlugForTokenLogos(AVALANCHE_CHAIN_ID)).toBe(
       "avalanche",
@@ -181,7 +184,18 @@ describe("token logo helpers", () => {
     });
   });
 
-  it("extracts Avalanche and Mantle logos from Dex Screener token pairs", () => {
+  it("extracts Sonic, Avalanche, and Mantle logos from Dex Screener token pairs", () => {
+    const sonicLogos = extractTokenLogosFromDexScreenerPairs({
+      chainId: 146,
+      requestedAddresses: [WPOL],
+      payload: [
+        {
+          url: "https://dexscreener.com/sonic/0xpair1",
+          baseToken: { address: WPOL.toLowerCase() },
+          info: { imageUrl: "https://cdn.dexscreener.com/sonic-token.png" },
+        },
+      ],
+    });
     const avalancheLogos = extractTokenLogosFromDexScreenerPairs({
       chainId: AVALANCHE_CHAIN_ID,
       requestedAddresses: [WAVAX],
@@ -205,6 +219,13 @@ describe("token logo helpers", () => {
       ],
     });
 
+    expect(sonicLogos[tokenLogoAddressKey(WPOL)]).toMatchObject({
+      chainId: 146,
+      tokenAddress: WPOL,
+      imageUrl: "https://cdn.dexscreener.com/sonic-token.png",
+      source: "dexscreener",
+      sourceUrl: "https://dexscreener.com/sonic/0xpair1",
+    });
     expect(avalancheLogos[tokenLogoAddressKey(WAVAX)]).toMatchObject({
       chainId: AVALANCHE_CHAIN_ID,
       tokenAddress: WAVAX,

@@ -7,6 +7,7 @@ import {
   MANTLE_CHAIN_ID,
   POLYGON_CHAIN_ID,
   PULSECHAIN_CHAIN_ID,
+  SONIC_CHAIN_ID,
   supportedChains,
 } from "./chains";
 import { ARBITRUM_ONE_CLIENT_CHAIN_ID } from "./arbitrum-approval-client";
@@ -22,6 +23,7 @@ describe("wagmi wallet chains", () => {
       BSC_CHAIN_ID,
       BASE_CHAIN_ID,
       POLYGON_CHAIN_ID,
+      SONIC_CHAIN_ID,
       AVALANCHE_CHAIN_ID,
       MANTLE_CHAIN_ID,
     ]);
@@ -31,6 +33,7 @@ describe("wagmi wallet chains", () => {
       BSC_CHAIN_ID,
       BASE_CHAIN_ID,
       POLYGON_CHAIN_ID,
+      SONIC_CHAIN_ID,
       AVALANCHE_CHAIN_ID,
       MANTLE_CHAIN_ID,
       ETHEREUM_MAINNET_CLIENT_CHAIN_ID,

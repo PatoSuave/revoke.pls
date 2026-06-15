@@ -11,6 +11,7 @@ Current active supported networks should be exactly:
 - BSC / BNB Smart Chain, chain ID `56`
 - Base, chain ID `8453`
 - Polygon, chain ID `137`
+- Sonic Mainnet, chain ID `146`
 - Avalanche C-Chain, chain ID `43114`
 - Mantle, chain ID `5000`
 - Ethereum Mainnet, chain ID `1`
@@ -64,7 +65,7 @@ submission must stay unavailable.
 
 ## Chain Safety Questions
 
-- Are active supported chains exactly PulseChain, BSC, Base, Polygon,
+- Are active supported chains exactly PulseChain, BSC, Base, Polygon, Sonic,
   Avalanche, Mantle, wallet-enabled Ethereum Mainnet, Arbitrum One's separate
   verified-row revoke lane, Optimism's separate verified-row lane, and
   HyperEVM's separate verified-row lane?
@@ -188,6 +189,16 @@ submission must stay unavailable.
   as the approval source of truth?
 - Does public Polygon RPC avoid historical `eth_getLogs` discovery?
 
+## Sonic Discovery Questions
+
+- Do Sonic historical log requests use Etherscan API V2 at
+  `https://api.etherscan.io/v2/api`?
+- Does every Sonic log request include `chainid=146`?
+- Are Sonic explorer links built with `https://sonicscan.org`?
+- Does Sonic discovery use approval logs rather than token-transfer endpoints
+  as the approval source of truth?
+- Does public Sonic RPC avoid historical `eth_getLogs` discovery?
+
 ## Avalanche Discovery Questions
 
 - Do Avalanche historical log requests use Etherscan API V2 at
@@ -233,6 +244,7 @@ submission must stay unavailable.
 - Do PulseChain revokes use PLS wording and PulseScan links?
 - Do Base revokes use ETH wording and BaseScan links?
 - Do Polygon revokes use POL wording and PolygonScan links?
+- Do Sonic revokes use S wording and SonicScan links?
 - Do Avalanche revokes use AVAX wording and SnowScan links?
 - Do Mantle revokes use MNT wording and Mantle explorer links?
 - Does Arbitrum show only ERC-20/NFT verified-row revoke while batch
@@ -258,20 +270,21 @@ submission must stay unavailable.
 - Do PulseChain labels avoid leaking onto BSC approvals?
 - Do PulseChain or BSC labels avoid leaking onto Base approvals?
 - Do PulseChain, BSC, or Base labels avoid leaking onto Polygon approvals?
-- Do existing registry labels avoid leaking onto Avalanche or Mantle approvals?
+- Do existing registry labels avoid leaking onto Sonic, Avalanche, or Mantle approvals?
 - Are BSC labels empty unless manually verified?
 - Are Base labels empty unless manually verified?
 - Are Polygon labels empty unless manually verified?
+- Are Sonic labels empty unless manually verified?
 - Are Avalanche labels empty unless manually verified?
 - Are Mantle labels empty unless manually verified?
-- Are unknown BSC, Base, Polygon, Avalanche, and Mantle spenders shown as
+- Are unknown BSC, Base, Polygon, Sonic, Avalanche, and Mantle spenders shown as
   unknown rather than guessed?
 - Is registry data treated only as enrichment, not discovery truth?
 
 ## Token Logo Questions
 
-- Is token-logo lookup scoped to PulseChain, BSC, Polygon, Avalanche, and
-  Mantle only until each additional chain is explicitly enabled and reviewed?
+- Is token-logo lookup scoped to PulseChain, BSC, Polygon, Sonic, Avalanche,
+  and Mantle only until each additional chain is explicitly enabled and reviewed?
 - Does the logo resolver send only token contract addresses, not scanned owner
   addresses, spender addresses, allowances, or wallet connection state?
 - Does the UI keep text symbol/address data visible when no logo exists or the

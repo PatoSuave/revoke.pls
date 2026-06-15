@@ -7,6 +7,7 @@ import {
   MANTLE_CHAIN_ID,
   POLYGON_CHAIN_ID,
   PULSECHAIN_CHAIN_ID,
+  SONIC_CHAIN_ID,
 } from "@/lib/chains";
 import { ARBITRUM_ONE_CLIENT_CHAIN_ID } from "@/lib/arbitrum-approval-client";
 import { ETHEREUM_MAINNET_CLIENT_CHAIN_ID } from "@/lib/ethereum-approval-client";
@@ -24,6 +25,7 @@ const CHAIN_LOGO_LABELS: Readonly<Record<number, string>> = {
   [BSC_CHAIN_ID]: "BNB Smart Chain",
   [BASE_CHAIN_ID]: "Base",
   [POLYGON_CHAIN_ID]: "Polygon",
+  [SONIC_CHAIN_ID]: "Sonic Mainnet",
   [AVALANCHE_CHAIN_ID]: "Avalanche C-Chain",
   [MANTLE_CHAIN_ID]: "Mantle",
 };
@@ -90,6 +92,8 @@ function renderChainMark(chainId: number, muted: boolean) {
       return <BaseMark muted={muted} />;
     case POLYGON_CHAIN_ID:
       return <PolygonMark muted={muted} />;
+    case SONIC_CHAIN_ID:
+      return <SonicMark muted={muted} />;
     case AVALANCHE_CHAIN_ID:
       return <AvalancheMark muted={muted} />;
     case MANTLE_CHAIN_ID:
@@ -218,6 +222,30 @@ function PolygonMark({ muted }: { muted: boolean }) {
       strokeLinejoin="round"
       strokeWidth="4"
     />
+  );
+}
+
+function SonicMark({ muted }: { muted: boolean }) {
+  return (
+    <>
+      <circle cx="24" cy="24" r="21" fill={muted ? "currentColor" : "#0F172A"} />
+      <path
+        d="M13 17c5-6 15-7 22-2-3 2-6 4-10 5-5 1-9 0-12-3Z"
+        fill={muted ? "#0B0A14" : "#58F1D4"}
+      />
+      <path
+        d="M35 31c-5 6-15 7-22 2 3-2 6-4 10-5 5-1 9 0 12 3Z"
+        fill={muted ? "#0B0A14" : "#58F1D4"}
+        opacity="0.88"
+      />
+      <path
+        d="M14 25c6 2 14 2 20-2"
+        fill="none"
+        stroke={muted ? "#0B0A14" : "#FFFFFF"}
+        strokeLinecap="round"
+        strokeWidth="3"
+      />
+    </>
   );
 }
 

@@ -21,8 +21,8 @@ export function Hero() {
               aria-hidden
             />
             <span className="min-w-0 max-w-[15rem] break-words">
-              PulseChain, BSC, Base, Polygon, Avalanche, Mantle, Ethereum,
-              Arbitrum, Optimism, and HyperEVM approval review
+              PulseChain, BSC, Base, Polygon, Sonic, Avalanche, Mantle,
+              Ethereum, Arbitrum, Optimism, and HyperEVM approval review
             </span>
           </span>
 

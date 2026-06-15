@@ -13,7 +13,7 @@ vi.mock("@/lib/server-approval-discovery", () => ({
   discoverServerErc20Approvals,
   discoverServerNftApprovals,
   isServerDiscoveryChainId: (chainId: number) =>
-    [56, 8453, 137, 43114, 5000].includes(chainId),
+    [56, 8453, 137, 146, 43114, 5000].includes(chainId),
   normalizeServerDiscoveryOwner: (value: string | null) =>
     value && /^0x[a-fA-F0-9]{40}$/.test(value) ? value : null,
   serverDiscoveryTimeoutSignal: (signal?: AbortSignal) => ({

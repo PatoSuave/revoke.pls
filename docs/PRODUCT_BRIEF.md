@@ -22,6 +22,7 @@ upgraded maliciously, or misunderstood.
 - BSC users
 - Base users
 - Polygon users
+- Sonic Mainnet users
 - Avalanche users
 - Mantle users
 - Ethereum users
@@ -39,9 +40,9 @@ upgraded maliciously, or misunderstood.
 - Connect a wallet through injected connectors or WalletConnect when configured
 - Scan address-only where the current scanner supports it
 - Detect PRC-20, BEP-20, ERC-20, Permit2, and supported NFT approvals
-- Scan PulseChain, BSC, Base, Polygon, Avalanche, Mantle, Ethereum, Arbitrum
-  One, Optimism, and HyperEVM according to their current source-backed support
-  levels
+- Scan PulseChain, BSC, Base, Polygon, Sonic Mainnet, Avalanche, Mantle,
+  Ethereum, Arbitrum One, Optimism, and HyperEVM according to their current
+  source-backed support levels
 - Enable Arbitrum, Optimism, and HyperEVM revoke only for verified ERC-20/NFT
   rows
 - Show token, spender, allowance, chain, explorer, and risk context

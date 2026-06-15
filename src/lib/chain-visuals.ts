@@ -43,6 +43,13 @@ export const CHAIN_VISUALS: Record<string, ChainVisual> = {
     accentBorder: "rgba(165, 107, 255, 0.36)",
     accentShadow: "0 0 20px rgba(130, 71, 229, 0.28)",
   },
+  "Sonic Mainnet": {
+    accent: "#58F1D4",
+    accentReadable: "#0F766E",
+    accentSoft: "rgba(88, 241, 212, 0.12)",
+    accentBorder: "rgba(88, 241, 212, 0.34)",
+    accentShadow: "0 0 20px rgba(88, 241, 212, 0.24)",
+  },
   "Avalanche C-Chain": {
     accent: "#FF6B6B",
     accentReadable: "#C81E1E",

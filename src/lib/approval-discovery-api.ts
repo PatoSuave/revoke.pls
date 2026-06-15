@@ -6,6 +6,7 @@ import {
   BSC_CHAIN_ID,
   MANTLE_CHAIN_ID,
   POLYGON_CHAIN_ID,
+  SONIC_CHAIN_ID,
 } from "@/lib/chains";
 import type {
   DiscoveredPair,
@@ -102,6 +103,7 @@ export type ServerApprovalDiscoveryChainId =
   | typeof BSC_CHAIN_ID
   | typeof BASE_CHAIN_ID
   | typeof POLYGON_CHAIN_ID
+  | typeof SONIC_CHAIN_ID
   | typeof AVALANCHE_CHAIN_ID
   | typeof MANTLE_CHAIN_ID;
 
@@ -113,6 +115,7 @@ export function usesServerApprovalDiscovery(
     chainId === BSC_CHAIN_ID ||
     chainId === BASE_CHAIN_ID ||
     chainId === POLYGON_CHAIN_ID ||
+    chainId === SONIC_CHAIN_ID ||
     chainId === AVALANCHE_CHAIN_ID ||
     chainId === MANTLE_CHAIN_ID
   );

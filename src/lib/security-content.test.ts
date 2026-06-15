@@ -50,6 +50,15 @@ describe("security content", () => {
       revoke: "Yes",
       status: "Live",
     });
+    expect(rowsByChain.get("Sonic Mainnet")).toMatchObject({
+      chainId: "146",
+      scan: "Yes",
+      revoke: "Yes",
+      status: "Live",
+    });
+    expect(rowsByChain.get("Sonic Mainnet")?.note).toContain(
+      "Gas is paid in S",
+    );
     expect(rowsByChain.get("Ethereum Mainnet")?.revoke).toContain(
       "live-verified rows",
     );

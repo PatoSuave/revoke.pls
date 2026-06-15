@@ -9,13 +9,14 @@
 
 ## Active Chains
 
-Ten live product chains are surfaced across the app:
+Eleven live product chains are surfaced across the app:
 
 - PulseChain, chain ID `369`, native gas token `PLS`, explorer `PulseScan`
 - BSC / BNB Smart Chain, chain ID `56`, native gas token `BNB`, explorer
   `BscScan`
 - Base, chain ID `8453`, native gas token `ETH`, explorer `BaseScan`
 - Polygon, chain ID `137`, native gas token `POL`, explorer `PolygonScan`
+- Sonic Mainnet, chain ID `146`, native gas token `S`, explorer `SonicScan`
 - Avalanche C-Chain, chain ID `43114`, native gas token `AVAX`, explorer
   `SnowScan`
 - Mantle, chain ID `5000`, native gas token `MNT`, explorer `Mantle Explorer`
@@ -26,8 +27,9 @@ Ten live product chains are surfaced across the app:
 - HyperEVM, chain ID `999`, native gas token `HYPE`, explorer `Hyperevmscan`,
   verified ERC-20/NFT row revoke
 
-PulseChain, BSC, Base, Polygon, Avalanche, and Mantle use the generic scanner registry in
-`src/lib/chains.ts`, including the shared scan, revoke, and batch lane.
+PulseChain, BSC, Base, Polygon, Sonic, Avalanche, and Mantle use the generic
+scanner registry in `src/lib/chains.ts`, including the shared scan, revoke, and
+batch lane.
 
 Ethereum Mainnet is wallet-enabled for the Ethereum read-only discovery and
 wallet-side revoke lane. It is surfaced as a live product chain, but it is not
@@ -53,13 +55,15 @@ revoke. HyperEVM gas is paid in HYPE.
 
 ## Web3 Layer
 
-- `src/lib/wagmi.ts` registers PulseChain, BSC, Base, Polygon, Avalanche
-  C-Chain, Mantle, Ethereum Mainnet, Arbitrum One, OP Mainnet, and HyperEVM with wagmi. Ethereum,
-  Arbitrum, Optimism, and HyperEVM use separate scanner lanes.
+- `src/lib/wagmi.ts` registers PulseChain, BSC, Base, Polygon, Sonic,
+  Avalanche C-Chain, Mantle, Ethereum Mainnet, Arbitrum One, OP Mainnet, and
+  HyperEVM with wagmi. Ethereum, Arbitrum, Optimism, and HyperEVM use separate
+  scanner lanes.
 - PulseChain RPC defaults to `https://rpc.pulsechain.com`.
 - BSC RPC defaults to `https://bsc-dataseed.bnbchain.org`.
 - Base RPC defaults to `https://mainnet.base.org`.
 - Polygon RPC defaults to `https://polygon.drpc.org`.
+- Sonic RPC defaults to `https://rpc.soniclabs.com`.
 - Avalanche C-Chain RPC defaults to
   `https://api.avax.network/ext/bc/C/rpc`.
 - Mantle RPC defaults to `https://rpc.mantle.xyz`.
@@ -74,9 +78,9 @@ revoke. HyperEVM gas is paid in HYPE.
 - HyperEVM wallet chain recognition uses `https://rpc.hyperliquid.xyz/evm`.
   Production HyperEVM approval discovery uses server-only RPC/API settings
   through `/api/hyperevm/approvals`.
-- PulseChain, BSC, Base, Polygon, Avalanche, Mantle, and Ethereum wallet RPCs can be overridden
-  with browser-visible public env vars. Server-side discovery RPCs use
-  unprefixed server-only env vars.
+- PulseChain, BSC, Base, Polygon, Sonic, Avalanche, Mantle, and Ethereum wallet
+  RPCs can be overridden with browser-visible public env vars. Server-side
+  discovery RPCs use unprefixed server-only env vars.
 - Live reads and writes always include the approval record's `chainId`.
 - When connected, the wallet account `chainId` is the active scanner source of
   truth. The app does not fall back to PulseChain after a supported wallet chain
@@ -118,6 +122,11 @@ token, and transaction links.
 Polygon hosted web discovery uses the same server route and Etherscan API V2
 logs path with `chainid=137`. Public Polygon RPC `eth_getLogs` is not used for
 historical approval discovery. PolygonScan remains the explorer for address,
+token, and transaction links.
+
+Sonic hosted web discovery uses the same server route and Etherscan API V2 logs
+path with `chainid=146`. Public Sonic RPC `eth_getLogs` is not used for
+historical approval discovery. SonicScan remains the explorer for address,
 token, and transaction links.
 
 Avalanche hosted web discovery uses the same server route and Etherscan API V2
@@ -184,6 +193,14 @@ row-level revoke stays limited to verified ERC-20 and NFT rows.
   `POLYGON_EXPLORER_API_KEY` / `ETHERSCAN_API_KEY`
 - Desktop/static Polygon fallback key env var:
   `NEXT_PUBLIC_POLYGON_EXPLORER_API_KEY`
+- Sonic server discovery API default:
+  `https://api.etherscan.io/v2/api`
+- Sonic server discovery API chain id:
+  `SONIC_EXPLORER_CHAIN_ID=146`
+- Sonic server API key env vars:
+  `SONIC_EXPLORER_API_KEY` / `ETHERSCAN_API_KEY`
+- Desktop/static Sonic fallback key env var:
+  `NEXT_PUBLIC_SONIC_EXPLORER_API_KEY`
 - Avalanche server discovery API default:
   `https://api.etherscan.io/v2/api`
 - Avalanche server discovery API chain id:
@@ -263,6 +280,13 @@ User-facing Polygon copy uses:
 - `ERC-1155` for multi-token NFT / semi-fungible approvals
 - `POL` for gas
 
+User-facing Sonic copy uses:
+
+- `ERC-20` for fungible token approvals
+- `ERC-721` for NFT approvals
+- `ERC-1155` for multi-token NFT / semi-fungible approvals
+- `S` for gas
+
 User-facing Avalanche copy uses:
 
 - `ERC-20` for fungible token approvals
@@ -320,8 +344,8 @@ Fungible token revoke:
 3. App prepares `approve(spender, 0)`.
 4. Wallet signs and submits on the approval's `chainId`.
 5. UI links the transaction to PulseScan, BscScan, BaseScan, PolygonScan,
-   SnowScan, Mantle Explorer, Etherscan, Arbiscan, Optimistic Etherscan, or
-   Hyperevmscan and rescans after success.
+   SonicScan, SnowScan, Mantle Explorer, Etherscan, Arbiscan, Optimistic
+   Etherscan, or Hyperevmscan and rescans after success.
 
 Permit2 delegated allowance revoke:
 

@@ -84,6 +84,14 @@ export const SECURITY_CHAIN_STATUS_ROWS: readonly ChainStatusRow[] = [
     note: "Shared scanner and wallet-side revoke flow using PolygonScan/Etherscan API V2 discovery and live verification.",
   },
   {
+    chain: "Sonic Mainnet",
+    chainId: "146",
+    scan: "Yes",
+    revoke: "Yes",
+    status: "Live",
+    note: "Shared scanner and wallet-side revoke flow using SonicScan/Etherscan API V2 discovery and live verification. Gas is paid in S.",
+  },
+  {
     chain: "Avalanche C-Chain",
     chainId: "43114",
     scan: "Yes",

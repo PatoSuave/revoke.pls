@@ -8,6 +8,7 @@ import {
   MANTLE_CHAIN_ID,
   POLYGON_CHAIN_ID,
   PULSECHAIN_CHAIN_ID,
+  SONIC_CHAIN_ID,
 } from "@/lib/chains";
 import {
   TOKEN_LOGO_API_RATE_LIMIT,
@@ -51,6 +52,7 @@ describe("token logo API route", () => {
     expect(response.headers.get("Cache-Control")).toContain("no-store");
     expect(body.status).toBe("bad-request");
     expect(body.errors.join(" ")).toContain("Base chainId=8453");
+    expect(body.errors.join(" ")).toContain("Sonic chainId=146");
     expect(fetch).not.toHaveBeenCalled();
   });
 
@@ -157,6 +159,7 @@ describe("token logo API route", () => {
   it.each([
     [ETHEREUM_TOKEN_LOGO_CHAIN_ID, "ethereum", WETH],
     [BASE_CHAIN_ID, "base", WETH],
+    [SONIC_CHAIN_ID, "sonic", WETH],
     [AVALANCHE_CHAIN_ID, "avalanche", WAVAX],
     [MANTLE_CHAIN_ID, "mantle", WMNT],
     [ARBITRUM_TOKEN_LOGO_CHAIN_ID, "arbitrum", WETH],

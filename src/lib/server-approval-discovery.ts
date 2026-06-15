@@ -18,6 +18,9 @@ import {
   POLYGON_CHAIN_ID,
   POLYGON_EXPLORER_API_DEFAULT,
   POLYGON_EXPLORER_CHAIN_ID_DEFAULT,
+  SONIC_CHAIN_ID,
+  SONIC_EXPLORER_API_DEFAULT,
+  SONIC_EXPLORER_CHAIN_ID_DEFAULT,
   type DiscoverySourceConfig,
 } from "@/lib/chains";
 import {
@@ -69,6 +72,15 @@ const CHAIN_CONFIGS = {
     apiUrlEnvNames: ["POLYGON_EXPLORER_API_URL"],
     apiKeyEnvNames: ["POLYGON_EXPLORER_API_KEY", "ETHERSCAN_API_KEY"],
     apiChainIdEnvNames: ["POLYGON_EXPLORER_CHAIN_ID"],
+  },
+  [SONIC_CHAIN_ID]: {
+    displayName: "Sonic",
+    explorerBaseUrl: "https://sonicscan.org",
+    apiUrlDefault: SONIC_EXPLORER_API_DEFAULT,
+    apiChainIdDefault: SONIC_EXPLORER_CHAIN_ID_DEFAULT,
+    apiUrlEnvNames: ["SONIC_EXPLORER_API_URL"],
+    apiKeyEnvNames: ["SONIC_EXPLORER_API_KEY", "ETHERSCAN_API_KEY"],
+    apiChainIdEnvNames: ["SONIC_EXPLORER_CHAIN_ID"],
   },
   [AVALANCHE_CHAIN_ID]: {
     displayName: "Avalanche",

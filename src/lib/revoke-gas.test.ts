@@ -8,6 +8,7 @@ import {
   BSC_CHAIN_ID,
   POLYGON_CHAIN_ID,
   PULSECHAIN_CHAIN_ID,
+  SONIC_CHAIN_ID,
 } from "@/lib/chains";
 import { ETHEREUM_MAINNET_CLIENT_CHAIN_ID } from "@/lib/ethereum-approval-client";
 import {
@@ -167,6 +168,7 @@ describe("revoke gas safety policy", () => {
     expect(shouldEstimateRevokeGas(PULSECHAIN_CHAIN_ID)).toBe(false);
     expect(shouldEstimateRevokeGas(BASE_CHAIN_ID)).toBe(false);
     expect(shouldEstimateRevokeGas(POLYGON_CHAIN_ID)).toBe(false);
+    expect(shouldEstimateRevokeGas(SONIC_CHAIN_ID)).toBe(false);
   });
 
   it("keeps the Ethereum gas warning and wallet-safety copy explicit", () => {

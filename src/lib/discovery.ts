@@ -194,7 +194,7 @@ export interface DiscoveryLimits {
 
 export const DEFAULT_DISCOVERY_LIMITS: DiscoveryLimits = {
   // Increased to reduce false negatives for long-lived wallets with large
-  // approval histories across PulseChain/BSC/Base/Polygon/Avalanche/Mantle.
+  // approval histories across PulseChain/BSC/Base/Polygon/Sonic/Avalanche/Mantle.
   maxRequests: 120,
   maxRawLogs: 100_000,
   requestTimeoutMs: 15_000,
@@ -298,7 +298,7 @@ function explorerErrorMessage(message: string | undefined): string {
   ) {
     return [
       "The configured explorer API is using a deprecated V1 endpoint.",
-      "Set this chain's explorer API URL to https://api.etherscan.io/v2/api and use an Etherscan API V2 key with access to the selected network. BSC uses chainid=56; Base uses chainid=8453; Polygon uses chainid=137.",
+      "Set this chain's explorer API URL to https://api.etherscan.io/v2/api and use an Etherscan API V2 key with access to the selected network. BSC uses chainid=56; Base uses chainid=8453; Polygon uses chainid=137; Sonic uses chainid=146.",
     ].join(" ");
   }
   return message ?? "unknown explorer error";

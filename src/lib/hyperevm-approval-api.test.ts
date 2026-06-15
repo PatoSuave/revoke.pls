@@ -8,6 +8,7 @@ import {
   MANTLE_CHAIN_ID,
   POLYGON_CHAIN_ID,
   PULSECHAIN_CHAIN_ID,
+  SONIC_CHAIN_ID,
   isSupportedChainId,
   supportedChainConfigList,
 } from "@/lib/chains";
@@ -215,6 +216,7 @@ describe("HyperEVM approval API foundation", () => {
       BSC_CHAIN_ID,
       BASE_CHAIN_ID,
       POLYGON_CHAIN_ID,
+      SONIC_CHAIN_ID,
       AVALANCHE_CHAIN_ID,
       MANTLE_CHAIN_ID,
     ]);

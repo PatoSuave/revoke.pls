@@ -8,6 +8,7 @@ import {
   MANTLE_CHAIN_ID,
   POLYGON_CHAIN_ID,
   PULSECHAIN_CHAIN_ID,
+  SONIC_CHAIN_ID,
   supportedChainConfigList,
 } from "@/lib/chains";
 import { ETHEREUM_MAINNET_CLIENT_CHAIN_ID } from "@/lib/ethereum-approval-client";
@@ -56,6 +57,7 @@ describe("wallet header network status", () => {
         BSC_CHAIN_ID,
         BASE_CHAIN_ID,
         POLYGON_CHAIN_ID,
+        SONIC_CHAIN_ID,
         AVALANCHE_CHAIN_ID,
         MANTLE_CHAIN_ID,
         ETHEREUM_MAINNET_CLIENT_CHAIN_ID,
@@ -119,6 +121,7 @@ describe("wallet header network status", () => {
         BSC_CHAIN_ID,
         BASE_CHAIN_ID,
         POLYGON_CHAIN_ID,
+        SONIC_CHAIN_ID,
         AVALANCHE_CHAIN_ID,
         MANTLE_CHAIN_ID,
       ].map((chainId) =>
@@ -132,6 +135,7 @@ describe("wallet header network status", () => {
       expect.objectContaining({ kind: "supported", label: "BNB Smart Chain" }),
       expect.objectContaining({ kind: "supported", label: "Base" }),
       expect.objectContaining({ kind: "supported", label: "Polygon" }),
+      expect.objectContaining({ kind: "supported", label: "Sonic Mainnet" }),
       expect.objectContaining({ kind: "supported", label: "Avalanche C-Chain" }),
       expect.objectContaining({ kind: "supported", label: "Mantle" }),
     ]);
@@ -143,6 +147,7 @@ describe("wallet header network status", () => {
       BSC_CHAIN_ID,
       BASE_CHAIN_ID,
       POLYGON_CHAIN_ID,
+      SONIC_CHAIN_ID,
       AVALANCHE_CHAIN_ID,
       MANTLE_CHAIN_ID,
     ]);

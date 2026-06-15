@@ -8,6 +8,7 @@ const LIVE_CHAIN_DISPLAY_ORDER = [
   "BNB Smart Chain",
   "Base",
   "Polygon",
+  "Sonic Mainnet",
   "Avalanche C-Chain",
   "Mantle",
   "Ethereum Mainnet",
@@ -18,6 +19,7 @@ const LIVE_CHAIN_DISPLAY_ORDER = [
 
 const COMPACT_CHAIN_NAMES: Record<string, string> = {
   "BNB Smart Chain": "BSC",
+  "Sonic Mainnet": "Sonic",
   "Avalanche C-Chain": "Avalanche",
   "Ethereum Mainnet": "Ethereum",
   "Arbitrum One": "Arbitrum",

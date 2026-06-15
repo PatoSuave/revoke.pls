@@ -7,6 +7,7 @@ import {
   MANTLE_CHAIN_ID,
   POLYGON_CHAIN_ID,
   PULSECHAIN_CHAIN_ID,
+  SONIC_CHAIN_ID,
   getSupportedChainShortNames,
   isSupportedChainId,
 } from "@/lib/chains";
@@ -66,6 +67,11 @@ describe("active chain resolution", () => {
   });
 
   it("resolves connected Avalanche and Mantle wallets without falling back to PulseChain", () => {
+    const sonicResult = resolveActiveChain({
+      isConnected: true,
+      walletChainId: SONIC_CHAIN_ID,
+      wagmiChainId: PULSECHAIN_CHAIN_ID,
+    });
     const avalancheResult = resolveActiveChain({
       isConnected: true,
       walletChainId: AVALANCHE_CHAIN_ID,
@@ -77,6 +83,9 @@ describe("active chain resolution", () => {
       wagmiChainId: PULSECHAIN_CHAIN_ID,
     });
 
+    expect(sonicResult.status).toBe("supported");
+    expect(sonicResult.activeChainId).toBe(SONIC_CHAIN_ID);
+    expect(sonicResult.activeChainConfig?.displayName).toBe("Sonic Mainnet");
     expect(avalancheResult.status).toBe("supported");
     expect(avalancheResult.activeChainId).toBe(AVALANCHE_CHAIN_ID);
     expect(avalancheResult.activeChainConfig?.displayName).toBe(
@@ -115,7 +124,7 @@ describe("active chain resolution", () => {
 
   it("uses all generic supported chains in supported-network copy", () => {
     expect(getSupportedChainShortNames()).toBe(
-      "PulseChain, BSC, Base, Polygon, Avalanche, or Mantle",
+      "PulseChain, BSC, Base, Polygon, Sonic, Avalanche, or Mantle",
     );
   });
 
@@ -126,6 +135,9 @@ describe("active chain resolution", () => {
       scannerSessionKey(owner, BASE_CHAIN_ID),
     );
     expect(scannerSessionKey(owner, BSC_CHAIN_ID)).not.toBe(
+      scannerSessionKey(owner, BASE_CHAIN_ID),
+    );
+    expect(scannerSessionKey(owner, SONIC_CHAIN_ID)).not.toBe(
       scannerSessionKey(owner, BASE_CHAIN_ID),
     );
   });
