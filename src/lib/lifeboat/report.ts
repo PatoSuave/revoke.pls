@@ -174,9 +174,13 @@ function formatVisibleAssetsSection(report: LifeboatReport): string {
         chain.visibleAssetsEvidence.length > 0
           ? chain.visibleAssetsEvidence
               .map((item) => {
-                const tokenId = item.tokenId ? ` token ID ${item.tokenId};` : "";
-                const amount = item.amount ? ` ${item.amount};` : "";
-                return `  - ${item.assetLabel}: ${item.exposureKind}; asset ${item.assetAddress}; spender ${item.spenderAddress};${tokenId}${amount} ${item.riskLevel} context`;
+                const tokenId = item.tokenId
+                  ? ` token ID ${markdownText(item.tokenId)};`
+                  : "";
+                const amount = item.amount
+                  ? ` ${markdownText(item.amount)};`
+                  : "";
+                return `  - ${markdownText(item.assetLabel)}: ${markdownText(item.exposureKind)}; asset ${markdownText(item.assetAddress)}; spender ${markdownText(item.spenderAddress)};${tokenId}${amount} ${markdownText(item.riskLevel)} context`;
               })
               .join("\n")
           : formatEmptyVisibleAssetsEvidence(chain.visibleAssetsStatus);
@@ -468,9 +472,9 @@ function formatPermit2ExposureSection(report: LifeboatReport): string {
                   ? `expires ${item.expiration.iso}`
                   : "expiration unknown";
                 const allowance = item.unlimited
-                  ? `unlimited ${item.tokenSymbol}`
-                  : item.formattedAllowance;
-                return `  - ${item.tokenSymbol}: ${allowance} delegated to ${item.spenderAddress} (${expiration})`;
+                  ? `unlimited ${markdownText(item.tokenSymbol)}`
+                  : markdownText(item.formattedAllowance);
+                return `  - ${markdownText(item.tokenSymbol)}: ${allowance} delegated to ${markdownText(item.spenderAddress)} (${markdownText(expiration)})`;
               })
               .join("\n")
           : "  - No active Permit2 delegated allowance row was found by the completed approval scan.";
@@ -607,8 +611,10 @@ function formatDustTrapSection(report: LifeboatReport): string {
         chain.dustTrapEvidence.length > 0
           ? chain.dustTrapEvidence
               .map((item) => {
-                const tokenId = item.tokenId ? ` tokenId ${item.tokenId}` : "";
-                return `  - ${item.title}: ${item.displayName}${tokenId}; ${item.amount}; contract ${item.contractAddress}; tx ${item.txHash}. ${item.description}`;
+                const tokenId = item.tokenId
+                  ? ` tokenId ${markdownText(item.tokenId)}`
+                  : "";
+                return `  - ${markdownText(item.title)}: ${markdownText(item.displayName)}${tokenId}; ${markdownText(item.amount)}; contract ${markdownText(item.contractAddress)}; tx ${markdownText(item.txHash)}. ${markdownText(item.description)}`;
               })
               .join("\n")
           : formatEmptyDustTrapEvidence(chain.dustTrapStatus);
@@ -745,5 +751,14 @@ function formatModuleStatus(
 }
 
 function formatIncompleteReasons(reasons: readonly string[]): string {
-  return reasons.length > 0 ? reasons.join("; ") : "No incomplete diagnostics reported.";
+  return reasons.length > 0
+    ? reasons.map(markdownText).join("; ")
+    : "No incomplete diagnostics reported.";
+}
+
+function markdownText(value: unknown): string {
+  return String(value ?? "")
+    .replace(/\r?\n/g, " ")
+    .replace(/\\/g, "\\\\")
+    .replace(/[`*_{}[\]()#+\-.!|<>]/g, "\\$&");
 }
