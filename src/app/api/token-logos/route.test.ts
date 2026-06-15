@@ -121,6 +121,94 @@ describe("token logo API route", () => {
     });
   });
 
+  it("fills missing PulseChain logos from the 9mm token list fallback", async () => {
+    const fallbackLogo =
+      "https://raw.githubusercontent.com/9mm-exchange/app-tokens/main/token-logo/wpls.png";
+    const fetch = vi.fn(async (input: RequestInfo | URL) => {
+      const url = new URL(String(input));
+
+      if (url.hostname === "api.dexscreener.com") {
+        return Response.json([]);
+      }
+
+      expect(url.href).toBe(
+        "https://raw.githubusercontent.com/9mm-exchange/app-tokens/main/9mm-tokenlist.json",
+      );
+      return Response.json({
+        tokens: [
+          {
+            chainId: PULSECHAIN_CHAIN_ID,
+            address: WPLS.toLowerCase(),
+            logoURI: fallbackLogo,
+          },
+        ],
+      });
+    });
+    vi.stubGlobal("fetch", fetch);
+
+    const response = await GET(
+      new Request(
+        `https://pulserevoke.test/api/token-logos?chainId=${PULSECHAIN_CHAIN_ID}&addresses=${WPLS}`,
+      ),
+    );
+    const body = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(body.status).toBe("complete");
+    expect(body.sources).toEqual(["dexscreener", "9mm-tokenlist"]);
+    expect(body.logos[tokenLogoAddressKey(WPLS)]).toMatchObject({
+      tokenAddress: WPLS,
+      imageUrl: fallbackLogo,
+      source: "9mm-tokenlist",
+      sourceUrl:
+        "https://raw.githubusercontent.com/9mm-exchange/app-tokens/main/9mm-tokenlist.json",
+    });
+    expect(fetch).toHaveBeenCalledTimes(2);
+  });
+
+  it("uses the 9mm token list fallback when Dex Screener is unavailable", async () => {
+    const fallbackLogo =
+      "https://raw.githubusercontent.com/9mm-exchange/app-tokens/main/base-logos/weth.png";
+    const fetch = vi.fn(async (input: RequestInfo | URL) => {
+      const url = new URL(String(input));
+
+      if (url.hostname === "api.dexscreener.com") {
+        return new Response("nope", { status: 503 });
+      }
+
+      expect(url.href).toBe(
+        "https://raw.githubusercontent.com/9mm-exchange/app-tokens/main/base-tokenlist.json",
+      );
+      return Response.json({
+        tokens: [
+          {
+            chainId: BASE_CHAIN_ID,
+            address: WETH,
+            logoURI: fallbackLogo,
+          },
+        ],
+      });
+    });
+    vi.stubGlobal("fetch", fetch);
+
+    const response = await GET(
+      new Request(
+        `https://pulserevoke.test/api/token-logos?chainId=${BASE_CHAIN_ID}&addresses=${WETH}`,
+      ),
+    );
+    const body = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(body.source).toBe("9mm-tokenlist");
+    expect(body.sources).toEqual(["9mm-tokenlist"]);
+    expect(body.logos[tokenLogoAddressKey(WETH)]).toMatchObject({
+      tokenAddress: WETH,
+      imageUrl: fallbackLogo,
+      source: "9mm-tokenlist",
+    });
+    expect(fetch).toHaveBeenCalledTimes(2);
+  });
+
   it("fetches BSC token logos through the Dex Screener token endpoint", async () => {
     const fetch = vi.fn(async (input: RequestInfo | URL) => {
       const url = new URL(String(input));
@@ -280,6 +368,6 @@ describe("token logo API route", () => {
       rateLimited: true,
       logos: {},
     });
-    expect(fetch).toHaveBeenCalledTimes(TOKEN_LOGO_API_RATE_LIMIT.maxRequests);
+    expect(fetch).toHaveBeenCalledTimes(TOKEN_LOGO_API_RATE_LIMIT.maxRequests * 2);
   });
 });

@@ -5,6 +5,7 @@ import {
   BSC_CHAIN_ID,
   POLYGON_CHAIN_ID,
   PULSECHAIN_CHAIN_ID,
+  SONIC_CHAIN_ID,
 } from "@/lib/chains";
 import { PERMIT2_ADDRESS } from "@/lib/permit2";
 
@@ -18,6 +19,9 @@ export const LIBERTYSWAP_SOURCE_URL =
   "https://docs.libertyswap.finance/liberty-swap-2.0/cross-chain-swaps";
 export const LIBERTYSWAP_LEGACY_NOTE =
   "This appears in LibertySwap's old-address list. Review whether this approval is still needed.";
+export const NINEMM_DEPLOYMENTS_SOURCE_LABEL = "9mm deployments repo";
+export const NINEMM_DEPLOYMENTS_SOURCE_URL =
+  "https://github.com/9mm-exchange/deployments";
 export const UNISWAP_DEPLOYMENTS_SOURCE_URL =
   "https://developers.uniswap.org/docs/protocols/v4/deployments";
 const PERMIT2_DOCS_URL = "https://docs.uniswap.org/contracts/permit2/overview";
@@ -144,6 +148,53 @@ function libertySwapEntry({
       "Matched chain-scoped address against LibertySwap's official cross-chain swaps docs.",
     source: LIBERTYSWAP_SOURCE_URL,
     protocolMetadata: libertySwapMetadata(contractStatus, assetLabel),
+  };
+}
+
+function nineMmMetadata(
+  sourcePath: string,
+  note?: string,
+): SpenderProtocolMetadata {
+  return {
+    protocolName: "9mm",
+    contractStatus: "current",
+    sourceLabel: NINEMM_DEPLOYMENTS_SOURCE_LABEL,
+    sourceUrl: `${NINEMM_DEPLOYMENTS_SOURCE_URL}/blob/main/${sourcePath}`,
+    ...(note ? { note } : {}),
+  };
+}
+
+function nineMmEntry({
+  chainId,
+  address,
+  label,
+  category,
+  sourcePath,
+  note,
+}: {
+  chainId: number;
+  address: Address;
+  label: string;
+  category: SpenderCategory;
+  sourcePath: string;
+  note?: string;
+}): SpenderEntry {
+  const sourceUrl = `${NINEMM_DEPLOYMENTS_SOURCE_URL}/blob/main/${sourcePath}`;
+
+  return {
+    chainId,
+    address,
+    label,
+    protocol: "9mm",
+    protocolSlug: "9mm",
+    category,
+    isTrusted: false,
+    url: "https://9mm.pro/",
+    notes:
+      note ??
+      "9mm deployment address from the official deployments repository. This label is descriptive context, not a safety guarantee.",
+    source: sourceUrl,
+    protocolMetadata: nineMmMetadata(sourcePath, note),
   };
 }
 
@@ -372,6 +423,240 @@ const LIBERTYSWAP_ETHEREUM_SPENDER_METADATA_REGISTRY: readonly SpenderEntry[] = 
   }),
 ] as const;
 
+const NINEMM_PULSECHAIN_SPENDER_METADATA_REGISTRY: readonly SpenderEntry[] = [
+  nineMmEntry({
+    chainId: PULSECHAIN_CHAIN_ID,
+    address: "0xcC73b59F8D7b7c532703bDfea2808a28a488cF47",
+    label: "9mm v2 Router",
+    category: "router",
+    sourcePath: "pulsechain/v2.json",
+  }),
+  nineMmEntry({
+    chainId: PULSECHAIN_CHAIN_ID,
+    address: "0xa9444246d80d6E3496C9242395213B4f22226a59",
+    label: "9mm v3 SmartRouter",
+    category: "router",
+    sourcePath: "pulsechain/v3.json",
+  }),
+  nineMmEntry({
+    chainId: PULSECHAIN_CHAIN_ID,
+    address: "0x7bE8fbe502191bBBCb38b02f2d4fA0D628301bEA",
+    label: "9mm v3 SwapRouter",
+    category: "router",
+    sourcePath: "pulsechain/v3.json",
+  }),
+  nineMmEntry({
+    chainId: PULSECHAIN_CHAIN_ID,
+    address: "0xdee0BDC4cc82872f7D35941aBFA872F744FdF064",
+    label: "9mm v3 Migrator",
+    category: "router",
+    sourcePath: "pulsechain/v3.json",
+  }),
+  nineMmEntry({
+    chainId: PULSECHAIN_CHAIN_ID,
+    address: "0x842f3eD1C390637C99F82833D01D37695BF22066",
+    label: "9mm MasterChefV3",
+    category: "farm",
+    sourcePath: "pulsechain/v3.json",
+  }),
+  nineMmEntry({
+    chainId: PULSECHAIN_CHAIN_ID,
+    address: "0xCC05bf158202b4F461Ede8843d76dcd7Bbad07f2",
+    label: "9mm v3 NonfungiblePositionManager",
+    category: "dex",
+    sourcePath: "pulsechain/v3.json",
+  }),
+] as const;
+
+const NINEMM_BSC_SPENDER_METADATA_REGISTRY: readonly SpenderEntry[] = [
+  nineMmEntry({
+    chainId: BSC_CHAIN_ID,
+    address: "0xe234243dD9530c759aB0dBEaCda0918D6Be4D502",
+    label: "9mm v2 Router",
+    category: "router",
+    sourcePath: "bsc/v2.json",
+  }),
+  nineMmEntry({
+    chainId: BSC_CHAIN_ID,
+    address: "0xB98D7AC1316c0D1f983AA980fD0b1254b782af11",
+    label: "9mm v3 SmartRouter",
+    category: "router",
+    sourcePath: "bsc/v3.json",
+  }),
+  nineMmEntry({
+    chainId: BSC_CHAIN_ID,
+    address: "0xb29d4A5EcF7eD1D3C8498152a95910A5AFA37083",
+    label: "9mm v3 SwapRouter",
+    category: "router",
+    sourcePath: "bsc/v3.json",
+  }),
+  nineMmEntry({
+    chainId: BSC_CHAIN_ID,
+    address: "0xf0C3E7A1489b929C1bA4200D07b8873eB65FAD6e",
+    label: "9mm v3 Migrator",
+    category: "router",
+    sourcePath: "bsc/v3.json",
+  }),
+  nineMmEntry({
+    chainId: BSC_CHAIN_ID,
+    address: "0x504c2D7d1D3a5584C2990A604D42f5ff37B197A2",
+    label: "9mm MasterChefV3",
+    category: "farm",
+    sourcePath: "bsc/v3.json",
+  }),
+  nineMmEntry({
+    chainId: BSC_CHAIN_ID,
+    address: "0xD057dFD57Bf327B5305C0FAfF84115Ffa0425Bd1",
+    label: "9mm v3 NonfungiblePositionManager",
+    category: "dex",
+    sourcePath: "bsc/v3.json",
+  }),
+] as const;
+
+const NINEMM_BASE_SPENDER_METADATA_REGISTRY: readonly SpenderEntry[] = [
+  nineMmEntry({
+    chainId: BASE_CHAIN_ID,
+    address: "0x00fECf89a9Ff8428901380fCA65B6f1BECCF9959",
+    label: "9mm v2 Router",
+    category: "router",
+    sourcePath: "basechain/v2.json",
+  }),
+  nineMmEntry({
+    chainId: BASE_CHAIN_ID,
+    address: "0xFF112C8005E210Cb77D3EA0198a0dc3AE3ccC107",
+    label: "9mm v3 SmartRouter",
+    category: "router",
+    sourcePath: "basechain/v3.json",
+  }),
+  nineMmEntry({
+    chainId: BASE_CHAIN_ID,
+    address: "0xa07d063b595168e081B51280ada5fc8e11cDE52B",
+    label: "9mm v3 SwapRouter",
+    category: "router",
+    sourcePath: "basechain/v3.json",
+  }),
+  nineMmEntry({
+    chainId: BASE_CHAIN_ID,
+    address: "0x79911ed1b61F5Fcd7251F0E4d05761E4B45B0D82",
+    label: "9mm v3 Migrator",
+    category: "router",
+    sourcePath: "basechain/v3.json",
+  }),
+  nineMmEntry({
+    chainId: BASE_CHAIN_ID,
+    address: "0xF1603FCa23B7a97cEb3EE4c62576B7d5AF00f16C",
+    label: "9mm MasterChefV3",
+    category: "farm",
+    sourcePath: "basechain/v3.json",
+  }),
+  nineMmEntry({
+    chainId: BASE_CHAIN_ID,
+    address: "0x1409a523F5bE27989Af9321Cc0EC1d441ACa6d9B",
+    label: "9mm v3 NonfungiblePositionManager",
+    category: "dex",
+    sourcePath: "basechain/v3.json",
+  }),
+] as const;
+
+const NINEMM_SONIC_SPENDER_METADATA_REGISTRY: readonly SpenderEntry[] = [
+  nineMmEntry({
+    chainId: SONIC_CHAIN_ID,
+    address: "0x46636339CC36978B3ac480FBaEd6389589A95eB1",
+    label: "9mm v2 Router",
+    category: "router",
+    sourcePath: "sonic/v2.json",
+  }),
+  nineMmEntry({
+    chainId: SONIC_CHAIN_ID,
+    address: "0x32de6892a8269b40E726e32e580b96B2fEa44D81",
+    label: "9mm v3 SmartRouter",
+    category: "router",
+    sourcePath: "sonic/v3.json",
+  }),
+  nineMmEntry({
+    chainId: SONIC_CHAIN_ID,
+    address: "0x807Bb427183B9464C7eE291cdb2Bbb47f400F953",
+    label: "9mm v3 SwapRouter",
+    category: "router",
+    sourcePath: "sonic/v3.json",
+  }),
+  nineMmEntry({
+    chainId: SONIC_CHAIN_ID,
+    address: "0x4FEd4AACA7C5FFAF82D9B6609495872abEd29666",
+    label: "9mm v3 Migrator",
+    category: "router",
+    sourcePath: "sonic/v3.json",
+  }),
+  nineMmEntry({
+    chainId: SONIC_CHAIN_ID,
+    address: "0x14c35a0A3D2cA5Ad3D0DBa77668FDC3F7b2F1863",
+    label: "9mm MasterChefV3",
+    category: "farm",
+    sourcePath: "sonic/v3.json",
+  }),
+  nineMmEntry({
+    chainId: SONIC_CHAIN_ID,
+    address: "0x61fF993976682601A819A231837Dd865382d8e9C",
+    label: "9mm v3 NonfungiblePositionManager",
+    category: "dex",
+    sourcePath: "sonic/v3.json",
+  }),
+  nineMmEntry({
+    chainId: SONIC_CHAIN_ID,
+    address: "0x81afd4c90422c8351ac8265900173ed240d929e3",
+    label: "9mm v4 Universal Router",
+    category: "router",
+    sourcePath: "sonic/v4.json",
+    note:
+      "9mm Sonic v4 Universal Router address from the official deployments repository. BSC v4 Universal Router is excluded because public 9mm sources currently disagree.",
+  }),
+] as const;
+
+const NINEMM_ETHEREUM_SPENDER_METADATA_REGISTRY: readonly SpenderEntry[] = [
+  nineMmEntry({
+    chainId: ETHEREUM_MAINNET_CHAIN_ID,
+    address: "0x5189592ABfF444B30b7702608b0d8D7Eb618495e",
+    label: "9mm v2 Router",
+    category: "router",
+    sourcePath: "mainnet/v2.json",
+  }),
+  nineMmEntry({
+    chainId: ETHEREUM_MAINNET_CHAIN_ID,
+    address: "0x30D678777Cd126D498b21fD8916825B2aface90C",
+    label: "9mm v3 SmartRouter",
+    category: "router",
+    sourcePath: "mainnet/v3.json",
+  }),
+  nineMmEntry({
+    chainId: ETHEREUM_MAINNET_CHAIN_ID,
+    address: "0xB2bd225880EE1D9De70D1dDaB5b92c5891264DCe",
+    label: "9mm v3 SwapRouter",
+    category: "router",
+    sourcePath: "mainnet/v3.json",
+  }),
+  nineMmEntry({
+    chainId: ETHEREUM_MAINNET_CHAIN_ID,
+    address: "0xc9046315905429f2555e190E2F463F1011061394",
+    label: "9mm v3 Migrator",
+    category: "router",
+    sourcePath: "mainnet/v3.json",
+  }),
+  nineMmEntry({
+    chainId: ETHEREUM_MAINNET_CHAIN_ID,
+    address: "0xd2Eb8eeAFbf748f0Ad21816aC1Ce662ed1233011",
+    label: "9mm MasterChefV3",
+    category: "farm",
+    sourcePath: "mainnet/v3.json",
+  }),
+  nineMmEntry({
+    chainId: ETHEREUM_MAINNET_CHAIN_ID,
+    address: "0x290a0376177a172911bAbA25F6C15E1748f4aE47",
+    label: "9mm v3 NonfungiblePositionManager",
+    category: "dex",
+    sourcePath: "mainnet/v3.json",
+  }),
+] as const;
+
 /**
  * Ethereum mainnet spender registry used as enrichment only. Discovery and
  * revoke safety still come from live API/RPC validation and wallet gates.
@@ -468,6 +753,14 @@ export const LIBERTYSWAP_SPENDER_METADATA_REGISTRY: readonly SpenderEntry[] = [
   ...LIBERTYSWAP_ETHEREUM_SPENDER_METADATA_REGISTRY,
 ] as const;
 
+export const NINEMM_SPENDER_METADATA_REGISTRY: readonly SpenderEntry[] = [
+  ...NINEMM_PULSECHAIN_SPENDER_METADATA_REGISTRY,
+  ...NINEMM_BSC_SPENDER_METADATA_REGISTRY,
+  ...NINEMM_BASE_SPENDER_METADATA_REGISTRY,
+  ...NINEMM_SONIC_SPENDER_METADATA_REGISTRY,
+  ...NINEMM_ETHEREUM_SPENDER_METADATA_REGISTRY,
+] as const;
+
 export const PERMIT2_SPENDER_METADATA_REGISTRY: readonly SpenderEntry[] = [
   permit2MetadataEntry({
     chainId: PULSECHAIN_CHAIN_ID,
@@ -502,6 +795,7 @@ export const PERMIT2_SPENDER_METADATA_REGISTRY: readonly SpenderEntry[] = [
 export const SPENDER_METADATA_REGISTRY: readonly SpenderEntry[] = [
   ...SPENDER_REGISTRY,
   ...LIBERTYSWAP_SPENDER_METADATA_REGISTRY,
+  ...NINEMM_SPENDER_METADATA_REGISTRY,
   ...PERMIT2_SPENDER_METADATA_REGISTRY,
 ] as const;
 
@@ -530,6 +824,26 @@ validateAddresses(
 validateAddresses(
   LIBERTYSWAP_ETHEREUM_SPENDER_METADATA_REGISTRY,
   "LIBERTYSWAP_SPENDER_METADATA_REGISTRY[ethereum]",
+);
+validateAddresses(
+  NINEMM_PULSECHAIN_SPENDER_METADATA_REGISTRY,
+  "NINEMM_SPENDER_METADATA_REGISTRY[pulsechain]",
+);
+validateAddresses(
+  NINEMM_BSC_SPENDER_METADATA_REGISTRY,
+  "NINEMM_SPENDER_METADATA_REGISTRY[bsc]",
+);
+validateAddresses(
+  NINEMM_BASE_SPENDER_METADATA_REGISTRY,
+  "NINEMM_SPENDER_METADATA_REGISTRY[base]",
+);
+validateAddresses(
+  NINEMM_SONIC_SPENDER_METADATA_REGISTRY,
+  "NINEMM_SPENDER_METADATA_REGISTRY[sonic]",
+);
+validateAddresses(
+  NINEMM_ETHEREUM_SPENDER_METADATA_REGISTRY,
+  "NINEMM_SPENDER_METADATA_REGISTRY[ethereum]",
 );
 for (const [chainId, label] of [
   [PULSECHAIN_CHAIN_ID, "pulsechain"],

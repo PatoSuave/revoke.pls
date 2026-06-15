@@ -178,13 +178,28 @@ describe("hardening source invariants", () => {
       join(process.cwd(), "src", "lib", "token-logo-api-controls.ts"),
       "utf8",
     );
+    const scanner = readFileSync(
+      join(
+        process.cwd(),
+        "src",
+        "components",
+        "sections",
+        "approval-scanner.tsx",
+      ),
+      "utf8",
+    );
 
     expect(helpers).toContain("TOKEN_LOGO_MAX_ADDRESSES = 30");
     expect(helpers).toContain("TOKEN_LOGO_REQUEST_TIMEOUT_MS = 8_000");
     expect(route).toContain("checkTokenLogoApiRateLimit");
     expect(route).toContain("tokenLogoNoStoreHeaders");
     expect(route).toContain("Retry-After");
+    expect(route).toContain("fetchNineMmTokenListLogos");
+    expect(helpers).toContain("9mm-tokenlist");
     expect(controls).toContain("TOKEN_LOGO_API_RATE_LIMIT");
+    expect(scanner).toContain(
+      "scored.map((approval) => approval.tokenAddress)",
+    );
     expect(`${route}\n${helpers}`).not.toMatch(
       /writeContract|sendTransaction|signTransaction|privateKey|mnemonic|seed|relayer/i,
     );

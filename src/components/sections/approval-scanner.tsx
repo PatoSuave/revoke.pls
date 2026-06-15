@@ -2056,8 +2056,8 @@ function ScanContent({
   debugMode: boolean;
 }) {
   const tokenLogoAddresses = useMemo(
-    () => visibleApprovals.map((approval) => approval.tokenAddress),
-    [visibleApprovals],
+    () => scored.map((approval) => approval.tokenAddress),
+    [scored],
   );
   const tokenLogos = useTokenLogos({
     chainId: chainConfig.chainId,
