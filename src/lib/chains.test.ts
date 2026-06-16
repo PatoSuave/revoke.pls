@@ -8,12 +8,21 @@ import {
   BASE_CHAIN_ID,
   BASE_EXPLORER_API_DEFAULT,
   BASE_EXPLORER_CHAIN_ID_DEFAULT,
+  BERACHAIN_CHAIN_ID,
+  BERACHAIN_EXPLORER_API_DEFAULT,
+  BERACHAIN_EXPLORER_CHAIN_ID_DEFAULT,
+  BLAST_CHAIN_ID,
+  BLAST_EXPLORER_API_DEFAULT,
+  BLAST_EXPLORER_CHAIN_ID_DEFAULT,
   BSC_CHAIN_ID,
   BSC_DEPRECATED_V1_EXPLORER_API_URL,
   BSC_EXPLORER_CHAIN_ID_DEFAULT,
   BSC_EXPLORER_API_DEFAULT,
   BSC_HIGH_GAS_WARNING_THRESHOLD,
   BSC_OSAKA_MAX_TRANSACTION_GAS,
+  LINEA_CHAIN_ID,
+  LINEA_EXPLORER_API_DEFAULT,
+  LINEA_EXPLORER_CHAIN_ID_DEFAULT,
   MANTLE_CHAIN_ID,
   MANTLE_EXPLORER_API_DEFAULT,
   MANTLE_EXPLORER_CHAIN_ID_DEFAULT,
@@ -25,11 +34,14 @@ import {
   SONIC_EXPLORER_API_DEFAULT,
   SONIC_EXPLORER_CHAIN_ID_DEFAULT,
   avalanche,
+  berachain,
+  blast,
   base,
   bsc,
   getChainConfig,
   getSupportedChainShortNames,
   isSupportedChainId,
+  linea,
   mantle,
   polygon,
   sonic,
@@ -70,6 +82,9 @@ describe("supported chain config", () => {
       SONIC_CHAIN_ID,
       AVALANCHE_CHAIN_ID,
       MANTLE_CHAIN_ID,
+      LINEA_CHAIN_ID,
+      BLAST_CHAIN_ID,
+      BERACHAIN_CHAIN_ID,
     ]);
     expect(supportedChainConfigList.map((chain) => chain.chainId)).toEqual([
       PULSECHAIN_CHAIN_ID,
@@ -79,6 +94,9 @@ describe("supported chain config", () => {
       SONIC_CHAIN_ID,
       AVALANCHE_CHAIN_ID,
       MANTLE_CHAIN_ID,
+      LINEA_CHAIN_ID,
+      BLAST_CHAIN_ID,
+      BERACHAIN_CHAIN_ID,
     ]);
     expect(supportedChainConfigList.map((chain) => chain.shortName)).toEqual([
       "PulseChain",
@@ -88,9 +106,12 @@ describe("supported chain config", () => {
       "Sonic",
       "Avalanche",
       "Mantle",
+      "Linea",
+      "Blast",
+      "Berachain",
     ]);
     expect(getSupportedChainShortNames()).toBe(
-      "PulseChain, BSC, Base, Polygon, Sonic, Avalanche, or Mantle",
+      "PulseChain, BSC, Base, Polygon, Sonic, Avalanche, Mantle, Linea, Blast, or Berachain",
     );
     expect(isSupportedChainId(1)).toBe(false);
     expect(isSupportedChainId(ARBITRUM_ONE_CLIENT_CHAIN_ID)).toBe(false);
@@ -337,6 +358,77 @@ describe("supported chain config", () => {
     expect(mantle.nativeCurrency.symbol).toBe("MNT");
   });
 
+  it("configures Linea, Blast, and Berachain as Etherscan V2 generic chains without public keys", () => {
+    const cases = [
+      {
+        chainId: LINEA_CHAIN_ID,
+        displayName: "Linea",
+        nativeSymbol: "ETH",
+        explorerName: "LineaScan",
+        explorerBaseUrl: "https://lineascan.build",
+        rpcUrl: "https://rpc.linea.build",
+        apiUrl: LINEA_EXPLORER_API_DEFAULT,
+        apiChainId: LINEA_EXPLORER_CHAIN_ID_DEFAULT,
+        apiKeyEnvVars: ["LINEA_EXPLORER_API_KEY", "ETHERSCAN_API_KEY"],
+        chain: linea,
+      },
+      {
+        chainId: BLAST_CHAIN_ID,
+        displayName: "Blast",
+        nativeSymbol: "ETH",
+        explorerName: "Blastscan",
+        explorerBaseUrl: "https://blastscan.io",
+        rpcUrl: "https://rpc.blast.io",
+        apiUrl: BLAST_EXPLORER_API_DEFAULT,
+        apiChainId: BLAST_EXPLORER_CHAIN_ID_DEFAULT,
+        apiKeyEnvVars: ["BLAST_EXPLORER_API_KEY", "ETHERSCAN_API_KEY"],
+        chain: blast,
+      },
+      {
+        chainId: BERACHAIN_CHAIN_ID,
+        displayName: "Berachain",
+        nativeSymbol: "BERA",
+        explorerName: "Berascan",
+        explorerBaseUrl: "https://berascan.com",
+        rpcUrl: "https://rpc.berachain.com",
+        apiUrl: BERACHAIN_EXPLORER_API_DEFAULT,
+        apiChainId: BERACHAIN_EXPLORER_CHAIN_ID_DEFAULT,
+        apiKeyEnvVars: ["BERACHAIN_EXPLORER_API_KEY", "ETHERSCAN_API_KEY"],
+        chain: berachain,
+      },
+    ] as const;
+
+    for (const item of cases) {
+      const config = getChainConfig(item.chainId);
+
+      expect(config?.chainId).toBe(item.chainId);
+      expect(config?.displayName).toBe(item.displayName);
+      expect(config?.shortName).toBe(item.displayName);
+      expect(config?.nativeSymbol).toBe(item.nativeSymbol);
+      expect(config?.standardLabels).toMatchObject({
+        fungible: "ERC-20",
+        nft: "ERC-721",
+        multiToken: "ERC-1155",
+      });
+      expect(config?.discovery.apiProviderKind).toBe("etherscan-v2");
+      expect(config?.discovery.apiProviderName).toBe("Etherscan API V2");
+      expect(config?.explorer.name).toBe(item.explorerName);
+      expect(config?.explorer.baseUrl).toBe(item.explorerBaseUrl);
+      expect(config?.rpc.defaultUrl).toBe(item.rpcUrl);
+      expect(config?.discovery.apiUrl).toBe(item.apiUrl);
+      expect(config?.discovery.apiChainId).toBe(item.apiChainId);
+      expect(config?.discovery.queryParams).toMatchObject({
+        chainid: item.apiChainId,
+      });
+      expect(config?.discovery.apiKeyEnvVars).toEqual(item.apiKeyEnvVars);
+      expect(config?.discovery.apiKeyEnvVars?.join(" ")).not.toContain(
+        "NEXT_PUBLIC",
+      );
+      expect(item.chain.id).toBe(item.chainId);
+      expect(item.chain.nativeCurrency.symbol).toBe(item.nativeSymbol);
+    }
+  });
+
   it("keeps PulseChain gas and explorer labels intact", () => {
     const config = getChainConfig(PULSECHAIN_CHAIN_ID);
 
@@ -419,6 +511,36 @@ describe("supported chain config", () => {
     );
   });
 
+  it("builds Linea, Blast, and Berachain explorer links", () => {
+    expect(explorerAddressUrl(LINEA_CHAIN_ID, SPENDER)).toBe(
+      `https://lineascan.build/address/${SPENDER}`,
+    );
+    expect(explorerTokenUrl(LINEA_CHAIN_ID, TOKEN)).toBe(
+      `https://lineascan.build/token/${TOKEN}`,
+    );
+    expect(explorerTxUrl(LINEA_CHAIN_ID, "0xabc")).toBe(
+      "https://lineascan.build/tx/0xabc",
+    );
+    expect(explorerAddressUrl(BLAST_CHAIN_ID, SPENDER)).toBe(
+      `https://blastscan.io/address/${SPENDER}`,
+    );
+    expect(explorerTokenUrl(BLAST_CHAIN_ID, TOKEN)).toBe(
+      `https://blastscan.io/token/${TOKEN}`,
+    );
+    expect(explorerTxUrl(BLAST_CHAIN_ID, "0xabc")).toBe(
+      "https://blastscan.io/tx/0xabc",
+    );
+    expect(explorerAddressUrl(BERACHAIN_CHAIN_ID, SPENDER)).toBe(
+      `https://berascan.com/address/${SPENDER}`,
+    );
+    expect(explorerTokenUrl(BERACHAIN_CHAIN_ID, TOKEN)).toBe(
+      `https://berascan.com/token/${TOKEN}`,
+    );
+    expect(explorerTxUrl(BERACHAIN_CHAIN_ID, "0xabc")).toBe(
+      "https://berascan.com/tx/0xabc",
+    );
+  });
+
   it("builds Etherscan links for wallet-only Ethereum revokes without activating Ethereum", () => {
     expect(isSupportedChainId(ETHEREUM_MAINNET_CLIENT_CHAIN_ID)).toBe(false);
     expect(explorerAddressUrl(ETHEREUM_MAINNET_CLIENT_CHAIN_ID, SPENDER)).toBe(
@@ -490,11 +612,14 @@ describe("supported chain config", () => {
     expect(getSpendersForChain(POLYGON_CHAIN_ID)).toEqual([]);
   });
 
-  it("does not leak existing registry labels onto Sonic, Avalanche, or Mantle", () => {
+  it("does not leak existing registry labels onto Sonic, Avalanche, Mantle, Linea, Blast, or Berachain", () => {
     for (const chainId of [
       SONIC_CHAIN_ID,
       AVALANCHE_CHAIN_ID,
       MANTLE_CHAIN_ID,
+      LINEA_CHAIN_ID,
+      BLAST_CHAIN_ID,
+      BERACHAIN_CHAIN_ID,
     ]) {
       expect(getSpenderEntry(chainId, PULSEX_ROUTER)).toBeUndefined();
       expect(getTokensForChain(chainId)).toEqual([]);
@@ -577,11 +702,14 @@ describe("supported chain config", () => {
     });
   });
 
-  it("builds Sonic, Avalanche, and Mantle ERC-20-compatible revoke calls with approve(spender, 0)", () => {
+  it("builds Sonic, Avalanche, Mantle, Linea, Blast, and Berachain ERC-20-compatible revoke calls with approve(spender, 0)", () => {
     for (const chainId of [
       SONIC_CHAIN_ID,
       AVALANCHE_CHAIN_ID,
       MANTLE_CHAIN_ID,
+      LINEA_CHAIN_ID,
+      BLAST_CHAIN_ID,
+      BERACHAIN_CHAIN_ID,
     ]) {
       const request = {
         ...buildRevokeCall({
@@ -654,6 +782,9 @@ describe("supported chain config", () => {
     expect(copy).toContain("Sonic");
     expect(copy).toContain("Avalanche");
     expect(copy).toContain("Mantle");
+    expect(copy).toContain("Linea");
+    expect(copy).toContain("Blast");
+    expect(copy).toContain("Berachain");
     expect(copy).toContain("Ethereum");
     expect(copy).toContain("Arbitrum");
     expect(isSupportedChainId(1)).toBe(false);
@@ -800,6 +931,48 @@ describe("supported chain config", () => {
     } finally {
       if (original !== undefined) {
         process.env.NEXT_PUBLIC_MANTLE_EXPLORER_CHAIN_ID = original;
+      }
+      vi.resetModules();
+    }
+  });
+
+  it("defaults the Linea, Blast, and Berachain explorer API chain IDs when env vars are absent", async () => {
+    const originals = {
+      linea: process.env.NEXT_PUBLIC_LINEA_EXPLORER_CHAIN_ID,
+      blast: process.env.NEXT_PUBLIC_BLAST_EXPLORER_CHAIN_ID,
+      berachain: process.env.NEXT_PUBLIC_BERACHAIN_EXPLORER_CHAIN_ID,
+    };
+    delete process.env.NEXT_PUBLIC_LINEA_EXPLORER_CHAIN_ID;
+    delete process.env.NEXT_PUBLIC_BLAST_EXPLORER_CHAIN_ID;
+    delete process.env.NEXT_PUBLIC_BERACHAIN_EXPLORER_CHAIN_ID;
+    vi.resetModules();
+
+    try {
+      const chains = await import("./chains");
+      const cases = [
+        [chains.LINEA_CHAIN_ID, "59144"],
+        [chains.BLAST_CHAIN_ID, "81457"],
+        [chains.BERACHAIN_CHAIN_ID, "80094"],
+      ] as const;
+
+      for (const [chainId, expected] of cases) {
+        const config = chains.getChainConfig(chainId);
+        expect(config?.discovery.apiProviderKind).toBe("etherscan-v2");
+        expect(config?.discovery.apiChainId).toBe(expected);
+        expect(config?.discovery.queryParams).toMatchObject({
+          chainid: expected,
+        });
+      }
+    } finally {
+      if (originals.linea !== undefined) {
+        process.env.NEXT_PUBLIC_LINEA_EXPLORER_CHAIN_ID = originals.linea;
+      }
+      if (originals.blast !== undefined) {
+        process.env.NEXT_PUBLIC_BLAST_EXPLORER_CHAIN_ID = originals.blast;
+      }
+      if (originals.berachain !== undefined) {
+        process.env.NEXT_PUBLIC_BERACHAIN_EXPLORER_CHAIN_ID =
+          originals.berachain;
       }
       vi.resetModules();
     }

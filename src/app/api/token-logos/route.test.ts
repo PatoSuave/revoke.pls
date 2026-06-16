@@ -4,7 +4,10 @@ import { getAddress } from "viem";
 import {
   AVALANCHE_CHAIN_ID,
   BASE_CHAIN_ID,
+  BERACHAIN_CHAIN_ID,
+  BLAST_CHAIN_ID,
   BSC_CHAIN_ID,
+  LINEA_CHAIN_ID,
   MANTLE_CHAIN_ID,
   POLYGON_CHAIN_ID,
   PULSECHAIN_CHAIN_ID,
@@ -30,6 +33,7 @@ const WPOL = getAddress("0x0d500B1d8E8eF31E21C99d1Db9A6444d3ADf1270");
 const WETH = getAddress("0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2");
 const WAVAX = getAddress("0xB31f66AA3C1e785363F0875A1B74E27b85FD66c7");
 const WMNT = getAddress("0x78c1b0C915c4FAA5FffA6CAbf0219DA63d7f4cb8");
+const BERA_TOKEN = getAddress("0x6969696969696969696969696969696969696969");
 
 afterEach(() => {
   vi.unstubAllGlobals();
@@ -250,6 +254,9 @@ describe("token logo API route", () => {
     [SONIC_CHAIN_ID, "sonic", WETH],
     [AVALANCHE_CHAIN_ID, "avalanche", WAVAX],
     [MANTLE_CHAIN_ID, "mantle", WMNT],
+    [LINEA_CHAIN_ID, "linea", WETH],
+    [BLAST_CHAIN_ID, "blast", WETH],
+    [BERACHAIN_CHAIN_ID, "berachain", BERA_TOKEN],
     [ARBITRUM_TOKEN_LOGO_CHAIN_ID, "arbitrum", WETH],
     [OPTIMISM_TOKEN_LOGO_CHAIN_ID, "optimism", WETH],
     [HYPEREVM_TOKEN_LOGO_CHAIN_ID, "hyperevm", WETH],

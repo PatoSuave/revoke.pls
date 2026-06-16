@@ -13,11 +13,14 @@ ship.
 - Sonic Mainnet support
 - Avalanche C-Chain support
 - Mantle support
+- Linea support
+- Blast support
+- Berachain support
 - Ethereum Mainnet read-only discovery and wallet-side revoke
 - Arbitrum One ERC-20/NFT verified-row revoke
 - Optimism / OP Mainnet ERC-20/NFT verified-row revoke
 - HyperEVM ERC-20/NFT verified-row revoke
-- First-class product copy and wallet switching for all eleven live chains
+- First-class product copy and wallet switching for all fourteen live chains
 - Browser wallet connection
 - WalletConnect when configured
 - Historical approval log discovery
@@ -32,6 +35,9 @@ ship.
 - Sonic Etherscan API V2 discovery with `chainid=146`
 - Avalanche Etherscan API V2 discovery with `chainid=43114`
 - Mantle Etherscan API V2 discovery with `chainid=5000`
+- Linea Etherscan API V2 discovery with `chainid=59144`
+- Blast Etherscan API V2 discovery with `chainid=81457`
+- Berachain Etherscan API V2 discovery with `chainid=80094`
 - Ethereum server-read-only Etherscan API V2 discovery with `chainid=1`
 - Arbitrum server-read-only Etherscan API V2 discovery with `chainid=42161`
 - Optimism server-read-only Etherscan API V2 discovery with `chainid=10`
@@ -65,8 +71,8 @@ ship.
 
 ## Future Ideas Requiring Review
 
-- More manually verified PulseChain, BSC, Base, Polygon, Sonic, Avalanche, and
-  Mantle registry labels
+- More manually verified PulseChain, BSC, Base, Polygon, Sonic, Avalanche,
+  Mantle, Linea, Blast, and Berachain registry labels
 - Future Arbitrum batch revoke only after separate planning and QA
 - Future Optimism batch revoke only after separate planning and QA
 - Future HyperEVM batch revoke only after separate planning and QA

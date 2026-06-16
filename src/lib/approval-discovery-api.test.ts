@@ -13,7 +13,10 @@ import {
 import {
   AVALANCHE_CHAIN_ID,
   BASE_CHAIN_ID,
+  BERACHAIN_CHAIN_ID,
+  BLAST_CHAIN_ID,
   BSC_CHAIN_ID,
+  LINEA_CHAIN_ID,
   MANTLE_CHAIN_ID,
   POLYGON_CHAIN_ID,
   PULSECHAIN_CHAIN_ID,
@@ -47,6 +50,9 @@ describe("approval discovery API serialization", () => {
     expect(usesServerApprovalDiscovery(SONIC_CHAIN_ID)).toBe(true);
     expect(usesServerApprovalDiscovery(AVALANCHE_CHAIN_ID)).toBe(true);
     expect(usesServerApprovalDiscovery(MANTLE_CHAIN_ID)).toBe(true);
+    expect(usesServerApprovalDiscovery(LINEA_CHAIN_ID)).toBe(true);
+    expect(usesServerApprovalDiscovery(BLAST_CHAIN_ID)).toBe(true);
+    expect(usesServerApprovalDiscovery(BERACHAIN_CHAIN_ID)).toBe(true);
     expect(usesServerApprovalDiscovery(PULSECHAIN_CHAIN_ID)).toBe(false);
     expect(usesServerApprovalDiscovery(undefined)).toBe(false);
   });

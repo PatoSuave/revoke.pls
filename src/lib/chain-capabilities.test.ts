@@ -9,8 +9,11 @@ import {
 import {
   AVALANCHE_CHAIN_ID,
   BASE_CHAIN_ID,
+  BERACHAIN_CHAIN_ID,
+  BLAST_CHAIN_ID,
   BSC_CHAIN_ID,
   BSC_OSAKA_MAX_TRANSACTION_GAS,
+  LINEA_CHAIN_ID,
   MANTLE_CHAIN_ID,
   POLYGON_CHAIN_ID,
   PULSECHAIN_CHAIN_ID,
@@ -32,6 +35,9 @@ describe("chain capability metadata", () => {
         SONIC_CHAIN_ID,
         AVALANCHE_CHAIN_ID,
         MANTLE_CHAIN_ID,
+        LINEA_CHAIN_ID,
+        BLAST_CHAIN_ID,
+        BERACHAIN_CHAIN_ID,
         PULSECHAIN_CHAIN_ID,
         BASE_CHAIN_ID,
         HYPEREVM_CLIENT_CHAIN_ID,
@@ -56,6 +62,11 @@ describe("chain capability metadata", () => {
       true,
     );
     expect(CHAIN_CAPABILITIES[MANTLE_CHAIN_ID].batchRevokeEnabled).toBe(true);
+    expect(CHAIN_CAPABILITIES[LINEA_CHAIN_ID].batchRevokeEnabled).toBe(true);
+    expect(CHAIN_CAPABILITIES[BLAST_CHAIN_ID].batchRevokeEnabled).toBe(true);
+    expect(CHAIN_CAPABILITIES[BERACHAIN_CHAIN_ID].batchRevokeEnabled).toBe(
+      true,
+    );
   });
 
   it("records EIP-7702 support without overclaiming unknown chains", () => {
@@ -76,6 +87,11 @@ describe("chain capability metadata", () => {
     expect(CHAIN_CAPABILITIES[MANTLE_CHAIN_ID].supportsEip7702).toBe(
       "unknown",
     );
+    expect(CHAIN_CAPABILITIES[LINEA_CHAIN_ID].supportsEip7702).toBe("unknown");
+    expect(CHAIN_CAPABILITIES[BLAST_CHAIN_ID].supportsEip7702).toBe("unknown");
+    expect(CHAIN_CAPABILITIES[BERACHAIN_CHAIN_ID].supportsEip7702).toBe(
+      "unknown",
+    );
   });
 
   it("records confirmed gas caps as chain metadata", () => {
@@ -90,6 +106,9 @@ describe("chain capability metadata", () => {
     expect(CHAIN_CAPABILITIES[SONIC_CHAIN_ID].perTxGasCap).toBeUndefined();
     expect(CHAIN_CAPABILITIES[AVALANCHE_CHAIN_ID].perTxGasCap).toBeUndefined();
     expect(CHAIN_CAPABILITIES[MANTLE_CHAIN_ID].perTxGasCap).toBeUndefined();
+    expect(CHAIN_CAPABILITIES[LINEA_CHAIN_ID].perTxGasCap).toBeUndefined();
+    expect(CHAIN_CAPABILITIES[BLAST_CHAIN_ID].perTxGasCap).toBeUndefined();
+    expect(CHAIN_CAPABILITIES[BERACHAIN_CHAIN_ID].perTxGasCap).toBeUndefined();
   });
 
   it("identifies preconfirmation-aware chains for receipt copy", () => {

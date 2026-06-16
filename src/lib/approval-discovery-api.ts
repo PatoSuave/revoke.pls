@@ -3,7 +3,10 @@ import type { Address } from "viem";
 import {
   AVALANCHE_CHAIN_ID,
   BASE_CHAIN_ID,
+  BERACHAIN_CHAIN_ID,
+  BLAST_CHAIN_ID,
   BSC_CHAIN_ID,
+  LINEA_CHAIN_ID,
   MANTLE_CHAIN_ID,
   POLYGON_CHAIN_ID,
   SONIC_CHAIN_ID,
@@ -105,7 +108,10 @@ export type ServerApprovalDiscoveryChainId =
   | typeof POLYGON_CHAIN_ID
   | typeof SONIC_CHAIN_ID
   | typeof AVALANCHE_CHAIN_ID
-  | typeof MANTLE_CHAIN_ID;
+  | typeof MANTLE_CHAIN_ID
+  | typeof LINEA_CHAIN_ID
+  | typeof BLAST_CHAIN_ID
+  | typeof BERACHAIN_CHAIN_ID;
 
 export function usesServerApprovalDiscovery(
   chainId: number | undefined,
@@ -117,7 +123,10 @@ export function usesServerApprovalDiscovery(
     chainId === POLYGON_CHAIN_ID ||
     chainId === SONIC_CHAIN_ID ||
     chainId === AVALANCHE_CHAIN_ID ||
-    chainId === MANTLE_CHAIN_ID
+    chainId === MANTLE_CHAIN_ID ||
+    chainId === LINEA_CHAIN_ID ||
+    chainId === BLAST_CHAIN_ID ||
+    chainId === BERACHAIN_CHAIN_ID
   );
 }
 

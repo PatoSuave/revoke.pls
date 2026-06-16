@@ -67,4 +67,19 @@ describe("siteConfig nav", () => {
       { href: "/security", label: "Security Guide" },
     ]);
   });
+
+  it("includes the new EVM chains in public metadata and explorer links", () => {
+    const copy = [
+      siteConfig.description,
+      siteConfig.longDescription,
+      ...siteConfig.keywords,
+    ].join(" ");
+
+    expect(copy).toContain("Linea");
+    expect(copy).toContain("Blast");
+    expect(copy).toContain("Berachain");
+    expect(siteConfig.links.lineascan).toBe("https://lineascan.build");
+    expect(siteConfig.links.blastscan).toBe("https://blastscan.io");
+    expect(siteConfig.links.berascan).toBe("https://berascan.com");
+  });
 });

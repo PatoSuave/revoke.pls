@@ -9,7 +9,7 @@
 
 ## Active Chains
 
-Eleven live product chains are surfaced across the app:
+Fourteen live product chains are surfaced across the app:
 
 - PulseChain, chain ID `369`, native gas token `PLS`, explorer `PulseScan`
 - BSC / BNB Smart Chain, chain ID `56`, native gas token `BNB`, explorer
@@ -20,6 +20,9 @@ Eleven live product chains are surfaced across the app:
 - Avalanche C-Chain, chain ID `43114`, native gas token `AVAX`, explorer
   `SnowScan`
 - Mantle, chain ID `5000`, native gas token `MNT`, explorer `Mantle Explorer`
+- Linea, chain ID `59144`, native gas token `ETH`, explorer `LineaScan`
+- Blast, chain ID `81457`, native gas token `ETH`, explorer `Blastscan`
+- Berachain, chain ID `80094`, native gas token `BERA`, explorer `Berascan`
 - Ethereum Mainnet, chain ID `1`, native gas token `ETH`, explorer `Etherscan`
 - Arbitrum One, chain ID `42161`, native gas token `ETH`, explorer `Arbiscan`
 - Optimism / OP Mainnet, chain ID `10`, native gas token `ETH`, explorer
@@ -27,7 +30,7 @@ Eleven live product chains are surfaced across the app:
 - HyperEVM, chain ID `999`, native gas token `HYPE`, explorer `Hyperevmscan`,
   verified ERC-20/NFT row revoke
 
-PulseChain, BSC, Base, Polygon, Sonic, Avalanche, and Mantle use the generic
+PulseChain, BSC, Base, Polygon, Sonic, Avalanche, Mantle, Linea, Blast, and Berachain use the generic
 scanner registry in `src/lib/chains.ts`, including the shared scan, revoke, and
 batch lane.
 
@@ -56,9 +59,9 @@ revoke. HyperEVM gas is paid in HYPE.
 ## Web3 Layer
 
 - `src/lib/wagmi.ts` registers PulseChain, BSC, Base, Polygon, Sonic,
-  Avalanche C-Chain, Mantle, Ethereum Mainnet, Arbitrum One, OP Mainnet, and
-  HyperEVM with wagmi. Ethereum, Arbitrum, Optimism, and HyperEVM use separate
-  scanner lanes.
+  Avalanche C-Chain, Mantle, Linea, Blast, Berachain, Ethereum Mainnet,
+  Arbitrum One, OP Mainnet, and HyperEVM with wagmi. Ethereum, Arbitrum,
+  Optimism, and HyperEVM use separate scanner lanes.
 - PulseChain RPC defaults to `https://rpc.pulsechain.com`.
 - BSC RPC defaults to `https://bsc-dataseed.bnbchain.org`.
 - Base RPC defaults to `https://mainnet.base.org`.
@@ -67,6 +70,9 @@ revoke. HyperEVM gas is paid in HYPE.
 - Avalanche C-Chain RPC defaults to
   `https://api.avax.network/ext/bc/C/rpc`.
 - Mantle RPC defaults to `https://rpc.mantle.xyz`.
+- Linea RPC defaults to `https://rpc.linea.build`.
+- Blast RPC defaults to `https://rpc.blast.io`.
+- Berachain RPC defaults to `https://rpc.berachain.com`.
 - Ethereum wallet RPC defaults to `https://ethereum-rpc.publicnode.com` unless
   overridden for the wallet client.
 - Arbitrum wallet chain recognition uses `https://arb1.arbitrum.io/rpc`.
@@ -78,8 +84,8 @@ revoke. HyperEVM gas is paid in HYPE.
 - HyperEVM wallet chain recognition uses `https://rpc.hyperliquid.xyz/evm`.
   Production HyperEVM approval discovery uses server-only RPC/API settings
   through `/api/hyperevm/approvals`.
-- PulseChain, BSC, Base, Polygon, Sonic, Avalanche, Mantle, and Ethereum wallet
-  RPCs can be overridden with browser-visible public env vars. Server-side
+- PulseChain, BSC, Base, Polygon, Sonic, Avalanche, Mantle, Linea, Blast,
+  Berachain, and Ethereum wallet RPCs can be overridden with browser-visible public env vars. Server-side
   discovery RPCs use unprefixed server-only env vars.
 - Live reads and writes always include the approval record's `chainId`.
 - When connected, the wallet account `chainId` is the active scanner source of
@@ -138,6 +144,21 @@ Mantle hosted web discovery uses the same server route and Etherscan API V2
 logs path with `chainid=5000`. Public Mantle RPC `eth_getLogs` is not used for
 historical approval discovery. Mantle Explorer remains the explorer for
 address, token, and transaction links.
+
+Linea hosted web discovery uses the same server route and Etherscan API V2
+logs path with `chainid=59144`. Public Linea RPC `eth_getLogs` is not used for
+historical approval discovery. LineaScan remains the explorer for address,
+token, and transaction links.
+
+Blast hosted web discovery uses the same server route and Etherscan API V2
+logs path with `chainid=81457`. Public Blast RPC `eth_getLogs` is not used for
+historical approval discovery. Blastscan remains the explorer for address,
+token, and transaction links.
+
+Berachain hosted web discovery uses the same server route and Etherscan API V2
+logs path with `chainid=80094`. Public Berachain RPC `eth_getLogs` is not used
+for historical approval discovery. Berascan remains the explorer for address,
+token, and transaction links.
 
 Ethereum historical discovery is exposed through `/api/ethereum/approvals` so
 the Etherscan key stays server-only. The route is read-only, uses bounded
@@ -217,6 +238,24 @@ row-level revoke stays limited to verified ERC-20 and NFT rows.
   `MANTLE_EXPLORER_API_KEY` / `ETHERSCAN_API_KEY`
 - Desktop/static Mantle fallback key env var:
   `NEXT_PUBLIC_MANTLE_EXPLORER_API_KEY`
+- Linea server discovery API default:
+  `https://api.etherscan.io/v2/api`
+- Linea server discovery API chain id:
+  `LINEA_EXPLORER_CHAIN_ID=59144`
+- Linea server API key env vars:
+  `LINEA_EXPLORER_API_KEY` / `ETHERSCAN_API_KEY`
+- Blast server discovery API default:
+  `https://api.etherscan.io/v2/api`
+- Blast server discovery API chain id:
+  `BLAST_EXPLORER_CHAIN_ID=81457`
+- Blast server API key env vars:
+  `BLAST_EXPLORER_API_KEY` / `ETHERSCAN_API_KEY`
+- Berachain server discovery API default:
+  `https://api.etherscan.io/v2/api`
+- Berachain server discovery API chain id:
+  `BERACHAIN_EXPLORER_CHAIN_ID=80094`
+- Berachain server API key env vars:
+  `BERACHAIN_EXPLORER_API_KEY` / `ETHERSCAN_API_KEY`
 - Ethereum server RPC env vars:
   `MAINNET_RPC_URL` / `ETHEREUM_RPC_URL`
 - Ethereum server API key env var:
@@ -301,6 +340,27 @@ User-facing Mantle copy uses:
 - `ERC-1155` for multi-token NFT / semi-fungible approvals
 - `MNT` for gas
 
+User-facing Linea copy uses:
+
+- `ERC-20` for fungible token approvals
+- `ERC-721` for NFT approvals
+- `ERC-1155` for multi-token NFT / semi-fungible approvals
+- `ETH` for gas
+
+User-facing Blast copy uses:
+
+- `ERC-20` for fungible token approvals
+- `ERC-721` for NFT approvals
+- `ERC-1155` for multi-token NFT / semi-fungible approvals
+- `ETH` for gas
+
+User-facing Berachain copy uses:
+
+- `ERC-20` for fungible token approvals
+- `ERC-721` for NFT approvals
+- `ERC-1155` for multi-token NFT / semi-fungible approvals
+- `BERA` for gas
+
 User-facing Arbitrum copy uses:
 
 - `ERC-20` for fungible token approvals
@@ -344,8 +404,9 @@ Fungible token revoke:
 3. App prepares `approve(spender, 0)`.
 4. Wallet signs and submits on the approval's `chainId`.
 5. UI links the transaction to PulseScan, BscScan, BaseScan, PolygonScan,
-   SonicScan, SnowScan, Mantle Explorer, Etherscan, Arbiscan, Optimistic
-   Etherscan, or Hyperevmscan and rescans after success.
+   SonicScan, SnowScan, Mantle Explorer, LineaScan, Blastscan, Berascan,
+   Etherscan, Arbiscan, Optimistic Etherscan, or Hyperevmscan and rescans
+   after success.
 
 Permit2 delegated allowance revoke:
 

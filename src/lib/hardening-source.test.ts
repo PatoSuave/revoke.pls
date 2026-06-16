@@ -230,12 +230,18 @@ describe("hardening source invariants", () => {
     expect(liveScript).toContain("/api/token-logos");
     expect(liveScript).toContain("/api/gas?chainId=369");
     expect(liveScript).toContain("assertNoApiKeyShapedLiteral");
+    expect(liveScript).toContain("LINEA_EXPLORER_API_KEY");
+    expect(liveScript).toContain("BLAST_EXPLORER_API_KEY");
+    expect(liveScript).toContain("BERACHAIN_EXPLORER_API_KEY");
     expect(liveScript).toContain("_vercel_share");
     expect(envScript).toContain("NEXT_PUBLIC_BSC_EXPLORER_API_KEY");
     expect(envScript).toContain("NEXT_PUBLIC_BSCSCAN_API_KEY");
     expect(envScript).toContain("NEXT_PUBLIC_SONIC_EXPLORER_API_KEY");
     expect(envScript).toContain("NEXT_PUBLIC_AVALANCHE_EXPLORER_API_KEY");
     expect(envScript).toContain("NEXT_PUBLIC_MANTLE_EXPLORER_API_KEY");
+    expect(envScript).toContain("NEXT_PUBLIC_LINEA_EXPLORER_API_KEY");
+    expect(envScript).toContain("NEXT_PUBLIC_BLAST_EXPLORER_API_KEY");
+    expect(envScript).toContain("NEXT_PUBLIC_BERACHAIN_EXPLORER_API_KEY");
     expect(envScript).toContain("NEXT_PUBLIC_ETHERSCAN_API_KEY");
     expect(envScript).toContain("allow-desktop-public-keys");
     expect(`${hostedHardening}\n${auditGuide}`).toContain("Vercel Firewall");

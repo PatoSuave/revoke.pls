@@ -4,7 +4,10 @@ import { ARBITRUM_ONE_CLIENT_CHAIN_ID } from "@/lib/arbitrum-approval-client";
 import {
   AVALANCHE_CHAIN_ID,
   BASE_CHAIN_ID,
+  BERACHAIN_CHAIN_ID,
+  BLAST_CHAIN_ID,
   BSC_CHAIN_ID,
+  LINEA_CHAIN_ID,
   MANTLE_CHAIN_ID,
   POLYGON_CHAIN_ID,
   PULSECHAIN_CHAIN_ID,
@@ -60,6 +63,9 @@ describe("wallet header network status", () => {
         SONIC_CHAIN_ID,
         AVALANCHE_CHAIN_ID,
         MANTLE_CHAIN_ID,
+        LINEA_CHAIN_ID,
+        BLAST_CHAIN_ID,
+        BERACHAIN_CHAIN_ID,
         ETHEREUM_MAINNET_CLIENT_CHAIN_ID,
         ARBITRUM_ONE_CLIENT_CHAIN_ID,
         OPTIMISM_CLIENT_CHAIN_ID,
@@ -124,6 +130,9 @@ describe("wallet header network status", () => {
         SONIC_CHAIN_ID,
         AVALANCHE_CHAIN_ID,
         MANTLE_CHAIN_ID,
+        LINEA_CHAIN_ID,
+        BLAST_CHAIN_ID,
+        BERACHAIN_CHAIN_ID,
       ].map((chainId) =>
         resolveHeaderNetworkStatus({
           walletChainId: chainId,
@@ -138,6 +147,9 @@ describe("wallet header network status", () => {
       expect.objectContaining({ kind: "supported", label: "Sonic Mainnet" }),
       expect.objectContaining({ kind: "supported", label: "Avalanche C-Chain" }),
       expect.objectContaining({ kind: "supported", label: "Mantle" }),
+      expect.objectContaining({ kind: "supported", label: "Linea" }),
+      expect.objectContaining({ kind: "supported", label: "Blast" }),
+      expect.objectContaining({ kind: "supported", label: "Berachain" }),
     ]);
   });
 
@@ -150,6 +162,9 @@ describe("wallet header network status", () => {
       SONIC_CHAIN_ID,
       AVALANCHE_CHAIN_ID,
       MANTLE_CHAIN_ID,
+      LINEA_CHAIN_ID,
+      BLAST_CHAIN_ID,
+      BERACHAIN_CHAIN_ID,
     ]);
     expect(supportedChainConfigList.map((chain) => chain.chainId)).not.toContain(
       ARBITRUM_ONE_CLIENT_CHAIN_ID,

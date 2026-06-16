@@ -10,7 +10,10 @@ import {
 import {
   AVALANCHE_CHAIN_ID,
   BASE_CHAIN_ID,
+  BERACHAIN_CHAIN_ID,
+  BLAST_CHAIN_ID,
   BSC_CHAIN_ID,
+  LINEA_CHAIN_ID,
   MANTLE_CHAIN_ID,
   POLYGON_CHAIN_ID,
   PULSECHAIN_CHAIN_ID,
@@ -47,6 +50,9 @@ export type GasTrackerChainId =
   | typeof SONIC_CHAIN_ID
   | typeof AVALANCHE_CHAIN_ID
   | typeof MANTLE_CHAIN_ID
+  | typeof LINEA_CHAIN_ID
+  | typeof BLAST_CHAIN_ID
+  | typeof BERACHAIN_CHAIN_ID
   | typeof ETHEREUM_MAINNET_CLIENT_CHAIN_ID
   | typeof ARBITRUM_ONE_CLIENT_CHAIN_ID
   | typeof OPTIMISM_CLIENT_CHAIN_ID
@@ -76,6 +82,9 @@ const POLYGON_RPC_DEFAULT = "https://polygon.drpc.org";
 const SONIC_RPC_DEFAULT = "https://rpc.soniclabs.com";
 const AVALANCHE_RPC_DEFAULT = "https://api.avax.network/ext/bc/C/rpc";
 const MANTLE_RPC_DEFAULT = "https://rpc.mantle.xyz";
+const LINEA_RPC_DEFAULT = "https://rpc.linea.build";
+const BLAST_RPC_DEFAULT = "https://rpc.blast.io";
+const BERACHAIN_RPC_DEFAULT = "https://rpc.berachain.com";
 
 const ethereumGasChain = defineGasChain({
   id: ETHEREUM_MAINNET_CLIENT_CHAIN_ID,
@@ -174,6 +183,42 @@ const mantleGasChain = defineGasChain({
   },
   rpcUrl: process.env.NEXT_PUBLIC_MANTLE_RPC_URL ?? MANTLE_RPC_DEFAULT,
   explorerUrl: "https://explorer.mantle.xyz",
+});
+
+const lineaGasChain = defineGasChain({
+  id: LINEA_CHAIN_ID,
+  name: "Linea",
+  nativeCurrency: {
+    name: "Ether",
+    symbol: "ETH",
+    decimals: 18,
+  },
+  rpcUrl: process.env.NEXT_PUBLIC_LINEA_RPC_URL ?? LINEA_RPC_DEFAULT,
+  explorerUrl: "https://lineascan.build",
+});
+
+const blastGasChain = defineGasChain({
+  id: BLAST_CHAIN_ID,
+  name: "Blast",
+  nativeCurrency: {
+    name: "Ether",
+    symbol: "ETH",
+    decimals: 18,
+  },
+  rpcUrl: process.env.NEXT_PUBLIC_BLAST_RPC_URL ?? BLAST_RPC_DEFAULT,
+  explorerUrl: "https://blastscan.io",
+});
+
+const berachainGasChain = defineGasChain({
+  id: BERACHAIN_CHAIN_ID,
+  name: "Berachain",
+  nativeCurrency: {
+    name: "BERA",
+    symbol: "BERA",
+    decimals: 18,
+  },
+  rpcUrl: process.env.NEXT_PUBLIC_BERACHAIN_RPC_URL ?? BERACHAIN_RPC_DEFAULT,
+  explorerUrl: "https://berascan.com",
 });
 
 const arbitrumGasChain = defineGasChain({
@@ -319,6 +364,52 @@ export const GAS_TRACKER_CHAINS = [
     coingeckoId: "mantle",
     estimateNote:
       "Mantle wallet estimates may include L1 data fees beyond this gas-price estimate.",
+  },
+  {
+    chainId: LINEA_CHAIN_ID,
+    chainName: "Linea",
+    shortName: "Linea",
+    nativeCurrency: "ETH",
+    nativeCurrencyName: "Ether",
+    viemChain: lineaGasChain,
+    defaultRpcUrl: LINEA_RPC_DEFAULT,
+    publicRpcUrl: lineaGasChain.rpcUrls.default.http[0],
+    serverRpcEnvNames: ["LINEA_RPC_URL", "LINEA_MAINNET_RPC_URL"],
+    publicRpcEnvNames: ["NEXT_PUBLIC_LINEA_RPC_URL"],
+    statusThresholds: { elevatedGwei: 0.1, highGwei: 1 },
+    coingeckoId: "ethereum",
+    estimateNote:
+      "Linea wallet estimates may include L1 data fees beyond this gas-price estimate.",
+  },
+  {
+    chainId: BLAST_CHAIN_ID,
+    chainName: "Blast",
+    shortName: "Blast",
+    nativeCurrency: "ETH",
+    nativeCurrencyName: "Ether",
+    viemChain: blastGasChain,
+    defaultRpcUrl: BLAST_RPC_DEFAULT,
+    publicRpcUrl: blastGasChain.rpcUrls.default.http[0],
+    serverRpcEnvNames: ["BLAST_RPC_URL", "BLAST_MAINNET_RPC_URL"],
+    publicRpcEnvNames: ["NEXT_PUBLIC_BLAST_RPC_URL"],
+    statusThresholds: { elevatedGwei: 0.1, highGwei: 1 },
+    coingeckoId: "ethereum",
+    estimateNote:
+      "Blast wallet estimates may include L1 data fees beyond this gas-price estimate.",
+  },
+  {
+    chainId: BERACHAIN_CHAIN_ID,
+    chainName: "Berachain",
+    shortName: "Berachain",
+    nativeCurrency: "BERA",
+    nativeCurrencyName: "BERA",
+    viemChain: berachainGasChain,
+    defaultRpcUrl: BERACHAIN_RPC_DEFAULT,
+    publicRpcUrl: berachainGasChain.rpcUrls.default.http[0],
+    serverRpcEnvNames: ["BERACHAIN_RPC_URL", "BERACHAIN_MAINNET_RPC_URL"],
+    publicRpcEnvNames: ["NEXT_PUBLIC_BERACHAIN_RPC_URL"],
+    statusThresholds: { elevatedGwei: 5, highGwei: 25 },
+    coingeckoId: "berachain",
   },
   {
     chainId: ETHEREUM_MAINNET_CLIENT_CHAIN_ID,

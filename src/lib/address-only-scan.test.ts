@@ -10,7 +10,10 @@ import { ARBITRUM_ONE_CLIENT_CHAIN_ID } from "@/lib/arbitrum-approval-client";
 import {
   AVALANCHE_CHAIN_ID,
   BASE_CHAIN_ID,
+  BERACHAIN_CHAIN_ID,
+  BLAST_CHAIN_ID,
   BSC_CHAIN_ID,
+  LINEA_CHAIN_ID,
   MANTLE_CHAIN_ID,
   POLYGON_CHAIN_ID,
   PULSECHAIN_CHAIN_ID,
@@ -89,6 +92,9 @@ describe("address-only scan selection", () => {
       SONIC_CHAIN_ID,
       AVALANCHE_CHAIN_ID,
       MANTLE_CHAIN_ID,
+      LINEA_CHAIN_ID,
+      BLAST_CHAIN_ID,
+      BERACHAIN_CHAIN_ID,
     ]);
     expect(ADDRESS_ONLY_SCAN_ALL_CONCURRENCY).toBe(1);
     expect(

@@ -14,6 +14,9 @@ Current active supported networks should be exactly:
 - Sonic Mainnet, chain ID `146`
 - Avalanche C-Chain, chain ID `43114`
 - Mantle, chain ID `5000`
+- Linea, chain ID `59144`
+- Blast, chain ID `81457`
+- Berachain, chain ID `80094`
 - Ethereum Mainnet, chain ID `1`
 - Arbitrum One, chain ID `42161`, ERC-20/NFT verified-row revoke
 - Optimism / OP Mainnet, chain ID `10`, ERC-20/NFT verified-row revoke
@@ -66,9 +69,9 @@ submission must stay unavailable.
 ## Chain Safety Questions
 
 - Are active supported chains exactly PulseChain, BSC, Base, Polygon, Sonic,
-  Avalanche, Mantle, wallet-enabled Ethereum Mainnet, Arbitrum One's separate
-  verified-row revoke lane, Optimism's separate verified-row lane, and
-  HyperEVM's separate verified-row lane?
+  Avalanche, Mantle, Linea, Blast, Berachain, wallet-enabled Ethereum Mainnet,
+  Arbitrum One's separate verified-row revoke lane, Optimism's separate
+  verified-row lane, and HyperEVM's separate verified-row lane?
 - Does `src/lib/wagmi.ts` register Ethereum, Arbitrum, Optimism, and HyperEVM
   only for their separate lanes and keep chain lists scoped correctly?
 - Is Ethereum Mainnet protected by owner, chain, preflight, gas, and row-level
@@ -219,6 +222,39 @@ submission must stay unavailable.
   as the approval source of truth?
 - Does public Mantle RPC avoid historical `eth_getLogs` discovery?
 
+## Linea Discovery Questions
+
+- Do Linea historical log requests use Etherscan API V2 at
+  `https://api.etherscan.io/v2/api`?
+- Does every Linea log request include `chainid=59144`?
+- Are Linea explorer links built with `https://lineascan.build`?
+- Does Linea discovery use approval logs rather than token-transfer endpoints
+  as the approval source of truth?
+- Does public Linea RPC avoid historical `eth_getLogs` discovery?
+- Are Linea explorer keys server-only, with no `NEXT_PUBLIC_*` key fallback?
+
+## Blast Discovery Questions
+
+- Do Blast historical log requests use Etherscan API V2 at
+  `https://api.etherscan.io/v2/api`?
+- Does every Blast log request include `chainid=81457`?
+- Are Blast explorer links built with `https://blastscan.io`?
+- Does Blast discovery use approval logs rather than token-transfer endpoints
+  as the approval source of truth?
+- Does public Blast RPC avoid historical `eth_getLogs` discovery?
+- Are Blast explorer keys server-only, with no `NEXT_PUBLIC_*` key fallback?
+
+## Berachain Discovery Questions
+
+- Do Berachain historical log requests use Etherscan API V2 at
+  `https://api.etherscan.io/v2/api`?
+- Does every Berachain log request include `chainid=80094`?
+- Are Berachain explorer links built with `https://berascan.com`?
+- Does Berachain discovery use approval logs rather than token-transfer
+  endpoints as the approval source of truth?
+- Does public Berachain RPC avoid historical `eth_getLogs` discovery?
+- Are Berachain explorer keys server-only, with no `NEXT_PUBLIC_*` key fallback?
+
 ## Live Validation Questions
 
 - Are discovered fungible token candidates rechecked with `allowance(owner,
@@ -247,6 +283,9 @@ submission must stay unavailable.
 - Do Sonic revokes use S wording and SonicScan links?
 - Do Avalanche revokes use AVAX wording and SnowScan links?
 - Do Mantle revokes use MNT wording and Mantle explorer links?
+- Do Linea revokes use ETH wording and LineaScan links?
+- Do Blast revokes use ETH wording and Blastscan links?
+- Do Berachain revokes use BERA wording and Berascan links?
 - Does Arbitrum show only ERC-20/NFT verified-row revoke while batch
   revoke remains unavailable?
 - Does Optimism show only ERC-20/NFT verified-row revoke while batch and global
@@ -270,21 +309,26 @@ submission must stay unavailable.
 - Do PulseChain labels avoid leaking onto BSC approvals?
 - Do PulseChain or BSC labels avoid leaking onto Base approvals?
 - Do PulseChain, BSC, or Base labels avoid leaking onto Polygon approvals?
-- Do existing registry labels avoid leaking onto Sonic, Avalanche, or Mantle approvals?
+- Do existing registry labels avoid leaking onto Sonic, Avalanche, Mantle,
+  Linea, Blast, or Berachain approvals?
 - Are BSC labels empty unless manually verified?
 - Are Base labels empty unless manually verified?
 - Are Polygon labels empty unless manually verified?
 - Are Sonic labels empty unless manually verified?
 - Are Avalanche labels empty unless manually verified?
 - Are Mantle labels empty unless manually verified?
-- Are unknown BSC, Base, Polygon, Sonic, Avalanche, and Mantle spenders shown as
-  unknown rather than guessed?
+- Are Linea labels empty unless manually verified?
+- Are Blast labels empty unless manually verified?
+- Are Berachain labels empty unless manually verified?
+- Are unknown BSC, Base, Polygon, Sonic, Avalanche, Mantle, Linea, Blast, and
+  Berachain spenders shown as unknown rather than guessed?
 - Is registry data treated only as enrichment, not discovery truth?
 
 ## Token Logo Questions
 
-- Is token-logo lookup scoped to PulseChain, BSC, Polygon, Sonic, Avalanche,
-  and Mantle only until each additional chain is explicitly enabled and reviewed?
+- Is token-logo lookup scoped to PulseChain, BSC, Base, Polygon, Sonic,
+  Avalanche, Mantle, Linea, Blast, Berachain, and explicitly reviewed
+  separate-lane chains?
 - Does the logo resolver send only token contract addresses, not scanned owner
   addresses, spender addresses, allowances, or wallet connection state?
 - Does the UI keep text symbol/address data visible when no logo exists or the

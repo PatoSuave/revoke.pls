@@ -74,7 +74,7 @@ Suggested first-pass targets:
 | Route group | Suggested posture |
 | --- | --- |
 | `/api/ethereum/approvals`, `/api/arbitrum/approvals`, `/api/optimism/approvals`, `/api/hyperevm/approvals` | Strict per-client rate limit because each request can trigger explorer/RPC work. |
-| `/api/discovery/approvals` | Strict per-client rate limit for shared BSC/Base/Polygon/Sonic/Avalanche/Mantle discovery. |
+| `/api/discovery/approvals` | Strict per-client rate limit for shared BSC/Base/Polygon/Sonic/Avalanche/Mantle/Linea/Blast/Berachain discovery. |
 | `/api/token-logos` | Moderate per-client rate limit; app code already caps addresses, times out upstream requests, and caches successful display metadata. |
 | `/api/gas` | Looser rate limit because the UI updates frequently, but still protect against scripted bursts. |
 | `/api/csp-report` | Strict rate limit because reports are telemetry-like and should never become a log spam path. |

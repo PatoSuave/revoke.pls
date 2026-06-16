@@ -4,12 +4,30 @@ import { spawn } from "node:child_process";
 
 const DEFAULT_OWNER = "0x1111111111111111111111111111111111111111";
 const API_ENDPOINTS = ["ethereum", "arbitrum", "optimism", "hyperevm"];
+const GENERIC_DISCOVERY_CHAIN_IDS = [59144, 81457, 80094];
+const TOKEN_LOGO_CHECKS = [
+  {
+    chainId: 59144,
+    address: "0xe5D7C2a44FfDDf6b295A15c148167daaAf5CF34f",
+  },
+  {
+    chainId: 81457,
+    address: "0x4300000000000000000000000000000000000004",
+  },
+  {
+    chainId: 80094,
+    address: "0x6969696969696969696969696969696969696969",
+  },
+];
 const PAGE_MARKERS = [
   "Review approvals before you revoke",
   "Address scan",
   "PulseChain",
   "BNB Smart Chain",
   "Base",
+  "Linea",
+  "Blast",
+  "Berachain",
   "Ethereum Mainnet",
   "Arbitrum One",
   "Optimism",
@@ -45,11 +63,16 @@ function parseOwner(value) {
 
 function vercelCurl(url) {
   return new Promise((resolve, reject) => {
+    const command = process.platform === "win32" ? "powershell.exe" : "npx";
     const args =
       process.platform === "win32"
-        ? ["/d", "/c", "npx.cmd", "vercel", "curl", url]
+        ? [
+            "-NoProfile",
+            "-NonInteractive",
+            "-Command",
+            `npx vercel curl ${quotePowerShellArg(url)}`,
+          ]
         : ["vercel", "curl", url];
-    const command = process.platform === "win32" ? "cmd.exe" : "npx";
     const child = spawn(command, args, {
       stdio: ["ignore", "pipe", "pipe"],
       windowsHide: true,
@@ -84,6 +107,10 @@ function vercelCurl(url) {
       resolve(stdout);
     });
   });
+}
+
+function quotePowerShellArg(value) {
+  return `'${value.replace(/'/g, "''")}'`;
 }
 
 function firstJsonObject(output) {
@@ -125,6 +152,50 @@ function expectConfiguredApi(endpoint, body) {
   }
 }
 
+function expectGenericDiscoveryApi(chainId, body) {
+  if (body?.ok !== true) {
+    throw new Error(`chainId=${chainId} generic API did not return ok=true.`);
+  }
+  if (["config-missing", "bad-request", "upstream-failure"].includes(body.status)) {
+    throw new Error(`chainId=${chainId} generic API returned status=${body.status}.`);
+  }
+  if (body.chainId !== chainId) {
+    throw new Error(
+      `chainId=${chainId} generic API returned chainId=${body.chainId}.`,
+    );
+  }
+  if (Array.isArray(body.missingConfig) && body.missingConfig.length > 0) {
+    throw new Error(
+      `chainId=${chainId} generic API reports missing config: ${body.missingConfig.join(", ")}`,
+    );
+  }
+}
+
+function expectTokenLogoApi({ chainId, address }, body) {
+  if (body?.ok !== true) {
+    throw new Error(`chainId=${chainId} token-logo API did not return ok=true.`);
+  }
+  if (body.status !== "complete") {
+    throw new Error(`chainId=${chainId} token-logo API returned status=${body.status}.`);
+  }
+  if (body.chainId !== chainId) {
+    throw new Error(
+      `chainId=${chainId} token-logo API returned chainId=${body.chainId}.`,
+    );
+  }
+  if (body.requested !== 1) {
+    throw new Error(
+      `chainId=${chainId} token-logo API requested=${body.requested}, expected 1.`,
+    );
+  }
+  if (!body.logos || typeof body.logos !== "object") {
+    throw new Error(`chainId=${chainId} token-logo API did not return a logo map.`);
+  }
+  if (!address.startsWith("0x")) {
+    throw new Error("Token logo smoke fixture address is malformed.");
+  }
+}
+
 async function main() {
   const [, , previewArg, ownerArg = DEFAULT_OWNER] = process.argv;
   if (!previewArg) {
@@ -151,6 +222,27 @@ async function main() {
     expectConfiguredApi(endpoint, body);
     console.log(
       `api: ${endpoint} ok status=${body.status} rpc=${body.diagnostics.rpcConfigured} explorer=${body.diagnostics.explorerConfigured}`,
+    );
+  }
+
+  for (const chainId of GENERIC_DISCOVERY_CHAIN_IDS) {
+    const apiUrl = new URL("/api/discovery/approvals", baseUrl);
+    apiUrl.searchParams.set("chainId", chainId.toString());
+    apiUrl.searchParams.set("scope", "erc20");
+    apiUrl.searchParams.set("owner", owner);
+    const body = firstJsonObject(await vercelCurl(apiUrl.toString()));
+    expectGenericDiscoveryApi(chainId, body);
+    console.log(`api: generic chainId=${chainId} ok status=${body.status}`);
+  }
+
+  for (const check of TOKEN_LOGO_CHECKS) {
+    const logoUrl = new URL("/api/token-logos", baseUrl);
+    logoUrl.searchParams.set("chainId", check.chainId.toString());
+    logoUrl.searchParams.set("addresses", check.address);
+    const body = firstJsonObject(await vercelCurl(logoUrl.toString()));
+    expectTokenLogoApi(check, body);
+    console.log(
+      `api: token logos chainId=${check.chainId} ok status=${body.status}`,
     );
   }
 

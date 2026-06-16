@@ -3,7 +3,10 @@ import { describe, expect, it } from "vitest";
 import {
   AVALANCHE_CHAIN_ID,
   BASE_CHAIN_ID,
+  BERACHAIN_CHAIN_ID,
+  BLAST_CHAIN_ID,
   BSC_CHAIN_ID,
+  LINEA_CHAIN_ID,
   MANTLE_CHAIN_ID,
   POLYGON_CHAIN_ID,
   PULSECHAIN_CHAIN_ID,
@@ -66,7 +69,7 @@ describe("active chain resolution", () => {
     expect(result.walletMatchesActiveChain).toBe(true);
   });
 
-  it("resolves connected Avalanche and Mantle wallets without falling back to PulseChain", () => {
+  it("resolves connected Sonic, Avalanche, Mantle, Linea, Blast, and Berachain wallets without falling back to PulseChain", () => {
     const sonicResult = resolveActiveChain({
       isConnected: true,
       walletChainId: SONIC_CHAIN_ID,
@@ -82,6 +85,21 @@ describe("active chain resolution", () => {
       walletChainId: MANTLE_CHAIN_ID,
       wagmiChainId: PULSECHAIN_CHAIN_ID,
     });
+    const lineaResult = resolveActiveChain({
+      isConnected: true,
+      walletChainId: LINEA_CHAIN_ID,
+      wagmiChainId: PULSECHAIN_CHAIN_ID,
+    });
+    const blastResult = resolveActiveChain({
+      isConnected: true,
+      walletChainId: BLAST_CHAIN_ID,
+      wagmiChainId: PULSECHAIN_CHAIN_ID,
+    });
+    const berachainResult = resolveActiveChain({
+      isConnected: true,
+      walletChainId: BERACHAIN_CHAIN_ID,
+      wagmiChainId: PULSECHAIN_CHAIN_ID,
+    });
 
     expect(sonicResult.status).toBe("supported");
     expect(sonicResult.activeChainId).toBe(SONIC_CHAIN_ID);
@@ -94,6 +112,15 @@ describe("active chain resolution", () => {
     expect(mantleResult.status).toBe("supported");
     expect(mantleResult.activeChainId).toBe(MANTLE_CHAIN_ID);
     expect(mantleResult.activeChainConfig?.displayName).toBe("Mantle");
+    expect(lineaResult.status).toBe("supported");
+    expect(lineaResult.activeChainId).toBe(LINEA_CHAIN_ID);
+    expect(lineaResult.activeChainConfig?.displayName).toBe("Linea");
+    expect(blastResult.status).toBe("supported");
+    expect(blastResult.activeChainId).toBe(BLAST_CHAIN_ID);
+    expect(blastResult.activeChainConfig?.displayName).toBe("Blast");
+    expect(berachainResult.status).toBe("supported");
+    expect(berachainResult.activeChainId).toBe(BERACHAIN_CHAIN_ID);
+    expect(berachainResult.activeChainConfig?.displayName).toBe("Berachain");
   });
 
   it("does not default to PulseChain when disconnected", () => {
@@ -124,7 +151,7 @@ describe("active chain resolution", () => {
 
   it("uses all generic supported chains in supported-network copy", () => {
     expect(getSupportedChainShortNames()).toBe(
-      "PulseChain, BSC, Base, Polygon, Sonic, Avalanche, or Mantle",
+      "PulseChain, BSC, Base, Polygon, Sonic, Avalanche, Mantle, Linea, Blast, or Berachain",
     );
   });
 

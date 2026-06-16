@@ -1,3 +1,5 @@
+import { LIVE_SUPPORTED_CHAIN_COMPACT_LIST } from "@/lib/supported-chain-copy";
+
 const HERO_BULLETS = [
   "Read-only until you revoke",
   "Live on-chain checks",
@@ -21,8 +23,7 @@ export function Hero() {
               aria-hidden
             />
             <span className="min-w-0 max-w-[15rem] break-words">
-              PulseChain, BSC, Base, Polygon, Sonic, Avalanche, Mantle,
-              Ethereum, Arbitrum, Optimism, and HyperEVM approval review
+              {LIVE_SUPPORTED_CHAIN_COMPACT_LIST} approval review
             </span>
           </span>
 

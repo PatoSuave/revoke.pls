@@ -2,8 +2,11 @@
 
 import {
   AVALANCHE_CHAIN_ID,
+  BERACHAIN_CHAIN_ID,
+  BLAST_CHAIN_ID,
   BASE_CHAIN_ID,
   BSC_CHAIN_ID,
+  LINEA_CHAIN_ID,
   MANTLE_CHAIN_ID,
   POLYGON_CHAIN_ID,
   PULSECHAIN_CHAIN_ID,
@@ -28,6 +31,9 @@ const CHAIN_LOGO_LABELS: Readonly<Record<number, string>> = {
   [SONIC_CHAIN_ID]: "Sonic Mainnet",
   [AVALANCHE_CHAIN_ID]: "Avalanche C-Chain",
   [MANTLE_CHAIN_ID]: "Mantle",
+  [LINEA_CHAIN_ID]: "Linea",
+  [BLAST_CHAIN_ID]: "Blast",
+  [BERACHAIN_CHAIN_ID]: "Berachain",
 };
 
 export function chainLogoLabel(chainId: number): string {
@@ -98,6 +104,12 @@ function renderChainMark(chainId: number, muted: boolean) {
       return <AvalancheMark muted={muted} />;
     case MANTLE_CHAIN_ID:
       return <MantleMark muted={muted} />;
+    case LINEA_CHAIN_ID:
+      return <LineaMark muted={muted} />;
+    case BLAST_CHAIN_ID:
+      return <BlastMark muted={muted} />;
+    case BERACHAIN_CHAIN_ID:
+      return <BerachainMark muted={muted} />;
     default:
       return <DefaultMark muted={muted} />;
   }
@@ -280,6 +292,73 @@ function MantleMark({ muted }: { muted: boolean }) {
         strokeLinecap="round"
         strokeWidth="3"
       />
+    </>
+  );
+}
+
+function LineaMark({ muted }: { muted: boolean }) {
+  return (
+    <>
+      <rect
+        x="4"
+        y="4"
+        width="40"
+        height="40"
+        rx="9"
+        fill={muted ? "currentColor" : "#0B0A14"}
+      />
+      <path
+        d="M14 14h7v13h13v7H14V14Z"
+        fill={muted ? "#0B0A14" : "#FFFFFF"}
+      />
+      <circle
+        cx="34"
+        cy="15"
+        r="5"
+        fill={muted ? "#0B0A14" : "#FFFFFF"}
+      />
+    </>
+  );
+}
+
+function BlastMark({ muted }: { muted: boolean }) {
+  const ink = muted ? "#0B0A14" : "#111318";
+
+  return (
+    <>
+      <rect
+        x="4"
+        y="4"
+        width="40"
+        height="40"
+        rx="7"
+        fill={muted ? "currentColor" : "#FCFF00"}
+      />
+      <path
+        d="M11 17 17 11h20l3 3-2 8-7 4 6 4-3 8H12l4-16 5 3-2 8h11l1-4H21l2-7h11l1-4H11Z"
+        fill={ink}
+        fillRule="evenodd"
+      />
+    </>
+  );
+}
+
+function BerachainMark({ muted }: { muted: boolean }) {
+  const ink = muted ? "#0B0A14" : "#20100B";
+
+  return (
+    <>
+      <circle cx="24" cy="24" r="21" fill={muted ? "currentColor" : "#FF7A1A"} />
+      <path
+        d="M9 26c0-4 2-7 5-9a7 7 0 0 1 13-1 7 7 0 0 1 12 5c0 2-1 4-2 6 1 2 2 4 2 7 0 7-6 10-15 10S9 41 9 34c0-3 1-5 2-7l-2-1Z"
+        fill={ink}
+      />
+      <path
+        d="M15 30c0-6 4-10 9-10s9 4 9 10c0 7-4 10-9 10s-9-3-9-10Z"
+        fill={ink}
+      />
+      <circle cx="19" cy="27" r="1.6" fill={muted ? "currentColor" : "#FF7A1A"} />
+      <circle cx="29" cy="27" r="1.6" fill={muted ? "currentColor" : "#FF7A1A"} />
     </>
   );
 }

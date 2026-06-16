@@ -1,5 +1,6 @@
 import { PulseMark } from "@/components/pulse-mark";
 import { siteConfig } from "@/lib/site";
+import { LIVE_SUPPORTED_CHAIN_COMPACT_LIST } from "@/lib/supported-chain-copy";
 
 export function SiteFooter() {
   const year = new Date().getFullYear();
@@ -57,8 +58,7 @@ export function SiteFooter() {
           <p>Informational and transactional. Not financial advice.</p>
           <p>
             Always verify spender addresses on the relevant explorer for
-            PulseChain, BSC, Base, Polygon, Sonic, Avalanche, Mantle,
-            Ethereum, Arbitrum, Optimism, or HyperEVM before signing.
+            {` ${LIVE_SUPPORTED_CHAIN_COMPACT_LIST}`} before signing.
           </p>
           <p className="mt-1">
             Copyright {year} {siteConfig.name} - {siteConfig.attribution}

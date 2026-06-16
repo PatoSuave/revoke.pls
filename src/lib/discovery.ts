@@ -194,7 +194,7 @@ export interface DiscoveryLimits {
 
 export const DEFAULT_DISCOVERY_LIMITS: DiscoveryLimits = {
   // Increased to reduce false negatives for long-lived wallets with large
-  // approval histories across PulseChain/BSC/Base/Polygon/Sonic/Avalanche/Mantle.
+  // approval histories across the shared generic scanner chains.
   maxRequests: 120,
   maxRawLogs: 100_000,
   requestTimeoutMs: 15_000,
