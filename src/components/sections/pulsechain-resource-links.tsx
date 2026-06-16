@@ -21,18 +21,26 @@ export function PulseChainResourceLinks({
       <div className="mx-auto max-w-6xl px-4 sm:px-6">
         <div className="max-w-3xl">
           <p className="text-xs font-semibold uppercase tracking-[0.18em] text-pulse-cyan">
-            PulseChain resources
+            Curated resources
           </p>
           <h2 className="mt-2 text-2xl font-bold text-pulse-text sm:text-3xl">
-            Trusted PulseChain links
+            Trusted links
           </h2>
           <p className="mt-3 text-sm leading-6 text-pulse-muted">
             {PULSECHAIN_RESOURCE_NOTICE}
           </p>
         </div>
 
-        <div className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
+        <div className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
           {PULSECHAIN_RESOURCE_LINKS.map((resource) => {
+            const actions = resource.actions ?? [
+              {
+                label: "Open",
+                href: resource.href,
+                domain: resource.domain,
+                kind: "primary" as const,
+              },
+            ];
             const cardStyle = {
               "--accent-color": resource.accentColor,
               "--accent-readable": resource.accentReadable,
@@ -46,13 +54,10 @@ export function PulseChainResourceLinks({
                 : "border-[color:var(--accent-border)] bg-[color:var(--accent-soft)]";
 
             return (
-              <a
+              <article
                 key={resource.href}
-                href={resource.href}
-                target="_blank"
-                rel="noopener noreferrer"
                 style={cardStyle}
-                className="group relative flex min-h-0 flex-col overflow-hidden rounded-xl border border-pulse-border/75 bg-pulse-panel/50 p-4 shadow-[inset_0_1px_0_rgb(255_255_255/0.03)] transition hover:border-[color:var(--accent-border)] hover:bg-pulse-panel/70 sm:min-h-48"
+                className="group relative flex min-h-0 flex-col overflow-hidden rounded-xl border border-pulse-border/75 bg-pulse-panel/50 p-4 shadow-[inset_0_1px_0_rgb(255_255_255/0.03)] transition hover:border-[color:var(--accent-border)] hover:bg-pulse-panel/70 sm:min-h-52"
               >
                 <div
                   className="pointer-events-none absolute inset-x-0 top-0 h-px bg-[color:var(--accent-border)] opacity-70 transition group-hover:opacity-100"
@@ -65,14 +70,20 @@ export function PulseChainResourceLinks({
                       className={`flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-xl border ${logoPlateClass}`}
                       aria-hidden
                     >
-                      <Image
-                        src={resource.logoSrc}
-                        alt=""
-                        width={34}
-                        height={34}
-                        sizes="34px"
-                        className="h-[34px] w-[34px] object-contain"
-                      />
+                      {resource.logoSrc ? (
+                        <Image
+                          src={resource.logoSrc}
+                          alt=""
+                          width={34}
+                          height={34}
+                          sizes="34px"
+                          className="h-[34px] w-[34px] object-contain"
+                        />
+                      ) : (
+                        <span className="text-lg font-bold text-[color:var(--accent-readable)]">
+                          {resource.fallbackMark ?? resource.label.charAt(0)}
+                        </span>
+                      )}
                     </span>
                     <div className="min-w-0 pt-0.5">
                       <p className="text-sm font-semibold text-pulse-text">
@@ -97,11 +108,35 @@ export function PulseChainResourceLinks({
                   <span className="min-w-0 break-all font-mono text-[11px] text-pulse-muted">
                     {resource.domain}
                   </span>
-                  <span className="shrink-0 text-xs font-semibold text-pulse-cyan transition group-hover:text-pulse-text">
-                    Open
-                  </span>
+                  {actions.length > 1 ? (
+                    <span className="shrink-0 rounded-full border border-[color:var(--accent-border)] bg-[color:var(--accent-soft)] px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-[color:var(--accent-readable)]">
+                      Options
+                    </span>
+                  ) : null}
                 </div>
-              </a>
+                <div className="relative z-10 mt-4 grid gap-2">
+                  {actions.map((action) => {
+                    const isSecondary = action.kind === "secondary";
+
+                    return (
+                      <a
+                        key={action.href}
+                        href={action.href}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className={`inline-flex min-h-10 items-center justify-center rounded-lg px-3 py-2 text-xs font-semibold transition ${
+                          isSecondary
+                            ? "border border-pulse-border bg-pulse-bg/45 text-pulse-text hover:border-[color:var(--accent-border)] hover:bg-pulse-bg/70"
+                            : "border border-[color:var(--accent-border)] bg-[color:var(--accent-soft)] text-[color:var(--accent-readable)] hover:bg-pulse-panel/80"
+                        }`}
+                        aria-label={`${action.label} for ${resource.label} (${action.domain})`}
+                      >
+                        {action.label}
+                      </a>
+                    );
+                  })}
+                </div>
+              </article>
             );
           })}
         </div>

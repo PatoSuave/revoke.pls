@@ -17,6 +17,7 @@ const eslintConfig = [
       "dist/**",
       "node_modules/**",
       "out/**",
+      ".vercel/**",
       "src-tauri/target/**",
       "next-env.d.ts",
     ],
