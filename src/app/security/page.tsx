@@ -24,6 +24,7 @@ import {
   HARDWARE_WALLET_SIGNING_LIMIT_COPY,
 } from "@/lib/hardware-wallet-guidance";
 import { absoluteUrl, siteConfig } from "@/lib/site";
+import { LIVE_SUPPORTED_CHAIN_COUNT } from "@/lib/supported-chain-copy";
 
 const title = "Security & Trust";
 const description =
@@ -304,10 +305,10 @@ function SupportedChainsSection() {
             Current production scope, not future promises.
           </h2>
           <p className="mt-4 text-sm leading-7 text-pulse-muted">
-            The matrix reflects the 10 live EVM networks and scanner/revoke
-            paths present in the app today. It does not enable any new network,
-            mark any spender as safe, or imply support for chains that need
-            separate approval mechanics.
+            The matrix reflects the {LIVE_SUPPORTED_CHAIN_COUNT} live EVM
+            networks and scanner/revoke paths present in the app today. It does
+            not enable any new network, mark any spender as safe, or imply
+            support for chains that need separate approval mechanics.
           </p>
         </div>
         <div className="mt-8">

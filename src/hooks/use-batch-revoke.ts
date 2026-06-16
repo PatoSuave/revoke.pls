@@ -21,6 +21,7 @@ import {
   type BatchPreflightSummary,
   type Erc20PreflightResult,
 } from "@/lib/preflight";
+import { verifyErc20PostRevokeCleared } from "@/lib/post-revoke-verification";
 import { buildRevokeCall, getWalletRevokeBlockReason } from "@/lib/revoke";
 import { trackEvent } from "@/lib/telemetry";
 
@@ -29,6 +30,7 @@ export type BatchItemStatus =
   | "refreshing"
   | "wallet"
   | "submitted"
+  | "verifying"
   | "success"
   | "failed"
   | "rejected"
@@ -288,6 +290,7 @@ export function useBatchRevoke({
     let failedCount = 0;
     let rejectedCount = 0;
     let skippedCount = 0;
+    let unverifiedCount = 0;
 
     for (const item of items) {
       const currentResult = results[item.key];
@@ -314,6 +317,7 @@ export function useBatchRevoke({
           error: preflightBlockReason,
           preflight: blockedErc20Preflight(preflightBlockReason),
         });
+        unverifiedCount += 1;
         continue;
       }
       const latest = await refreshErc20PreflightForItem(
@@ -343,6 +347,7 @@ export function useBatchRevoke({
           error: submitBlockReason,
           preflight: blockedErc20Preflight(submitBlockReason),
         });
+        unverifiedCount += 1;
         continue;
       }
 
@@ -397,8 +402,30 @@ export function useBatchRevoke({
           });
           failedCount += 1;
         } else {
-          patch(item.key, { status: "success", hash });
-          successCount += 1;
+          patch(item.key, { status: "verifying", hash });
+          const verification = await verifyErc20PostRevokeCleared({
+            client,
+            ownerAddress,
+            target: {
+              chainId: item.chainId,
+              tokenAddress: item.tokenAddress,
+              spenderAddress: item.spenderAddress,
+              approvalKind: item.approvalKind,
+              approvalContractAddress: item.approvalContractAddress,
+            },
+          });
+
+          if (verification.state === "confirmed-cleared") {
+            patch(item.key, { status: "success", hash });
+            successCount += 1;
+          } else {
+            patch(item.key, {
+              status: "unverified",
+              hash,
+              error: postRevokeVerificationErrorMessage(verification),
+            });
+            unverifiedCount += 1;
+          }
         }
       } catch (e) {
         const n = normalizeRevokeError(e);
@@ -417,7 +444,8 @@ export function useBatchRevoke({
       failed: failedCount,
       rejected: rejectedCount,
       skipped: skippedCount,
-      partial: failedCount + rejectedCount + skippedCount > 0,
+      unverified: unverifiedCount,
+      partial: failedCount + rejectedCount + skippedCount + unverifiedCount > 0,
     });
     onComplete?.();
   }, [
@@ -574,6 +602,25 @@ function resultFromPreflight(
     error: preflight.error,
     preflight,
   };
+}
+
+function postRevokeVerificationErrorMessage(
+  result: Awaited<ReturnType<typeof verifyErc20PostRevokeCleared>>,
+): string {
+  if (result.state === "mismatch") {
+    return "Transaction confirmed, but live verification still found an active approval. Rescan before trusting this approval as revoked.";
+  }
+  if (result.state === "incomplete") {
+    return result.error
+      ? `Transaction confirmed, but post-revoke verification was incomplete: ${result.error}. Rescan before trusting this approval as revoked.`
+      : "Transaction confirmed, but post-revoke verification was incomplete. Rescan before trusting this approval as revoked.";
+  }
+  if (result.state === "failed") {
+    return result.error
+      ? `Transaction confirmed, but post-revoke verification failed: ${result.error}. Rescan before trusting this approval as revoked.`
+      : "Transaction confirmed, but post-revoke verification failed. Rescan before trusting this approval as revoked.";
+  }
+  return "Transaction confirmed, but post-revoke verification did not complete. Rescan before trusting this approval as revoked.";
 }
 
 function withGasCapContext(
