@@ -4,12 +4,22 @@ import { describe, expect, it } from "vitest";
 import {
   BERACHAIN_CHAIN_ID,
   BLAST_CHAIN_ID,
+  PULSECHAIN_CHAIN_ID,
   LINEA_CHAIN_ID,
 } from "@/lib/chains";
 
 const SOURCE = readFileSync(new URL("./chain-logo.tsx", import.meta.url), "utf8");
 
 describe("ChainLogo source", () => {
+  it("uses the original PulseChain vector mark instead of the generated fallback", () => {
+    expect(PULSECHAIN_CHAIN_ID).toBe(369);
+    expect(SOURCE).toContain("PULSECHAIN_LOGO_PATH");
+    expect(SOURCE).toContain("PulseChain-Logo-Shape");
+    expect(SOURCE).toContain("#00EAFF");
+    expect(SOURCE).toContain("#FF0000");
+    expect(SOURCE).not.toContain('d="M8 24h10l4-9 6 20 4-11h8"');
+  });
+
   it("labels Linea, Blast, and Berachain explicitly", () => {
     expect(SOURCE).toContain(`[LINEA_CHAIN_ID]: "Linea"`);
     expect(SOURCE).toContain(`[BLAST_CHAIN_ID]: "Blast"`);
