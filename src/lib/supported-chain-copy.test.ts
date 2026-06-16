@@ -74,6 +74,7 @@ describe("supported chain copy", () => {
     const sources = [
       join(process.cwd(), "src", "app", "page.tsx"),
       join(process.cwd(), "src", "app", "app", "page.tsx"),
+      join(process.cwd(), "src", "app", "security", "page.tsx"),
       join(process.cwd(), "src", "components", "sections", "approval-scanner.tsx"),
       join(process.cwd(), "src", "components", "sections", "faq.tsx"),
       join(process.cwd(), "src", "components", "sections", "how-it-works.tsx"),
@@ -83,7 +84,8 @@ describe("supported chain copy", () => {
 
     expect(sources[0]).toContain("LIVE_SUPPORTED_CHAIN_ROWS");
     expect(sources[1]).toContain("LIVE_SUPPORTED_CHAIN_ROWS");
-    for (const source of sources.slice(2)) {
+    expect(sources[2]).toContain("LIVE_SUPPORTED_CHAIN_COUNT");
+    for (const source of sources.slice(3)) {
       expect(source).toContain("LIVE_SUPPORTED_CHAIN");
     }
   });

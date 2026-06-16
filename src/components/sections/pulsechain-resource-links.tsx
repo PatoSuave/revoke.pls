@@ -24,7 +24,7 @@ export function PulseChainResourceLinks({
             Curated resources
           </p>
           <h2 className="mt-2 text-2xl font-bold text-pulse-text sm:text-3xl">
-            Trusted links
+            Curated links
           </h2>
           <p className="mt-3 text-sm leading-6 text-pulse-muted">
             {PULSECHAIN_RESOURCE_NOTICE}

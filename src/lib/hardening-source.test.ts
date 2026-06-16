@@ -15,6 +15,21 @@ describe("hardening source invariants", () => {
     expect(source).not.toContain("Promise.all(receipt");
   });
 
+  it("keeps batch revoke success gated by post-revoke live verification", () => {
+    const source = readFileSync(
+      join(process.cwd(), "src", "hooks", "use-batch-revoke.ts"),
+      "utf8",
+    );
+
+    expect(source).toContain("verifyErc20PostRevokeCleared");
+    expect(source).toContain('status: "verifying"');
+    expect(source).toContain('verification.state === "confirmed-cleared"');
+    expect(source.indexOf("verifyErc20PostRevokeCleared")).toBeGreaterThan(-1);
+    expect(source.indexOf('status: "success"')).toBeGreaterThan(
+      source.indexOf('verification.state === "confirmed-cleared"'),
+    );
+  });
+
   it("keeps API routes free of server-side write, signing, or relayer logic", () => {
     const ethereumRoute = readFileSync(
       join(

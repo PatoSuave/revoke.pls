@@ -6,6 +6,8 @@ import {
 } from "@/lib/pulsechain-resources";
 
 describe("PulseChain resource links", () => {
+  const referralRedirectDomain = ["refr", "cc"].join(".");
+
   it("keeps the curated resource list on the exact approved HTTPS domains", () => {
     expect(PULSECHAIN_RESOURCE_LINKS.map((link) => link.href)).toEqual([
       "https://pulsechain.com/",
@@ -87,7 +89,9 @@ describe("PulseChain resource links", () => {
       trezor?.actions?.every((action) => action.href.startsWith("https://")),
     ).toBe(true);
     expect(JSON.stringify(trezor).toLowerCase()).not.toContain("referral");
-    expect(JSON.stringify(trezor).toLowerCase()).not.toContain("refr.cc");
+    expect(JSON.stringify(trezor).toLowerCase()).not.toContain(
+      referralRedirectDomain,
+    );
   });
 
   it("does not frame the list as financial advice or a safety guarantee", () => {

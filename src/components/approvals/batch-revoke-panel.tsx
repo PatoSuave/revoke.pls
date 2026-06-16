@@ -377,8 +377,9 @@ function CompleteCard({
         {success} of {total} revoked
       </h3>
       <p className="mt-1 text-xs leading-5 text-pulse-muted">
-        Completed items have confirmed on-chain. Any failed, rejected, or
-        unverified approvals remain unchanged and can be reviewed again.
+        Revoked items have confirmed on-chain and passed post-revoke live
+        verification. Any failed, rejected, or unverified approvals can be
+        reviewed again.
       </p>
 
       {stoppedByRejection ? (
@@ -432,6 +433,7 @@ const STATUS_LABEL: Record<BatchItemStatus, string> = {
   refreshing: "Refreshing",
   wallet: "Confirm in wallet...",
   submitted: "Confirming...",
+  verifying: "Verifying...",
   success: "Revoked",
   failed: "Failed",
   rejected: "Rejected",
@@ -449,6 +451,7 @@ const STATUS_TONE: Record<
   refreshing: "info",
   wallet: "info",
   submitted: "info",
+  verifying: "info",
   success: "success",
   failed: "red",
   rejected: "muted",
