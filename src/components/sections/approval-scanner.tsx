@@ -98,9 +98,9 @@ import { tokenLogoAddressKey } from "@/lib/token-logos";
 
 /**
  * Connected-wallet approval scanner for the shared PulseChain/BSC/Base/Polygon/
- * Sonic/Avalanche/Mantle lane. Ethereum, Arbitrum, Optimism, and HyperEVM are routed through read-only
- * scanner lanes in this component before verified rows can expose revoke
- * actions.
+ * Sonic/Avalanche/Mantle/Linea/Blast/Berachain lane. Ethereum, Arbitrum,
+ * Optimism, and HyperEVM are routed through read-only scanner lanes in this
+ * component before verified rows can expose revoke actions.
  *
  * Uses `useApprovalDiscovery` to pull historical `Approval` events from the
  * configured explorer, re-validate every `(token, spender)` pair live via

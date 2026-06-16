@@ -1,8 +1,11 @@
 import {
   AVALANCHE_CHAIN_ID,
   BASE_CHAIN_ID,
+  BERACHAIN_CHAIN_ID,
+  BLAST_CHAIN_ID,
   BSC_CHAIN_ID,
   BSC_OSAKA_MAX_TRANSACTION_GAS,
+  LINEA_CHAIN_ID,
   MANTLE_CHAIN_ID,
   POLYGON_CHAIN_ID,
   PULSECHAIN_CHAIN_ID,
@@ -107,6 +110,39 @@ export const CHAIN_CAPABILITIES: Record<number, ChainCapability> = {
     notes: [
       "Mantle wallet estimates may include L1 data fees beyond gas-price estimates.",
     ],
+  },
+  [LINEA_CHAIN_ID]: {
+    chainId: LINEA_CHAIN_ID,
+    name: "Linea",
+    supportsEip7702: "unknown",
+    batchRevokeEnabled: true,
+    websocketSupport: "unknown",
+    confirmationStrategy: "receipt-plus-live-recheck",
+    notes: [
+      "Linea wallet estimates may include L1 data fees beyond gas-price estimates.",
+      "Use standard RPC methods where possible.",
+    ],
+  },
+  [BLAST_CHAIN_ID]: {
+    chainId: BLAST_CHAIN_ID,
+    name: "Blast",
+    supportsEip7702: "unknown",
+    batchRevokeEnabled: true,
+    websocketSupport: "unknown",
+    confirmationStrategy: "receipt-plus-live-recheck",
+    notes: [
+      "Blast wallet estimates may include L1 data fees beyond gas-price estimates.",
+      "Use standard RPC methods where possible.",
+    ],
+  },
+  [BERACHAIN_CHAIN_ID]: {
+    chainId: BERACHAIN_CHAIN_ID,
+    name: "Berachain",
+    supportsEip7702: "unknown",
+    batchRevokeEnabled: true,
+    websocketSupport: "unknown",
+    confirmationStrategy: "receipt-plus-live-recheck",
+    notes: ["Use standard RPC methods where possible."],
   },
   [ARBITRUM_ONE_CLIENT_CHAIN_ID]: {
     chainId: ARBITRUM_ONE_CLIENT_CHAIN_ID,

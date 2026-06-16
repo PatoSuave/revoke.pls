@@ -30,7 +30,8 @@ scanner logic.
 Electron is defensible if wallet extension injection is a hard requirement
 (MetaMask browser extension running inside the app). For this app it is
 not — WalletConnect covers the primary mobile + hardware wallet case for
-PulseChain, BSC, Base, Polygon, Sonic, Avalanche, and Mantle users, and the target
+PulseChain, BSC, Base, Polygon, Sonic, Avalanche, Mantle, Linea, Blast, and
+Berachain users, and the target
 audience is comfortable with QR pairing. Electron's 150 MB binary also works against IPFS distribution
 credibility.
 
@@ -46,16 +47,18 @@ entry in the launcher's downloads grid.
 
 The current `/app` build is nearly ideal for Tauri wrapping:
 
-- **No server-side code.** No API routes exist. All blockchain reads go
-  directly from wagmi/viem through HTTP RPC. `output: 'export'` can be
-  enabled with one line.
+- **Hosted web and desktop have different discovery surfaces.** Hosted web
+  uses server-side API routes for Etherscan API V2-backed approval discovery.
+  Static desktop builds disable server discovery and rely on public client-side
+  RPC/explorer configuration that can be baked in at build time.
 - **No browser-API coupling in hooks.** The six hooks in `src/hooks/`
   use only `fetch()`, wagmi hooks, and React state. The only `document`
   usage is `document.addEventListener` in `connect-wallet-button.tsx`
   for menu dismiss — a non-issue in the Tauri webview.
-- **Configurable network access.** PulseChain, BSC, Base, Polygon, Sonic,
-  Avalanche, and Mantle RPC/explorer values are env-variable-driven and baked into the
-  desktop build at compile time.
+- **Configurable network access.** Public RPC/explorer values for desktop-safe
+  client-side networks are env-variable-driven and baked into the desktop build
+  at compile time. Server-only Etherscan API keys are not baked into desktop
+  bundles.
 
 ---
 
@@ -71,7 +74,8 @@ This is the most important architectural difference from the web product.
 
 **Practical consequence for v1:** the desktop build should ship with
 `NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID` baked in. WalletConnect covers common
-PulseChain, BSC, Base, Polygon, Sonic, Avalanche, and Mantle wallet use cases
+PulseChain, BSC, Base, Polygon, Sonic, Avalanche, Mantle, Linea, Blast, and
+Berachain wallet use cases
 (MetaMask Mobile, Rabby Mobile, hardware wallets).
 Pure MetaMask-desktop-only users are not served by the injected path in a
 webview — they must scan a QR or use the web app instead.

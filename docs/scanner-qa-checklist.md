@@ -1,8 +1,8 @@
 # Scanner QA Checklist
 
 Use this checklist to verify that Pulse Revoke reads approval state correctly on
-PulseChain, BSC, Base, Polygon, Sonic Mainnet, Avalanche, Mantle, Ethereum,
-Arbitrum One
+PulseChain, BSC, Base, Polygon, Sonic Mainnet, Avalanche, Mantle, Linea, Blast,
+Berachain, Ethereum, Arbitrum One
 verified-row revoke, Optimism verified-row revoke, and HyperEVM verified-row
 revoke.
 Keep all testing low-risk and manual.
@@ -41,6 +41,9 @@ Run the scanner flow on all supported chains:
 - Sonic Mainnet, chain ID `146`, gas token `S`.
 - Avalanche C-Chain, chain ID `43114`, gas token `AVAX`.
 - Mantle, chain ID `5000`, gas token `MNT`.
+- Linea, chain ID `59144`, gas token `ETH`.
+- Blast, chain ID `81457`, gas token `ETH`.
+- Berachain, chain ID `80094`, gas token `BERA`.
 - Ethereum Mainnet, chain ID `1`, gas token `ETH`.
 - Arbitrum One, chain ID `42161`, gas token `ETH`, ERC-20/NFT verified-row
   lane.
@@ -63,6 +66,9 @@ For each chain, confirm diagnostics show:
 - Sonic API chain ID `146` when testing Sonic Mainnet.
 - Avalanche API chain ID `43114` when testing Avalanche C-Chain.
 - Mantle API chain ID `5000` when testing Mantle.
+- Linea API chain ID `59144` when testing Linea.
+- Blast API chain ID `81457` when testing Blast.
+- Berachain API chain ID `80094` when testing Berachain.
 - Arbitrum API chain ID `42161` when testing Arbitrum One.
 - Optimism API chain ID `10` when testing OP Mainnet.
 - HyperEVM API chain ID `999` when testing HyperEVM.
@@ -200,6 +206,51 @@ For each chain, confirm diagnostics show:
 - Rate limits, malformed responses, missing API keys, and capped responses are
   shown as incomplete/error states, not as "clear".
 
+## Linea Discovery Checks
+
+- `LINEA_EXPLORER_API_URL` is either unset or points to a compatible Etherscan
+  API V2 endpoint. The default is `https://api.etherscan.io/v2/api`.
+- `LINEA_EXPLORER_CHAIN_ID` is unset or set to `59144`.
+- `LINEA_EXPLORER_API_KEY` or `ETHERSCAN_API_KEY` is set server-side to an
+  Etherscan API V2 key with Linea Mainnet access.
+- No Linea explorer key is exposed through a `NEXT_PUBLIC_` variable.
+- Linea scans use Etherscan API V2 logs with `chainid=59144` for historical
+  approval discovery through `/api/discovery/approvals`.
+- The app does not rely on public Linea RPC `eth_getLogs` for historical
+  approval discovery.
+- Rate limits, malformed responses, missing API keys, and capped responses are
+  shown as incomplete/error states, not as "clear".
+
+## Blast Discovery Checks
+
+- `BLAST_EXPLORER_API_URL` is either unset or points to a compatible Etherscan
+  API V2 endpoint. The default is `https://api.etherscan.io/v2/api`.
+- `BLAST_EXPLORER_CHAIN_ID` is unset or set to `81457`.
+- `BLAST_EXPLORER_API_KEY` or `ETHERSCAN_API_KEY` is set server-side to an
+  Etherscan API V2 key with Blast Mainnet access.
+- No Blast explorer key is exposed through a `NEXT_PUBLIC_` variable.
+- Blast scans use Etherscan API V2 logs with `chainid=81457` for historical
+  approval discovery through `/api/discovery/approvals`.
+- The app does not rely on public Blast RPC `eth_getLogs` for historical
+  approval discovery.
+- Rate limits, malformed responses, missing API keys, and capped responses are
+  shown as incomplete/error states, not as "clear".
+
+## Berachain Discovery Checks
+
+- `BERACHAIN_EXPLORER_API_URL` is either unset or points to a compatible
+  Etherscan API V2 endpoint. The default is `https://api.etherscan.io/v2/api`.
+- `BERACHAIN_EXPLORER_CHAIN_ID` is unset or set to `80094`.
+- `BERACHAIN_EXPLORER_API_KEY` or `ETHERSCAN_API_KEY` is set server-side to an
+  Etherscan API V2 key with Berachain Mainnet access.
+- No Berachain explorer key is exposed through a `NEXT_PUBLIC_` variable.
+- Berachain scans use Etherscan API V2 logs with `chainid=80094` for
+  historical approval discovery through `/api/discovery/approvals`.
+- The app does not rely on public Berachain RPC `eth_getLogs` for historical
+  approval discovery.
+- Rate limits, malformed responses, missing API keys, and capped responses are
+  shown as incomplete/error states, not as "clear".
+
 ## Arbitrum Verified-Row Checks
 
 - `ARBITRUM_ONE_RPC_URL` or `ARBITRUM_RPC_URL` is set server-side for
@@ -275,7 +326,8 @@ For each chain, confirm diagnostics show:
 13. On revoke-enabled chains, revoke the approval from the app.
 14. Rescan after the transaction confirms.
 15. Confirm the approval disappears or diagnostics show no nonzero allowance.
-16. Verify directly on PulseScan, BscScan, BaseScan, PolygonScan, Etherscan,
+16. Verify directly on PulseScan, BscScan, BaseScan, PolygonScan, SonicScan,
+    SnowScan, Mantle Explorer, LineaScan, Blastscan, Berascan, Etherscan,
     Arbiscan, or Optimistic Etherscan if results disagree.
 
 ## NFT Approval Test
@@ -346,8 +398,8 @@ For per-token approvals:
 
 - Connect to an unsupported chain.
 - Confirm the app lists PulseChain, BSC, Base, Polygon, Sonic Mainnet,
-  Avalanche, Mantle, Ethereum, Arbitrum, Optimism, and HyperEVM with the
-  correct scan/revoke statuses.
+  Avalanche, Mantle, Linea, Blast, Berachain, Ethereum, Arbitrum, Optimism,
+  and HyperEVM with the correct scan/revoke statuses.
 - Confirm no scan starts.
 - Confirm no revoke action is available.
 - Confirm stale approvals from a previous chain are not shown as current.
@@ -360,4 +412,5 @@ For per-token approvals:
 - Wallet with historical approvals that validate to zero shows a clear state.
 - Failed live reads show verification incomplete, not clear.
 - Etherscan API V2 rate limits, the BscScan V1 deprecation error, or a missing
-  BSC/Base/Polygon/Sonic/Avalanche/Mantle API key show an actionable error.
+  BSC/Base/Polygon/Sonic/Avalanche/Mantle/Linea/Blast/Berachain API key show
+  an actionable error.

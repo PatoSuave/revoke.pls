@@ -8,7 +8,10 @@ import {
 import {
   avalanche,
   base,
+  berachain,
+  blast,
   bsc,
+  linea,
   mantle,
   polygon,
   pulsechain,
@@ -39,6 +42,9 @@ import {
  *  - Sonic Mainnet (146)
  *  - Avalanche C-Chain (43114)
  *  - Mantle mainnet (5000)
+ *  - Linea mainnet (59144)
+ *  - Blast mainnet (81457)
+ *  - Berachain mainnet (80094)
  *
  * Ethereum Mainnet (1) is registered as a wallet-only chain for the
  * Ethereum scanner/revoke flow. It is intentionally not part of the active
@@ -73,7 +79,7 @@ export const hasWalletConnect: boolean = Boolean(walletConnectProjectId);
 const WALLETCONNECT_METADATA = {
   name: "Pulse Revoke",
   description:
-    "Review token approvals on PulseChain, BSC, Base, Polygon, Sonic, Avalanche, Mantle, Ethereum, Arbitrum, Optimism, and HyperEVM.",
+    "Review token approvals on PulseChain, BSC, Base, Polygon, Sonic, Avalanche, Mantle, Linea, Blast, Berachain, Ethereum, Arbitrum, Optimism, and HyperEVM.",
   url: "https://pulserevoke.com",
   icons: ["https://pulserevoke.com/icon.png"],
 };
@@ -114,6 +120,11 @@ export const wagmiConfig = createConfig({
       process.env.NEXT_PUBLIC_AVALANCHE_RPC_URL ?? undefined,
     ),
     [mantle.id]: http(process.env.NEXT_PUBLIC_MANTLE_RPC_URL ?? undefined),
+    [linea.id]: http(process.env.NEXT_PUBLIC_LINEA_RPC_URL ?? undefined),
+    [blast.id]: http(process.env.NEXT_PUBLIC_BLAST_RPC_URL ?? undefined),
+    [berachain.id]: http(
+      process.env.NEXT_PUBLIC_BERACHAIN_RPC_URL ?? undefined,
+    ),
     [ethereumMainnetWalletChain.id]: http(
       process.env.NEXT_PUBLIC_MAINNET_RPC_URL ??
         process.env.NEXT_PUBLIC_ETHEREUM_RPC_URL ??

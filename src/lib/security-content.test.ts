@@ -89,6 +89,29 @@ describe("security content", () => {
     expect(rowsByChain.get("HyperEVM")?.note).toContain(
       "Gas is paid in HYPE",
     );
+    expect(rowsByChain.get("Linea")).toMatchObject({
+      chainId: "59144",
+      scan: "Yes",
+      revoke: "Yes",
+      status: "Live",
+    });
+    expect(rowsByChain.get("Linea")?.note).toContain("Gas is paid in ETH");
+    expect(rowsByChain.get("Blast")).toMatchObject({
+      chainId: "81457",
+      scan: "Yes",
+      revoke: "Yes",
+      status: "Live",
+    });
+    expect(rowsByChain.get("Blast")?.note).toContain("Gas is paid in ETH");
+    expect(rowsByChain.get("Berachain")).toMatchObject({
+      chainId: "80094",
+      scan: "Yes",
+      revoke: "Yes",
+      status: "Live",
+    });
+    expect(rowsByChain.get("Berachain")?.note).toContain(
+      "Gas is paid in BERA",
+    );
     expect(rowsByChain.get("Solana")).toMatchObject({
       scan: "No",
       revoke: "No",

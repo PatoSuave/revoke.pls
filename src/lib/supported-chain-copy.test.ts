@@ -23,17 +23,20 @@ describe("supported chain copy", () => {
       "Sonic Mainnet",
       "Avalanche C-Chain",
       "Mantle",
+      "Linea",
+      "Blast",
+      "Berachain",
       "Ethereum Mainnet",
       "Arbitrum One",
       "Optimism",
       "HyperEVM",
     ]);
-    expect(LIVE_SUPPORTED_CHAIN_COUNT).toBe(11);
+    expect(LIVE_SUPPORTED_CHAIN_COUNT).toBe(14);
     expect(LIVE_SUPPORTED_CHAIN_LIST).toBe(
-      "PulseChain, BNB Smart Chain, Base, Polygon, Sonic Mainnet, Avalanche C-Chain, Mantle, Ethereum Mainnet, Arbitrum One, Optimism, and HyperEVM",
+      "PulseChain, BNB Smart Chain, Base, Polygon, Sonic Mainnet, Avalanche C-Chain, Mantle, Linea, Blast, Berachain, Ethereum Mainnet, Arbitrum One, Optimism, and HyperEVM",
     );
     expect(LIVE_SUPPORTED_CHAIN_COMPACT_LIST).toBe(
-      "PulseChain, BSC, Base, Polygon, Sonic, Avalanche, Mantle, Ethereum, Arbitrum, Optimism, and HyperEVM",
+      "PulseChain, BSC, Base, Polygon, Sonic, Avalanche, Mantle, Linea, Blast, Berachain, Ethereum, Arbitrum, Optimism, and HyperEVM",
     );
   });
 

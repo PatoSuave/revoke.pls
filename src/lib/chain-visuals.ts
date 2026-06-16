@@ -64,6 +64,27 @@ export const CHAIN_VISUALS: Record<string, ChainVisual> = {
     accentBorder: "rgba(103, 232, 249, 0.34)",
     accentShadow: "0 0 20px rgba(103, 232, 249, 0.23)",
   },
+  Linea: {
+    accent: "#8F9BFF",
+    accentReadable: "#4F46E5",
+    accentSoft: "rgba(143, 155, 255, 0.12)",
+    accentBorder: "rgba(143, 155, 255, 0.34)",
+    accentShadow: "0 0 20px rgba(79, 70, 229, 0.24)",
+  },
+  Blast: {
+    accent: "#F8FF46",
+    accentReadable: "#7C6F00",
+    accentSoft: "rgba(248, 255, 70, 0.12)",
+    accentBorder: "rgba(248, 255, 70, 0.34)",
+    accentShadow: "0 0 20px rgba(248, 255, 70, 0.22)",
+  },
+  Berachain: {
+    accent: "#F59E0B",
+    accentReadable: "#B45309",
+    accentSoft: "rgba(245, 158, 11, 0.12)",
+    accentBorder: "rgba(245, 158, 11, 0.34)",
+    accentShadow: "0 0 20px rgba(245, 158, 11, 0.24)",
+  },
   "Ethereum Mainnet": {
     accent: "#8EA5FF",
     accentReadable: "#4F67D8",

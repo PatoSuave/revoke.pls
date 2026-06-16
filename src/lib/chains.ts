@@ -16,6 +16,9 @@ export const POLYGON_CHAIN_ID = 137;
 export const SONIC_CHAIN_ID = 146;
 export const AVALANCHE_CHAIN_ID = 43114;
 export const MANTLE_CHAIN_ID = 5000;
+export const LINEA_CHAIN_ID = 59144;
+export const BLAST_CHAIN_ID = 81457;
+export const BERACHAIN_CHAIN_ID = 80094;
 export type SupportedChainId =
   | typeof PULSECHAIN_CHAIN_ID
   | typeof BSC_CHAIN_ID
@@ -23,7 +26,10 @@ export type SupportedChainId =
   | typeof POLYGON_CHAIN_ID
   | typeof SONIC_CHAIN_ID
   | typeof AVALANCHE_CHAIN_ID
-  | typeof MANTLE_CHAIN_ID;
+  | typeof MANTLE_CHAIN_ID
+  | typeof LINEA_CHAIN_ID
+  | typeof BLAST_CHAIN_ID
+  | typeof BERACHAIN_CHAIN_ID;
 
 const PULSECHAIN_RPC_DEFAULT = "https://rpc.pulsechain.com";
 const BSC_RPC_DEFAULT = "https://bsc-dataseed.bnbchain.org";
@@ -32,6 +38,9 @@ const POLYGON_RPC_DEFAULT = "https://polygon.drpc.org";
 const SONIC_RPC_DEFAULT = "https://rpc.soniclabs.com";
 const AVALANCHE_RPC_DEFAULT = "https://api.avax.network/ext/bc/C/rpc";
 const MANTLE_RPC_DEFAULT = "https://rpc.mantle.xyz";
+const LINEA_RPC_DEFAULT = "https://rpc.linea.build";
+const BLAST_RPC_DEFAULT = "https://rpc.blast.io";
+const BERACHAIN_RPC_DEFAULT = "https://rpc.berachain.com";
 
 const PULSECHAIN_EXPLORER_BASE_URL = "https://scan.pulsechain.com";
 const BSC_EXPLORER_BASE_URL = "https://bscscan.com";
@@ -40,6 +49,9 @@ const POLYGON_EXPLORER_BASE_URL = "https://polygonscan.com";
 const SONIC_EXPLORER_BASE_URL = "https://sonicscan.org";
 const AVALANCHE_EXPLORER_BASE_URL = "https://snowscan.xyz";
 const MANTLE_EXPLORER_BASE_URL = "https://explorer.mantle.xyz";
+const LINEA_EXPLORER_BASE_URL = "https://lineascan.build";
+const BLAST_EXPLORER_BASE_URL = "https://blastscan.io";
+const BERACHAIN_EXPLORER_BASE_URL = "https://berascan.com";
 
 export const PULSECHAIN_EXPLORER_API_DEFAULT =
   "https://api.scan.pulsechain.com/api";
@@ -51,6 +63,10 @@ export const SONIC_EXPLORER_API_DEFAULT = "https://api.etherscan.io/v2/api";
 export const AVALANCHE_EXPLORER_API_DEFAULT =
   "https://api.etherscan.io/v2/api";
 export const MANTLE_EXPLORER_API_DEFAULT =
+  "https://api.etherscan.io/v2/api";
+export const LINEA_EXPLORER_API_DEFAULT = "https://api.etherscan.io/v2/api";
+export const BLAST_EXPLORER_API_DEFAULT = "https://api.etherscan.io/v2/api";
+export const BERACHAIN_EXPLORER_API_DEFAULT =
   "https://api.etherscan.io/v2/api";
 export const BSC_DEPRECATED_V1_EXPLORER_API_URL =
   "https://api.bscscan.com/api";
@@ -66,6 +82,10 @@ export const SONIC_EXPLORER_CHAIN_ID_DEFAULT = SONIC_CHAIN_ID.toString();
 export const AVALANCHE_EXPLORER_CHAIN_ID_DEFAULT =
   AVALANCHE_CHAIN_ID.toString();
 export const MANTLE_EXPLORER_CHAIN_ID_DEFAULT = MANTLE_CHAIN_ID.toString();
+export const LINEA_EXPLORER_CHAIN_ID_DEFAULT = LINEA_CHAIN_ID.toString();
+export const BLAST_EXPLORER_CHAIN_ID_DEFAULT = BLAST_CHAIN_ID.toString();
+export const BERACHAIN_EXPLORER_CHAIN_ID_DEFAULT =
+  BERACHAIN_CHAIN_ID.toString();
 export const BSC_OSAKA_MAX_TRANSACTION_GAS = 16_777_216n;
 export const BSC_HIGH_GAS_WARNING_THRESHOLD = 1_000_000n;
 
@@ -76,7 +96,10 @@ export type SupportedChainKey =
   | "polygon"
   | "sonic"
   | "avalanche"
-  | "mantle";
+  | "mantle"
+  | "linea"
+  | "blast"
+  | "berachain";
 
 function cleanEnv(value: string | undefined): string | undefined {
   const trimmed = value?.trim();
@@ -91,12 +114,18 @@ function cleanApiKey(value: string | undefined): string | undefined {
   if (cleaned === "PASTE_YOUR_SONIC_EXPLORER_KEY_HERE") return undefined;
   if (cleaned === "PASTE_YOUR_AVALANCHE_EXPLORER_KEY_HERE") return undefined;
   if (cleaned === "PASTE_YOUR_MANTLE_EXPLORER_KEY_HERE") return undefined;
+  if (cleaned === "PASTE_YOUR_LINEA_EXPLORER_KEY_HERE") return undefined;
+  if (cleaned === "PASTE_YOUR_BLAST_EXPLORER_KEY_HERE") return undefined;
+  if (cleaned === "PASTE_YOUR_BERACHAIN_EXPLORER_KEY_HERE") return undefined;
   if (cleaned === "PASTE_YOUR_ETHERSCAN_V2_KEY_HERE") return undefined;
   if (cleaned === "your_bscscan_key") return undefined;
   if (cleaned === "your_polygonscan_key") return undefined;
   if (cleaned === "your_sonic_explorer_key") return undefined;
   if (cleaned === "your_avalanche_explorer_key") return undefined;
   if (cleaned === "your_mantle_explorer_key") return undefined;
+  if (cleaned === "your_linea_explorer_key") return undefined;
+  if (cleaned === "your_blast_explorer_key") return undefined;
+  if (cleaned === "your_berachain_explorer_key") return undefined;
   if (cleaned === "YOUR_ETHERSCAN_V2_KEY") return undefined;
   return cleaned;
 }
@@ -133,6 +162,11 @@ const polygonRpcEnv = cleanEnv(process.env.NEXT_PUBLIC_POLYGON_RPC_URL);
 const sonicRpcEnv = cleanEnv(process.env.NEXT_PUBLIC_SONIC_RPC_URL);
 const avalancheRpcEnv = cleanEnv(process.env.NEXT_PUBLIC_AVALANCHE_RPC_URL);
 const mantleRpcEnv = cleanEnv(process.env.NEXT_PUBLIC_MANTLE_RPC_URL);
+const lineaRpcEnv = cleanEnv(process.env.NEXT_PUBLIC_LINEA_RPC_URL);
+const blastRpcEnv = cleanEnv(process.env.NEXT_PUBLIC_BLAST_RPC_URL);
+const berachainRpcEnv = cleanEnv(
+  process.env.NEXT_PUBLIC_BERACHAIN_RPC_URL,
+);
 const pulsechainExplorerApiEnv = cleanEnv(
   process.env.NEXT_PUBLIC_PULSECHAIN_EXPLORER_API,
 );
@@ -154,6 +188,15 @@ const avalancheExplorerApiEnv = cleanEnv(
 const mantleExplorerApiEnv = cleanEnv(
   process.env.NEXT_PUBLIC_MANTLE_EXPLORER_API_URL,
 );
+const lineaExplorerApiEnv = cleanEnv(
+  process.env.NEXT_PUBLIC_LINEA_EXPLORER_API_URL,
+);
+const blastExplorerApiEnv = cleanEnv(
+  process.env.NEXT_PUBLIC_BLAST_EXPLORER_API_URL,
+);
+const berachainExplorerApiEnv = cleanEnv(
+  process.env.NEXT_PUBLIC_BERACHAIN_EXPLORER_API_URL,
+);
 const bscExplorerChainIdEnv = cleanEnv(
   process.env.NEXT_PUBLIC_BSC_EXPLORER_CHAIN_ID,
 );
@@ -171,6 +214,15 @@ const avalancheExplorerChainIdEnv = cleanEnv(
 );
 const mantleExplorerChainIdEnv = cleanEnv(
   process.env.NEXT_PUBLIC_MANTLE_EXPLORER_CHAIN_ID,
+);
+const lineaExplorerChainIdEnv = cleanEnv(
+  process.env.NEXT_PUBLIC_LINEA_EXPLORER_CHAIN_ID,
+);
+const blastExplorerChainIdEnv = cleanEnv(
+  process.env.NEXT_PUBLIC_BLAST_EXPLORER_CHAIN_ID,
+);
+const berachainExplorerChainIdEnv = cleanEnv(
+  process.env.NEXT_PUBLIC_BERACHAIN_EXPLORER_CHAIN_ID,
 );
 const bscPreferredApiKeyEnv = cleanApiKey(
   process.env.NEXT_PUBLIC_BSC_EXPLORER_API_KEY,
@@ -220,6 +272,18 @@ const mantleExplorerChainId =
   mantleExplorerChainIdEnv === MANTLE_EXPLORER_CHAIN_ID_DEFAULT
     ? mantleExplorerChainIdEnv
     : MANTLE_EXPLORER_CHAIN_ID_DEFAULT;
+const lineaExplorerChainId =
+  lineaExplorerChainIdEnv === LINEA_EXPLORER_CHAIN_ID_DEFAULT
+    ? lineaExplorerChainIdEnv
+    : LINEA_EXPLORER_CHAIN_ID_DEFAULT;
+const blastExplorerChainId =
+  blastExplorerChainIdEnv === BLAST_EXPLORER_CHAIN_ID_DEFAULT
+    ? blastExplorerChainIdEnv
+    : BLAST_EXPLORER_CHAIN_ID_DEFAULT;
+const berachainExplorerChainId =
+  berachainExplorerChainIdEnv === BERACHAIN_EXPLORER_CHAIN_ID_DEFAULT
+    ? berachainExplorerChainIdEnv
+    : BERACHAIN_EXPLORER_CHAIN_ID_DEFAULT;
 const bscExplorerApiKeyEnv = bscPreferredApiKeyEnv ?? bscScanApiKeyEnv;
 const bscDiscoveryWarnings = [
   bscDeprecatedV1ApiConfigured
@@ -267,6 +331,24 @@ const mantleDiscoveryWarnings = [
   mantleExplorerChainIdEnv &&
   mantleExplorerChainIdEnv !== MANTLE_EXPLORER_CHAIN_ID_DEFAULT
     ? `NEXT_PUBLIC_MANTLE_EXPLORER_CHAIN_ID must be ${MANTLE_EXPLORER_CHAIN_ID_DEFAULT} for Mantle Mainnet. The app is using chainid=${MANTLE_EXPLORER_CHAIN_ID_DEFAULT}.`
+    : null,
+].filter((warning): warning is string => Boolean(warning));
+const lineaDiscoveryWarnings = [
+  lineaExplorerChainIdEnv &&
+  lineaExplorerChainIdEnv !== LINEA_EXPLORER_CHAIN_ID_DEFAULT
+    ? `NEXT_PUBLIC_LINEA_EXPLORER_CHAIN_ID must be ${LINEA_EXPLORER_CHAIN_ID_DEFAULT} for Linea Mainnet. The app is using chainid=${LINEA_EXPLORER_CHAIN_ID_DEFAULT}.`
+    : null,
+].filter((warning): warning is string => Boolean(warning));
+const blastDiscoveryWarnings = [
+  blastExplorerChainIdEnv &&
+  blastExplorerChainIdEnv !== BLAST_EXPLORER_CHAIN_ID_DEFAULT
+    ? `NEXT_PUBLIC_BLAST_EXPLORER_CHAIN_ID must be ${BLAST_EXPLORER_CHAIN_ID_DEFAULT} for Blast Mainnet. The app is using chainid=${BLAST_EXPLORER_CHAIN_ID_DEFAULT}.`
+    : null,
+].filter((warning): warning is string => Boolean(warning));
+const berachainDiscoveryWarnings = [
+  berachainExplorerChainIdEnv &&
+  berachainExplorerChainIdEnv !== BERACHAIN_EXPLORER_CHAIN_ID_DEFAULT
+    ? `NEXT_PUBLIC_BERACHAIN_EXPLORER_CHAIN_ID must be ${BERACHAIN_EXPLORER_CHAIN_ID_DEFAULT} for Berachain Mainnet. The app is using chainid=${BERACHAIN_EXPLORER_CHAIN_ID_DEFAULT}.`
     : null,
 ].filter((warning): warning is string => Boolean(warning));
 
@@ -449,6 +531,87 @@ export const mantle = defineChain({
     default: {
       name: "Mantle Explorer",
       url: MANTLE_EXPLORER_BASE_URL,
+    },
+  },
+  contracts: {
+    multicall3: {
+      address: "0xcA11bde05977b3631167028862bE2a173976CA11",
+    },
+  },
+  testnet: false,
+});
+
+export const linea = defineChain({
+  id: LINEA_CHAIN_ID,
+  name: "Linea",
+  nativeCurrency: {
+    name: "Ether",
+    symbol: "ETH",
+    decimals: 18,
+  },
+  rpcUrls: {
+    default: {
+      http: [lineaRpcEnv ?? LINEA_RPC_DEFAULT],
+    },
+  },
+  blockExplorers: {
+    default: {
+      name: "LineaScan",
+      url: LINEA_EXPLORER_BASE_URL,
+    },
+  },
+  contracts: {
+    multicall3: {
+      address: "0xcA11bde05977b3631167028862bE2a173976CA11",
+    },
+  },
+  testnet: false,
+});
+
+export const blast = defineChain({
+  id: BLAST_CHAIN_ID,
+  name: "Blast",
+  nativeCurrency: {
+    name: "Ether",
+    symbol: "ETH",
+    decimals: 18,
+  },
+  rpcUrls: {
+    default: {
+      http: [blastRpcEnv ?? BLAST_RPC_DEFAULT],
+    },
+  },
+  blockExplorers: {
+    default: {
+      name: "Blastscan",
+      url: BLAST_EXPLORER_BASE_URL,
+    },
+  },
+  contracts: {
+    multicall3: {
+      address: "0xcA11bde05977b3631167028862bE2a173976CA11",
+    },
+  },
+  testnet: false,
+});
+
+export const berachain = defineChain({
+  id: BERACHAIN_CHAIN_ID,
+  name: "Berachain",
+  nativeCurrency: {
+    name: "BERA",
+    symbol: "BERA",
+    decimals: 18,
+  },
+  rpcUrls: {
+    default: {
+      http: [berachainRpcEnv ?? BERACHAIN_RPC_DEFAULT],
+    },
+  },
+  blockExplorers: {
+    default: {
+      name: "Berascan",
+      url: BERACHAIN_EXPLORER_BASE_URL,
     },
   },
   contracts: {
@@ -671,6 +834,21 @@ const mantleRpc = buildRpcConfig(
   MANTLE_RPC_DEFAULT,
   mantleRpcEnv,
 );
+const lineaRpc = buildRpcConfig(
+  "NEXT_PUBLIC_LINEA_RPC_URL",
+  LINEA_RPC_DEFAULT,
+  lineaRpcEnv,
+);
+const blastRpc = buildRpcConfig(
+  "NEXT_PUBLIC_BLAST_RPC_URL",
+  BLAST_RPC_DEFAULT,
+  blastRpcEnv,
+);
+const berachainRpc = buildRpcConfig(
+  "NEXT_PUBLIC_BERACHAIN_RPC_URL",
+  BERACHAIN_RPC_DEFAULT,
+  berachainRpcEnv,
+);
 
 const pulsechainDiscovery = buildDiscoveryConfig({
   id: "blockscout-pulsescan",
@@ -837,6 +1015,78 @@ const mantleDiscovery = buildDiscoveryConfig({
   missingApiKeyMessage:
     "Mantle historical discovery uses Etherscan API V2. Set NEXT_PUBLIC_MANTLE_EXPLORER_API_KEY only for desktop/static builds without API routes. Hosted web deployments should use MANTLE_EXPLORER_API_KEY or ETHERSCAN_API_KEY server-side.",
   warnings: mantleDiscoveryWarnings,
+});
+
+const lineaDiscovery = buildDiscoveryConfig({
+  id: "etherscan-v2-linea",
+  name: "Etherscan API V2 (Linea logs)",
+  apiProviderKind: "etherscan-v2",
+  apiProviderName: "Etherscan API V2",
+  url: LINEA_EXPLORER_BASE_URL,
+  apiUrlEnvVar: "NEXT_PUBLIC_LINEA_EXPLORER_API_URL",
+  apiUrlDefault: LINEA_EXPLORER_API_DEFAULT,
+  apiChainId: lineaExplorerChainId,
+  apiChainIdEnvVar: "NEXT_PUBLIC_LINEA_EXPLORER_CHAIN_ID",
+  apiKeyEnvVar: "LINEA_EXPLORER_API_KEY / ETHERSCAN_API_KEY",
+  apiKeyEnvVars: ["LINEA_EXPLORER_API_KEY", "ETHERSCAN_API_KEY"],
+  apiUrlEnv: lineaExplorerApiEnv,
+  requiresApiKey: true,
+  queryParams: {
+    chainid: lineaExplorerChainId,
+  },
+  limitations:
+    "Etherscan API V2 can rate-limit, cap responses, or require smaller block windows for Linea logs.",
+  missingApiKeyMessage:
+    "Linea historical discovery uses Etherscan API V2. Hosted web deployments should use LINEA_EXPLORER_API_KEY or ETHERSCAN_API_KEY server-side; do not expose explorer keys through NEXT_PUBLIC variables.",
+  warnings: lineaDiscoveryWarnings,
+});
+
+const blastDiscovery = buildDiscoveryConfig({
+  id: "etherscan-v2-blast",
+  name: "Etherscan API V2 (Blast logs)",
+  apiProviderKind: "etherscan-v2",
+  apiProviderName: "Etherscan API V2",
+  url: BLAST_EXPLORER_BASE_URL,
+  apiUrlEnvVar: "NEXT_PUBLIC_BLAST_EXPLORER_API_URL",
+  apiUrlDefault: BLAST_EXPLORER_API_DEFAULT,
+  apiChainId: blastExplorerChainId,
+  apiChainIdEnvVar: "NEXT_PUBLIC_BLAST_EXPLORER_CHAIN_ID",
+  apiKeyEnvVar: "BLAST_EXPLORER_API_KEY / ETHERSCAN_API_KEY",
+  apiKeyEnvVars: ["BLAST_EXPLORER_API_KEY", "ETHERSCAN_API_KEY"],
+  apiUrlEnv: blastExplorerApiEnv,
+  requiresApiKey: true,
+  queryParams: {
+    chainid: blastExplorerChainId,
+  },
+  limitations:
+    "Etherscan API V2 can rate-limit, cap responses, or require smaller block windows for Blast logs.",
+  missingApiKeyMessage:
+    "Blast historical discovery uses Etherscan API V2. Hosted web deployments should use BLAST_EXPLORER_API_KEY or ETHERSCAN_API_KEY server-side; do not expose explorer keys through NEXT_PUBLIC variables.",
+  warnings: blastDiscoveryWarnings,
+});
+
+const berachainDiscovery = buildDiscoveryConfig({
+  id: "etherscan-v2-berachain",
+  name: "Etherscan API V2 (Berachain logs)",
+  apiProviderKind: "etherscan-v2",
+  apiProviderName: "Etherscan API V2",
+  url: BERACHAIN_EXPLORER_BASE_URL,
+  apiUrlEnvVar: "NEXT_PUBLIC_BERACHAIN_EXPLORER_API_URL",
+  apiUrlDefault: BERACHAIN_EXPLORER_API_DEFAULT,
+  apiChainId: berachainExplorerChainId,
+  apiChainIdEnvVar: "NEXT_PUBLIC_BERACHAIN_EXPLORER_CHAIN_ID",
+  apiKeyEnvVar: "BERACHAIN_EXPLORER_API_KEY / ETHERSCAN_API_KEY",
+  apiKeyEnvVars: ["BERACHAIN_EXPLORER_API_KEY", "ETHERSCAN_API_KEY"],
+  apiUrlEnv: berachainExplorerApiEnv,
+  requiresApiKey: true,
+  queryParams: {
+    chainid: berachainExplorerChainId,
+  },
+  limitations:
+    "Etherscan API V2 can rate-limit, cap responses, or require smaller block windows for Berachain logs.",
+  missingApiKeyMessage:
+    "Berachain historical discovery uses Etherscan API V2. Hosted web deployments should use BERACHAIN_EXPLORER_API_KEY or ETHERSCAN_API_KEY server-side; do not expose explorer keys through NEXT_PUBLIC variables.",
+  warnings: berachainDiscoveryWarnings,
 });
 
 export const supportedChainConfigs = {
@@ -1086,6 +1336,111 @@ export const supportedChainConfigs = {
       nftOperator: "ERC-721/ERC-1155",
     },
   },
+  [LINEA_CHAIN_ID]: {
+    key: "linea",
+    chain: linea,
+    chainId: LINEA_CHAIN_ID,
+    displayName: "Linea",
+    shortName: "Linea",
+    nativeSymbol: "ETH",
+    rpc: lineaRpc,
+    explorer: {
+      name: "LineaScan",
+      baseUrl: LINEA_EXPLORER_BASE_URL,
+      apiUrl: lineaDiscovery.apiUrl,
+      apiUrlEnvVar: lineaDiscovery.apiUrlEnvVar,
+      apiKeyEnvVar: lineaDiscovery.apiKeyEnvVar,
+      urls: explorerUrls(LINEA_EXPLORER_BASE_URL),
+    },
+    discovery: lineaDiscovery,
+    discoverySettings: {
+      sourceKind: "explorer-logs",
+      providerName: "Etherscan API V2",
+      approvalEventTopicMode: "topic0-topic1-owner",
+      defaultFromBlock: "0",
+      defaultToBlock: "latest",
+      pageSize: 1000,
+      historicalRpcLogs: "disabled",
+      capWarning:
+        "Etherscan API V2 may rate-limit, cap pages, or require smaller windows for Linea logs; incomplete discovery is surfaced to the user.",
+    },
+    standardLabels: {
+      fungible: "ERC-20",
+      nft: "ERC-721",
+      multiToken: "ERC-1155",
+      nftOperator: "ERC-721/ERC-1155",
+    },
+  },
+  [BLAST_CHAIN_ID]: {
+    key: "blast",
+    chain: blast,
+    chainId: BLAST_CHAIN_ID,
+    displayName: "Blast",
+    shortName: "Blast",
+    nativeSymbol: "ETH",
+    rpc: blastRpc,
+    explorer: {
+      name: "Blastscan",
+      baseUrl: BLAST_EXPLORER_BASE_URL,
+      apiUrl: blastDiscovery.apiUrl,
+      apiUrlEnvVar: blastDiscovery.apiUrlEnvVar,
+      apiKeyEnvVar: blastDiscovery.apiKeyEnvVar,
+      urls: explorerUrls(BLAST_EXPLORER_BASE_URL),
+    },
+    discovery: blastDiscovery,
+    discoverySettings: {
+      sourceKind: "explorer-logs",
+      providerName: "Etherscan API V2",
+      approvalEventTopicMode: "topic0-topic1-owner",
+      defaultFromBlock: "0",
+      defaultToBlock: "latest",
+      pageSize: 1000,
+      historicalRpcLogs: "disabled",
+      capWarning:
+        "Etherscan API V2 may rate-limit, cap pages, or require smaller windows for Blast logs; incomplete discovery is surfaced to the user.",
+    },
+    standardLabels: {
+      fungible: "ERC-20",
+      nft: "ERC-721",
+      multiToken: "ERC-1155",
+      nftOperator: "ERC-721/ERC-1155",
+    },
+  },
+  [BERACHAIN_CHAIN_ID]: {
+    key: "berachain",
+    chain: berachain,
+    chainId: BERACHAIN_CHAIN_ID,
+    displayName: "Berachain",
+    shortName: "Berachain",
+    nativeSymbol: "BERA",
+    rpc: berachainRpc,
+    explorer: {
+      name: "Berascan",
+      baseUrl: BERACHAIN_EXPLORER_BASE_URL,
+      apiUrl: berachainDiscovery.apiUrl,
+      apiUrlEnvVar: berachainDiscovery.apiUrlEnvVar,
+      apiKeyEnvVar: berachainDiscovery.apiKeyEnvVar,
+      urls: explorerUrls(BERACHAIN_EXPLORER_BASE_URL),
+    },
+    discovery: berachainDiscovery,
+    discoverySettings: {
+      sourceKind: "explorer-logs",
+      providerName: "Etherscan API V2",
+      approvalEventTopicMode: "topic0-topic1-owner",
+      defaultFromBlock: "0",
+      defaultToBlock: "latest",
+      pageSize: 1000,
+      historicalRpcLogs: "disabled",
+      capWarning:
+        "Etherscan API V2 may rate-limit, cap pages, or require smaller windows for Berachain logs; incomplete discovery is surfaced to the user.",
+    },
+    standardLabels: {
+      fungible: "ERC-20",
+      nft: "ERC-721",
+      multiToken: "ERC-1155",
+      nftOperator: "ERC-721/ERC-1155",
+    },
+  },
 } as const satisfies Record<number, SupportedChainConfig>;
 
 export const supportedChains = [
@@ -1096,6 +1451,9 @@ export const supportedChains = [
   sonic,
   avalanche,
   mantle,
+  linea,
+  blast,
+  berachain,
 ] as const;
 
 export function isSupportedChainId(
@@ -1121,6 +1479,9 @@ export const supportedChainConfigList = [
   supportedChainConfigs[SONIC_CHAIN_ID],
   supportedChainConfigs[AVALANCHE_CHAIN_ID],
   supportedChainConfigs[MANTLE_CHAIN_ID],
+  supportedChainConfigs[LINEA_CHAIN_ID],
+  supportedChainConfigs[BLAST_CHAIN_ID],
+  supportedChainConfigs[BERACHAIN_CHAIN_ID],
 ] as const;
 
 function joinNames(names: readonly string[]): string {

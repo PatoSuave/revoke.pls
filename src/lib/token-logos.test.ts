@@ -4,7 +4,10 @@ import { getAddress } from "viem";
 import {
   AVALANCHE_CHAIN_ID,
   BASE_CHAIN_ID,
+  BERACHAIN_CHAIN_ID,
+  BLAST_CHAIN_ID,
   BSC_CHAIN_ID,
+  LINEA_CHAIN_ID,
   MANTLE_CHAIN_ID,
   POLYGON_CHAIN_ID,
   PULSECHAIN_CHAIN_ID,
@@ -63,6 +66,14 @@ describe("token logo helpers", () => {
     expect(isTokenLogoSupportedChain(MANTLE_CHAIN_ID)).toBe(true);
     expect(getDexScreenerChainSlugForTokenLogos(MANTLE_CHAIN_ID)).toBe(
       "mantle",
+    );
+    expect(isTokenLogoSupportedChain(LINEA_CHAIN_ID)).toBe(true);
+    expect(getDexScreenerChainSlugForTokenLogos(LINEA_CHAIN_ID)).toBe("linea");
+    expect(isTokenLogoSupportedChain(BLAST_CHAIN_ID)).toBe(true);
+    expect(getDexScreenerChainSlugForTokenLogos(BLAST_CHAIN_ID)).toBe("blast");
+    expect(isTokenLogoSupportedChain(BERACHAIN_CHAIN_ID)).toBe(true);
+    expect(getDexScreenerChainSlugForTokenLogos(BERACHAIN_CHAIN_ID)).toBe(
+      "berachain",
     );
     expect(isTokenLogoSupportedChain(ARBITRUM_TOKEN_LOGO_CHAIN_ID)).toBe(true);
     expect(getDexScreenerChainSlugForTokenLogos(ARBITRUM_TOKEN_LOGO_CHAIN_ID)).toBe(
@@ -184,7 +195,7 @@ describe("token logo helpers", () => {
     });
   });
 
-  it("extracts Sonic, Avalanche, and Mantle logos from Dex Screener token pairs", () => {
+  it("extracts non-PulseChain logos from Dex Screener token pairs", () => {
     const sonicLogos = extractTokenLogosFromDexScreenerPairs({
       chainId: 146,
       requestedAddresses: [WPOL],
