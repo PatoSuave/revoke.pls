@@ -1,18 +1,27 @@
+export interface PulsechainResourceAction {
+  label: string;
+  href: string;
+  domain: string;
+  kind?: "primary" | "secondary";
+}
+
 export interface PulsechainResourceLink {
   label: string;
   href: string;
   domain: string;
   category: string;
   description: string;
-  logoSrc: string;
+  logoSrc?: string;
+  fallbackMark?: string;
   accentColor: string;
   accentReadable: string;
   accentSoft: string;
   accentBorder: string;
   logoPlate?: "dark";
+  actions?: readonly PulsechainResourceAction[];
 }
 
-export const PULSECHAIN_RESOURCE_LINKS = [
+export const PULSECHAIN_RESOURCE_LINKS: readonly PulsechainResourceLink[] = [
   {
     label: "PulseChain",
     href: "https://pulsechain.com/",
@@ -74,7 +83,27 @@ export const PULSECHAIN_RESOURCE_LINKS = [
     accentSoft: "rgba(255, 58, 182, 0.11)",
     accentBorder: "rgba(255, 58, 182, 0.34)",
   },
-] as const satisfies readonly PulsechainResourceLink[];
+  {
+    label: "Trezor",
+    href: "https://trezor.io/store",
+    domain: "trezor.io",
+    category: "Hardware wallet",
+    description: "Official Trezor store link for hardware wallet purchases.",
+    logoSrc: "/protocol-logos/trezor.svg",
+    accentColor: "#00B489",
+    accentReadable: "#047857",
+    accentSoft: "rgba(0, 180, 137, 0.11)",
+    accentBorder: "rgba(0, 180, 137, 0.34)",
+    actions: [
+      {
+        label: "Official site",
+        href: "https://trezor.io/store",
+        domain: "trezor.io",
+        kind: "primary",
+      },
+    ],
+  },
+] as const;
 
 export const PULSECHAIN_RESOURCE_NOTICE =
-  "These are curated navigation links for exact-domain checking. A listed link is not financial advice or a safety guarantee; always verify the domain and wallet prompt before connecting or signing.";
+  "These are curated navigation links for domain checking. A listed link is not financial advice or a safety guarantee; always verify the destination domain and wallet prompt before connecting or signing.";
