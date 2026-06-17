@@ -16,6 +16,7 @@ describe("PulseChain resource links", () => {
       "https://9mm.pro/",
       "https://hex.com/",
       "https://trezor.io/store",
+      "https://zkxwallet.com/",
     ]);
     expect(
       PULSECHAIN_RESOURCE_LINKS.every((link) =>
@@ -35,6 +36,7 @@ describe("PulseChain resource links", () => {
       "9mm.pro",
       "hex.com",
       "trezor.io",
+      "zkxwallet.com",
     ]);
   });
 
@@ -90,6 +92,22 @@ describe("PulseChain resource links", () => {
     ).toBe(true);
     expect(JSON.stringify(trezor).toLowerCase()).not.toContain("referral");
     expect(JSON.stringify(trezor).toLowerCase()).not.toContain(
+      referralRedirectDomain,
+    );
+  });
+
+  it("keeps ZKX Wallet pointed at the provided HTTPS wallet site", () => {
+    const zkx = PULSECHAIN_RESOURCE_LINKS.find(
+      (link) => link.label === "ZKX Wallet",
+    );
+
+    expect(zkx).toBeDefined();
+    expect(zkx?.href).toBe("https://zkxwallet.com/");
+    expect(zkx?.domain).toBe("zkxwallet.com");
+    expect(zkx?.category).toBe("Wallet");
+    expect(zkx?.logoSrc).toBe("/protocol-logos/zkx-wallet.png");
+    expect(JSON.stringify(zkx).toLowerCase()).not.toContain("referral");
+    expect(JSON.stringify(zkx).toLowerCase()).not.toContain(
       referralRedirectDomain,
     );
   });

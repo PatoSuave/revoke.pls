@@ -57,17 +57,18 @@ export function PulseChainResourceLinks({
               <article
                 key={resource.href}
                 style={cardStyle}
-                className="group relative flex min-h-0 flex-col overflow-hidden rounded-xl border border-pulse-border/75 bg-pulse-panel/50 p-4 shadow-[inset_0_1px_0_rgb(255_255_255/0.03)] transition hover:border-[color:var(--accent-border)] hover:bg-pulse-panel/70 sm:min-h-52"
+                className="resource-card group relative flex min-h-0 flex-col overflow-hidden rounded-xl border border-pulse-border/75 bg-pulse-panel/50 p-4 transition hover:border-[color:var(--accent-border)] hover:bg-pulse-panel/70 sm:min-h-52"
               >
                 <div
                   className="pointer-events-none absolute inset-x-0 top-0 h-px bg-[color:var(--accent-border)] opacity-70 transition group-hover:opacity-100"
                   aria-hidden
                 />
+                <ResourceCardLifeline />
 
                 <div className="relative z-10 flex items-start justify-between gap-3">
                   <div className="flex min-w-0 items-start gap-3">
                     <span
-                      className={`flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-xl border ${logoPlateClass}`}
+                      className={`resource-logo-plate flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-xl border ${logoPlateClass}`}
                       aria-hidden
                     >
                       {resource.logoSrc ? (
@@ -95,7 +96,7 @@ export function PulseChainResourceLinks({
                     </div>
                   </div>
                   <span
-                    className="mt-1 h-2 w-2 shrink-0 rounded-full bg-pulse-green shadow-[0_0_14px_rgba(28,229,161,0.65)]"
+                    className="brand-live-dot mt-1 h-2 w-2 shrink-0 rounded-full"
                     aria-hidden
                   />
                 </div>
@@ -124,7 +125,7 @@ export function PulseChainResourceLinks({
                         href={action.href}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className={`inline-flex min-h-10 items-center justify-center rounded-lg px-3 py-2 text-xs font-semibold transition ${
+                        className={`resource-link-action inline-flex min-h-10 items-center justify-center rounded-lg px-3 py-2 text-xs font-semibold transition ${
                           isSecondary
                             ? "border border-pulse-border bg-pulse-bg/45 text-pulse-text hover:border-[color:var(--accent-border)] hover:bg-pulse-bg/70"
                             : "border border-[color:var(--accent-border)] bg-[color:var(--accent-soft)] text-[color:var(--accent-readable)] hover:bg-pulse-panel/80"
@@ -142,5 +143,27 @@ export function PulseChainResourceLinks({
         </div>
       </div>
     </section>
+  );
+}
+
+function ResourceCardLifeline() {
+  return (
+    <svg
+      className="resource-card-lifeline"
+      viewBox="0 0 220 56"
+      preserveAspectRatio="none"
+      aria-hidden
+      focusable="false"
+    >
+      <path
+        className="resource-card-lifeline-track"
+        d="M0 30 H104 L112 24 L120 36 L130 10 L143 48 L154 30 H220"
+      />
+      <path
+        className="resource-card-lifeline-sweep"
+        d="M0 30 H104 L112 24 L120 36 L130 10 L143 48 L154 30 H220"
+        pathLength="100"
+      />
+    </svg>
   );
 }

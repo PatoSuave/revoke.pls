@@ -103,6 +103,18 @@ export const PULSECHAIN_RESOURCE_LINKS: readonly PulsechainResourceLink[] = [
       },
     ],
   },
+  {
+    label: "ZKX Wallet",
+    href: "https://zkxwallet.com/",
+    domain: "zkxwallet.com",
+    category: "Wallet",
+    description: "ZKX Wallet site for wallet downloads and product information.",
+    logoSrc: "/protocol-logos/zkx-wallet.png",
+    accentColor: "#3A8BFF",
+    accentReadable: "#2563EB",
+    accentSoft: "rgba(58, 139, 255, 0.11)",
+    accentBorder: "rgba(58, 139, 255, 0.34)",
+  },
 ] as const;
 
 export const PULSECHAIN_RESOURCE_NOTICE =
