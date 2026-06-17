@@ -57,6 +57,31 @@ describe("PulseChain resource links", () => {
     ).toBe(true);
   });
 
+  it("targets hover videos only to the approved resource cards", () => {
+    const hoverVideoLinks = PULSECHAIN_RESOURCE_LINKS.filter(
+      (link) => link.hoverVideoSrc,
+    );
+
+    expect(hoverVideoLinks.map((link) => link.label).sort()).toEqual([
+      "9mm Pro",
+      "HEX",
+      "LibertySwap",
+      "PulseChain",
+      "PulseX",
+    ]);
+    expect(
+      Object.fromEntries(
+        hoverVideoLinks.map((link) => [link.label, link.hoverVideoSrc]),
+      ),
+    ).toEqual({
+      "9mm Pro": "/media/9mm-hover.mov",
+      HEX: "/media/richard-heart-twerking.mp4",
+      LibertySwap: "/media/libertyswap-pcock.mp4",
+      PulseChain: "/media/richard-heart-twerking.mp4",
+      PulseX: "/media/richard-heart-twerking.mp4",
+    });
+  });
+
   it("keeps accent colors readable in light mode", () => {
     expect(PULSECHAIN_RESOURCE_LINKS.every((link) => link.accentReadable)).toBe(
       true,

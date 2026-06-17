@@ -1,6 +1,7 @@
 import Image from "next/image";
 import type { CSSProperties } from "react";
 
+import { HoverVideoLayer } from "@/components/hover-video-layer";
 import {
   PULSECHAIN_RESOURCE_LINKS,
   PULSECHAIN_RESOURCE_NOTICE,
@@ -57,8 +58,12 @@ export function PulseChainResourceLinks({
               <article
                 key={resource.href}
                 style={cardStyle}
+                data-hover-video-card={resource.hoverVideoSrc ? "" : undefined}
                 className="resource-card group relative flex min-h-0 flex-col overflow-hidden rounded-xl border border-pulse-border/75 bg-pulse-panel/50 p-4 transition hover:border-[color:var(--accent-border)] hover:bg-pulse-panel/70 sm:min-h-52"
               >
+                {resource.hoverVideoSrc ? (
+                  <HoverVideoLayer src={resource.hoverVideoSrc} />
+                ) : null}
                 <div
                   className="pointer-events-none absolute inset-x-0 top-0 h-px bg-[color:var(--accent-border)] opacity-70 transition group-hover:opacity-100"
                   aria-hidden
