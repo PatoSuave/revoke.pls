@@ -4,7 +4,7 @@ import type { CSSProperties } from "react";
 import { AntiPhishingBanner } from "@/components/sections/anti-phishing-banner";
 import { ApprovalScanner } from "@/components/sections/approval-scanner";
 import { ChainLogo } from "@/components/chains/chain-logo";
-import { PulseMark } from "@/components/pulse-mark";
+import { PulseChainLogoMark } from "@/components/pulsechain-logo-mark";
 import { PulseChainGasTracker } from "@/components/gas/pulsechain-gas-tracker";
 import { PulseChainResourceLinks } from "@/components/sections/pulsechain-resource-links";
 import { getChainVisual } from "@/lib/chain-visuals";
@@ -58,7 +58,7 @@ function ScannerAppBackdrop() {
   return (
     <div className="chain-map-backdrop" aria-hidden>
       <div className="chain-map-mark hidden sm:block">
-        <PulseMark className="h-64 w-64 lg:h-80 lg:w-80" />
+        <PulseChainLogoMark className="h-64 w-[17.25rem] lg:h-80 lg:w-[21.5rem]" />
       </div>
     </div>
   );
