@@ -44,8 +44,10 @@ describe("supported chain copy", () => {
     expect(VERIFIED_ROW_SUPPORT_NOTE).toContain(
       "Arbitrum One, Optimism, and HyperEVM",
     );
-    expect(VERIFIED_ROW_SUPPORT_NOTE).toContain("row-level ERC-20/NFT revoke");
-    expect(VERIFIED_ROW_SUPPORT_NOTE).toContain("batch revoke is not enabled");
+    expect(VERIFIED_ROW_SUPPORT_NOTE).toContain(
+      "ERC-20 and NFT revoke actions for verified rows only",
+    );
+    expect(VERIFIED_ROW_SUPPORT_NOTE).toContain("Batch revoke is not enabled");
     expect(HYPEREVM_LIVE_NETWORK_NOTE).toContain("HyperEVM is live");
     expect(HYPEREVM_LIVE_NETWORK_NOTE).toContain("chain ID 999");
   });
@@ -62,7 +64,7 @@ describe("supported chain copy", () => {
           (row) => row.chain === "Ethereum Mainnet",
         )!,
       ),
-    ).toBe("Live-verified revoke");
+    ).toBe("Verified row revoke");
     expect(
       formatRevokeSupport(
         LIVE_SUPPORTED_CHAIN_ROWS.find((row) => row.chain === "Optimism")!,

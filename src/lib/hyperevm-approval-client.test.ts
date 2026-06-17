@@ -75,7 +75,7 @@ function response(
 describe("HyperEVM approval client mapping", () => {
   it("identifies HyperEVM as a special wallet-recognition chain", () => {
     expect(HYPEREVM_STATUS_LABEL).toBe(
-      "HyperEVM verified-row revoke",
+      "HyperEVM verified row revoke",
     );
     expect(hyperevmWalletChain.id).toBe(999);
     expect(hyperevmWalletChain.nativeCurrency.symbol).toBe(

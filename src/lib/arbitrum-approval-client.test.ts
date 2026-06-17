@@ -75,7 +75,7 @@ function response(
 describe("Arbitrum approval client mapping", () => {
   it("identifies Arbitrum One as a read-only wallet-recognition chain", () => {
     expect(ARBITRUM_ONE_STATUS_LABEL).toBe(
-      "Arbitrum One verified-row revoke",
+      "Arbitrum One verified row revoke",
     );
     expect(arbitrumOneWalletChain.id).toBe(42161);
     expect(arbitrumOneWalletChain.nativeCurrency.symbol).toBe(
