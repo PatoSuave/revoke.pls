@@ -24,13 +24,13 @@ export const metadata: Metadata = {
   },
   openGraph: {
     type: "website",
-    title: `Revoke Scanner · ${siteConfig.shortName}`,
+    title: `Revoke Scanner | ${siteConfig.shortName}`,
     description: siteConfig.description,
     url: absoluteUrl("/app"),
   },
   twitter: {
     card: "summary_large_image",
-    title: `Revoke Scanner · ${siteConfig.shortName}`,
+    title: `Revoke Scanner | ${siteConfig.shortName}`,
     description: siteConfig.description,
   },
 };
@@ -79,7 +79,7 @@ function AppWorkspaceIntro() {
             <p className="mt-3 max-w-2xl text-sm leading-6 text-pulse-muted sm:text-base">
               Paste a wallet address to review approvals without connecting.
               Connect only the matching wallet when you are ready to revoke a
-              live-verified row.
+              verified active row.
             </p>
             <p className="mt-2 max-w-2xl text-sm leading-6 text-pulse-muted sm:text-base">
               {HYPEREVM_LIVE_NETWORK_NOTE}

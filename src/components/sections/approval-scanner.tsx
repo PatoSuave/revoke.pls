@@ -99,7 +99,7 @@ import { tokenLogoAddressKey } from "@/lib/token-logos";
 /**
  * Connected-wallet approval scanner for the shared PulseChain/BSC/Base/Polygon/
  * Sonic/Avalanche/Mantle/Linea/Blast/Berachain lane. Ethereum, Arbitrum,
- * Optimism, and HyperEVM are routed through read-only scanner lanes in this
+ * Optimism, and HyperEVM are routed through review scanner lanes in this
  * component before verified rows can expose revoke actions.
  *
  * Uses `useApprovalDiscovery` to pull historical `Approval` events from the
@@ -181,7 +181,7 @@ export function ApprovalScanner() {
             Scan first. Revoke only when ready.
           </h2>
           <p className="mt-2 text-sm leading-6 text-pulse-muted">
-            Paste a wallet address for read-only review, or connect the
+            Paste a wallet address for approval review without connecting, or connect the
             matching wallet when you are ready to act on verified approvals.
           </p>
         </div>
@@ -267,7 +267,7 @@ function AddressScanPanel({
       : scanTarget.connectedWalletAddress
         ? "Wallet mismatch"
         : "Connect matching wallet to revoke"
-    : "No pasted address active";
+    : "Ready for address";
   const modeDisplay = getScannerModeDisplay({
     scanMode: scanTarget.scanMode,
     walletConnected: Boolean(scanTarget.connectedWalletAddress),
@@ -290,7 +290,7 @@ function AddressScanPanel({
             Review first. Connect only to revoke.
           </h3>
           <p className="mt-2 max-w-2xl text-sm leading-6 text-pulse-muted">
-            Paste any EVM wallet address for read-only review. Wallet
+            Paste any EVM wallet address for approval review. Wallet
             connection is needed only when you choose a verified row to revoke.
           </p>
         </div>
@@ -725,7 +725,7 @@ function AddressOnlyScanResults({
         <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
           <div>
             <p className="text-xs font-semibold uppercase tracking-[0.18em] text-pulse-cyan">
-              Address-only scan
+              Address scan
             </p>
             <p className="mt-2 max-w-2xl leading-6 text-pulse-muted">
               Approvals are public blockchain state. You do not need to connect
@@ -815,7 +815,7 @@ function AddressOnlyChainSelector({
             Select network
           </p>
           <p className="mt-1 text-sm leading-6 text-pulse-muted">
-            Address-only mode scans one network by default. Multi-network scans
+            Address scans check one network by default. Multi-network scans
             start only after you request them.
           </p>
           <p className="mt-1 text-xs text-pulse-muted">{scanAllStatus}</p>
@@ -2101,7 +2101,7 @@ function ScanContent({
             `Something went wrong reading allowances from ${chainConfig.displayName}.`}
         </p>
         <p className="mt-2 text-xs text-pulse-muted">
-          This is a read-only step. Try again, switch RPC/explorer settings, or
+          This scan does not request wallet transactions. Try again, switch RPC/explorer settings, or
           verify directly on {chainConfig.explorer.name} if the explorer is
           rate-limited.
         </p>
@@ -2515,7 +2515,7 @@ function ScanProgressPanel({
               {phase.detail}
             </p>
             <p className="mt-1 text-xs leading-5 text-pulse-muted/85">
-              This is read-only work. Wallet transactions are requested only
+              Scanning does not request wallet transactions. A wallet request appears only
               after you choose an approval and confirm it.
             </p>
           </div>

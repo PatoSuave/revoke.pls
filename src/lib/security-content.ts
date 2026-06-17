@@ -4,11 +4,11 @@ export const ANTI_PHISHING_COPY =
   "Official site: pulserevoke.com. Pulse Revoke will never ask for your seed phrase or private key. Avoid wallet links from DMs, Telegram, Discord, ads, or misspelled domains.";
 
 export const DATA_MINIMIZATION_COPY =
-  "Pulse Revoke does not maintain an app-level database of scanned wallets or approval history. Scans use public chain data and configured RPC, explorer, API, wallet, browser, hosting, and network providers may still process normal request metadata.";
+  "Pulse Revoke does not maintain an application database of scanned wallets or approval history. Scans use public chain data. Configured RPC, explorer, API, wallet, browser, hosting, and network providers may still process normal request metadata.";
 
 export const SECURITY_CAN_DO = [
-  "Scan public approval history for the supported EVM networks currently wired into the app.",
-  "Re-check discovered allowances and NFT operator permissions live before showing them as active.",
+  "Scan public approval history for the supported EVM networks available in the app.",
+  "Check discovered allowances and NFT operator permissions live before showing them as active.",
   "Prepare standard revoke transactions for approvals you choose to clear.",
   "Link tokens, spenders, and transaction hashes to the relevant block explorer for independent review.",
   "Scan a pasted EVM address without connecting a wallet, then keep revoke unavailable until a matching wallet is connected.",
@@ -57,7 +57,7 @@ export const SECURITY_CHAIN_STATUS_ROWS: readonly ChainStatusRow[] = [
     scan: "Yes",
     revoke: "Yes",
     status: "Live",
-    note: "Shared scanner and wallet-side revoke flow for PRC-20, ERC-721, and ERC-1155-style approvals.",
+    note: "Shared scanner with revokes through your wallet for PRC-20, ERC-721, and ERC-1155 approvals.",
   },
   {
     chain: "BNB Smart Chain",
@@ -65,7 +65,7 @@ export const SECURITY_CHAIN_STATUS_ROWS: readonly ChainStatusRow[] = [
     scan: "Yes",
     revoke: "Yes",
     status: "Live",
-    note: "Shared scanner and wallet-side revoke flow with BSC-specific gas cap and high-gas warnings preserved.",
+    note: "Shared scanner with revokes through your wallet and BSC gas guardrails.",
   },
   {
     chain: "Base",
@@ -73,7 +73,7 @@ export const SECURITY_CHAIN_STATUS_ROWS: readonly ChainStatusRow[] = [
     scan: "Yes",
     revoke: "Yes",
     status: "Live",
-    note: "Shared scanner and wallet-side revoke flow using Base explorer discovery and live verification.",
+    note: "Shared scanner with Base explorer discovery, live verification, and revokes through your wallet.",
   },
   {
     chain: "Polygon",
@@ -81,7 +81,7 @@ export const SECURITY_CHAIN_STATUS_ROWS: readonly ChainStatusRow[] = [
     scan: "Yes",
     revoke: "Yes",
     status: "Live",
-    note: "Shared scanner and wallet-side revoke flow using PolygonScan/Etherscan API V2 discovery and live verification.",
+    note: "Shared scanner with PolygonScan discovery, live verification, and revokes through your wallet.",
   },
   {
     chain: "Sonic Mainnet",
@@ -89,7 +89,7 @@ export const SECURITY_CHAIN_STATUS_ROWS: readonly ChainStatusRow[] = [
     scan: "Yes",
     revoke: "Yes",
     status: "Live",
-    note: "Shared scanner and wallet-side revoke flow using SonicScan/Etherscan API V2 discovery and live verification. Gas is paid in S.",
+    note: "Shared scanner with SonicScan discovery, live verification, and revokes through your wallet. Gas is paid in S.",
   },
   {
     chain: "Avalanche C-Chain",
@@ -97,7 +97,7 @@ export const SECURITY_CHAIN_STATUS_ROWS: readonly ChainStatusRow[] = [
     scan: "Yes",
     revoke: "Yes",
     status: "Live",
-    note: "Shared scanner and wallet-side revoke flow using SnowScan/Etherscan API V2 discovery and live verification. Gas is paid in AVAX.",
+    note: "Shared scanner with SnowScan discovery, live verification, and revokes through your wallet. Gas is paid in AVAX.",
   },
   {
     chain: "Mantle",
@@ -105,7 +105,7 @@ export const SECURITY_CHAIN_STATUS_ROWS: readonly ChainStatusRow[] = [
     scan: "Yes",
     revoke: "Yes",
     status: "Live",
-    note: "Shared scanner and wallet-side revoke flow using Mantle explorer links, Etherscan API V2 discovery, and live verification. Gas is paid in MNT.",
+    note: "Shared scanner with Mantle explorer links, live verification, and revokes through your wallet. Gas is paid in MNT.",
   },
   {
     chain: "Linea",
@@ -113,7 +113,7 @@ export const SECURITY_CHAIN_STATUS_ROWS: readonly ChainStatusRow[] = [
     scan: "Yes",
     revoke: "Yes",
     status: "Live",
-    note: "Shared scanner and wallet-side revoke flow using LineaScan/Etherscan API V2 discovery and live verification. Gas is paid in ETH.",
+    note: "Shared scanner with LineaScan discovery, live verification, and revokes through your wallet. Gas is paid in ETH.",
   },
   {
     chain: "Blast",
@@ -121,7 +121,7 @@ export const SECURITY_CHAIN_STATUS_ROWS: readonly ChainStatusRow[] = [
     scan: "Yes",
     revoke: "Yes",
     status: "Live",
-    note: "Shared scanner and wallet-side revoke flow using Blastscan/Etherscan API V2 discovery and live verification. Gas is paid in ETH.",
+    note: "Shared scanner with Blastscan discovery, live verification, and revokes through your wallet. Gas is paid in ETH.",
   },
   {
     chain: "Berachain",
@@ -129,7 +129,7 @@ export const SECURITY_CHAIN_STATUS_ROWS: readonly ChainStatusRow[] = [
     scan: "Yes",
     revoke: "Yes",
     status: "Live",
-    note: "Shared scanner and wallet-side revoke flow using Berascan/Etherscan API V2 discovery and live verification. Gas is paid in BERA.",
+    note: "Shared scanner with Berascan discovery, live verification, and revokes through your wallet. Gas is paid in BERA.",
   },
   {
     chain: "Ethereum Mainnet",
@@ -137,7 +137,7 @@ export const SECURITY_CHAIN_STATUS_ROWS: readonly ChainStatusRow[] = [
     scan: "Yes",
     revoke: "Yes, for live-verified rows",
     status: "Live",
-    note: "Uses the Ethereum read-only API plus live RPC validation. Revoke is wallet-side and available only after row verification, matching wallet, and correct chain checks pass.",
+    note: "Uses hosted approval discovery plus live RPC validation. Revoke is available through your wallet only after row verification, matching wallet, and correct chain checks pass.",
   },
   {
     chain: "Arbitrum One",
@@ -145,7 +145,7 @@ export const SECURITY_CHAIN_STATUS_ROWS: readonly ChainStatusRow[] = [
     scan: "Yes",
     revoke: "ERC-20/NFT verified rows only",
     status: "Live",
-    note: "Server-side approval discovery and live verification. Revoke is row-level only for verified ERC-20 and NFT rows; batch revoke is not enabled on Arbitrum.",
+    note: "Hosted approval discovery and live verification. Revoke is available per row for verified ERC-20 and NFT approvals. Batch revoke is not enabled on Arbitrum.",
   },
   {
     chain: "Optimism",
@@ -153,7 +153,7 @@ export const SECURITY_CHAIN_STATUS_ROWS: readonly ChainStatusRow[] = [
     scan: "Yes",
     revoke: "ERC-20/NFT verified rows only",
     status: "Live",
-    note: "Server-side approval discovery and live verification for OP Mainnet. Revoke is row-level only for verified ERC-20 and NFT rows; batch revoke is not enabled on Optimism.",
+    note: "Hosted approval discovery and live verification for OP Mainnet. Revoke is available per row for verified ERC-20 and NFT approvals. Batch revoke is not enabled on Optimism.",
   },
   {
     chain: "HyperEVM",
@@ -161,7 +161,7 @@ export const SECURITY_CHAIN_STATUS_ROWS: readonly ChainStatusRow[] = [
     scan: "Yes",
     revoke: "ERC-20/NFT verified rows only",
     status: "Live",
-    note: "Server-side approval discovery and live verification for HyperEVM. Revoke is row-level only for verified ERC-20 and NFT rows; batch revoke is not enabled on HyperEVM. Gas is paid in HYPE.",
+    note: "Hosted approval discovery and live verification for HyperEVM. Revoke is available per row for verified ERC-20 and NFT approvals. Batch revoke is not enabled on HyperEVM. Gas is paid in HYPE.",
   },
   {
     chain: "Solana",
