@@ -3,6 +3,7 @@ import Link from "next/link";
 import type { CSSProperties, ReactNode } from "react";
 
 import { ChainLogo } from "@/components/chains/chain-logo";
+import { HoverVideoLayer } from "@/components/hover-video-layer";
 import { AntiPhishingBanner } from "@/components/sections/anti-phishing-banner";
 import { PulseChainResourceLinks } from "@/components/sections/pulsechain-resource-links";
 import { PulseMark } from "@/components/pulse-mark";
@@ -112,6 +113,15 @@ const SCANNER_PANEL_POINTS = [
     body: "Revoke writes appear in your wallet only after you choose an action.",
   },
 ] as const;
+
+const RICHARD_HEART_HOVER_VIDEO_SRC =
+  "/media/richard-heart-twerking.mp4";
+
+const CHAIN_CARD_HOVER_MEDIA_SRC: Partial<Record<string, string>> = {
+  PulseChain: RICHARD_HEART_HOVER_VIDEO_SRC,
+  "BNB Smart Chain": "/media/cz-hover.gif",
+  "Ethereum Mainnet": "/media/vitalik-hover.gif",
+};
 
 const HOW_IT_WORKS = [
   {
@@ -378,6 +388,7 @@ function SupportedChainsSection() {
 
 function ChainCard({ row }: { row: (typeof LIVE_SUPPORTED_CHAIN_ROWS)[number] }) {
   const isPrimary = row.chain === "PulseChain";
+  const hoverMediaSrc = CHAIN_CARD_HOVER_MEDIA_SRC[row.chain];
   const supportLabel = formatRevokeSupport(row);
   const visual = getChainVisual(row.chain);
   const chainId = Number(row.chainId);
@@ -395,8 +406,12 @@ function ChainCard({ row }: { row: (typeof LIVE_SUPPORTED_CHAIN_ROWS)[number] })
   return (
     <article
       style={cardStyle}
+      data-hover-video-card={hoverMediaSrc ? "" : undefined}
+      tabIndex={hoverMediaSrc ? 0 : undefined}
+      aria-label={hoverMediaSrc ? `${row.chain} live EVM network card` : undefined}
       className="group relative flex min-h-52 flex-col overflow-hidden rounded-2xl border border-[color:var(--accent-border)] bg-[linear-gradient(135deg,var(--accent-soft),var(--chain-card-bg))] p-5 transition duration-200 hover:-translate-y-0.5 hover:shadow-glow"
     >
+      {hoverMediaSrc ? <HoverVideoLayer src={hoverMediaSrc} /> : null}
       <div
         className="pointer-events-none absolute -right-6 -top-5 text-[color:var(--accent-color)] opacity-[0.10] transition group-hover:opacity-[0.16]"
         aria-hidden

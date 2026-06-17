@@ -11,6 +11,7 @@ export interface PulsechainResourceLink {
   domain: string;
   category: string;
   description: string;
+  hoverVideoSrc?: string;
   logoSrc?: string;
   fallbackMark?: string;
   accentColor: string;
@@ -28,6 +29,7 @@ export const PULSECHAIN_RESOURCE_LINKS: readonly PulsechainResourceLink[] = [
     domain: "pulsechain.com",
     category: "Network",
     description: "PulseChain network site and ecosystem entry point.",
+    hoverVideoSrc: "/media/richard-heart-twerking.mp4",
     logoSrc: "/protocol-logos/pulsechain.png",
     accentColor: "#9B5CFF",
     accentReadable: "#6D28D9",
@@ -40,6 +42,7 @@ export const PULSECHAIN_RESOURCE_LINKS: readonly PulsechainResourceLink[] = [
     domain: "pulsex.com",
     category: "DEX",
     description: "PulseChain decentralized exchange resource.",
+    hoverVideoSrc: "/media/richard-heart-twerking.mp4",
     logoSrc: "/protocol-logos/pulsex.png",
     accentColor: "#24F28C",
     accentReadable: "#008C5A",
@@ -52,6 +55,7 @@ export const PULSECHAIN_RESOURCE_LINKS: readonly PulsechainResourceLink[] = [
     domain: "libertyswap.finance",
     category: "DEX / bridge",
     description: "PulseChain swap and bridge resource.",
+    hoverVideoSrc: "/media/libertyswap-pcock.mp4",
     logoSrc: "/protocol-logos/libertyswap.png",
     accentColor: "#FF7A1A",
     accentReadable: "#C2410C",
@@ -64,6 +68,7 @@ export const PULSECHAIN_RESOURCE_LINKS: readonly PulsechainResourceLink[] = [
     domain: "9mm.pro",
     category: "DEX suite",
     description: "PulseChain-compatible DEX and protocol suite.",
+    hoverVideoSrc: "/media/9mm-hover.mov",
     logoSrc: "/protocol-logos/9mm-pro.png",
     accentColor: "#E8F1FF",
     accentReadable: "#334155",
@@ -77,6 +82,7 @@ export const PULSECHAIN_RESOURCE_LINKS: readonly PulsechainResourceLink[] = [
     domain: "hex.com",
     category: "Protocol",
     description: "HEX protocol resource.",
+    hoverVideoSrc: "/media/richard-heart-twerking.mp4",
     logoSrc: "/protocol-logos/hex.png",
     accentColor: "#FF3AB6",
     accentReadable: "#C0267B",

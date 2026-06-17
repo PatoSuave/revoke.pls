@@ -256,6 +256,74 @@ body {
     transform: translateY(-0.35rem);
   }
 
+  [data-hover-video-card] {
+    isolation: isolate;
+  }
+
+  .hover-video-layer {
+    pointer-events: none;
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+    display: none;
+    overflow: hidden;
+    opacity: 0;
+    transition: opacity 180ms ease;
+  }
+
+  .hover-video-layer::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background:
+      linear-gradient(
+        180deg,
+        rgb(var(--pulse-bg) / 0.62),
+        rgb(var(--pulse-bg) / 0.36) 42%,
+        rgb(var(--pulse-bg) / 0.72)
+      ),
+      radial-gradient(
+        320px 180px at 20% 0%,
+        color-mix(in srgb, var(--accent-color) 26%, transparent),
+        transparent 74%
+      );
+  }
+
+  .hover-video-layer-media {
+    height: 100%;
+    width: 100%;
+    object-fit: contain;
+    opacity: 0.76;
+    filter: saturate(0.94) contrast(1.06) brightness(0.68);
+    transform: scale(0.9);
+  }
+
+  html[data-theme="light"] .hover-video-layer::after {
+    background:
+      linear-gradient(
+        180deg,
+        rgb(var(--pulse-panel) / 0.78),
+        rgb(var(--pulse-panel) / 0.52) 42%,
+        rgb(var(--pulse-panel) / 0.82)
+      ),
+      radial-gradient(
+        320px 180px at 20% 0%,
+        color-mix(in srgb, var(--accent-color) 22%, transparent),
+        transparent 74%
+      );
+  }
+
+  @media (hover: hover) and (pointer: fine) {
+    [data-hover-video-card] .hover-video-layer {
+      display: block;
+    }
+
+    [data-hover-video-card][data-hover-video-active="true"]
+      .hover-video-layer {
+      opacity: 1;
+    }
+  }
+
   .resource-logo-plate {
     position: relative;
     z-index: 1;
@@ -675,8 +743,14 @@ body {
   }
 
   .resource-card,
+  .hover-video-layer,
   .resource-card-lifeline-sweep {
     animation: none;
+  }
+
+  .hover-video-layer {
+    display: none !important;
+    opacity: 0 !important;
   }
 
   .resource-card-lifeline-sweep {

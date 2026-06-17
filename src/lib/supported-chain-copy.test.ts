@@ -91,4 +91,22 @@ describe("supported chain copy", () => {
       expect(source).toContain("LIVE_SUPPORTED_CHAIN");
     }
   });
+
+  it("keeps homepage hover media scoped to selected network cards", () => {
+    const source = readFileSync(
+      join(process.cwd(), "src", "app", "page.tsx"),
+      "utf8",
+    );
+
+    expect(source).toContain("CHAIN_CARD_HOVER_MEDIA_SRC");
+    expect(source).toContain("PulseChain: RICHARD_HEART_HOVER_VIDEO_SRC");
+    expect(source).toContain('"BNB Smart Chain": "/media/cz-hover.gif"');
+    expect(source).toContain(
+      '"Ethereum Mainnet": "/media/vitalik-hover.gif"',
+    );
+    expect(source).toContain(
+      "data-hover-video-card={hoverMediaSrc ? \"\" : undefined}",
+    );
+    expect(source).toContain("RICHARD_HEART_HOVER_VIDEO_SRC");
+  });
 });
