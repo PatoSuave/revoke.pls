@@ -75,7 +75,7 @@ function response(
 describe("Optimism approval client mapping", () => {
   it("identifies OP Mainnet as a special wallet-recognition chain", () => {
     expect(OPTIMISM_STATUS_LABEL).toBe(
-      "Optimism verified-row revoke",
+      "Optimism verified row revoke",
     );
     expect(optimismWalletChain.id).toBe(10);
     expect(optimismWalletChain.nativeCurrency.symbol).toBe(

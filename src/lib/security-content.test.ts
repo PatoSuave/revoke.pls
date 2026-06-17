@@ -69,7 +69,7 @@ describe("security content", () => {
       status: "Live",
     });
     expect(rowsByChain.get("Arbitrum One")?.note).toContain(
-      "batch revoke is not enabled",
+      "Batch revoke is not enabled",
     );
     expect(rowsByChain.get("Optimism")).toMatchObject({
       chainId: "10",
@@ -78,7 +78,7 @@ describe("security content", () => {
       status: "Live",
     });
     expect(rowsByChain.get("Optimism")?.note).toContain(
-      "batch revoke is not enabled",
+      "Batch revoke is not enabled",
     );
     expect(rowsByChain.get("HyperEVM")).toMatchObject({
       chainId: "999",
@@ -121,7 +121,7 @@ describe("security content", () => {
 
   it("states privacy limits without overclaiming infrastructure behavior", () => {
     expect(DATA_MINIMIZATION_COPY).toContain(
-      "does not maintain an app-level database",
+      "does not maintain an application database",
     );
     expect(DATA_MINIMIZATION_COPY).toContain("RPC");
     expect(DATA_MINIMIZATION_COPY).toContain("explorer");

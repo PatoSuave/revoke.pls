@@ -438,7 +438,7 @@ describe("Ethereum approval client mapping", () => {
     expect(mapped.state).toBe("verification-incomplete");
     expect(mapped.revokeEnabled).toBe(false);
     expect(mapped.revokeDisabledReason).toBe(
-      "Verification incomplete (discovery was truncated; 2 ERC-20 live reads failed; 1 NFT live read failed) - revoke unavailable.",
+      "Verification incomplete (discovery was truncated; 2 ERC-20 live reads failed; 1 NFT live read failed). Revoke is unavailable.",
     );
   });
 
