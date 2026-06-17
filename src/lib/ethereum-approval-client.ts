@@ -401,13 +401,13 @@ function ethereumApiRevokeDisabledReason({
   }
 
   if (response.status === "config-missing") {
-    return "Ethereum API configuration is missing - revoke unavailable.";
+    return "Ethereum API configuration is missing. Revoke is unavailable.";
   }
   if (response.status === "upstream-failure") {
-    return "Ethereum explorer or RPC failed - revoke unavailable.";
+    return "Ethereum explorer or RPC failed. Revoke is unavailable.";
   }
   if (malformedResponse) {
-    return "Ethereum API response was malformed - revoke unavailable.";
+    return "Ethereum API response was malformed. Revoke is unavailable.";
   }
   if (response.status === "verification-incomplete" || incomplete) {
     return ethereumIncompleteVerificationReason(response);
@@ -431,10 +431,10 @@ function ethereumRowRevokeDisabledReason({
 }): string | null {
   if (rowVerifiedForRevoke) return null;
   if (response.status === "config-missing") {
-    return "Ethereum API configuration is missing - revoke unavailable.";
+    return "Ethereum API configuration is missing. Revoke is unavailable.";
   }
   if (response.status === "upstream-failure") {
-    return "Ethereum explorer or RPC failed - revoke unavailable.";
+    return "Ethereum explorer or RPC failed. Revoke is unavailable.";
   }
   if (malformedResponse) {
     return "This row was not fully verified.";
@@ -505,7 +505,7 @@ function ethereumIncompleteVerificationReason(
   }
 
   const suffix = details.length > 0 ? ` (${details.join("; ")})` : "";
-  return `Verification incomplete${suffix} - revoke unavailable.`;
+  return `Verification incomplete${suffix}. Revoke is unavailable.`;
 }
 
 export function canEnableEthereumWalletRevoke({

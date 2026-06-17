@@ -10,15 +10,15 @@ import {
 export const HYPEREVM_CLIENT_CHAIN_ID = 999;
 export const HYPEREVM_DISPLAY_NAME = "HyperEVM";
 export const HYPEREVM_SHORT_NAME = "HyperEVM";
-export const HYPEREVM_STATUS_LABEL = "HyperEVM verified-row revoke";
+export const HYPEREVM_STATUS_LABEL = "HyperEVM verified row revoke";
 export const HYPEREVM_NATIVE_SYMBOL = "HYPE";
 export const HYPEREVM_EXPLORER_NAME = "Hyperevmscan";
 export const HYPEREVM_EXPLORER_BASE_URL = "https://hyperevmscan.io";
 export const HYPEREVM_PUBLIC_RPC_URL = "https://rpc.hyperliquid.xyz/evm";
 export const HYPEREVM_REVOKE_UNAVAILABLE_COPY =
-  "HyperEVM revoke is available only for live-verified ERC-20 and NFT rows.";
+  "HyperEVM revoke is available only for verified ERC-20 and NFT rows.";
 export const HYPEREVM_NFT_REVOKE_UNAVAILABLE_COPY =
-  "HyperEVM NFT revoke is available only for live-verified rows.";
+  "HyperEVM NFT revoke is available only for verified rows.";
 export const HYPEREVM_BATCH_REVOKE_UNAVAILABLE_COPY =
   "Batch revoke is not enabled for HyperEVM.";
 
@@ -426,10 +426,10 @@ function hyperevmErc20RowRevokeDisabledReason({
 }): string | null {
   if (rowVerifiedForRevoke) return null;
   if (response.status === "config-missing") {
-    return "HyperEVM API configuration is missing - revoke unavailable.";
+    return "HyperEVM API configuration is missing. Revoke is unavailable.";
   }
   if (response.status === "upstream-failure") {
-    return "HyperEVM explorer or RPC failed - revoke unavailable.";
+    return "HyperEVM explorer or RPC failed. Revoke is unavailable.";
   }
   if (malformedResponse) {
     return "Revoke unavailable until current approval state is verified.";
@@ -458,10 +458,10 @@ function hyperevmNftRowRevokeDisabledReason({
 }): string | null {
   if (rowVerifiedForRevoke) return null;
   if (response.status === "config-missing") {
-    return "HyperEVM API configuration is missing - revoke unavailable.";
+    return "HyperEVM API configuration is missing. Revoke is unavailable.";
   }
   if (response.status === "upstream-failure") {
-    return "HyperEVM explorer or RPC failed - revoke unavailable.";
+    return "HyperEVM explorer or RPC failed. Revoke is unavailable.";
   }
   if (malformedResponse) {
     return "Revoke unavailable until current approval state is verified.";

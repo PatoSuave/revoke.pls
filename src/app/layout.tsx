@@ -12,7 +12,7 @@ import {
 // Icons and social previews are generated from co-located metadata files.
 // Next.js auto-populates the metadata fields from those routes.
 
-const pageTitle = `${siteConfig.name} - ${siteConfig.tagline}`;
+const pageTitle = `${siteConfig.name} | ${siteConfig.tagline}`;
 
 export const metadata: Metadata = {
   metadataBase: new URL(siteConfig.url),

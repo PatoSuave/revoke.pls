@@ -61,7 +61,7 @@ export function SiteFooter() {
             {` ${LIVE_SUPPORTED_CHAIN_COMPACT_LIST}`} before signing.
           </p>
           <p className="mt-1">
-            Copyright {year} {siteConfig.name} - {siteConfig.attribution}
+            Copyright {year} {siteConfig.name}. {siteConfig.attribution}
           </p>
         </div>
       </div>

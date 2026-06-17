@@ -98,7 +98,7 @@ export const siteConfig = {
   tagline: "Scan, review, revoke.",
   /** Single-sentence meta description (used for SEO + OG). */
   description:
-    "Pulse Revoke helps users review and revoke token and NFT approvals on PulseChain, BSC, Base, Polygon, Sonic Mainnet, Avalanche C-Chain, Mantle, Linea, Blast, Berachain, Ethereum Mainnet, Arbitrum One, Optimism, and HyperEVM. Arbitrum, Optimism, and HyperEVM revoke support is limited to verified ERC-20/NFT rows.",
+    "Pulse Revoke helps users review and revoke token and NFT approvals on PulseChain, BSC, Base, Polygon, Sonic Mainnet, Avalanche C-Chain, Mantle, Linea, Blast, Berachain, Ethereum Mainnet, Arbitrum One, Optimism, and HyperEVM. Arbitrum, Optimism, and HyperEVM revoke support is limited to verified ERC-20 and NFT rows.",
   /** Longer paragraph for hero copy and social previews. */
   longDescription:
     "Review token allowances and NFT operator approvals on PulseChain, BSC, Base, Polygon, Sonic Mainnet, Avalanche, Mantle, Linea, Blast, Berachain, Ethereum Mainnet, Arbitrum One, Optimism, or HyperEVM. Clear approvals you no longer trust with wallet-signed revoke transactions.",

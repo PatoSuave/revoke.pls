@@ -38,13 +38,13 @@ export const metadata: Metadata = {
   },
   openGraph: {
     type: "website",
-    title: `${title} - ${siteConfig.shortName}`,
+    title: `${title} | ${siteConfig.shortName}`,
     description,
     url: absoluteUrl("/security"),
   },
   twitter: {
     card: "summary_large_image",
-    title: `${title} - ${siteConfig.shortName}`,
+    title: `${title} | ${siteConfig.shortName}`,
     description,
   },
 };
@@ -324,7 +324,7 @@ function AddressOnlySection() {
     <section className="bg-pulse-bg py-16 sm:py-20">
       <div className="mx-auto grid max-w-6xl gap-6 px-4 sm:px-6 lg:grid-cols-[1fr_1fr]">
         <div>
-          <SectionKicker>Address-only scan</SectionKicker>
+          <SectionKicker>Address scan</SectionKicker>
           <h2 className="mt-2 text-3xl font-bold sm:text-4xl">
             Scan first, connect only when you are ready to revoke.
           </h2>
@@ -339,8 +339,7 @@ function AddressOnlySection() {
           <p className="mt-3">
             Revoke stays unavailable until the connected wallet exactly matches
             the scanned address and is on the required chain. This preserves
-            the same wallet-side ownership and network checks as connected
-            scanning.
+            the same ownership and network checks as connected scanning.
           </p>
         </div>
       </div>

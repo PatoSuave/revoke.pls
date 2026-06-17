@@ -10,15 +10,15 @@ import {
 export const OPTIMISM_CLIENT_CHAIN_ID = 10;
 export const OPTIMISM_DISPLAY_NAME = "Optimism";
 export const OPTIMISM_SHORT_NAME = "Optimism";
-export const OPTIMISM_STATUS_LABEL = "Optimism verified-row revoke";
+export const OPTIMISM_STATUS_LABEL = "Optimism verified row revoke";
 export const OPTIMISM_NATIVE_SYMBOL = "ETH";
 export const OPTIMISM_EXPLORER_NAME = "Optimistic Etherscan";
 export const OPTIMISM_EXPLORER_BASE_URL = "https://optimistic.etherscan.io";
 export const OPTIMISM_PUBLIC_RPC_URL = "https://mainnet.optimism.io";
 export const OPTIMISM_REVOKE_UNAVAILABLE_COPY =
-  "Optimism revoke is available only for live-verified ERC-20 and NFT rows.";
+  "Optimism revoke is available only for verified ERC-20 and NFT rows.";
 export const OPTIMISM_NFT_REVOKE_UNAVAILABLE_COPY =
-  "Optimism NFT revoke is available only for live-verified rows.";
+  "Optimism NFT revoke is available only for verified rows.";
 export const OPTIMISM_BATCH_REVOKE_UNAVAILABLE_COPY =
   "Batch revoke is not enabled for Optimism.";
 
@@ -426,10 +426,10 @@ function optimismErc20RowRevokeDisabledReason({
 }): string | null {
   if (rowVerifiedForRevoke) return null;
   if (response.status === "config-missing") {
-    return "Optimism API configuration is missing - revoke unavailable.";
+    return "Optimism API configuration is missing. Revoke is unavailable.";
   }
   if (response.status === "upstream-failure") {
-    return "Optimism explorer or RPC failed - revoke unavailable.";
+    return "Optimism explorer or RPC failed. Revoke is unavailable.";
   }
   if (malformedResponse) {
     return "Revoke unavailable until current approval state is verified.";
@@ -458,10 +458,10 @@ function optimismNftRowRevokeDisabledReason({
 }): string | null {
   if (rowVerifiedForRevoke) return null;
   if (response.status === "config-missing") {
-    return "Optimism API configuration is missing - revoke unavailable.";
+    return "Optimism API configuration is missing. Revoke is unavailable.";
   }
   if (response.status === "upstream-failure") {
-    return "Optimism explorer or RPC failed - revoke unavailable.";
+    return "Optimism explorer or RPC failed. Revoke is unavailable.";
   }
   if (malformedResponse) {
     return "Revoke unavailable until current approval state is verified.";

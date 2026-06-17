@@ -7,6 +7,15 @@ const STATUS_STYLES = {
   "Not supported": "border-pulse-red/35 bg-pulse-red/10 text-pulse-red",
 } as const;
 
+function formatRevokeStatusLabel(revoke: string) {
+  if (revoke === "Yes, for live-verified rows") return "Verified rows only";
+  if (revoke === "ERC-20/NFT verified rows only") {
+    return "ERC-20 and NFT verified rows only";
+  }
+
+  return revoke;
+}
+
 export function SupportedChainStatusMatrix() {
   return (
     <div className="overflow-x-auto rounded-2xl border border-pulse-border bg-pulse-panel/65">
@@ -52,7 +61,7 @@ export function SupportedChainStatusMatrix() {
                 {row.scan}
               </td>
               <td className="px-4 py-4 align-top text-pulse-muted">
-                {row.revoke}
+                {formatRevokeStatusLabel(row.revoke)}
               </td>
               <td className="px-4 py-4 align-top">
                 <span

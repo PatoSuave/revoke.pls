@@ -25,7 +25,7 @@ import {
 } from "@/lib/supported-chain-copy";
 
 const productName = "Pulse Revoke";
-const launcherTitle = `${productName} - Scan, review, revoke`;
+const launcherTitle = `${productName}: Scan, review, revoke`;
 const launcherDescription =
   `Launch the Pulse Revoke scanner. Review and revoke token and NFT approvals on ${LIVE_SUPPORTED_CHAIN_LIST} without custody.`;
 
@@ -58,8 +58,8 @@ const TRUST_POINTS = [
     body: "Funds stay in your wallet. The app reads public approval state.",
   },
   {
-    title: "Wallet-confirmed revokes",
-    body: "Every revoke is an on-chain transaction you approve in your wallet.",
+    title: "Wallet confirmed revokes",
+    body: "Every revoke is a transaction you approve in your wallet.",
   },
   {
     title: "Labels are context",
@@ -70,37 +70,37 @@ const TRUST_POINTS = [
 const HERO_TRUST_ITEMS = [
   "No seed phrase",
   "No custody",
-  "Wallet-confirmed revokes",
+  "Wallet confirmed revokes",
   "Scan first, connect only when ready",
 ] as const;
 
 const CHAIN_CARD_COPY: Record<string, string> = {
   PulseChain:
-    "Primary Pulse Revoke lane for PRC-20, ERC-721-style, and ERC-1155-style approvals.",
+    "Primary Pulse Revoke lane for PRC-20, ERC-721, and ERC-1155 approvals.",
   "BNB Smart Chain":
-    "Shared scanner and wallet-side revoke flow with BSC gas guardrails.",
-  Base: "Shared scanner and wallet-side revoke flow using Base explorer discovery.",
+    "Shared scanner with BSC gas guardrails and revokes through your wallet.",
+  Base: "Shared scanner with Base explorer discovery and revokes through your wallet.",
   Polygon:
-    "Shared scanner and wallet-side revoke flow using PolygonScan and live checks.",
+    "Shared scanner with PolygonScan discovery, live checks, and revokes through your wallet.",
   "Sonic Mainnet":
-    "Shared scanner and wallet-side revoke flow using SonicScan and live checks.",
+    "Shared scanner with SonicScan discovery, live checks, and revokes through your wallet.",
   "Avalanche C-Chain":
-    "Shared scanner and wallet-side revoke flow using SnowScan and live checks.",
+    "Shared scanner with SnowScan discovery, live checks, and revokes through your wallet.",
   Mantle:
-    "Shared scanner and wallet-side revoke flow using Mantle explorer links and live checks.",
+    "Shared scanner with Mantle explorer links, live checks, and revokes through your wallet.",
   "Ethereum Mainnet":
-    "Server-side discovery with wallet-side revoke only after row verification.",
+    "Hosted approval discovery with revokes through your wallet after row verification.",
   "Arbitrum One":
-    "Server-side discovery with verified ERC-20/NFT row-level revoke.",
+    "Hosted approval discovery with verified ERC-20 and NFT revokes per row.",
   Optimism:
-    "Server-side discovery for OP Mainnet with verified row-level revoke.",
+    "Hosted approval discovery for OP Mainnet with verified revokes per row.",
   HyperEVM:
-    "Server-side discovery with verified ERC-20/NFT row-level revoke on chain ID 999.",
+    "Hosted approval discovery with verified ERC-20 and NFT revokes per row on chain ID 999.",
 };
 
 const SCANNER_PANEL_POINTS = [
   {
-    title: "Address-only review",
+    title: "Address review",
     body: "Start with a pasted EVM wallet address before connecting anything.",
   },
   {
@@ -127,7 +127,7 @@ const HOW_IT_WORKS = [
   {
     step: "03",
     title: "Revoke with your wallet",
-    body: "Choose only the approvals you want to clear. Each revoke is wallet-confirmed and submitted on-chain.",
+    body: "Choose only the approvals you want to clear. Each revoke is confirmed in your wallet and submitted on chain.",
   },
 ] as const;
 
@@ -160,7 +160,7 @@ const FAQ_ITEMS = [
   {
     question: "Is the desktop app available yet?",
     answer:
-      "Not yet. The Tauri desktop path is scaffolded, but public desktop artifacts are still pending release.",
+      "Not yet. The Tauri desktop path is prepared for a future signed release, but public desktop artifacts are still pending.",
   },
   {
     question: "What chains are supported?",
@@ -331,7 +331,7 @@ function ScannerPathPanel() {
           Scan first. Connect only when you are ready to revoke.
         </p>
         <p className="mt-3 text-sm leading-6 text-pulse-muted">
-          PulseChain is the primary lane, and the same wallet-confirmed safety
+          PulseChain is the primary lane, and the same wallet confirmation
           model applies across every supported EVM network.
         </p>
       </div>
@@ -499,7 +499,7 @@ function HowItWorks() {
       <SectionHeader
         eyebrow="How it works"
         title="A narrow scan, review, revoke flow"
-        body="The product does three things with clear boundaries: read public approval data, verify active state, and prepare wallet-confirmed revoke transactions."
+        body="The product does three things with clear boundaries: read public approval data, verify active state, and prepare revoke transactions that your wallet must confirm."
       />
       <div className="mx-auto mt-10 grid max-w-6xl gap-4 px-4 sm:px-6 lg:grid-cols-3">
         {HOW_IT_WORKS.map((item) => (
@@ -539,7 +539,7 @@ function DesktopSection({
             Desktop builds are planned, not live yet.
           </h2>
           <p className="mt-4 text-sm leading-7 text-pulse-muted">
-            The live scanner is the hosted /app. The desktop path is scaffolded
+            The live scanner is the hosted /app. The desktop path is prepared
             for a future signed Tauri build, and no public artifact is linked
             until release files and checksums are real.
           </p>

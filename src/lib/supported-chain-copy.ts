@@ -81,15 +81,15 @@ export const VERIFIED_ROW_CHAIN_LIST = formatList(
   VERIFIED_ROW_CHAIN_ROWS.map((row) => row.chain),
 );
 
-export const VERIFIED_ROW_SUPPORT_NOTE = `${VERIFIED_ROW_CHAIN_LIST} support row-level ERC-20/NFT revoke only after live verification; batch revoke is not enabled there.`;
+export const VERIFIED_ROW_SUPPORT_NOTE = `${VERIFIED_ROW_CHAIN_LIST} support ERC-20 and NFT revoke actions for verified rows only after live verification. Batch revoke is not enabled there.`;
 
 export const HYPEREVM_LIVE_NETWORK_NOTE =
-  "HyperEVM is live in Pulse Revoke for read-only approval scans and wallet-confirmed ERC-20/NFT verified-row revokes on chain ID 999.";
+  "HyperEVM is live in Pulse Revoke for approval review without wallet connection and revokes for verified ERC-20 and NFT rows on chain ID 999.";
 
 export function formatRevokeSupport(row: ChainStatusRow) {
   if (row.revoke === "Yes") return "Scan + revoke";
   if (row.revoke === "Yes, for live-verified rows") {
-    return "Live-verified revoke";
+    return "Verified row revoke";
   }
 
   return row.revoke;
