@@ -45,6 +45,13 @@ and the chain-specific scanner clients.
 | Sonic Mainnet | 146 | Yes | Yes | Generic scanner and wallet-side revoke flow. Gas is paid in S. |
 | Avalanche C-Chain | 43114 | Yes | Yes | Generic scanner and wallet-side revoke flow. Gas is paid in AVAX. |
 | Mantle | 5000 | Yes | Yes | Generic scanner and wallet-side revoke flow. Gas is paid in MNT. |
+| Linea | 59144 | Yes | Yes | Generic scanner and wallet-side revoke flow. Gas is paid in ETH. |
+| Blast | 81457 | Yes | Yes | Generic scanner and wallet-side revoke flow. Gas is paid in ETH. |
+| Berachain | 80094 | Yes | Yes | Generic scanner and wallet-side revoke flow. Gas is paid in BERA. |
+| Celo | 42220 | Yes | Yes | Generic scanner and wallet-side revoke flow. Gas is paid in CELO. |
+| Gnosis | 100 | Yes | Yes | Generic scanner and wallet-side revoke flow. Gas is paid in XDAI. |
+| Unichain | 130 | Yes | Yes | Generic scanner and wallet-side revoke flow. Gas is paid in ETH. |
+| World Chain | 480 | Yes | Yes | Generic scanner and wallet-side revoke flow. Gas is paid in ETH. |
 | Ethereum Mainnet | 1 | Yes | Live-verified rows | Server-side read-only discovery. Revoke stays wallet-side and depends on live verification, matching wallet, and correct chain checks. |
 | Arbitrum One | 42161 | Yes | ERC-20/NFT verified rows only | Server-side read-only discovery. Batch and global revoke are not enabled. |
 | Optimism / OP Mainnet | 10 | Yes | ERC-20/NFT verified rows only | Server-side read-only discovery. Batch and global revoke are not enabled. |
@@ -61,7 +68,8 @@ Solana is not supported by the current EVM approval scanner design.
   state
 - Address-only scan mode for review before connecting a wallet
 - Chain-scoped token and spender labels for context
-- Token-logo lookup for PulseChain, BSC, Polygon, Sonic, Avalanche, and Mantle display only
+- Token-logo lookup for supported EVM chains where Dex Screener provides
+  display metadata
 - Multi-chain gas tracker with live block-based updates and native-token plus
   approximate USD cost estimates
 - Revoke receipt status with post-revoke live verification
@@ -72,8 +80,8 @@ Solana is not supported by the current EVM approval scanner design.
 
 The `/app` workspace includes an informational gas tracker for the supported EVM
 chains in this app: PulseChain, BNB Smart Chain, Base, Polygon, Sonic Mainnet,
-Avalanche C-Chain, Mantle, Ethereum Mainnet, Arbitrum One, Optimism, and
-HyperEVM. It fetches current gas data
+Avalanche C-Chain, Mantle, Linea, Blast, Berachain, Celo, Gnosis, Unichain,
+World Chain, Ethereum Mainnet, Arbitrum One, Optimism, and HyperEVM. It fetches current gas data
 through the server-side `/api/gas?chainId=...` route, updates when new blocks
 are detected on the selected chain, and keeps only a small in-memory chart
 history in the browser.
@@ -165,9 +173,9 @@ Common groups:
 | Group | Variables |
 | --- | --- |
 | Site and wallet UI | `NEXT_PUBLIC_SITE_URL`, `NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID`, `NEXT_PUBLIC_TELEMETRY_ENABLED` |
-| Public wallet/gas watcher RPC overrides | `NEXT_PUBLIC_PULSECHAIN_RPC_URL`, `NEXT_PUBLIC_BSC_RPC_URL`, `NEXT_PUBLIC_BASE_RPC_URL`, `NEXT_PUBLIC_POLYGON_RPC_URL`, `NEXT_PUBLIC_SONIC_RPC_URL`, `NEXT_PUBLIC_AVALANCHE_RPC_URL`, `NEXT_PUBLIC_MANTLE_RPC_URL`, `NEXT_PUBLIC_MAINNET_RPC_URL`, `NEXT_PUBLIC_ETHEREUM_RPC_URL`, `NEXT_PUBLIC_ARBITRUM_RPC_URL`, `NEXT_PUBLIC_OPTIMISM_RPC_URL`, `NEXT_PUBLIC_HYPEREVM_RPC_URL` |
-| Server gas tracker RPC overrides | `PULSECHAIN_RPC_URL`, `BSC_RPC_URL`, `BASE_RPC_URL`, `POLYGON_RPC_URL`, `SONIC_RPC_URL`, `SONIC_MAINNET_RPC_URL`, `AVALANCHE_RPC_URL`, `AVALANCHE_C_CHAIN_RPC_URL`, `AVALANCHE_MAINNET_RPC_URL`, `MANTLE_RPC_URL`, `MANTLE_MAINNET_RPC_URL`, `MAINNET_RPC_URL`, `ETHEREUM_RPC_URL`, `ARBITRUM_ONE_RPC_URL`, `ARBITRUM_RPC_URL`, `OPTIMISM_RPC_URL`, `OPTIMISM_MAINNET_RPC_URL`, `HYPEREVM_RPC_URL`, `HYPEREVM_MAINNET_RPC_URL`, `HYPERLIQUID_EVM_RPC_URL` |
-| Hosted generic discovery | `BSC_EXPLORER_API_KEY`, `BASE_EXPLORER_API_KEY`, `POLYGON_EXPLORER_API_KEY`, `SONIC_EXPLORER_API_KEY`, `AVALANCHE_EXPLORER_API_KEY`, `MANTLE_EXPLORER_API_KEY`, `ETHERSCAN_API_KEY` |
+| Public wallet/gas watcher RPC overrides | `NEXT_PUBLIC_PULSECHAIN_RPC_URL`, `NEXT_PUBLIC_BSC_RPC_URL`, `NEXT_PUBLIC_BASE_RPC_URL`, `NEXT_PUBLIC_POLYGON_RPC_URL`, `NEXT_PUBLIC_SONIC_RPC_URL`, `NEXT_PUBLIC_AVALANCHE_RPC_URL`, `NEXT_PUBLIC_MANTLE_RPC_URL`, `NEXT_PUBLIC_LINEA_RPC_URL`, `NEXT_PUBLIC_BLAST_RPC_URL`, `NEXT_PUBLIC_BERACHAIN_RPC_URL`, `NEXT_PUBLIC_CELO_RPC_URL`, `NEXT_PUBLIC_GNOSIS_RPC_URL`, `NEXT_PUBLIC_UNICHAIN_RPC_URL`, `NEXT_PUBLIC_WORLDCHAIN_RPC_URL`, `NEXT_PUBLIC_MAINNET_RPC_URL`, `NEXT_PUBLIC_ETHEREUM_RPC_URL`, `NEXT_PUBLIC_ARBITRUM_RPC_URL`, `NEXT_PUBLIC_OPTIMISM_RPC_URL`, `NEXT_PUBLIC_HYPEREVM_RPC_URL` |
+| Server gas tracker RPC overrides | `PULSECHAIN_RPC_URL`, `BSC_RPC_URL`, `BASE_RPC_URL`, `POLYGON_RPC_URL`, `SONIC_RPC_URL`, `SONIC_MAINNET_RPC_URL`, `AVALANCHE_RPC_URL`, `AVALANCHE_C_CHAIN_RPC_URL`, `AVALANCHE_MAINNET_RPC_URL`, `MANTLE_RPC_URL`, `MANTLE_MAINNET_RPC_URL`, `LINEA_RPC_URL`, `LINEA_MAINNET_RPC_URL`, `BLAST_RPC_URL`, `BLAST_MAINNET_RPC_URL`, `BERACHAIN_RPC_URL`, `BERACHAIN_MAINNET_RPC_URL`, `CELO_RPC_URL`, `CELO_MAINNET_RPC_URL`, `GNOSIS_RPC_URL`, `GNOSIS_MAINNET_RPC_URL`, `UNICHAIN_RPC_URL`, `UNICHAIN_MAINNET_RPC_URL`, `WORLDCHAIN_RPC_URL`, `WORLDCHAIN_MAINNET_RPC_URL`, `MAINNET_RPC_URL`, `ETHEREUM_RPC_URL`, `ARBITRUM_ONE_RPC_URL`, `ARBITRUM_RPC_URL`, `OPTIMISM_RPC_URL`, `OPTIMISM_MAINNET_RPC_URL`, `HYPEREVM_RPC_URL`, `HYPEREVM_MAINNET_RPC_URL`, `HYPERLIQUID_EVM_RPC_URL` |
+| Hosted generic discovery | `BSC_EXPLORER_API_KEY`, `BASE_EXPLORER_API_KEY`, `POLYGON_EXPLORER_API_KEY`, `SONIC_EXPLORER_API_KEY`, `AVALANCHE_EXPLORER_API_KEY`, `MANTLE_EXPLORER_API_KEY`, `LINEA_EXPLORER_API_KEY`, `BLAST_EXPLORER_API_KEY`, `BERACHAIN_EXPLORER_API_KEY`, `CELO_EXPLORER_API_KEY`, `GNOSIS_EXPLORER_API_KEY`, `UNICHAIN_EXPLORER_API_KEY`, `WORLDCHAIN_EXPLORER_API_KEY`, `ETHERSCAN_API_KEY` |
 | Ethereum discovery | `MAINNET_RPC_URL`, `ETHEREUM_RPC_URL`, `ETHEREUM_EXPLORER_API_URL`, `ETHERSCAN_API_KEY` |
 | Arbitrum discovery | `ARBITRUM_ONE_RPC_URL`, `ARBITRUM_RPC_URL`, `ARBITRUM_EXPLORER_API_URL`, `ARBITRUM_EXPLORER_CHAIN_ID`, `ARBISCAN_API_KEY` |
 | Optimism discovery | `OPTIMISM_RPC_URL`, `OPTIMISM_MAINNET_RPC_URL`, `OP_MAINNET_RPC_URL`, `OPTIMISM_EXPLORER_API_KEY`, `OPTIMISTIC_ETHERSCAN_API_KEY`, `ETHERSCAN_API_KEY` |
@@ -240,7 +248,7 @@ git diff -- src/hooks src/app/api src/lib/wagmi.ts src/lib/preflight.ts src/lib/
 | `src/hooks/use-revoke-approval.ts` | Wallet-side fungible revoke hook |
 | `src/hooks/use-revoke-nft-approval.ts` | Wallet-side NFT revoke hook |
 | `src/hooks/use-batch-revoke.ts` | Sequential batch revoke for the generic lane |
-| `src/lib/chains.ts` | Generic supported-chain registry for PulseChain, BSC, Base, Polygon, Sonic, Avalanche, and Mantle |
+| `src/lib/chains.ts` | Generic supported-chain registry for PulseChain, BSC, Base, Polygon, Sonic, Avalanche, Mantle, Linea, Blast, Berachain, Celo, Gnosis, Unichain, and World Chain |
 | `src/lib/wagmi.ts` | Wallet connectors, registered wallet chains, and transports |
 | `src/lib/security-content.ts` | Public security copy and supported-chain status matrix |
 | `src/lib/*approval-api.ts` | Server-side read-only discovery and live validation helpers |

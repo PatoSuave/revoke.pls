@@ -20,6 +20,12 @@ import {
   BSC_EXPLORER_API_DEFAULT,
   BSC_HIGH_GAS_WARNING_THRESHOLD,
   BSC_OSAKA_MAX_TRANSACTION_GAS,
+  CELO_CHAIN_ID,
+  CELO_EXPLORER_API_DEFAULT,
+  CELO_EXPLORER_CHAIN_ID_DEFAULT,
+  GNOSIS_CHAIN_ID,
+  GNOSIS_EXPLORER_API_DEFAULT,
+  GNOSIS_EXPLORER_CHAIN_ID_DEFAULT,
   LINEA_CHAIN_ID,
   LINEA_EXPLORER_API_DEFAULT,
   LINEA_EXPLORER_CHAIN_ID_DEFAULT,
@@ -33,13 +39,21 @@ import {
   SONIC_CHAIN_ID,
   SONIC_EXPLORER_API_DEFAULT,
   SONIC_EXPLORER_CHAIN_ID_DEFAULT,
+  UNICHAIN_CHAIN_ID,
+  UNICHAIN_EXPLORER_API_DEFAULT,
+  UNICHAIN_EXPLORER_CHAIN_ID_DEFAULT,
+  WORLDCHAIN_CHAIN_ID,
+  WORLDCHAIN_EXPLORER_API_DEFAULT,
+  WORLDCHAIN_EXPLORER_CHAIN_ID_DEFAULT,
   avalanche,
   berachain,
   blast,
   base,
   bsc,
+  celo,
   getChainConfig,
   getSupportedChainShortNames,
+  gnosis,
   isSupportedChainId,
   linea,
   mantle,
@@ -47,6 +61,8 @@ import {
   sonic,
   supportedChainConfigList,
   supportedChains,
+  unichain,
+  worldchain,
 } from "./chains";
 import { explorerAddressUrl, explorerTokenUrl, explorerTxUrl } from "./explorer";
 import { ARBITRUM_ONE_CLIENT_CHAIN_ID } from "./arbitrum-approval-client";
@@ -85,6 +101,10 @@ describe("supported chain config", () => {
       LINEA_CHAIN_ID,
       BLAST_CHAIN_ID,
       BERACHAIN_CHAIN_ID,
+      CELO_CHAIN_ID,
+      GNOSIS_CHAIN_ID,
+      UNICHAIN_CHAIN_ID,
+      WORLDCHAIN_CHAIN_ID,
     ]);
     expect(supportedChainConfigList.map((chain) => chain.chainId)).toEqual([
       PULSECHAIN_CHAIN_ID,
@@ -97,6 +117,10 @@ describe("supported chain config", () => {
       LINEA_CHAIN_ID,
       BLAST_CHAIN_ID,
       BERACHAIN_CHAIN_ID,
+      CELO_CHAIN_ID,
+      GNOSIS_CHAIN_ID,
+      UNICHAIN_CHAIN_ID,
+      WORLDCHAIN_CHAIN_ID,
     ]);
     expect(supportedChainConfigList.map((chain) => chain.shortName)).toEqual([
       "PulseChain",
@@ -109,9 +133,13 @@ describe("supported chain config", () => {
       "Linea",
       "Blast",
       "Berachain",
+      "Celo",
+      "Gnosis",
+      "Unichain",
+      "World",
     ]);
     expect(getSupportedChainShortNames()).toBe(
-      "PulseChain, BSC, Base, Polygon, Sonic, Avalanche, Mantle, Linea, Blast, or Berachain",
+      "PulseChain, BSC, Base, Polygon, Sonic, Avalanche, Mantle, Linea, Blast, Berachain, Celo, Gnosis, Unichain, or World",
     );
     expect(isSupportedChainId(1)).toBe(false);
     expect(isSupportedChainId(ARBITRUM_ONE_CLIENT_CHAIN_ID)).toBe(false);
@@ -358,7 +386,7 @@ describe("supported chain config", () => {
     expect(mantle.nativeCurrency.symbol).toBe("MNT");
   });
 
-  it("configures Linea, Blast, and Berachain as Etherscan V2 generic chains without public keys", () => {
+  it("configures shared-key Etherscan V2 generic chains without public keys", () => {
     const cases = [
       {
         chainId: LINEA_CHAIN_ID,
@@ -396,6 +424,55 @@ describe("supported chain config", () => {
         apiKeyEnvVars: ["BERACHAIN_EXPLORER_API_KEY", "ETHERSCAN_API_KEY"],
         chain: berachain,
       },
+      {
+        chainId: CELO_CHAIN_ID,
+        displayName: "Celo",
+        nativeSymbol: "CELO",
+        explorerName: "CeloScan",
+        explorerBaseUrl: "https://celoscan.io",
+        rpcUrl: "https://forno.celo.org",
+        apiUrl: CELO_EXPLORER_API_DEFAULT,
+        apiChainId: CELO_EXPLORER_CHAIN_ID_DEFAULT,
+        apiKeyEnvVars: ["CELO_EXPLORER_API_KEY", "ETHERSCAN_API_KEY"],
+        chain: celo,
+      },
+      {
+        chainId: GNOSIS_CHAIN_ID,
+        displayName: "Gnosis",
+        nativeSymbol: "XDAI",
+        explorerName: "Gnosisscan",
+        explorerBaseUrl: "https://gnosisscan.io",
+        rpcUrl: "https://rpc.gnosischain.com",
+        apiUrl: GNOSIS_EXPLORER_API_DEFAULT,
+        apiChainId: GNOSIS_EXPLORER_CHAIN_ID_DEFAULT,
+        apiKeyEnvVars: ["GNOSIS_EXPLORER_API_KEY", "ETHERSCAN_API_KEY"],
+        chain: gnosis,
+      },
+      {
+        chainId: UNICHAIN_CHAIN_ID,
+        displayName: "Unichain",
+        nativeSymbol: "ETH",
+        explorerName: "Uniscan",
+        explorerBaseUrl: "https://uniscan.xyz",
+        rpcUrl: "https://mainnet.unichain.org",
+        apiUrl: UNICHAIN_EXPLORER_API_DEFAULT,
+        apiChainId: UNICHAIN_EXPLORER_CHAIN_ID_DEFAULT,
+        apiKeyEnvVars: ["UNICHAIN_EXPLORER_API_KEY", "ETHERSCAN_API_KEY"],
+        chain: unichain,
+      },
+      {
+        chainId: WORLDCHAIN_CHAIN_ID,
+        displayName: "World Chain",
+        shortName: "World",
+        nativeSymbol: "ETH",
+        explorerName: "Worldscan",
+        explorerBaseUrl: "https://worldscan.org",
+        rpcUrl: "https://worldchain-mainnet.g.alchemy.com/public",
+        apiUrl: WORLDCHAIN_EXPLORER_API_DEFAULT,
+        apiChainId: WORLDCHAIN_EXPLORER_CHAIN_ID_DEFAULT,
+        apiKeyEnvVars: ["WORLDCHAIN_EXPLORER_API_KEY", "ETHERSCAN_API_KEY"],
+        chain: worldchain,
+      },
     ] as const;
 
     for (const item of cases) {
@@ -403,7 +480,7 @@ describe("supported chain config", () => {
 
       expect(config?.chainId).toBe(item.chainId);
       expect(config?.displayName).toBe(item.displayName);
-      expect(config?.shortName).toBe(item.displayName);
+      expect(config?.shortName).toBe("shortName" in item ? item.shortName : item.displayName);
       expect(config?.nativeSymbol).toBe(item.nativeSymbol);
       expect(config?.standardLabels).toMatchObject({
         fungible: "ERC-20",
@@ -511,7 +588,7 @@ describe("supported chain config", () => {
     );
   });
 
-  it("builds Linea, Blast, and Berachain explorer links", () => {
+  it("builds shared-key Etherscan V2 generic explorer links", () => {
     expect(explorerAddressUrl(LINEA_CHAIN_ID, SPENDER)).toBe(
       `https://lineascan.build/address/${SPENDER}`,
     );
@@ -538,6 +615,42 @@ describe("supported chain config", () => {
     );
     expect(explorerTxUrl(BERACHAIN_CHAIN_ID, "0xabc")).toBe(
       "https://berascan.com/tx/0xabc",
+    );
+    expect(explorerAddressUrl(CELO_CHAIN_ID, SPENDER)).toBe(
+      `https://celoscan.io/address/${SPENDER}`,
+    );
+    expect(explorerTokenUrl(CELO_CHAIN_ID, TOKEN)).toBe(
+      `https://celoscan.io/token/${TOKEN}`,
+    );
+    expect(explorerTxUrl(CELO_CHAIN_ID, "0xabc")).toBe(
+      "https://celoscan.io/tx/0xabc",
+    );
+    expect(explorerAddressUrl(GNOSIS_CHAIN_ID, SPENDER)).toBe(
+      `https://gnosisscan.io/address/${SPENDER}`,
+    );
+    expect(explorerTokenUrl(GNOSIS_CHAIN_ID, TOKEN)).toBe(
+      `https://gnosisscan.io/token/${TOKEN}`,
+    );
+    expect(explorerTxUrl(GNOSIS_CHAIN_ID, "0xabc")).toBe(
+      "https://gnosisscan.io/tx/0xabc",
+    );
+    expect(explorerAddressUrl(UNICHAIN_CHAIN_ID, SPENDER)).toBe(
+      `https://uniscan.xyz/address/${SPENDER}`,
+    );
+    expect(explorerTokenUrl(UNICHAIN_CHAIN_ID, TOKEN)).toBe(
+      `https://uniscan.xyz/token/${TOKEN}`,
+    );
+    expect(explorerTxUrl(UNICHAIN_CHAIN_ID, "0xabc")).toBe(
+      "https://uniscan.xyz/tx/0xabc",
+    );
+    expect(explorerAddressUrl(WORLDCHAIN_CHAIN_ID, SPENDER)).toBe(
+      `https://worldscan.org/address/${SPENDER}`,
+    );
+    expect(explorerTokenUrl(WORLDCHAIN_CHAIN_ID, TOKEN)).toBe(
+      `https://worldscan.org/token/${TOKEN}`,
+    );
+    expect(explorerTxUrl(WORLDCHAIN_CHAIN_ID, "0xabc")).toBe(
+      "https://worldscan.org/tx/0xabc",
     );
   });
 
@@ -612,7 +725,7 @@ describe("supported chain config", () => {
     expect(getSpendersForChain(POLYGON_CHAIN_ID)).toEqual([]);
   });
 
-  it("does not leak existing registry labels onto Sonic, Avalanche, Mantle, Linea, Blast, or Berachain", () => {
+  it("does not leak existing registry labels onto generic EVM chains", () => {
     for (const chainId of [
       SONIC_CHAIN_ID,
       AVALANCHE_CHAIN_ID,
@@ -620,6 +733,10 @@ describe("supported chain config", () => {
       LINEA_CHAIN_ID,
       BLAST_CHAIN_ID,
       BERACHAIN_CHAIN_ID,
+      CELO_CHAIN_ID,
+      GNOSIS_CHAIN_ID,
+      UNICHAIN_CHAIN_ID,
+      WORLDCHAIN_CHAIN_ID,
     ]) {
       expect(getSpenderEntry(chainId, PULSEX_ROUTER)).toBeUndefined();
       expect(getTokensForChain(chainId)).toEqual([]);
@@ -702,7 +819,7 @@ describe("supported chain config", () => {
     });
   });
 
-  it("builds Sonic, Avalanche, Mantle, Linea, Blast, and Berachain ERC-20-compatible revoke calls with approve(spender, 0)", () => {
+  it("builds generic EVM ERC-20-compatible revoke calls with approve(spender, 0)", () => {
     for (const chainId of [
       SONIC_CHAIN_ID,
       AVALANCHE_CHAIN_ID,
@@ -710,6 +827,10 @@ describe("supported chain config", () => {
       LINEA_CHAIN_ID,
       BLAST_CHAIN_ID,
       BERACHAIN_CHAIN_ID,
+      CELO_CHAIN_ID,
+      GNOSIS_CHAIN_ID,
+      UNICHAIN_CHAIN_ID,
+      WORLDCHAIN_CHAIN_ID,
     ]) {
       const request = {
         ...buildRevokeCall({
@@ -785,6 +906,10 @@ describe("supported chain config", () => {
     expect(copy).toContain("Linea");
     expect(copy).toContain("Blast");
     expect(copy).toContain("Berachain");
+    expect(copy).toContain("Celo");
+    expect(copy).toContain("Gnosis");
+    expect(copy).toContain("Unichain");
+    expect(copy).toContain("World");
     expect(copy).toContain("Ethereum");
     expect(copy).toContain("Arbitrum");
     expect(isSupportedChainId(1)).toBe(false);
@@ -936,15 +1061,23 @@ describe("supported chain config", () => {
     }
   });
 
-  it("defaults the Linea, Blast, and Berachain explorer API chain IDs when env vars are absent", async () => {
+  it("defaults the shared Etherscan V2 explorer API chain IDs when env vars are absent", async () => {
     const originals = {
       linea: process.env.NEXT_PUBLIC_LINEA_EXPLORER_CHAIN_ID,
       blast: process.env.NEXT_PUBLIC_BLAST_EXPLORER_CHAIN_ID,
       berachain: process.env.NEXT_PUBLIC_BERACHAIN_EXPLORER_CHAIN_ID,
+      celo: process.env.NEXT_PUBLIC_CELO_EXPLORER_CHAIN_ID,
+      gnosis: process.env.NEXT_PUBLIC_GNOSIS_EXPLORER_CHAIN_ID,
+      unichain: process.env.NEXT_PUBLIC_UNICHAIN_EXPLORER_CHAIN_ID,
+      worldchain: process.env.NEXT_PUBLIC_WORLDCHAIN_EXPLORER_CHAIN_ID,
     };
     delete process.env.NEXT_PUBLIC_LINEA_EXPLORER_CHAIN_ID;
     delete process.env.NEXT_PUBLIC_BLAST_EXPLORER_CHAIN_ID;
     delete process.env.NEXT_PUBLIC_BERACHAIN_EXPLORER_CHAIN_ID;
+    delete process.env.NEXT_PUBLIC_CELO_EXPLORER_CHAIN_ID;
+    delete process.env.NEXT_PUBLIC_GNOSIS_EXPLORER_CHAIN_ID;
+    delete process.env.NEXT_PUBLIC_UNICHAIN_EXPLORER_CHAIN_ID;
+    delete process.env.NEXT_PUBLIC_WORLDCHAIN_EXPLORER_CHAIN_ID;
     vi.resetModules();
 
     try {
@@ -953,6 +1086,10 @@ describe("supported chain config", () => {
         [chains.LINEA_CHAIN_ID, "59144"],
         [chains.BLAST_CHAIN_ID, "81457"],
         [chains.BERACHAIN_CHAIN_ID, "80094"],
+        [chains.CELO_CHAIN_ID, "42220"],
+        [chains.GNOSIS_CHAIN_ID, "100"],
+        [chains.UNICHAIN_CHAIN_ID, "130"],
+        [chains.WORLDCHAIN_CHAIN_ID, "480"],
       ] as const;
 
       for (const [chainId, expected] of cases) {
@@ -973,6 +1110,20 @@ describe("supported chain config", () => {
       if (originals.berachain !== undefined) {
         process.env.NEXT_PUBLIC_BERACHAIN_EXPLORER_CHAIN_ID =
           originals.berachain;
+      }
+      if (originals.celo !== undefined) {
+        process.env.NEXT_PUBLIC_CELO_EXPLORER_CHAIN_ID = originals.celo;
+      }
+      if (originals.gnosis !== undefined) {
+        process.env.NEXT_PUBLIC_GNOSIS_EXPLORER_CHAIN_ID = originals.gnosis;
+      }
+      if (originals.unichain !== undefined) {
+        process.env.NEXT_PUBLIC_UNICHAIN_EXPLORER_CHAIN_ID =
+          originals.unichain;
+      }
+      if (originals.worldchain !== undefined) {
+        process.env.NEXT_PUBLIC_WORLDCHAIN_EXPLORER_CHAIN_ID =
+          originals.worldchain;
       }
       vi.resetModules();
     }

@@ -14,6 +14,10 @@ const LIVE_CHAIN_DISPLAY_ORDER = [
   "Linea",
   "Blast",
   "Berachain",
+  "Celo",
+  "Gnosis",
+  "Unichain",
+  "World Chain",
   "Ethereum Mainnet",
   "Arbitrum One",
   "Optimism",
@@ -26,6 +30,7 @@ const COMPACT_CHAIN_NAMES: Record<string, string> = {
   "Avalanche C-Chain": "Avalanche",
   "Ethereum Mainnet": "Ethereum",
   "Arbitrum One": "Arbitrum",
+  "World Chain": "World",
 };
 
 function formatList(items: readonly string[]) {

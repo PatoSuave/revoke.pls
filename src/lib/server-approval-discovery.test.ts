@@ -5,8 +5,16 @@ import {
   BERACHAIN_EXPLORER_CHAIN_ID_DEFAULT,
   BLAST_CHAIN_ID,
   BLAST_EXPLORER_CHAIN_ID_DEFAULT,
+  CELO_CHAIN_ID,
+  CELO_EXPLORER_CHAIN_ID_DEFAULT,
+  GNOSIS_CHAIN_ID,
+  GNOSIS_EXPLORER_CHAIN_ID_DEFAULT,
   LINEA_CHAIN_ID,
   LINEA_EXPLORER_CHAIN_ID_DEFAULT,
+  UNICHAIN_CHAIN_ID,
+  UNICHAIN_EXPLORER_CHAIN_ID_DEFAULT,
+  WORLDCHAIN_CHAIN_ID,
+  WORLDCHAIN_EXPLORER_CHAIN_ID_DEFAULT,
 } from "@/lib/chains";
 import type { DiscoverySourceConfig } from "@/lib/chains";
 
@@ -103,6 +111,30 @@ describe("server approval discovery shared Etherscan key", () => {
       displayName: "Berachain",
       chainid: BERACHAIN_EXPLORER_CHAIN_ID_DEFAULT,
       keyEnvNames: ["BERACHAIN_EXPLORER_API_KEY", "ETHERSCAN_API_KEY"],
+    },
+    {
+      chainId: CELO_CHAIN_ID,
+      displayName: "Celo",
+      chainid: CELO_EXPLORER_CHAIN_ID_DEFAULT,
+      keyEnvNames: ["CELO_EXPLORER_API_KEY", "ETHERSCAN_API_KEY"],
+    },
+    {
+      chainId: GNOSIS_CHAIN_ID,
+      displayName: "Gnosis",
+      chainid: GNOSIS_EXPLORER_CHAIN_ID_DEFAULT,
+      keyEnvNames: ["GNOSIS_EXPLORER_API_KEY", "ETHERSCAN_API_KEY"],
+    },
+    {
+      chainId: UNICHAIN_CHAIN_ID,
+      displayName: "Unichain",
+      chainid: UNICHAIN_EXPLORER_CHAIN_ID_DEFAULT,
+      keyEnvNames: ["UNICHAIN_EXPLORER_API_KEY", "ETHERSCAN_API_KEY"],
+    },
+    {
+      chainId: WORLDCHAIN_CHAIN_ID,
+      displayName: "World Chain",
+      chainid: WORLDCHAIN_EXPLORER_CHAIN_ID_DEFAULT,
+      keyEnvNames: ["WORLDCHAIN_EXPLORER_API_KEY", "ETHERSCAN_API_KEY"],
     },
   ] as const)(
     "uses server-only ETHERSCAN_API_KEY fallback for $displayName",

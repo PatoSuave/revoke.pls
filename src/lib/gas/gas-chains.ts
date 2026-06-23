@@ -13,11 +13,15 @@ import {
   BERACHAIN_CHAIN_ID,
   BLAST_CHAIN_ID,
   BSC_CHAIN_ID,
+  CELO_CHAIN_ID,
+  GNOSIS_CHAIN_ID,
   LINEA_CHAIN_ID,
   MANTLE_CHAIN_ID,
   POLYGON_CHAIN_ID,
   PULSECHAIN_CHAIN_ID,
   SONIC_CHAIN_ID,
+  UNICHAIN_CHAIN_ID,
+  WORLDCHAIN_CHAIN_ID,
 } from "@/lib/chains";
 import {
   ETHEREUM_MAINNET_CLIENT_CHAIN_ID,
@@ -53,6 +57,10 @@ export type GasTrackerChainId =
   | typeof LINEA_CHAIN_ID
   | typeof BLAST_CHAIN_ID
   | typeof BERACHAIN_CHAIN_ID
+  | typeof CELO_CHAIN_ID
+  | typeof GNOSIS_CHAIN_ID
+  | typeof UNICHAIN_CHAIN_ID
+  | typeof WORLDCHAIN_CHAIN_ID
   | typeof ETHEREUM_MAINNET_CLIENT_CHAIN_ID
   | typeof ARBITRUM_ONE_CLIENT_CHAIN_ID
   | typeof OPTIMISM_CLIENT_CHAIN_ID
@@ -85,6 +93,11 @@ const MANTLE_RPC_DEFAULT = "https://rpc.mantle.xyz";
 const LINEA_RPC_DEFAULT = "https://rpc.linea.build";
 const BLAST_RPC_DEFAULT = "https://rpc.blast.io";
 const BERACHAIN_RPC_DEFAULT = "https://rpc.berachain.com";
+const CELO_RPC_DEFAULT = "https://forno.celo.org";
+const GNOSIS_RPC_DEFAULT = "https://rpc.gnosischain.com";
+const UNICHAIN_RPC_DEFAULT = "https://mainnet.unichain.org";
+const WORLDCHAIN_RPC_DEFAULT =
+  "https://worldchain-mainnet.g.alchemy.com/public";
 
 const ethereumGasChain = defineGasChain({
   id: ETHEREUM_MAINNET_CLIENT_CHAIN_ID,
@@ -219,6 +232,54 @@ const berachainGasChain = defineGasChain({
   },
   rpcUrl: process.env.NEXT_PUBLIC_BERACHAIN_RPC_URL ?? BERACHAIN_RPC_DEFAULT,
   explorerUrl: "https://berascan.com",
+});
+
+const celoGasChain = defineGasChain({
+  id: CELO_CHAIN_ID,
+  name: "Celo",
+  nativeCurrency: {
+    name: "CELO",
+    symbol: "CELO",
+    decimals: 18,
+  },
+  rpcUrl: process.env.NEXT_PUBLIC_CELO_RPC_URL ?? CELO_RPC_DEFAULT,
+  explorerUrl: "https://celoscan.io",
+});
+
+const gnosisGasChain = defineGasChain({
+  id: GNOSIS_CHAIN_ID,
+  name: "Gnosis",
+  nativeCurrency: {
+    name: "xDAI",
+    symbol: "XDAI",
+    decimals: 18,
+  },
+  rpcUrl: process.env.NEXT_PUBLIC_GNOSIS_RPC_URL ?? GNOSIS_RPC_DEFAULT,
+  explorerUrl: "https://gnosisscan.io",
+});
+
+const unichainGasChain = defineGasChain({
+  id: UNICHAIN_CHAIN_ID,
+  name: "Unichain",
+  nativeCurrency: {
+    name: "Ether",
+    symbol: "ETH",
+    decimals: 18,
+  },
+  rpcUrl: process.env.NEXT_PUBLIC_UNICHAIN_RPC_URL ?? UNICHAIN_RPC_DEFAULT,
+  explorerUrl: "https://uniscan.xyz",
+});
+
+const worldchainGasChain = defineGasChain({
+  id: WORLDCHAIN_CHAIN_ID,
+  name: "World Chain",
+  nativeCurrency: {
+    name: "Ether",
+    symbol: "ETH",
+    decimals: 18,
+  },
+  rpcUrl: process.env.NEXT_PUBLIC_WORLDCHAIN_RPC_URL ?? WORLDCHAIN_RPC_DEFAULT,
+  explorerUrl: "https://worldscan.org",
 });
 
 const arbitrumGasChain = defineGasChain({
@@ -410,6 +471,66 @@ export const GAS_TRACKER_CHAINS = [
     publicRpcEnvNames: ["NEXT_PUBLIC_BERACHAIN_RPC_URL"],
     statusThresholds: { elevatedGwei: 5, highGwei: 25 },
     coingeckoId: "berachain",
+  },
+  {
+    chainId: CELO_CHAIN_ID,
+    chainName: "Celo",
+    shortName: "Celo",
+    nativeCurrency: "CELO",
+    nativeCurrencyName: "CELO",
+    viemChain: celoGasChain,
+    defaultRpcUrl: CELO_RPC_DEFAULT,
+    publicRpcUrl: celoGasChain.rpcUrls.default.http[0],
+    serverRpcEnvNames: ["CELO_RPC_URL", "CELO_MAINNET_RPC_URL"],
+    publicRpcEnvNames: ["NEXT_PUBLIC_CELO_RPC_URL"],
+    statusThresholds: { elevatedGwei: 1, highGwei: 5 },
+    coingeckoId: "celo",
+  },
+  {
+    chainId: GNOSIS_CHAIN_ID,
+    chainName: "Gnosis",
+    shortName: "Gnosis",
+    nativeCurrency: "XDAI",
+    nativeCurrencyName: "xDAI",
+    viemChain: gnosisGasChain,
+    defaultRpcUrl: GNOSIS_RPC_DEFAULT,
+    publicRpcUrl: gnosisGasChain.rpcUrls.default.http[0],
+    serverRpcEnvNames: ["GNOSIS_RPC_URL", "GNOSIS_MAINNET_RPC_URL"],
+    publicRpcEnvNames: ["NEXT_PUBLIC_GNOSIS_RPC_URL"],
+    statusThresholds: { elevatedGwei: 2, highGwei: 10 },
+    coingeckoId: "xdai",
+  },
+  {
+    chainId: UNICHAIN_CHAIN_ID,
+    chainName: "Unichain",
+    shortName: "Unichain",
+    nativeCurrency: "ETH",
+    nativeCurrencyName: "Ether",
+    viemChain: unichainGasChain,
+    defaultRpcUrl: UNICHAIN_RPC_DEFAULT,
+    publicRpcUrl: unichainGasChain.rpcUrls.default.http[0],
+    serverRpcEnvNames: ["UNICHAIN_RPC_URL", "UNICHAIN_MAINNET_RPC_URL"],
+    publicRpcEnvNames: ["NEXT_PUBLIC_UNICHAIN_RPC_URL"],
+    statusThresholds: { elevatedGwei: 0.1, highGwei: 1 },
+    coingeckoId: "ethereum",
+    estimateNote:
+      "Unichain wallet estimates may include L1 data fees beyond this gas-price estimate.",
+  },
+  {
+    chainId: WORLDCHAIN_CHAIN_ID,
+    chainName: "World Chain",
+    shortName: "World",
+    nativeCurrency: "ETH",
+    nativeCurrencyName: "Ether",
+    viemChain: worldchainGasChain,
+    defaultRpcUrl: WORLDCHAIN_RPC_DEFAULT,
+    publicRpcUrl: worldchainGasChain.rpcUrls.default.http[0],
+    serverRpcEnvNames: ["WORLDCHAIN_RPC_URL", "WORLDCHAIN_MAINNET_RPC_URL"],
+    publicRpcEnvNames: ["NEXT_PUBLIC_WORLDCHAIN_RPC_URL"],
+    statusThresholds: { elevatedGwei: 0.1, highGwei: 1 },
+    coingeckoId: "ethereum",
+    estimateNote:
+      "World Chain wallet estimates may include L1 data fees beyond this gas-price estimate.",
   },
   {
     chainId: ETHEREUM_MAINNET_CLIENT_CHAIN_ID,

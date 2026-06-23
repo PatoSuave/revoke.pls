@@ -2,8 +2,8 @@
 
 Pulse Revoke is public code for reviewing and clearing wallet approvals on
 PulseChain, BSC / BNB Smart Chain, Base, Polygon, Sonic Mainnet, Avalanche
-C-Chain, Mantle, Linea, Blast, Berachain, Ethereum Mainnet, Arbitrum One,
-Optimism / OP Mainnet, and HyperEVM.
+C-Chain, Mantle, Linea, Blast, Berachain, Celo, Gnosis, Unichain, World Chain,
+Ethereum Mainnet, Arbitrum One, Optimism / OP Mainnet, and HyperEVM.
 
 ## What The App Does
 
@@ -14,12 +14,13 @@ Optimism / OP Mainnet, and HyperEVM.
 - Shows active approvals only
 - Adds chain-scoped registry labels where known
 - Looks up PulseChain, BSC, Base, Polygon, Sonic, Avalanche, Mantle, Linea,
-  Blast, and Berachain token logos by token
-  contract address for display only
+  Blast, Berachain, Celo, Unichain, and World Chain token logos by token
+  contract address for display only; Gnosis rows use symbol/initial fallback
 - Prepares standard approval-clearing transactions when the user chooses to
   revoke
-- Scans BSC, Base, Polygon, Sonic, Avalanche, Mantle, Linea, Blast, and
-  Berachain through a server-side read-only API in hosted web builds
+- Scans BSC, Base, Polygon, Sonic, Avalanche, Mantle, Linea, Blast, Berachain,
+  Celo, Gnosis, Unichain, and World Chain through a server-side read-only API
+  in hosted web builds
 - Scans Arbitrum One through a server-side read-only API and enables only
   live-verified ERC-20 and NFT row revoke
 - Scans Optimism / OP Mainnet through a server-side API and enables only
@@ -48,7 +49,8 @@ Optimism / OP Mainnet, and HyperEVM.
 - Review the active chain shown in the app.
 - Open token and spender links on PulseScan, BscScan, BaseScan, PolygonScan,
   SonicScan, SnowScan, Mantle Explorer, LineaScan, Blastscan, Berascan,
-  Etherscan, Arbiscan, Optimistic Etherscan, or Hyperevmscan.
+  CeloScan, Gnosisscan, Uniscan, Worldscan, Etherscan, Arbiscan, Optimistic
+  Etherscan, or Hyperevmscan.
 - Check that revoke wallet prompts match the intended approval-clearing call.
 - Confirm BSC transactions use BNB gas and BscScan links.
 - Confirm PulseChain transactions use PLS gas and PulseScan links.
@@ -60,6 +62,10 @@ Optimism / OP Mainnet, and HyperEVM.
 - Confirm Linea transactions use ETH gas and LineaScan links.
 - Confirm Blast transactions use ETH gas and Blastscan links.
 - Confirm Berachain transactions use BERA gas and Berascan links.
+- Confirm Celo transactions use CELO gas and CeloScan links.
+- Confirm Gnosis transactions use XDAI gas and Gnosisscan links.
+- Confirm Unichain transactions use ETH gas and Uniscan links.
+- Confirm World Chain transactions use ETH gas and Worldscan links.
 - Use `/app?debug=1` for diagnostic information about discovery source,
   chain ID, API configuration presence, and incomplete scan reasons.
 
@@ -67,7 +73,8 @@ Optimism / OP Mainnet, and HyperEVM.
 
 Approval discovery starts from historical events. Public RPC providers can be
 unreliable or impractical for large historical `eth_getLogs` scans, especially
-on BSC, Base, Polygon, Sonic, Avalanche, Mantle, Linea, Blast, and Berachain. Pulse Revoke uses explorer log
+on BSC, Base, Polygon, Sonic, Avalanche, Mantle, Linea, Blast, Berachain, Celo,
+Gnosis, Unichain, and World Chain. Pulse Revoke uses explorer log
 APIs for historical discovery and then uses live RPC reads to validate current
 state.
 
@@ -84,10 +91,12 @@ historical discovery uses the same server-side route backed by Etherscan API V2
 with `chainid=43114`. SnowScan is still used for public explorer links. Mantle
 hosted web historical discovery uses the same server-side route backed by
 Etherscan API V2 with `chainid=5000`. Mantle Explorer is still used for public
-explorer links. Linea, Blast, and Berachain hosted web historical discovery use
-the same server-side route backed by Etherscan API V2 with `chainid=59144`,
-`chainid=81457`, and `chainid=80094`; LineaScan, Blastscan, and Berascan remain
-the public explorer links. Ethereum, Arbitrum, Optimism, and HyperEVM discovery use
+explorer links. Linea, Blast, Berachain, Celo, Gnosis, Unichain, and World
+Chain hosted web historical discovery use the same server-side route backed by
+Etherscan API V2 with `chainid=59144`, `chainid=81457`, `chainid=80094`,
+`chainid=42220`, `chainid=100`, `chainid=130`, and `chainid=480`; LineaScan,
+Blastscan, Berascan, CeloScan, Gnosisscan, Uniscan, and Worldscan remain the
+public explorer links. Ethereum, Arbitrum, Optimism, and HyperEVM discovery use
 server-side read-only API routes so managed RPC URLs and explorer API keys do
 not need to be exposed to the browser. Arbitrum requests use `chainid=42161`
 and Arbiscan links. Optimism requests use `chainid=10` and Optimistic Etherscan

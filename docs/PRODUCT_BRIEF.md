@@ -41,8 +41,9 @@ upgraded maliciously, or misunderstood.
 - Scan address-only where the current scanner supports it
 - Detect PRC-20, BEP-20, ERC-20, Permit2, and supported NFT approvals
 - Scan PulseChain, BSC, Base, Polygon, Sonic Mainnet, Avalanche, Mantle,
-  Linea, Blast, Berachain, Ethereum, Arbitrum One, Optimism, and HyperEVM
-  according to their current source-backed support levels
+  Linea, Blast, Berachain, Celo, Gnosis, Unichain, World Chain, Ethereum,
+  Arbitrum One, Optimism, and HyperEVM according to their current
+  source-backed support levels
 - Enable Arbitrum, Optimism, and HyperEVM revoke only for verified ERC-20/NFT
   rows
 - Show token, spender, allowance, chain, explorer, and risk context

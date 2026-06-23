@@ -9,7 +9,7 @@
 
 ## Active Chains
 
-Fourteen live product chains are surfaced across the app:
+Eighteen live product chains are surfaced across the app:
 
 - PulseChain, chain ID `369`, native gas token `PLS`, explorer `PulseScan`
 - BSC / BNB Smart Chain, chain ID `56`, native gas token `BNB`, explorer
@@ -23,6 +23,10 @@ Fourteen live product chains are surfaced across the app:
 - Linea, chain ID `59144`, native gas token `ETH`, explorer `LineaScan`
 - Blast, chain ID `81457`, native gas token `ETH`, explorer `Blastscan`
 - Berachain, chain ID `80094`, native gas token `BERA`, explorer `Berascan`
+- Celo, chain ID `42220`, native gas token `CELO`, explorer `CeloScan`
+- Gnosis, chain ID `100`, native gas token `XDAI`, explorer `Gnosisscan`
+- Unichain, chain ID `130`, native gas token `ETH`, explorer `Uniscan`
+- World Chain, chain ID `480`, native gas token `ETH`, explorer `Worldscan`
 - Ethereum Mainnet, chain ID `1`, native gas token `ETH`, explorer `Etherscan`
 - Arbitrum One, chain ID `42161`, native gas token `ETH`, explorer `Arbiscan`
 - Optimism / OP Mainnet, chain ID `10`, native gas token `ETH`, explorer
@@ -30,9 +34,10 @@ Fourteen live product chains are surfaced across the app:
 - HyperEVM, chain ID `999`, native gas token `HYPE`, explorer `Hyperevmscan`,
   verified ERC-20/NFT row revoke
 
-PulseChain, BSC, Base, Polygon, Sonic, Avalanche, Mantle, Linea, Blast, and Berachain use the generic
-scanner registry in `src/lib/chains.ts`, including the shared scan, revoke, and
-batch lane.
+PulseChain, BSC, Base, Polygon, Sonic, Avalanche, Mantle, Linea, Blast,
+Berachain, Celo, Gnosis, Unichain, and World Chain use the generic scanner
+registry in `src/lib/chains.ts`, including the shared scan, revoke, and batch
+lane.
 
 Ethereum Mainnet is wallet-enabled for the Ethereum read-only discovery and
 wallet-side revoke lane. It is surfaced as a live product chain, but it is not
@@ -59,9 +64,9 @@ revoke. HyperEVM gas is paid in HYPE.
 ## Web3 Layer
 
 - `src/lib/wagmi.ts` registers PulseChain, BSC, Base, Polygon, Sonic,
-  Avalanche C-Chain, Mantle, Linea, Blast, Berachain, Ethereum Mainnet,
-  Arbitrum One, OP Mainnet, and HyperEVM with wagmi. Ethereum, Arbitrum,
-  Optimism, and HyperEVM use separate scanner lanes.
+  Avalanche C-Chain, Mantle, Linea, Blast, Berachain, Celo, Gnosis, Unichain,
+  World Chain, Ethereum Mainnet, Arbitrum One, OP Mainnet, and HyperEVM with
+  wagmi. Ethereum, Arbitrum, Optimism, and HyperEVM use separate scanner lanes.
 - PulseChain RPC defaults to `https://rpc.pulsechain.com`.
 - BSC RPC defaults to `https://bsc-dataseed.bnbchain.org`.
 - Base RPC defaults to `https://mainnet.base.org`.
@@ -73,6 +78,10 @@ revoke. HyperEVM gas is paid in HYPE.
 - Linea RPC defaults to `https://rpc.linea.build`.
 - Blast RPC defaults to `https://rpc.blast.io`.
 - Berachain RPC defaults to `https://rpc.berachain.com`.
+- Celo RPC defaults to `https://forno.celo.org`.
+- Gnosis RPC defaults to `https://rpc.gnosischain.com`.
+- Unichain RPC defaults to `https://mainnet.unichain.org`.
+- World Chain RPC defaults to `https://worldchain-mainnet.g.alchemy.com/public`.
 - Ethereum wallet RPC defaults to `https://ethereum-rpc.publicnode.com` unless
   overridden for the wallet client.
 - Arbitrum wallet chain recognition uses `https://arb1.arbitrum.io/rpc`.
@@ -85,8 +94,9 @@ revoke. HyperEVM gas is paid in HYPE.
   Production HyperEVM approval discovery uses server-only RPC/API settings
   through `/api/hyperevm/approvals`.
 - PulseChain, BSC, Base, Polygon, Sonic, Avalanche, Mantle, Linea, Blast,
-  Berachain, and Ethereum wallet RPCs can be overridden with browser-visible public env vars. Server-side
-  discovery RPCs use unprefixed server-only env vars.
+  Berachain, Celo, Gnosis, Unichain, World Chain, and Ethereum wallet RPCs can
+  be overridden with browser-visible public env vars. Server-side discovery RPCs
+  use unprefixed server-only env vars.
 - Live reads and writes always include the approval record's `chainId`.
 - When connected, the wallet account `chainId` is the active scanner source of
   truth. The app does not fall back to PulseChain after a supported wallet chain
@@ -159,6 +169,12 @@ Berachain hosted web discovery uses the same server route and Etherscan API V2
 logs path with `chainid=80094`. Public Berachain RPC `eth_getLogs` is not used
 for historical approval discovery. Berascan remains the explorer for address,
 token, and transaction links.
+
+Celo, Gnosis, Unichain, and World Chain hosted web discovery use the same server
+route and Etherscan API V2 logs path with `chainid=42220`, `chainid=100`,
+`chainid=130`, and `chainid=480`. Public RPC `eth_getLogs` is not used for
+historical approval discovery. CeloScan, Gnosisscan, Uniscan, and Worldscan
+remain the user-facing explorers for address, token, and transaction links.
 
 Ethereum historical discovery is exposed through `/api/ethereum/approvals` so
 the Etherscan key stays server-only. The route is read-only, uses bounded
@@ -256,6 +272,30 @@ row-level revoke stays limited to verified ERC-20 and NFT rows.
   `BERACHAIN_EXPLORER_CHAIN_ID=80094`
 - Berachain server API key env vars:
   `BERACHAIN_EXPLORER_API_KEY` / `ETHERSCAN_API_KEY`
+- Celo server discovery API default:
+  `https://api.etherscan.io/v2/api`
+- Celo server discovery API chain id:
+  `CELO_EXPLORER_CHAIN_ID=42220`
+- Celo server API key env vars:
+  `CELO_EXPLORER_API_KEY` / `ETHERSCAN_API_KEY`
+- Gnosis server discovery API default:
+  `https://api.etherscan.io/v2/api`
+- Gnosis server discovery API chain id:
+  `GNOSIS_EXPLORER_CHAIN_ID=100`
+- Gnosis server API key env vars:
+  `GNOSIS_EXPLORER_API_KEY` / `ETHERSCAN_API_KEY`
+- Unichain server discovery API default:
+  `https://api.etherscan.io/v2/api`
+- Unichain server discovery API chain id:
+  `UNICHAIN_EXPLORER_CHAIN_ID=130`
+- Unichain server API key env vars:
+  `UNICHAIN_EXPLORER_API_KEY` / `ETHERSCAN_API_KEY`
+- World Chain server discovery API default:
+  `https://api.etherscan.io/v2/api`
+- World Chain server discovery API chain id:
+  `WORLDCHAIN_EXPLORER_CHAIN_ID=480`
+- World Chain server API key env vars:
+  `WORLDCHAIN_EXPLORER_API_KEY` / `ETHERSCAN_API_KEY`
 - Ethereum server RPC env vars:
   `MAINNET_RPC_URL` / `ETHEREUM_RPC_URL`
 - Ethereum server API key env var:
@@ -361,6 +401,13 @@ User-facing Berachain copy uses:
 - `ERC-1155` for multi-token NFT / semi-fungible approvals
 - `BERA` for gas
 
+User-facing Celo, Gnosis, Unichain, and World Chain copy uses:
+
+- `ERC-20` for fungible token approvals
+- `ERC-721` for NFT approvals
+- `ERC-1155` for multi-token NFT / semi-fungible approvals
+- `CELO`, `XDAI`, or `ETH` for gas, matching the selected chain
+
 User-facing Arbitrum copy uses:
 
 - `ERC-20` for fungible token approvals
@@ -405,8 +452,8 @@ Fungible token revoke:
 4. Wallet signs and submits on the approval's `chainId`.
 5. UI links the transaction to PulseScan, BscScan, BaseScan, PolygonScan,
    SonicScan, SnowScan, Mantle Explorer, LineaScan, Blastscan, Berascan,
-   Etherscan, Arbiscan, Optimistic Etherscan, or Hyperevmscan and rescans
-   after success.
+   CeloScan, Gnosisscan, Uniscan, Worldscan, Etherscan, Arbiscan, Optimistic
+   Etherscan, or Hyperevmscan and rescans after success.
 
 Permit2 delegated allowance revoke:
 

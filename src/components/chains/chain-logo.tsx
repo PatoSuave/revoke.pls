@@ -8,11 +8,15 @@ import {
   BLAST_CHAIN_ID,
   BASE_CHAIN_ID,
   BSC_CHAIN_ID,
+  CELO_CHAIN_ID,
+  GNOSIS_CHAIN_ID,
   LINEA_CHAIN_ID,
   MANTLE_CHAIN_ID,
   POLYGON_CHAIN_ID,
   PULSECHAIN_CHAIN_ID,
   SONIC_CHAIN_ID,
+  UNICHAIN_CHAIN_ID,
+  WORLDCHAIN_CHAIN_ID,
 } from "@/lib/chains";
 import { ARBITRUM_ONE_CLIENT_CHAIN_ID } from "@/lib/arbitrum-approval-client";
 import { ETHEREUM_MAINNET_CLIENT_CHAIN_ID } from "@/lib/ethereum-approval-client";
@@ -40,6 +44,10 @@ const CHAIN_LOGO_LABELS: Readonly<Record<number, string>> = {
   [LINEA_CHAIN_ID]: "Linea",
   [BLAST_CHAIN_ID]: "Blast",
   [BERACHAIN_CHAIN_ID]: "Berachain",
+  [CELO_CHAIN_ID]: "Celo",
+  [GNOSIS_CHAIN_ID]: "Gnosis",
+  [UNICHAIN_CHAIN_ID]: "Unichain",
+  [WORLDCHAIN_CHAIN_ID]: "World Chain",
 };
 
 export function chainLogoLabel(chainId: number): string {
@@ -116,6 +124,14 @@ function renderChainMark(chainId: number, muted: boolean) {
       return <BlastMark muted={muted} />;
     case BERACHAIN_CHAIN_ID:
       return <BerachainMark muted={muted} />;
+    case CELO_CHAIN_ID:
+      return <CeloMark muted={muted} />;
+    case GNOSIS_CHAIN_ID:
+      return <GnosisMark muted={muted} />;
+    case UNICHAIN_CHAIN_ID:
+      return <UnichainMark muted={muted} />;
+    case WORLDCHAIN_CHAIN_ID:
+      return <WorldChainMark muted={muted} />;
     default:
       return <DefaultMark muted={muted} />;
   }
@@ -383,6 +399,88 @@ function BerachainMark({ muted }: { muted: boolean }) {
       />
       <circle cx="19" cy="27" r="1.6" fill={muted ? "currentColor" : "#FF7A1A"} />
       <circle cx="29" cy="27" r="1.6" fill={muted ? "currentColor" : "#FF7A1A"} />
+    </>
+  );
+}
+
+function CeloMark({ muted }: { muted: boolean }) {
+  return (
+    <>
+      <circle cx="24" cy="24" r="21" fill={muted ? "currentColor" : "#FCFF52"} />
+      <circle
+        cx="21"
+        cy="21"
+        r="10"
+        fill="none"
+        stroke={muted ? "#0B0A14" : "#35D07F"}
+        strokeWidth="5"
+      />
+      <circle
+        cx="28"
+        cy="28"
+        r="10"
+        fill="none"
+        stroke={muted ? "#0B0A14" : "#111318"}
+        strokeWidth="5"
+      />
+    </>
+  );
+}
+
+function GnosisMark({ muted }: { muted: boolean }) {
+  return (
+    <>
+      <circle cx="24" cy="24" r="21" fill={muted ? "currentColor" : "#103C3C"} />
+      <path
+        d="M12 29c3-8 7-12 12-12s9 4 12 12"
+        fill="none"
+        stroke={muted ? "#0B0A14" : "#FFFFFF"}
+        strokeLinecap="round"
+        strokeWidth="4"
+      />
+      <circle cx="18" cy="25" r="3" fill={muted ? "#0B0A14" : "#49D19C"} />
+      <circle cx="30" cy="25" r="3" fill={muted ? "#0B0A14" : "#49D19C"} />
+      <path
+        d="M17 34h14"
+        stroke={muted ? "#0B0A14" : "#FFFFFF"}
+        strokeLinecap="round"
+        strokeWidth="4"
+      />
+    </>
+  );
+}
+
+function UnichainMark({ muted }: { muted: boolean }) {
+  return (
+    <>
+      <circle cx="24" cy="24" r="21" fill={muted ? "currentColor" : "#FF007A"} />
+      <path
+        d="M15 13h7v18c0 4 2 6 6 6s6-2 6-6V13h7v18c0 8-5 13-13 13S15 39 15 31V13Z"
+        fill={muted ? "#0B0A14" : "#FFFFFF"}
+      />
+    </>
+  );
+}
+
+function WorldChainMark({ muted }: { muted: boolean }) {
+  return (
+    <>
+      <circle cx="24" cy="24" r="21" fill={muted ? "currentColor" : "#101828"} />
+      <circle
+        cx="24"
+        cy="24"
+        r="13"
+        fill="none"
+        stroke={muted ? "#0B0A14" : "#6EE7F9"}
+        strokeWidth="4"
+      />
+      <path
+        d="M11 24h26M24 11c5 5 5 21 0 26M24 11c-5 5-5 21 0 26"
+        fill="none"
+        stroke={muted ? "#0B0A14" : "#FFFFFF"}
+        strokeLinecap="round"
+        strokeWidth="2.5"
+      />
     </>
   );
 }

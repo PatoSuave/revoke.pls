@@ -7,11 +7,15 @@ import {
   BERACHAIN_CHAIN_ID,
   BLAST_CHAIN_ID,
   BSC_CHAIN_ID,
+  CELO_CHAIN_ID,
+  GNOSIS_CHAIN_ID,
   LINEA_CHAIN_ID,
   MANTLE_CHAIN_ID,
   POLYGON_CHAIN_ID,
   PULSECHAIN_CHAIN_ID,
   SONIC_CHAIN_ID,
+  UNICHAIN_CHAIN_ID,
+  WORLDCHAIN_CHAIN_ID,
 } from "@/lib/chains";
 import {
   ARBITRUM_TOKEN_LOGO_CHAIN_ID,
@@ -74,6 +78,18 @@ describe("token logo helpers", () => {
     expect(isTokenLogoSupportedChain(BERACHAIN_CHAIN_ID)).toBe(true);
     expect(getDexScreenerChainSlugForTokenLogos(BERACHAIN_CHAIN_ID)).toBe(
       "berachain",
+    );
+    expect(isTokenLogoSupportedChain(CELO_CHAIN_ID)).toBe(true);
+    expect(getDexScreenerChainSlugForTokenLogos(CELO_CHAIN_ID)).toBe("celo");
+    expect(isTokenLogoSupportedChain(GNOSIS_CHAIN_ID)).toBe(false);
+    expect(getDexScreenerChainSlugForTokenLogos(GNOSIS_CHAIN_ID)).toBeNull();
+    expect(isTokenLogoSupportedChain(UNICHAIN_CHAIN_ID)).toBe(true);
+    expect(getDexScreenerChainSlugForTokenLogos(UNICHAIN_CHAIN_ID)).toBe(
+      "unichain",
+    );
+    expect(isTokenLogoSupportedChain(WORLDCHAIN_CHAIN_ID)).toBe(true);
+    expect(getDexScreenerChainSlugForTokenLogos(WORLDCHAIN_CHAIN_ID)).toBe(
+      "worldchain",
     );
     expect(isTokenLogoSupportedChain(ARBITRUM_TOKEN_LOGO_CHAIN_ID)).toBe(true);
     expect(getDexScreenerChainSlugForTokenLogos(ARBITRUM_TOKEN_LOGO_CHAIN_ID)).toBe(

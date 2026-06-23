@@ -112,6 +112,36 @@ describe("security content", () => {
     expect(rowsByChain.get("Berachain")?.note).toContain(
       "Gas is paid in BERA",
     );
+    expect(rowsByChain.get("Celo")).toMatchObject({
+      chainId: "42220",
+      scan: "Yes",
+      revoke: "Yes",
+      status: "Live",
+    });
+    expect(rowsByChain.get("Celo")?.note).toContain("Gas is paid in CELO");
+    expect(rowsByChain.get("Gnosis")).toMatchObject({
+      chainId: "100",
+      scan: "Yes",
+      revoke: "Yes",
+      status: "Live",
+    });
+    expect(rowsByChain.get("Gnosis")?.note).toContain("Gas is paid in XDAI");
+    expect(rowsByChain.get("Unichain")).toMatchObject({
+      chainId: "130",
+      scan: "Yes",
+      revoke: "Yes",
+      status: "Live",
+    });
+    expect(rowsByChain.get("Unichain")?.note).toContain("Gas is paid in ETH");
+    expect(rowsByChain.get("World Chain")).toMatchObject({
+      chainId: "480",
+      scan: "Yes",
+      revoke: "Yes",
+      status: "Live",
+    });
+    expect(rowsByChain.get("World Chain")?.note).toContain(
+      "Gas is paid in ETH",
+    );
     expect(rowsByChain.get("Solana")).toMatchObject({
       scan: "No",
       revoke: "No",

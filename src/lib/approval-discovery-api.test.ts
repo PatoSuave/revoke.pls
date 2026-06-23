@@ -16,11 +16,15 @@ import {
   BERACHAIN_CHAIN_ID,
   BLAST_CHAIN_ID,
   BSC_CHAIN_ID,
+  CELO_CHAIN_ID,
+  GNOSIS_CHAIN_ID,
   LINEA_CHAIN_ID,
   MANTLE_CHAIN_ID,
   POLYGON_CHAIN_ID,
   PULSECHAIN_CHAIN_ID,
   SONIC_CHAIN_ID,
+  UNICHAIN_CHAIN_ID,
+  WORLDCHAIN_CHAIN_ID,
 } from "@/lib/chains";
 import type {
   DiscoveredPair,
@@ -53,6 +57,10 @@ describe("approval discovery API serialization", () => {
     expect(usesServerApprovalDiscovery(LINEA_CHAIN_ID)).toBe(true);
     expect(usesServerApprovalDiscovery(BLAST_CHAIN_ID)).toBe(true);
     expect(usesServerApprovalDiscovery(BERACHAIN_CHAIN_ID)).toBe(true);
+    expect(usesServerApprovalDiscovery(CELO_CHAIN_ID)).toBe(true);
+    expect(usesServerApprovalDiscovery(GNOSIS_CHAIN_ID)).toBe(true);
+    expect(usesServerApprovalDiscovery(UNICHAIN_CHAIN_ID)).toBe(true);
+    expect(usesServerApprovalDiscovery(WORLDCHAIN_CHAIN_ID)).toBe(true);
     expect(usesServerApprovalDiscovery(PULSECHAIN_CHAIN_ID)).toBe(false);
     expect(usesServerApprovalDiscovery(undefined)).toBe(false);
   });

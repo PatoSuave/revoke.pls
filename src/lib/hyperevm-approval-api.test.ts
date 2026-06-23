@@ -7,11 +7,15 @@ import {
   BERACHAIN_CHAIN_ID,
   BLAST_CHAIN_ID,
   BSC_CHAIN_ID,
+  CELO_CHAIN_ID,
+  GNOSIS_CHAIN_ID,
   LINEA_CHAIN_ID,
   MANTLE_CHAIN_ID,
   POLYGON_CHAIN_ID,
   PULSECHAIN_CHAIN_ID,
   SONIC_CHAIN_ID,
+  UNICHAIN_CHAIN_ID,
+  WORLDCHAIN_CHAIN_ID,
   isSupportedChainId,
   supportedChainConfigList,
 } from "@/lib/chains";
@@ -225,6 +229,10 @@ describe("HyperEVM approval API foundation", () => {
       LINEA_CHAIN_ID,
       BLAST_CHAIN_ID,
       BERACHAIN_CHAIN_ID,
+      CELO_CHAIN_ID,
+      GNOSIS_CHAIN_ID,
+      UNICHAIN_CHAIN_ID,
+      WORLDCHAIN_CHAIN_ID,
     ]);
   });
 
