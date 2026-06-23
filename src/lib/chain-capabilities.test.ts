@@ -13,11 +13,15 @@ import {
   BLAST_CHAIN_ID,
   BSC_CHAIN_ID,
   BSC_OSAKA_MAX_TRANSACTION_GAS,
+  CELO_CHAIN_ID,
+  GNOSIS_CHAIN_ID,
   LINEA_CHAIN_ID,
   MANTLE_CHAIN_ID,
   POLYGON_CHAIN_ID,
   PULSECHAIN_CHAIN_ID,
   SONIC_CHAIN_ID,
+  UNICHAIN_CHAIN_ID,
+  WORLDCHAIN_CHAIN_ID,
 } from "@/lib/chains";
 import { ARBITRUM_ONE_CLIENT_CHAIN_ID } from "@/lib/arbitrum-approval-client";
 import { ETHEREUM_MAINNET_CLIENT_CHAIN_ID } from "@/lib/ethereum-approval-client";
@@ -38,6 +42,10 @@ describe("chain capability metadata", () => {
         LINEA_CHAIN_ID,
         BLAST_CHAIN_ID,
         BERACHAIN_CHAIN_ID,
+        CELO_CHAIN_ID,
+        GNOSIS_CHAIN_ID,
+        UNICHAIN_CHAIN_ID,
+        WORLDCHAIN_CHAIN_ID,
         PULSECHAIN_CHAIN_ID,
         BASE_CHAIN_ID,
         HYPEREVM_CLIENT_CHAIN_ID,
@@ -67,6 +75,12 @@ describe("chain capability metadata", () => {
     expect(CHAIN_CAPABILITIES[BERACHAIN_CHAIN_ID].batchRevokeEnabled).toBe(
       true,
     );
+    expect(CHAIN_CAPABILITIES[CELO_CHAIN_ID].batchRevokeEnabled).toBe(true);
+    expect(CHAIN_CAPABILITIES[GNOSIS_CHAIN_ID].batchRevokeEnabled).toBe(true);
+    expect(CHAIN_CAPABILITIES[UNICHAIN_CHAIN_ID].batchRevokeEnabled).toBe(true);
+    expect(CHAIN_CAPABILITIES[WORLDCHAIN_CHAIN_ID].batchRevokeEnabled).toBe(
+      true,
+    );
   });
 
   it("records EIP-7702 support without overclaiming unknown chains", () => {
@@ -92,6 +106,16 @@ describe("chain capability metadata", () => {
     expect(CHAIN_CAPABILITIES[BERACHAIN_CHAIN_ID].supportsEip7702).toBe(
       "unknown",
     );
+    expect(CHAIN_CAPABILITIES[CELO_CHAIN_ID].supportsEip7702).toBe("unknown");
+    expect(CHAIN_CAPABILITIES[GNOSIS_CHAIN_ID].supportsEip7702).toBe(
+      "unknown",
+    );
+    expect(CHAIN_CAPABILITIES[UNICHAIN_CHAIN_ID].supportsEip7702).toBe(
+      "unknown",
+    );
+    expect(CHAIN_CAPABILITIES[WORLDCHAIN_CHAIN_ID].supportsEip7702).toBe(
+      "unknown",
+    );
   });
 
   it("records confirmed gas caps as chain metadata", () => {
@@ -109,6 +133,12 @@ describe("chain capability metadata", () => {
     expect(CHAIN_CAPABILITIES[LINEA_CHAIN_ID].perTxGasCap).toBeUndefined();
     expect(CHAIN_CAPABILITIES[BLAST_CHAIN_ID].perTxGasCap).toBeUndefined();
     expect(CHAIN_CAPABILITIES[BERACHAIN_CHAIN_ID].perTxGasCap).toBeUndefined();
+    expect(CHAIN_CAPABILITIES[CELO_CHAIN_ID].perTxGasCap).toBeUndefined();
+    expect(CHAIN_CAPABILITIES[GNOSIS_CHAIN_ID].perTxGasCap).toBeUndefined();
+    expect(CHAIN_CAPABILITIES[UNICHAIN_CHAIN_ID].perTxGasCap).toBeUndefined();
+    expect(
+      CHAIN_CAPABILITIES[WORLDCHAIN_CHAIN_ID].perTxGasCap,
+    ).toBeUndefined();
   });
 
   it("identifies preconfirmation-aware chains for receipt copy", () => {

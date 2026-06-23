@@ -6,11 +6,15 @@ import {
   BERACHAIN_CHAIN_ID,
   BLAST_CHAIN_ID,
   BSC_CHAIN_ID,
+  CELO_CHAIN_ID,
+  GNOSIS_CHAIN_ID,
   LINEA_CHAIN_ID,
   MANTLE_CHAIN_ID,
   POLYGON_CHAIN_ID,
   PULSECHAIN_CHAIN_ID,
   SONIC_CHAIN_ID,
+  UNICHAIN_CHAIN_ID,
+  WORLDCHAIN_CHAIN_ID,
 } from "@/lib/chains";
 
 export const ETHEREUM_TOKEN_LOGO_CHAIN_ID = 1;
@@ -33,6 +37,10 @@ const DEXSCREENER_CHAIN_SLUG_BY_CHAIN_ID: Readonly<Record<number, string>> = {
   [LINEA_CHAIN_ID]: "linea",
   [BLAST_CHAIN_ID]: "blast",
   [BERACHAIN_CHAIN_ID]: "berachain",
+  [CELO_CHAIN_ID]: "celo",
+  [GNOSIS_CHAIN_ID]: "gnosischain",
+  [UNICHAIN_CHAIN_ID]: "unichain",
+  [WORLDCHAIN_CHAIN_ID]: "worldchain",
   [ARBITRUM_TOKEN_LOGO_CHAIN_ID]: "arbitrum",
   [HYPEREVM_TOKEN_LOGO_CHAIN_ID]: "hyperevm",
 };
@@ -88,6 +96,10 @@ export function supportedTokenLogoChainSummary(): string {
     "Linea chainId=59144",
     "Blast chainId=81457",
     "Berachain chainId=80094",
+    "Celo chainId=42220",
+    "Gnosis chainId=100",
+    "Unichain chainId=130",
+    "World Chain chainId=480",
     "PulseChain chainId=369",
     "Base chainId=8453",
     "Arbitrum chainId=42161",

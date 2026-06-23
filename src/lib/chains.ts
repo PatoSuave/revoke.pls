@@ -19,6 +19,10 @@ export const MANTLE_CHAIN_ID = 5000;
 export const LINEA_CHAIN_ID = 59144;
 export const BLAST_CHAIN_ID = 81457;
 export const BERACHAIN_CHAIN_ID = 80094;
+export const CELO_CHAIN_ID = 42220;
+export const GNOSIS_CHAIN_ID = 100;
+export const UNICHAIN_CHAIN_ID = 130;
+export const WORLDCHAIN_CHAIN_ID = 480;
 export type SupportedChainId =
   | typeof PULSECHAIN_CHAIN_ID
   | typeof BSC_CHAIN_ID
@@ -29,7 +33,11 @@ export type SupportedChainId =
   | typeof MANTLE_CHAIN_ID
   | typeof LINEA_CHAIN_ID
   | typeof BLAST_CHAIN_ID
-  | typeof BERACHAIN_CHAIN_ID;
+  | typeof BERACHAIN_CHAIN_ID
+  | typeof CELO_CHAIN_ID
+  | typeof GNOSIS_CHAIN_ID
+  | typeof UNICHAIN_CHAIN_ID
+  | typeof WORLDCHAIN_CHAIN_ID;
 
 const PULSECHAIN_RPC_DEFAULT = "https://rpc.pulsechain.com";
 const BSC_RPC_DEFAULT = "https://bsc-dataseed.bnbchain.org";
@@ -41,6 +49,11 @@ const MANTLE_RPC_DEFAULT = "https://rpc.mantle.xyz";
 const LINEA_RPC_DEFAULT = "https://rpc.linea.build";
 const BLAST_RPC_DEFAULT = "https://rpc.blast.io";
 const BERACHAIN_RPC_DEFAULT = "https://rpc.berachain.com";
+const CELO_RPC_DEFAULT = "https://forno.celo.org";
+const GNOSIS_RPC_DEFAULT = "https://rpc.gnosischain.com";
+const UNICHAIN_RPC_DEFAULT = "https://mainnet.unichain.org";
+const WORLDCHAIN_RPC_DEFAULT =
+  "https://worldchain-mainnet.g.alchemy.com/public";
 
 const PULSECHAIN_EXPLORER_BASE_URL = "https://scan.pulsechain.com";
 const BSC_EXPLORER_BASE_URL = "https://bscscan.com";
@@ -52,6 +65,10 @@ const MANTLE_EXPLORER_BASE_URL = "https://explorer.mantle.xyz";
 const LINEA_EXPLORER_BASE_URL = "https://lineascan.build";
 const BLAST_EXPLORER_BASE_URL = "https://blastscan.io";
 const BERACHAIN_EXPLORER_BASE_URL = "https://berascan.com";
+const CELO_EXPLORER_BASE_URL = "https://celoscan.io";
+const GNOSIS_EXPLORER_BASE_URL = "https://gnosisscan.io";
+const UNICHAIN_EXPLORER_BASE_URL = "https://uniscan.xyz";
+const WORLDCHAIN_EXPLORER_BASE_URL = "https://worldscan.org";
 
 export const PULSECHAIN_EXPLORER_API_DEFAULT =
   "https://api.scan.pulsechain.com/api";
@@ -67,6 +84,12 @@ export const MANTLE_EXPLORER_API_DEFAULT =
 export const LINEA_EXPLORER_API_DEFAULT = "https://api.etherscan.io/v2/api";
 export const BLAST_EXPLORER_API_DEFAULT = "https://api.etherscan.io/v2/api";
 export const BERACHAIN_EXPLORER_API_DEFAULT =
+  "https://api.etherscan.io/v2/api";
+export const CELO_EXPLORER_API_DEFAULT = "https://api.etherscan.io/v2/api";
+export const GNOSIS_EXPLORER_API_DEFAULT = "https://api.etherscan.io/v2/api";
+export const UNICHAIN_EXPLORER_API_DEFAULT =
+  "https://api.etherscan.io/v2/api";
+export const WORLDCHAIN_EXPLORER_API_DEFAULT =
   "https://api.etherscan.io/v2/api";
 export const BSC_DEPRECATED_V1_EXPLORER_API_URL =
   "https://api.bscscan.com/api";
@@ -86,6 +109,12 @@ export const LINEA_EXPLORER_CHAIN_ID_DEFAULT = LINEA_CHAIN_ID.toString();
 export const BLAST_EXPLORER_CHAIN_ID_DEFAULT = BLAST_CHAIN_ID.toString();
 export const BERACHAIN_EXPLORER_CHAIN_ID_DEFAULT =
   BERACHAIN_CHAIN_ID.toString();
+export const CELO_EXPLORER_CHAIN_ID_DEFAULT = CELO_CHAIN_ID.toString();
+export const GNOSIS_EXPLORER_CHAIN_ID_DEFAULT = GNOSIS_CHAIN_ID.toString();
+export const UNICHAIN_EXPLORER_CHAIN_ID_DEFAULT =
+  UNICHAIN_CHAIN_ID.toString();
+export const WORLDCHAIN_EXPLORER_CHAIN_ID_DEFAULT =
+  WORLDCHAIN_CHAIN_ID.toString();
 export const BSC_OSAKA_MAX_TRANSACTION_GAS = 16_777_216n;
 export const BSC_HIGH_GAS_WARNING_THRESHOLD = 1_000_000n;
 
@@ -99,7 +128,11 @@ export type SupportedChainKey =
   | "mantle"
   | "linea"
   | "blast"
-  | "berachain";
+  | "berachain"
+  | "celo"
+  | "gnosis"
+  | "unichain"
+  | "worldchain";
 
 function cleanEnv(value: string | undefined): string | undefined {
   const trimmed = value?.trim();
@@ -117,6 +150,10 @@ function cleanApiKey(value: string | undefined): string | undefined {
   if (cleaned === "PASTE_YOUR_LINEA_EXPLORER_KEY_HERE") return undefined;
   if (cleaned === "PASTE_YOUR_BLAST_EXPLORER_KEY_HERE") return undefined;
   if (cleaned === "PASTE_YOUR_BERACHAIN_EXPLORER_KEY_HERE") return undefined;
+  if (cleaned === "PASTE_YOUR_CELO_EXPLORER_KEY_HERE") return undefined;
+  if (cleaned === "PASTE_YOUR_GNOSIS_EXPLORER_KEY_HERE") return undefined;
+  if (cleaned === "PASTE_YOUR_UNICHAIN_EXPLORER_KEY_HERE") return undefined;
+  if (cleaned === "PASTE_YOUR_WORLDCHAIN_EXPLORER_KEY_HERE") return undefined;
   if (cleaned === "PASTE_YOUR_ETHERSCAN_V2_KEY_HERE") return undefined;
   if (cleaned === "your_bscscan_key") return undefined;
   if (cleaned === "your_polygonscan_key") return undefined;
@@ -126,6 +163,10 @@ function cleanApiKey(value: string | undefined): string | undefined {
   if (cleaned === "your_linea_explorer_key") return undefined;
   if (cleaned === "your_blast_explorer_key") return undefined;
   if (cleaned === "your_berachain_explorer_key") return undefined;
+  if (cleaned === "your_celo_explorer_key") return undefined;
+  if (cleaned === "your_gnosis_explorer_key") return undefined;
+  if (cleaned === "your_unichain_explorer_key") return undefined;
+  if (cleaned === "your_worldchain_explorer_key") return undefined;
   if (cleaned === "YOUR_ETHERSCAN_V2_KEY") return undefined;
   return cleaned;
 }
@@ -167,6 +208,10 @@ const blastRpcEnv = cleanEnv(process.env.NEXT_PUBLIC_BLAST_RPC_URL);
 const berachainRpcEnv = cleanEnv(
   process.env.NEXT_PUBLIC_BERACHAIN_RPC_URL,
 );
+const celoRpcEnv = cleanEnv(process.env.NEXT_PUBLIC_CELO_RPC_URL);
+const gnosisRpcEnv = cleanEnv(process.env.NEXT_PUBLIC_GNOSIS_RPC_URL);
+const unichainRpcEnv = cleanEnv(process.env.NEXT_PUBLIC_UNICHAIN_RPC_URL);
+const worldchainRpcEnv = cleanEnv(process.env.NEXT_PUBLIC_WORLDCHAIN_RPC_URL);
 const pulsechainExplorerApiEnv = cleanEnv(
   process.env.NEXT_PUBLIC_PULSECHAIN_EXPLORER_API,
 );
@@ -197,6 +242,18 @@ const blastExplorerApiEnv = cleanEnv(
 const berachainExplorerApiEnv = cleanEnv(
   process.env.NEXT_PUBLIC_BERACHAIN_EXPLORER_API_URL,
 );
+const celoExplorerApiEnv = cleanEnv(
+  process.env.NEXT_PUBLIC_CELO_EXPLORER_API_URL,
+);
+const gnosisExplorerApiEnv = cleanEnv(
+  process.env.NEXT_PUBLIC_GNOSIS_EXPLORER_API_URL,
+);
+const unichainExplorerApiEnv = cleanEnv(
+  process.env.NEXT_PUBLIC_UNICHAIN_EXPLORER_API_URL,
+);
+const worldchainExplorerApiEnv = cleanEnv(
+  process.env.NEXT_PUBLIC_WORLDCHAIN_EXPLORER_API_URL,
+);
 const bscExplorerChainIdEnv = cleanEnv(
   process.env.NEXT_PUBLIC_BSC_EXPLORER_CHAIN_ID,
 );
@@ -223,6 +280,18 @@ const blastExplorerChainIdEnv = cleanEnv(
 );
 const berachainExplorerChainIdEnv = cleanEnv(
   process.env.NEXT_PUBLIC_BERACHAIN_EXPLORER_CHAIN_ID,
+);
+const celoExplorerChainIdEnv = cleanEnv(
+  process.env.NEXT_PUBLIC_CELO_EXPLORER_CHAIN_ID,
+);
+const gnosisExplorerChainIdEnv = cleanEnv(
+  process.env.NEXT_PUBLIC_GNOSIS_EXPLORER_CHAIN_ID,
+);
+const unichainExplorerChainIdEnv = cleanEnv(
+  process.env.NEXT_PUBLIC_UNICHAIN_EXPLORER_CHAIN_ID,
+);
+const worldchainExplorerChainIdEnv = cleanEnv(
+  process.env.NEXT_PUBLIC_WORLDCHAIN_EXPLORER_CHAIN_ID,
 );
 const bscPreferredApiKeyEnv = cleanApiKey(
   process.env.NEXT_PUBLIC_BSC_EXPLORER_API_KEY,
@@ -284,6 +353,22 @@ const berachainExplorerChainId =
   berachainExplorerChainIdEnv === BERACHAIN_EXPLORER_CHAIN_ID_DEFAULT
     ? berachainExplorerChainIdEnv
     : BERACHAIN_EXPLORER_CHAIN_ID_DEFAULT;
+const celoExplorerChainId =
+  celoExplorerChainIdEnv === CELO_EXPLORER_CHAIN_ID_DEFAULT
+    ? celoExplorerChainIdEnv
+    : CELO_EXPLORER_CHAIN_ID_DEFAULT;
+const gnosisExplorerChainId =
+  gnosisExplorerChainIdEnv === GNOSIS_EXPLORER_CHAIN_ID_DEFAULT
+    ? gnosisExplorerChainIdEnv
+    : GNOSIS_EXPLORER_CHAIN_ID_DEFAULT;
+const unichainExplorerChainId =
+  unichainExplorerChainIdEnv === UNICHAIN_EXPLORER_CHAIN_ID_DEFAULT
+    ? unichainExplorerChainIdEnv
+    : UNICHAIN_EXPLORER_CHAIN_ID_DEFAULT;
+const worldchainExplorerChainId =
+  worldchainExplorerChainIdEnv === WORLDCHAIN_EXPLORER_CHAIN_ID_DEFAULT
+    ? worldchainExplorerChainIdEnv
+    : WORLDCHAIN_EXPLORER_CHAIN_ID_DEFAULT;
 const bscExplorerApiKeyEnv = bscPreferredApiKeyEnv ?? bscScanApiKeyEnv;
 const bscDiscoveryWarnings = [
   bscDeprecatedV1ApiConfigured
@@ -349,6 +434,30 @@ const berachainDiscoveryWarnings = [
   berachainExplorerChainIdEnv &&
   berachainExplorerChainIdEnv !== BERACHAIN_EXPLORER_CHAIN_ID_DEFAULT
     ? `NEXT_PUBLIC_BERACHAIN_EXPLORER_CHAIN_ID must be ${BERACHAIN_EXPLORER_CHAIN_ID_DEFAULT} for Berachain Mainnet. The app is using chainid=${BERACHAIN_EXPLORER_CHAIN_ID_DEFAULT}.`
+    : null,
+].filter((warning): warning is string => Boolean(warning));
+const celoDiscoveryWarnings = [
+  celoExplorerChainIdEnv &&
+  celoExplorerChainIdEnv !== CELO_EXPLORER_CHAIN_ID_DEFAULT
+    ? `NEXT_PUBLIC_CELO_EXPLORER_CHAIN_ID must be ${CELO_EXPLORER_CHAIN_ID_DEFAULT} for Celo Mainnet. The app is using chainid=${CELO_EXPLORER_CHAIN_ID_DEFAULT}.`
+    : null,
+].filter((warning): warning is string => Boolean(warning));
+const gnosisDiscoveryWarnings = [
+  gnosisExplorerChainIdEnv &&
+  gnosisExplorerChainIdEnv !== GNOSIS_EXPLORER_CHAIN_ID_DEFAULT
+    ? `NEXT_PUBLIC_GNOSIS_EXPLORER_CHAIN_ID must be ${GNOSIS_EXPLORER_CHAIN_ID_DEFAULT} for Gnosis. The app is using chainid=${GNOSIS_EXPLORER_CHAIN_ID_DEFAULT}.`
+    : null,
+].filter((warning): warning is string => Boolean(warning));
+const unichainDiscoveryWarnings = [
+  unichainExplorerChainIdEnv &&
+  unichainExplorerChainIdEnv !== UNICHAIN_EXPLORER_CHAIN_ID_DEFAULT
+    ? `NEXT_PUBLIC_UNICHAIN_EXPLORER_CHAIN_ID must be ${UNICHAIN_EXPLORER_CHAIN_ID_DEFAULT} for Unichain Mainnet. The app is using chainid=${UNICHAIN_EXPLORER_CHAIN_ID_DEFAULT}.`
+    : null,
+].filter((warning): warning is string => Boolean(warning));
+const worldchainDiscoveryWarnings = [
+  worldchainExplorerChainIdEnv &&
+  worldchainExplorerChainIdEnv !== WORLDCHAIN_EXPLORER_CHAIN_ID_DEFAULT
+    ? `NEXT_PUBLIC_WORLDCHAIN_EXPLORER_CHAIN_ID must be ${WORLDCHAIN_EXPLORER_CHAIN_ID_DEFAULT} for World Chain. The app is using chainid=${WORLDCHAIN_EXPLORER_CHAIN_ID_DEFAULT}.`
     : null,
 ].filter((warning): warning is string => Boolean(warning));
 
@@ -622,6 +731,114 @@ export const berachain = defineChain({
   testnet: false,
 });
 
+export const celo = defineChain({
+  id: CELO_CHAIN_ID,
+  name: "Celo",
+  nativeCurrency: {
+    name: "CELO",
+    symbol: "CELO",
+    decimals: 18,
+  },
+  rpcUrls: {
+    default: {
+      http: [celoRpcEnv ?? CELO_RPC_DEFAULT],
+    },
+  },
+  blockExplorers: {
+    default: {
+      name: "CeloScan",
+      url: CELO_EXPLORER_BASE_URL,
+    },
+  },
+  contracts: {
+    multicall3: {
+      address: "0xcA11bde05977b3631167028862bE2a173976CA11",
+    },
+  },
+  testnet: false,
+});
+
+export const gnosis = defineChain({
+  id: GNOSIS_CHAIN_ID,
+  name: "Gnosis",
+  nativeCurrency: {
+    name: "xDAI",
+    symbol: "XDAI",
+    decimals: 18,
+  },
+  rpcUrls: {
+    default: {
+      http: [gnosisRpcEnv ?? GNOSIS_RPC_DEFAULT],
+    },
+  },
+  blockExplorers: {
+    default: {
+      name: "Gnosisscan",
+      url: GNOSIS_EXPLORER_BASE_URL,
+    },
+  },
+  contracts: {
+    multicall3: {
+      address: "0xcA11bde05977b3631167028862bE2a173976CA11",
+    },
+  },
+  testnet: false,
+});
+
+export const unichain = defineChain({
+  id: UNICHAIN_CHAIN_ID,
+  name: "Unichain",
+  nativeCurrency: {
+    name: "Ether",
+    symbol: "ETH",
+    decimals: 18,
+  },
+  rpcUrls: {
+    default: {
+      http: [unichainRpcEnv ?? UNICHAIN_RPC_DEFAULT],
+    },
+  },
+  blockExplorers: {
+    default: {
+      name: "Uniscan",
+      url: UNICHAIN_EXPLORER_BASE_URL,
+    },
+  },
+  contracts: {
+    multicall3: {
+      address: "0xcA11bde05977b3631167028862bE2a173976CA11",
+    },
+  },
+  testnet: false,
+});
+
+export const worldchain = defineChain({
+  id: WORLDCHAIN_CHAIN_ID,
+  name: "World Chain",
+  nativeCurrency: {
+    name: "Ether",
+    symbol: "ETH",
+    decimals: 18,
+  },
+  rpcUrls: {
+    default: {
+      http: [worldchainRpcEnv ?? WORLDCHAIN_RPC_DEFAULT],
+    },
+  },
+  blockExplorers: {
+    default: {
+      name: "Worldscan",
+      url: WORLDCHAIN_EXPLORER_BASE_URL,
+    },
+  },
+  contracts: {
+    multicall3: {
+      address: "0xcA11bde05977b3631167028862bE2a173976CA11",
+    },
+  },
+  testnet: false,
+});
+
 export interface DiscoverySourceConfig {
   /** Short machine-friendly identifier surfaced in dev/debug views. */
   id: string;
@@ -848,6 +1065,26 @@ const berachainRpc = buildRpcConfig(
   "NEXT_PUBLIC_BERACHAIN_RPC_URL",
   BERACHAIN_RPC_DEFAULT,
   berachainRpcEnv,
+);
+const celoRpc = buildRpcConfig(
+  "NEXT_PUBLIC_CELO_RPC_URL",
+  CELO_RPC_DEFAULT,
+  celoRpcEnv,
+);
+const gnosisRpc = buildRpcConfig(
+  "NEXT_PUBLIC_GNOSIS_RPC_URL",
+  GNOSIS_RPC_DEFAULT,
+  gnosisRpcEnv,
+);
+const unichainRpc = buildRpcConfig(
+  "NEXT_PUBLIC_UNICHAIN_RPC_URL",
+  UNICHAIN_RPC_DEFAULT,
+  unichainRpcEnv,
+);
+const worldchainRpc = buildRpcConfig(
+  "NEXT_PUBLIC_WORLDCHAIN_RPC_URL",
+  WORLDCHAIN_RPC_DEFAULT,
+  worldchainRpcEnv,
 );
 
 const pulsechainDiscovery = buildDiscoveryConfig({
@@ -1087,6 +1324,102 @@ const berachainDiscovery = buildDiscoveryConfig({
   missingApiKeyMessage:
     "Berachain historical discovery uses Etherscan API V2. Hosted web deployments should use BERACHAIN_EXPLORER_API_KEY or ETHERSCAN_API_KEY server-side; do not expose explorer keys through NEXT_PUBLIC variables.",
   warnings: berachainDiscoveryWarnings,
+});
+
+const celoDiscovery = buildDiscoveryConfig({
+  id: "etherscan-v2-celo",
+  name: "Etherscan API V2 (Celo logs)",
+  apiProviderKind: "etherscan-v2",
+  apiProviderName: "Etherscan API V2",
+  url: CELO_EXPLORER_BASE_URL,
+  apiUrlEnvVar: "NEXT_PUBLIC_CELO_EXPLORER_API_URL",
+  apiUrlDefault: CELO_EXPLORER_API_DEFAULT,
+  apiChainId: celoExplorerChainId,
+  apiChainIdEnvVar: "NEXT_PUBLIC_CELO_EXPLORER_CHAIN_ID",
+  apiKeyEnvVar: "CELO_EXPLORER_API_KEY / ETHERSCAN_API_KEY",
+  apiKeyEnvVars: ["CELO_EXPLORER_API_KEY", "ETHERSCAN_API_KEY"],
+  apiUrlEnv: celoExplorerApiEnv,
+  requiresApiKey: true,
+  queryParams: {
+    chainid: celoExplorerChainId,
+  },
+  limitations:
+    "Etherscan API V2 can rate-limit, cap responses, or require smaller block windows for Celo logs.",
+  missingApiKeyMessage:
+    "Celo historical discovery uses Etherscan API V2. Hosted web deployments should use CELO_EXPLORER_API_KEY or ETHERSCAN_API_KEY server-side; do not expose explorer keys through NEXT_PUBLIC variables.",
+  warnings: celoDiscoveryWarnings,
+});
+
+const gnosisDiscovery = buildDiscoveryConfig({
+  id: "etherscan-v2-gnosis",
+  name: "Etherscan API V2 (Gnosis logs)",
+  apiProviderKind: "etherscan-v2",
+  apiProviderName: "Etherscan API V2",
+  url: GNOSIS_EXPLORER_BASE_URL,
+  apiUrlEnvVar: "NEXT_PUBLIC_GNOSIS_EXPLORER_API_URL",
+  apiUrlDefault: GNOSIS_EXPLORER_API_DEFAULT,
+  apiChainId: gnosisExplorerChainId,
+  apiChainIdEnvVar: "NEXT_PUBLIC_GNOSIS_EXPLORER_CHAIN_ID",
+  apiKeyEnvVar: "GNOSIS_EXPLORER_API_KEY / ETHERSCAN_API_KEY",
+  apiKeyEnvVars: ["GNOSIS_EXPLORER_API_KEY", "ETHERSCAN_API_KEY"],
+  apiUrlEnv: gnosisExplorerApiEnv,
+  requiresApiKey: true,
+  queryParams: {
+    chainid: gnosisExplorerChainId,
+  },
+  limitations:
+    "Etherscan API V2 can rate-limit, cap responses, or require smaller block windows for Gnosis logs.",
+  missingApiKeyMessage:
+    "Gnosis historical discovery uses Etherscan API V2. Hosted web deployments should use GNOSIS_EXPLORER_API_KEY or ETHERSCAN_API_KEY server-side; do not expose explorer keys through NEXT_PUBLIC variables.",
+  warnings: gnosisDiscoveryWarnings,
+});
+
+const unichainDiscovery = buildDiscoveryConfig({
+  id: "etherscan-v2-unichain",
+  name: "Etherscan API V2 (Unichain logs)",
+  apiProviderKind: "etherscan-v2",
+  apiProviderName: "Etherscan API V2",
+  url: UNICHAIN_EXPLORER_BASE_URL,
+  apiUrlEnvVar: "NEXT_PUBLIC_UNICHAIN_EXPLORER_API_URL",
+  apiUrlDefault: UNICHAIN_EXPLORER_API_DEFAULT,
+  apiChainId: unichainExplorerChainId,
+  apiChainIdEnvVar: "NEXT_PUBLIC_UNICHAIN_EXPLORER_CHAIN_ID",
+  apiKeyEnvVar: "UNICHAIN_EXPLORER_API_KEY / ETHERSCAN_API_KEY",
+  apiKeyEnvVars: ["UNICHAIN_EXPLORER_API_KEY", "ETHERSCAN_API_KEY"],
+  apiUrlEnv: unichainExplorerApiEnv,
+  requiresApiKey: true,
+  queryParams: {
+    chainid: unichainExplorerChainId,
+  },
+  limitations:
+    "Etherscan API V2 can rate-limit, cap responses, or require smaller block windows for Unichain logs.",
+  missingApiKeyMessage:
+    "Unichain historical discovery uses Etherscan API V2. Hosted web deployments should use UNICHAIN_EXPLORER_API_KEY or ETHERSCAN_API_KEY server-side; do not expose explorer keys through NEXT_PUBLIC variables.",
+  warnings: unichainDiscoveryWarnings,
+});
+
+const worldchainDiscovery = buildDiscoveryConfig({
+  id: "etherscan-v2-worldchain",
+  name: "Etherscan API V2 (World Chain logs)",
+  apiProviderKind: "etherscan-v2",
+  apiProviderName: "Etherscan API V2",
+  url: WORLDCHAIN_EXPLORER_BASE_URL,
+  apiUrlEnvVar: "NEXT_PUBLIC_WORLDCHAIN_EXPLORER_API_URL",
+  apiUrlDefault: WORLDCHAIN_EXPLORER_API_DEFAULT,
+  apiChainId: worldchainExplorerChainId,
+  apiChainIdEnvVar: "NEXT_PUBLIC_WORLDCHAIN_EXPLORER_CHAIN_ID",
+  apiKeyEnvVar: "WORLDCHAIN_EXPLORER_API_KEY / ETHERSCAN_API_KEY",
+  apiKeyEnvVars: ["WORLDCHAIN_EXPLORER_API_KEY", "ETHERSCAN_API_KEY"],
+  apiUrlEnv: worldchainExplorerApiEnv,
+  requiresApiKey: true,
+  queryParams: {
+    chainid: worldchainExplorerChainId,
+  },
+  limitations:
+    "Etherscan API V2 can rate-limit, cap responses, or require smaller block windows for World Chain logs.",
+  missingApiKeyMessage:
+    "World Chain historical discovery uses Etherscan API V2. Hosted web deployments should use WORLDCHAIN_EXPLORER_API_KEY or ETHERSCAN_API_KEY server-side; do not expose explorer keys through NEXT_PUBLIC variables.",
+  warnings: worldchainDiscoveryWarnings,
 });
 
 export const supportedChainConfigs = {
@@ -1441,6 +1774,146 @@ export const supportedChainConfigs = {
       nftOperator: "ERC-721/ERC-1155",
     },
   },
+  [CELO_CHAIN_ID]: {
+    key: "celo",
+    chain: celo,
+    chainId: CELO_CHAIN_ID,
+    displayName: "Celo",
+    shortName: "Celo",
+    nativeSymbol: "CELO",
+    rpc: celoRpc,
+    explorer: {
+      name: "CeloScan",
+      baseUrl: CELO_EXPLORER_BASE_URL,
+      apiUrl: celoDiscovery.apiUrl,
+      apiUrlEnvVar: celoDiscovery.apiUrlEnvVar,
+      apiKeyEnvVar: celoDiscovery.apiKeyEnvVar,
+      urls: explorerUrls(CELO_EXPLORER_BASE_URL),
+    },
+    discovery: celoDiscovery,
+    discoverySettings: {
+      sourceKind: "explorer-logs",
+      providerName: "Etherscan API V2",
+      approvalEventTopicMode: "topic0-topic1-owner",
+      defaultFromBlock: "0",
+      defaultToBlock: "latest",
+      pageSize: 1000,
+      historicalRpcLogs: "disabled",
+      capWarning:
+        "Etherscan API V2 may rate-limit, cap pages, or require smaller windows for Celo logs; incomplete discovery is surfaced to the user.",
+    },
+    standardLabels: {
+      fungible: "ERC-20",
+      nft: "ERC-721",
+      multiToken: "ERC-1155",
+      nftOperator: "ERC-721/ERC-1155",
+    },
+  },
+  [GNOSIS_CHAIN_ID]: {
+    key: "gnosis",
+    chain: gnosis,
+    chainId: GNOSIS_CHAIN_ID,
+    displayName: "Gnosis",
+    shortName: "Gnosis",
+    nativeSymbol: "XDAI",
+    rpc: gnosisRpc,
+    explorer: {
+      name: "Gnosisscan",
+      baseUrl: GNOSIS_EXPLORER_BASE_URL,
+      apiUrl: gnosisDiscovery.apiUrl,
+      apiUrlEnvVar: gnosisDiscovery.apiUrlEnvVar,
+      apiKeyEnvVar: gnosisDiscovery.apiKeyEnvVar,
+      urls: explorerUrls(GNOSIS_EXPLORER_BASE_URL),
+    },
+    discovery: gnosisDiscovery,
+    discoverySettings: {
+      sourceKind: "explorer-logs",
+      providerName: "Etherscan API V2",
+      approvalEventTopicMode: "topic0-topic1-owner",
+      defaultFromBlock: "0",
+      defaultToBlock: "latest",
+      pageSize: 1000,
+      historicalRpcLogs: "disabled",
+      capWarning:
+        "Etherscan API V2 may rate-limit, cap pages, or require smaller windows for Gnosis logs; incomplete discovery is surfaced to the user.",
+    },
+    standardLabels: {
+      fungible: "ERC-20",
+      nft: "ERC-721",
+      multiToken: "ERC-1155",
+      nftOperator: "ERC-721/ERC-1155",
+    },
+  },
+  [UNICHAIN_CHAIN_ID]: {
+    key: "unichain",
+    chain: unichain,
+    chainId: UNICHAIN_CHAIN_ID,
+    displayName: "Unichain",
+    shortName: "Unichain",
+    nativeSymbol: "ETH",
+    rpc: unichainRpc,
+    explorer: {
+      name: "Uniscan",
+      baseUrl: UNICHAIN_EXPLORER_BASE_URL,
+      apiUrl: unichainDiscovery.apiUrl,
+      apiUrlEnvVar: unichainDiscovery.apiUrlEnvVar,
+      apiKeyEnvVar: unichainDiscovery.apiKeyEnvVar,
+      urls: explorerUrls(UNICHAIN_EXPLORER_BASE_URL),
+    },
+    discovery: unichainDiscovery,
+    discoverySettings: {
+      sourceKind: "explorer-logs",
+      providerName: "Etherscan API V2",
+      approvalEventTopicMode: "topic0-topic1-owner",
+      defaultFromBlock: "0",
+      defaultToBlock: "latest",
+      pageSize: 1000,
+      historicalRpcLogs: "disabled",
+      capWarning:
+        "Etherscan API V2 may rate-limit, cap pages, or require smaller windows for Unichain logs; incomplete discovery is surfaced to the user.",
+    },
+    standardLabels: {
+      fungible: "ERC-20",
+      nft: "ERC-721",
+      multiToken: "ERC-1155",
+      nftOperator: "ERC-721/ERC-1155",
+    },
+  },
+  [WORLDCHAIN_CHAIN_ID]: {
+    key: "worldchain",
+    chain: worldchain,
+    chainId: WORLDCHAIN_CHAIN_ID,
+    displayName: "World Chain",
+    shortName: "World",
+    nativeSymbol: "ETH",
+    rpc: worldchainRpc,
+    explorer: {
+      name: "Worldscan",
+      baseUrl: WORLDCHAIN_EXPLORER_BASE_URL,
+      apiUrl: worldchainDiscovery.apiUrl,
+      apiUrlEnvVar: worldchainDiscovery.apiUrlEnvVar,
+      apiKeyEnvVar: worldchainDiscovery.apiKeyEnvVar,
+      urls: explorerUrls(WORLDCHAIN_EXPLORER_BASE_URL),
+    },
+    discovery: worldchainDiscovery,
+    discoverySettings: {
+      sourceKind: "explorer-logs",
+      providerName: "Etherscan API V2",
+      approvalEventTopicMode: "topic0-topic1-owner",
+      defaultFromBlock: "0",
+      defaultToBlock: "latest",
+      pageSize: 1000,
+      historicalRpcLogs: "disabled",
+      capWarning:
+        "Etherscan API V2 may rate-limit, cap pages, or require smaller windows for World Chain logs; incomplete discovery is surfaced to the user.",
+    },
+    standardLabels: {
+      fungible: "ERC-20",
+      nft: "ERC-721",
+      multiToken: "ERC-1155",
+      nftOperator: "ERC-721/ERC-1155",
+    },
+  },
 } as const satisfies Record<number, SupportedChainConfig>;
 
 export const supportedChains = [
@@ -1454,6 +1927,10 @@ export const supportedChains = [
   linea,
   blast,
   berachain,
+  celo,
+  gnosis,
+  unichain,
+  worldchain,
 ] as const;
 
 export function isSupportedChainId(
@@ -1482,6 +1959,10 @@ export const supportedChainConfigList = [
   supportedChainConfigs[LINEA_CHAIN_ID],
   supportedChainConfigs[BLAST_CHAIN_ID],
   supportedChainConfigs[BERACHAIN_CHAIN_ID],
+  supportedChainConfigs[CELO_CHAIN_ID],
+  supportedChainConfigs[GNOSIS_CHAIN_ID],
+  supportedChainConfigs[UNICHAIN_CHAIN_ID],
+  supportedChainConfigs[WORLDCHAIN_CHAIN_ID],
 ] as const;
 
 function joinNames(names: readonly string[]): string {

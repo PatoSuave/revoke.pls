@@ -7,11 +7,15 @@ import {
   BERACHAIN_CHAIN_ID,
   BLAST_CHAIN_ID,
   BSC_CHAIN_ID,
+  CELO_CHAIN_ID,
+  GNOSIS_CHAIN_ID,
   LINEA_CHAIN_ID,
   MANTLE_CHAIN_ID,
   POLYGON_CHAIN_ID,
   PULSECHAIN_CHAIN_ID,
   SONIC_CHAIN_ID,
+  UNICHAIN_CHAIN_ID,
+  WORLDCHAIN_CHAIN_ID,
   supportedChainConfigList,
 } from "@/lib/chains";
 import { ETHEREUM_MAINNET_CLIENT_CHAIN_ID } from "@/lib/ethereum-approval-client";
@@ -66,6 +70,10 @@ describe("wallet header network status", () => {
         LINEA_CHAIN_ID,
         BLAST_CHAIN_ID,
         BERACHAIN_CHAIN_ID,
+        CELO_CHAIN_ID,
+        GNOSIS_CHAIN_ID,
+        UNICHAIN_CHAIN_ID,
+        WORLDCHAIN_CHAIN_ID,
         ETHEREUM_MAINNET_CLIENT_CHAIN_ID,
         ARBITRUM_ONE_CLIENT_CHAIN_ID,
         OPTIMISM_CLIENT_CHAIN_ID,
@@ -133,6 +141,10 @@ describe("wallet header network status", () => {
         LINEA_CHAIN_ID,
         BLAST_CHAIN_ID,
         BERACHAIN_CHAIN_ID,
+        CELO_CHAIN_ID,
+        GNOSIS_CHAIN_ID,
+        UNICHAIN_CHAIN_ID,
+        WORLDCHAIN_CHAIN_ID,
       ].map((chainId) =>
         resolveHeaderNetworkStatus({
           walletChainId: chainId,
@@ -150,6 +162,10 @@ describe("wallet header network status", () => {
       expect.objectContaining({ kind: "supported", label: "Linea" }),
       expect.objectContaining({ kind: "supported", label: "Blast" }),
       expect.objectContaining({ kind: "supported", label: "Berachain" }),
+      expect.objectContaining({ kind: "supported", label: "Celo" }),
+      expect.objectContaining({ kind: "supported", label: "Gnosis" }),
+      expect.objectContaining({ kind: "supported", label: "Unichain" }),
+      expect.objectContaining({ kind: "supported", label: "World Chain" }),
     ]);
   });
 
@@ -165,6 +181,10 @@ describe("wallet header network status", () => {
       LINEA_CHAIN_ID,
       BLAST_CHAIN_ID,
       BERACHAIN_CHAIN_ID,
+      CELO_CHAIN_ID,
+      GNOSIS_CHAIN_ID,
+      UNICHAIN_CHAIN_ID,
+      WORLDCHAIN_CHAIN_ID,
     ]);
     expect(supportedChainConfigList.map((chain) => chain.chainId)).not.toContain(
       ARBITRUM_ONE_CLIENT_CHAIN_ID,

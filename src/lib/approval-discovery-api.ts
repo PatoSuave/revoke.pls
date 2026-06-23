@@ -6,10 +6,14 @@ import {
   BERACHAIN_CHAIN_ID,
   BLAST_CHAIN_ID,
   BSC_CHAIN_ID,
+  CELO_CHAIN_ID,
+  GNOSIS_CHAIN_ID,
   LINEA_CHAIN_ID,
   MANTLE_CHAIN_ID,
   POLYGON_CHAIN_ID,
   SONIC_CHAIN_ID,
+  UNICHAIN_CHAIN_ID,
+  WORLDCHAIN_CHAIN_ID,
 } from "@/lib/chains";
 import type {
   DiscoveredPair,
@@ -111,7 +115,11 @@ export type ServerApprovalDiscoveryChainId =
   | typeof MANTLE_CHAIN_ID
   | typeof LINEA_CHAIN_ID
   | typeof BLAST_CHAIN_ID
-  | typeof BERACHAIN_CHAIN_ID;
+  | typeof BERACHAIN_CHAIN_ID
+  | typeof CELO_CHAIN_ID
+  | typeof GNOSIS_CHAIN_ID
+  | typeof UNICHAIN_CHAIN_ID
+  | typeof WORLDCHAIN_CHAIN_ID;
 
 export function usesServerApprovalDiscovery(
   chainId: number | undefined,
@@ -126,7 +134,11 @@ export function usesServerApprovalDiscovery(
     chainId === MANTLE_CHAIN_ID ||
     chainId === LINEA_CHAIN_ID ||
     chainId === BLAST_CHAIN_ID ||
-    chainId === BERACHAIN_CHAIN_ID
+    chainId === BERACHAIN_CHAIN_ID ||
+    chainId === CELO_CHAIN_ID ||
+    chainId === GNOSIS_CHAIN_ID ||
+    chainId === UNICHAIN_CHAIN_ID ||
+    chainId === WORLDCHAIN_CHAIN_ID
   );
 }
 

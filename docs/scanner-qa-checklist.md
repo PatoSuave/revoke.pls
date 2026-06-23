@@ -2,7 +2,7 @@
 
 Use this checklist to verify that Pulse Revoke reads approval state correctly on
 PulseChain, BSC, Base, Polygon, Sonic Mainnet, Avalanche, Mantle, Linea, Blast,
-Berachain, Ethereum, Arbitrum One
+Berachain, Celo, Gnosis, Unichain, World Chain, Ethereum, Arbitrum One
 verified-row revoke, Optimism verified-row revoke, and HyperEVM verified-row
 revoke.
 Keep all testing low-risk and manual.
@@ -44,6 +44,10 @@ Run the scanner flow on all supported chains:
 - Linea, chain ID `59144`, gas token `ETH`.
 - Blast, chain ID `81457`, gas token `ETH`.
 - Berachain, chain ID `80094`, gas token `BERA`.
+- Celo, chain ID `42220`, gas token `CELO`.
+- Gnosis, chain ID `100`, gas token `XDAI`.
+- Unichain, chain ID `130`, gas token `ETH`.
+- World Chain, chain ID `480`, gas token `ETH`.
 - Ethereum Mainnet, chain ID `1`, gas token `ETH`.
 - Arbitrum One, chain ID `42161`, gas token `ETH`, ERC-20/NFT verified-row
   lane.
@@ -69,6 +73,10 @@ For each chain, confirm diagnostics show:
 - Linea API chain ID `59144` when testing Linea.
 - Blast API chain ID `81457` when testing Blast.
 - Berachain API chain ID `80094` when testing Berachain.
+- Celo API chain ID `42220` when testing Celo.
+- Gnosis API chain ID `100` when testing Gnosis.
+- Unichain API chain ID `130` when testing Unichain.
+- World Chain API chain ID `480` when testing World Chain.
 - Arbitrum API chain ID `42161` when testing Arbitrum One.
 - Optimism API chain ID `10` when testing OP Mainnet.
 - HyperEVM API chain ID `999` when testing HyperEVM.
@@ -251,6 +259,23 @@ For each chain, confirm diagnostics show:
 - Rate limits, malformed responses, missing API keys, and capped responses are
   shown as incomplete/error states, not as "clear".
 
+## Celo, Gnosis, Unichain, And World Chain Discovery Checks
+
+- `CELO_EXPLORER_API_URL`, `GNOSIS_EXPLORER_API_URL`,
+  `UNICHAIN_EXPLORER_API_URL`, and `WORLDCHAIN_EXPLORER_API_URL` are either
+  unset or point to compatible Etherscan API V2 endpoints. The default is
+  `https://api.etherscan.io/v2/api`.
+- Explorer chain IDs are unset or set to `42220`, `100`, `130`, and `480`.
+- Chain-specific explorer keys or `ETHERSCAN_API_KEY` are set server-side.
+- No Celo, Gnosis, Unichain, or World Chain explorer key is exposed through a
+  `NEXT_PUBLIC_` variable.
+- These chains scan through `/api/discovery/approvals` with Etherscan API V2
+  logs and the expected `chainid`.
+- The app does not rely on public RPC `eth_getLogs` for historical approval
+  discovery.
+- Rate limits, malformed responses, missing API keys, and capped responses are
+  shown as incomplete/error states, not as "clear".
+
 ## Arbitrum Verified-Row Checks
 
 - `ARBITRUM_ONE_RPC_URL` or `ARBITRUM_RPC_URL` is set server-side for
@@ -327,8 +352,9 @@ For each chain, confirm diagnostics show:
 14. Rescan after the transaction confirms.
 15. Confirm the approval disappears or diagnostics show no nonzero allowance.
 16. Verify directly on PulseScan, BscScan, BaseScan, PolygonScan, SonicScan,
-    SnowScan, Mantle Explorer, LineaScan, Blastscan, Berascan, Etherscan,
-    Arbiscan, or Optimistic Etherscan if results disagree.
+    SnowScan, Mantle Explorer, LineaScan, Blastscan, Berascan, CeloScan,
+    Gnosisscan, Uniscan, Worldscan, Etherscan, Arbiscan, or Optimistic
+    Etherscan if results disagree.
 
 ## NFT Approval Test
 
@@ -373,6 +399,13 @@ For per-token approvals:
 - Single Sonic revoke confirm panel says Sonic Mainnet and S.
 - Single Avalanche revoke confirm panel says Avalanche and AVAX.
 - Single Mantle revoke confirm panel says Mantle and MNT.
+- Single Linea revoke confirm panel says Linea and ETH.
+- Single Blast revoke confirm panel says Blast and ETH.
+- Single Berachain revoke confirm panel says Berachain and BERA.
+- Single Celo revoke confirm panel says Celo and CELO.
+- Single Gnosis revoke confirm panel says Gnosis and XDAI.
+- Single Unichain revoke confirm panel says Unichain and ETH.
+- Single World Chain revoke confirm panel says World Chain and ETH.
 - Permit2 revoke confirm panel clearly identifies a Permit2 delegated allowance
   and clears it through the Permit2 contract.
 - Arbitrum One shows a revoke confirm panel only for live-verified ERC-20 and
@@ -387,6 +420,13 @@ For per-token approvals:
 - Sonic transaction links open SonicScan.
 - Avalanche transaction links open SnowScan.
 - Mantle transaction links open Mantle Explorer.
+- Linea transaction links open LineaScan.
+- Blast transaction links open Blastscan.
+- Berachain transaction links open Berascan.
+- Celo transaction links open CeloScan.
+- Gnosis transaction links open Gnosisscan.
+- Unichain transaction links open Uniscan.
+- World Chain transaction links open Worldscan.
 - Arbitrum address and token links open Arbiscan.
 - Optimism address and token links open Optimistic Etherscan.
 - Batch revoke submits one transaction at a time.
@@ -398,8 +438,9 @@ For per-token approvals:
 
 - Connect to an unsupported chain.
 - Confirm the app lists PulseChain, BSC, Base, Polygon, Sonic Mainnet,
-  Avalanche, Mantle, Linea, Blast, Berachain, Ethereum, Arbitrum, Optimism,
-  and HyperEVM with the correct scan/revoke statuses.
+  Avalanche, Mantle, Linea, Blast, Berachain, Celo, Gnosis, Unichain, World
+  Chain, Ethereum, Arbitrum, Optimism, and HyperEVM with the correct
+  scan/revoke statuses.
 - Confirm no scan starts.
 - Confirm no revoke action is available.
 - Confirm stale approvals from a previous chain are not shown as current.
@@ -412,5 +453,5 @@ For per-token approvals:
 - Wallet with historical approvals that validate to zero shows a clear state.
 - Failed live reads show verification incomplete, not clear.
 - Etherscan API V2 rate limits, the BscScan V1 deprecation error, or a missing
-  BSC/Base/Polygon/Sonic/Avalanche/Mantle/Linea/Blast/Berachain API key show
-  an actionable error.
+  BSC/Base/Polygon/Sonic/Avalanche/Mantle/Linea/Blast/Berachain/Celo/Gnosis/
+  Unichain/World Chain API key show an actionable error.

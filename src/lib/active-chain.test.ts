@@ -6,11 +6,15 @@ import {
   BERACHAIN_CHAIN_ID,
   BLAST_CHAIN_ID,
   BSC_CHAIN_ID,
+  CELO_CHAIN_ID,
+  GNOSIS_CHAIN_ID,
   LINEA_CHAIN_ID,
   MANTLE_CHAIN_ID,
   POLYGON_CHAIN_ID,
   PULSECHAIN_CHAIN_ID,
   SONIC_CHAIN_ID,
+  UNICHAIN_CHAIN_ID,
+  WORLDCHAIN_CHAIN_ID,
   getSupportedChainShortNames,
   isSupportedChainId,
 } from "@/lib/chains";
@@ -69,7 +73,7 @@ describe("active chain resolution", () => {
     expect(result.walletMatchesActiveChain).toBe(true);
   });
 
-  it("resolves connected Sonic, Avalanche, Mantle, Linea, Blast, and Berachain wallets without falling back to PulseChain", () => {
+  it("resolves connected generic EVM wallets without falling back to PulseChain", () => {
     const sonicResult = resolveActiveChain({
       isConnected: true,
       walletChainId: SONIC_CHAIN_ID,
@@ -100,6 +104,26 @@ describe("active chain resolution", () => {
       walletChainId: BERACHAIN_CHAIN_ID,
       wagmiChainId: PULSECHAIN_CHAIN_ID,
     });
+    const celoResult = resolveActiveChain({
+      isConnected: true,
+      walletChainId: CELO_CHAIN_ID,
+      wagmiChainId: PULSECHAIN_CHAIN_ID,
+    });
+    const gnosisResult = resolveActiveChain({
+      isConnected: true,
+      walletChainId: GNOSIS_CHAIN_ID,
+      wagmiChainId: PULSECHAIN_CHAIN_ID,
+    });
+    const unichainResult = resolveActiveChain({
+      isConnected: true,
+      walletChainId: UNICHAIN_CHAIN_ID,
+      wagmiChainId: PULSECHAIN_CHAIN_ID,
+    });
+    const worldchainResult = resolveActiveChain({
+      isConnected: true,
+      walletChainId: WORLDCHAIN_CHAIN_ID,
+      wagmiChainId: PULSECHAIN_CHAIN_ID,
+    });
 
     expect(sonicResult.status).toBe("supported");
     expect(sonicResult.activeChainId).toBe(SONIC_CHAIN_ID);
@@ -121,6 +145,18 @@ describe("active chain resolution", () => {
     expect(berachainResult.status).toBe("supported");
     expect(berachainResult.activeChainId).toBe(BERACHAIN_CHAIN_ID);
     expect(berachainResult.activeChainConfig?.displayName).toBe("Berachain");
+    expect(celoResult.status).toBe("supported");
+    expect(celoResult.activeChainId).toBe(CELO_CHAIN_ID);
+    expect(celoResult.activeChainConfig?.displayName).toBe("Celo");
+    expect(gnosisResult.status).toBe("supported");
+    expect(gnosisResult.activeChainId).toBe(GNOSIS_CHAIN_ID);
+    expect(gnosisResult.activeChainConfig?.displayName).toBe("Gnosis");
+    expect(unichainResult.status).toBe("supported");
+    expect(unichainResult.activeChainId).toBe(UNICHAIN_CHAIN_ID);
+    expect(unichainResult.activeChainConfig?.displayName).toBe("Unichain");
+    expect(worldchainResult.status).toBe("supported");
+    expect(worldchainResult.activeChainId).toBe(WORLDCHAIN_CHAIN_ID);
+    expect(worldchainResult.activeChainConfig?.displayName).toBe("World Chain");
   });
 
   it("does not default to PulseChain when disconnected", () => {
@@ -151,7 +187,7 @@ describe("active chain resolution", () => {
 
   it("uses all generic supported chains in supported-network copy", () => {
     expect(getSupportedChainShortNames()).toBe(
-      "PulseChain, BSC, Base, Polygon, Sonic, Avalanche, Mantle, Linea, Blast, or Berachain",
+      "PulseChain, BSC, Base, Polygon, Sonic, Avalanche, Mantle, Linea, Blast, Berachain, Celo, Gnosis, Unichain, or World",
     );
   });
 

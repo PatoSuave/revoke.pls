@@ -17,6 +17,10 @@ Current active supported networks should be exactly:
 - Linea, chain ID `59144`
 - Blast, chain ID `81457`
 - Berachain, chain ID `80094`
+- Celo, chain ID `42220`
+- Gnosis, chain ID `100`
+- Unichain, chain ID `130`
+- World Chain, chain ID `480`
 - Ethereum Mainnet, chain ID `1`
 - Arbitrum One, chain ID `42161`, ERC-20/NFT verified-row revoke
 - Optimism / OP Mainnet, chain ID `10`, ERC-20/NFT verified-row revoke
@@ -69,9 +73,10 @@ submission must stay unavailable.
 ## Chain Safety Questions
 
 - Are active supported chains exactly PulseChain, BSC, Base, Polygon, Sonic,
-  Avalanche, Mantle, Linea, Blast, Berachain, wallet-enabled Ethereum Mainnet,
-  Arbitrum One's separate verified-row revoke lane, Optimism's separate
-  verified-row lane, and HyperEVM's separate verified-row lane?
+  Avalanche, Mantle, Linea, Blast, Berachain, Celo, Gnosis, Unichain, World
+  Chain, wallet-enabled Ethereum Mainnet, Arbitrum One's separate verified-row
+  revoke lane, Optimism's separate verified-row lane, and HyperEVM's separate
+  verified-row lane?
 - Does `src/lib/wagmi.ts` register Ethereum, Arbitrum, Optimism, and HyperEVM
   only for their separate lanes and keep chain lists scoped correctly?
 - Is Ethereum Mainnet protected by owner, chain, preflight, gas, and row-level
@@ -255,6 +260,24 @@ submission must stay unavailable.
 - Does public Berachain RPC avoid historical `eth_getLogs` discovery?
 - Are Berachain explorer keys server-only, with no `NEXT_PUBLIC_*` key fallback?
 
+## Celo, Gnosis, Unichain, And World Chain Discovery Questions
+
+- Do Celo, Gnosis, Unichain, and World Chain historical log requests use
+  Etherscan API V2 at `https://api.etherscan.io/v2/api`?
+- Does every Celo log request include `chainid=42220`?
+- Does every Gnosis log request include `chainid=100`?
+- Does every Unichain log request include `chainid=130`?
+- Does every World Chain log request include `chainid=480`?
+- Are explorer links built with `https://celoscan.io`,
+  `https://gnosisscan.io`, `https://uniscan.xyz`, and
+  `https://worldscan.org`?
+- Does discovery use approval logs rather than token-transfer endpoints as the
+  approval source of truth?
+- Does public RPC avoid historical `eth_getLogs` discovery?
+- Are explorer keys server-only, with no `NEXT_PUBLIC_*` key fallback?
+- Does the shared `ETHERSCAN_API_KEY` fallback work without committing or
+  browser-exposing the key?
+
 ## Live Validation Questions
 
 - Are discovered fungible token candidates rechecked with `allowance(owner,
@@ -310,7 +333,7 @@ submission must stay unavailable.
 - Do PulseChain or BSC labels avoid leaking onto Base approvals?
 - Do PulseChain, BSC, or Base labels avoid leaking onto Polygon approvals?
 - Do existing registry labels avoid leaking onto Sonic, Avalanche, Mantle,
-  Linea, Blast, or Berachain approvals?
+  Linea, Blast, Berachain, Celo, Gnosis, Unichain, or World Chain approvals?
 - Are BSC labels empty unless manually verified?
 - Are Base labels empty unless manually verified?
 - Are Polygon labels empty unless manually verified?
@@ -320,8 +343,13 @@ submission must stay unavailable.
 - Are Linea labels empty unless manually verified?
 - Are Blast labels empty unless manually verified?
 - Are Berachain labels empty unless manually verified?
+- Are Celo labels empty unless manually verified?
+- Are Gnosis labels empty unless manually verified?
+- Are Unichain labels empty unless manually verified?
+- Are World Chain labels empty unless manually verified?
 - Are unknown BSC, Base, Polygon, Sonic, Avalanche, Mantle, Linea, Blast, and
-  Berachain spenders shown as unknown rather than guessed?
+  Berachain, Celo, Gnosis, Unichain, and World Chain spenders shown as unknown
+  rather than guessed?
 - Is registry data treated only as enrichment, not discovery truth?
 
 ## Token Logo Questions

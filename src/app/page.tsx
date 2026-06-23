@@ -89,6 +89,20 @@ const CHAIN_CARD_COPY: Record<string, string> = {
     "Shared scanner with SnowScan discovery, live checks, and revokes through your wallet.",
   Mantle:
     "Shared scanner with Mantle explorer links, live checks, and revokes through your wallet.",
+  Linea:
+    "Shared scanner with LineaScan discovery, live checks, and revokes through your wallet.",
+  Blast:
+    "Shared scanner with Blastscan discovery, live checks, and revokes through your wallet.",
+  Berachain:
+    "Shared scanner with Berascan discovery, live checks, and revokes through your wallet.",
+  Celo:
+    "Shared scanner with CeloScan discovery, live checks, and revokes through your wallet.",
+  Gnosis:
+    "Shared scanner with Gnosisscan discovery, live checks, and revokes through your wallet.",
+  Unichain:
+    "Shared scanner with Uniscan discovery, live checks, and revokes through your wallet.",
+  "World Chain":
+    "Shared scanner with Worldscan discovery, live checks, and revokes through your wallet.",
   "Ethereum Mainnet":
     "Hosted approval discovery with revokes through your wallet after row verification.",
   "Arbitrum One":

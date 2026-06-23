@@ -11,12 +11,16 @@ import {
   berachain,
   blast,
   bsc,
+  celo,
+  gnosis,
   linea,
   mantle,
   polygon,
   pulsechain,
   sonic,
   supportedChains,
+  unichain,
+  worldchain,
 } from "@/lib/chains";
 import {
   ETHEREUM_MAINNET_PUBLIC_RPC_URL,
@@ -45,6 +49,10 @@ import {
  *  - Linea mainnet (59144)
  *  - Blast mainnet (81457)
  *  - Berachain mainnet (80094)
+ *  - Celo mainnet (42220)
+ *  - Gnosis (100)
+ *  - Unichain mainnet (130)
+ *  - World Chain (480)
  *
  * Ethereum Mainnet (1) is registered as a wallet-only chain for the
  * Ethereum scanner/revoke flow. It is intentionally not part of the active
@@ -79,7 +87,7 @@ export const hasWalletConnect: boolean = Boolean(walletConnectProjectId);
 const WALLETCONNECT_METADATA = {
   name: "Pulse Revoke",
   description:
-    "Review token approvals on PulseChain, BSC, Base, Polygon, Sonic, Avalanche, Mantle, Linea, Blast, Berachain, Ethereum, Arbitrum, Optimism, and HyperEVM.",
+    "Review token approvals on PulseChain, BSC, Base, Polygon, Sonic, Avalanche, Mantle, Linea, Blast, Berachain, Celo, Gnosis, Unichain, World Chain, Ethereum, Arbitrum, Optimism, and HyperEVM.",
   url: "https://pulserevoke.com",
   icons: ["https://pulserevoke.com/icon.png"],
 };
@@ -124,6 +132,14 @@ export const wagmiConfig = createConfig({
     [blast.id]: http(process.env.NEXT_PUBLIC_BLAST_RPC_URL ?? undefined),
     [berachain.id]: http(
       process.env.NEXT_PUBLIC_BERACHAIN_RPC_URL ?? undefined,
+    ),
+    [celo.id]: http(process.env.NEXT_PUBLIC_CELO_RPC_URL ?? undefined),
+    [gnosis.id]: http(process.env.NEXT_PUBLIC_GNOSIS_RPC_URL ?? undefined),
+    [unichain.id]: http(
+      process.env.NEXT_PUBLIC_UNICHAIN_RPC_URL ?? undefined,
+    ),
+    [worldchain.id]: http(
+      process.env.NEXT_PUBLIC_WORLDCHAIN_RPC_URL ?? undefined,
     ),
     [ethereumMainnetWalletChain.id]: http(
       process.env.NEXT_PUBLIC_MAINNET_RPC_URL ??

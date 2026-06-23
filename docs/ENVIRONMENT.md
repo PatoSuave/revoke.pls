@@ -1,7 +1,8 @@
 # Environment Variables
 
 Pulse Revoke is primarily a wallet-side frontend app, with server-side BSC,
-Base, Polygon, Sonic, Avalanche, Mantle, Linea, Blast, Berachain, Ethereum, Arbitrum, Optimism, and HyperEVM
+Base, Polygon, Sonic, Avalanche, Mantle, Linea, Blast, Berachain, Celo, Gnosis,
+Unichain, World Chain, Ethereum, Arbitrum, Optimism, and HyperEVM
 API routes for discovery plus a server-side gas tracker route. Variables prefixed with
 `NEXT_PUBLIC_` are embedded into the browser bundle and are visible to users. Do
 not store private secrets in these variables.
@@ -9,7 +10,8 @@ not store private secrets in these variables.
 ## Production Requirements
 
 For the live PulseChain, BSC, Base, Polygon, Sonic, Avalanche, Mantle, Linea,
-Blast, Berachain, Ethereum, Arbitrum, Optimism, and HyperEVM product, configure:
+Blast, Berachain, Celo, Gnosis, Unichain, World Chain, Ethereum, Arbitrum,
+Optimism, and HyperEVM product, configure:
 
 | Variable | Production status | Notes |
 | --- | --- | --- |
@@ -59,6 +61,26 @@ Blast, Berachain, Ethereum, Arbitrum, Optimism, and HyperEVM product, configure:
 | `BERACHAIN_EXPLORER_API_KEY` / `ETHERSCAN_API_KEY` | Required for reliable Berachain discovery | Server-only Etherscan API V2 key with Berachain Mainnet access. Do not use a `NEXT_PUBLIC_` key. |
 | `BERACHAIN_RPC_URL` / `BERACHAIN_MAINNET_RPC_URL` | Optional | Server-only Berachain gas tracker RPC override for `/api/gas`. |
 | `NEXT_PUBLIC_BERACHAIN_RPC_URL` | Recommended | Public fallback is available, but production should prefer a reliable RPC for wallet reads and browser block watching. |
+| `CELO_EXPLORER_API_URL` | Optional | Server-only Celo logs API. Defaults to `https://api.etherscan.io/v2/api`. |
+| `CELO_EXPLORER_CHAIN_ID` | Optional | Must be `42220` for Celo Etherscan API V2 logs. Defaults to `42220`. |
+| `CELO_EXPLORER_API_KEY` / `ETHERSCAN_API_KEY` | Required for reliable Celo discovery | Server-only Etherscan API V2 key with Celo Mainnet access. Do not use a `NEXT_PUBLIC_` key. |
+| `CELO_RPC_URL` / `CELO_MAINNET_RPC_URL` | Optional | Server-only Celo gas tracker RPC override for `/api/gas`. |
+| `NEXT_PUBLIC_CELO_RPC_URL` | Recommended | Public fallback is available, but production should prefer a reliable RPC for wallet reads and browser block watching. |
+| `GNOSIS_EXPLORER_API_URL` | Optional | Server-only Gnosis logs API. Defaults to `https://api.etherscan.io/v2/api`. |
+| `GNOSIS_EXPLORER_CHAIN_ID` | Optional | Must be `100` for Gnosis Etherscan API V2 logs. Defaults to `100`. |
+| `GNOSIS_EXPLORER_API_KEY` / `ETHERSCAN_API_KEY` | Required for reliable Gnosis discovery | Server-only Etherscan API V2 key with Gnosis access. Do not use a `NEXT_PUBLIC_` key. |
+| `GNOSIS_RPC_URL` / `GNOSIS_MAINNET_RPC_URL` | Optional | Server-only Gnosis gas tracker RPC override for `/api/gas`. |
+| `NEXT_PUBLIC_GNOSIS_RPC_URL` | Recommended | Public fallback is available, but production should prefer a reliable RPC for wallet reads and browser block watching. |
+| `UNICHAIN_EXPLORER_API_URL` | Optional | Server-only Unichain logs API. Defaults to `https://api.etherscan.io/v2/api`. |
+| `UNICHAIN_EXPLORER_CHAIN_ID` | Optional | Must be `130` for Unichain Etherscan API V2 logs. Defaults to `130`. |
+| `UNICHAIN_EXPLORER_API_KEY` / `ETHERSCAN_API_KEY` | Required for reliable Unichain discovery | Server-only Etherscan API V2 key with Unichain Mainnet access. Do not use a `NEXT_PUBLIC_` key. |
+| `UNICHAIN_RPC_URL` / `UNICHAIN_MAINNET_RPC_URL` | Optional | Server-only Unichain gas tracker RPC override for `/api/gas`. |
+| `NEXT_PUBLIC_UNICHAIN_RPC_URL` | Recommended | Public fallback is available, but production should prefer a reliable RPC for wallet reads and browser block watching. |
+| `WORLDCHAIN_EXPLORER_API_URL` | Optional | Server-only World Chain logs API. Defaults to `https://api.etherscan.io/v2/api`. |
+| `WORLDCHAIN_EXPLORER_CHAIN_ID` | Optional | Must be `480` for World Chain Etherscan API V2 logs. Defaults to `480`. |
+| `WORLDCHAIN_EXPLORER_API_KEY` / `ETHERSCAN_API_KEY` | Required for reliable World Chain discovery | Server-only Etherscan API V2 key with World Mainnet access. Do not use a `NEXT_PUBLIC_` key. |
+| `WORLDCHAIN_RPC_URL` / `WORLDCHAIN_MAINNET_RPC_URL` | Optional | Server-only World Chain gas tracker RPC override for `/api/gas`. |
+| `NEXT_PUBLIC_WORLDCHAIN_RPC_URL` | Recommended | Public fallback is available, but production should prefer a reliable RPC for wallet reads and browser block watching. |
 | `MAINNET_RPC_URL` / `ETHEREUM_RPC_URL` | Required for Ethereum scan | Server-only Ethereum RPC URL for `/api/ethereum/approvals` and `/api/gas`. |
 | `ETHERSCAN_API_KEY` | Required for Ethereum scan | Server-only Etherscan API key. Do not use a `NEXT_PUBLIC_` key for Ethereum server discovery. |
 | `ARBITRUM_ONE_RPC_URL` / `ARBITRUM_RPC_URL` | Required for Arbitrum scan | Server-only Arbitrum RPC URL for `/api/arbitrum/approvals` and `/api/gas`. |
@@ -73,8 +95,8 @@ override them for reliability. The gas tracker prefers unprefixed server RPC
 variables, then browser-safe `NEXT_PUBLIC_*` RPC values, then code defaults.
 Keep private RPC URLs server-only.
 
-PulseChain, BSC, Base, Polygon, Sonic, Avalanche, Mantle, Linea, Blast, and
-Berachain token logos use Dex Screener's
+PulseChain, BSC, Base, Polygon, Sonic, Avalanche, Mantle, Linea, Blast,
+Berachain, Celo, Unichain, and World Chain token logos use Dex Screener's
 public token lookup endpoint through `/api/token-logos`. No API key is required.
 The app sends token contract addresses only, caps each request at `30`
 addresses, caches successful display metadata at the CDN, and falls back to
@@ -102,6 +124,9 @@ fallbacks: `PULSECHAIN_RPC_URL`, `PULSECHAIN_MAINNET_RPC_URL`, `BSC_RPC_URL`,
 `AVALANCHE_MAINNET_RPC_URL`, `MANTLE_RPC_URL`, `MANTLE_MAINNET_RPC_URL`,
 `LINEA_RPC_URL`, `LINEA_MAINNET_RPC_URL`, `BLAST_RPC_URL`,
 `BLAST_MAINNET_RPC_URL`, `BERACHAIN_RPC_URL`, `BERACHAIN_MAINNET_RPC_URL`,
+`CELO_RPC_URL`, `CELO_MAINNET_RPC_URL`, `GNOSIS_RPC_URL`,
+`GNOSIS_MAINNET_RPC_URL`, `UNICHAIN_RPC_URL`, `UNICHAIN_MAINNET_RPC_URL`,
+`WORLDCHAIN_RPC_URL`, `WORLDCHAIN_MAINNET_RPC_URL`,
 `MAINNET_RPC_URL`, `ETHEREUM_RPC_URL`,
 `ARBITRUM_ONE_RPC_URL`, `ARBITRUM_RPC_URL`,
 `OPTIMISM_RPC_URL`, `OPTIMISM_MAINNET_RPC_URL`, `OP_MAINNET_RPC_URL`,
@@ -203,6 +228,16 @@ Hosted web Berachain approval discovery does not rely on public Berachain RPC
 `eth_getLogs`; it uses the server-side `/api/discovery/approvals` route with
 Etherscan API V2 logs.
 
+### `NEXT_PUBLIC_CELO_RPC_URL` / `NEXT_PUBLIC_GNOSIS_RPC_URL` / `NEXT_PUBLIC_UNICHAIN_RPC_URL` / `NEXT_PUBLIC_WORLDCHAIN_RPC_URL`
+
+Recommended for production. These override the Celo, Gnosis, Unichain, and
+World Chain RPCs used by wagmi/viem for live validation and transaction
+submission. If unset, the app uses public defaults.
+
+Hosted web discovery for these chains does not rely on public RPC
+`eth_getLogs`; it uses the server-side `/api/discovery/approvals` route with
+Etherscan API V2 logs.
+
 ### `NEXT_PUBLIC_MAINNET_RPC_URL` / `NEXT_PUBLIC_ETHEREUM_RPC_URL`
 
 Optional browser-visible Ethereum wallet transport overrides. These are used by
@@ -225,20 +260,28 @@ discovery. If unset, the app uses `https://api.scan.pulsechain.com/api`.
 ### Token Logo Lookup
 
 No environment variable is required for PulseChain, BSC, Base, Polygon, Sonic,
-Avalanche, Mantle, Linea, Blast, or Berachain token logos. The server route
+Avalanche, Mantle, Linea, Blast, Berachain, Celo, Unichain, or World Chain
+token logos. The server route
 `/api/token-logos?chainId=369&addresses=...`,
 `/api/token-logos?chainId=56&addresses=...`,
 `/api/token-logos?chainId=8453&addresses=...`,
 `/api/token-logos?chainId=137&addresses=...`,
 `/api/token-logos?chainId=146&addresses=...`,
-`/api/token-logos?chainId=43114&addresses=...`, or
+`/api/token-logos?chainId=43114&addresses=...`,
 `/api/token-logos?chainId=5000&addresses=...`,
 `/api/token-logos?chainId=59144&addresses=...`,
 `/api/token-logos?chainId=81457&addresses=...`, or
-`/api/token-logos?chainId=80094&addresses=...` calls Dex Screener for display
+`/api/token-logos?chainId=80094&addresses=...`,
+`/api/token-logos?chainId=42220&addresses=...`,
+`/api/token-logos?chainId=130&addresses=...`, or
+`/api/token-logos?chainId=480&addresses=...` calls Dex Screener for display
 metadata and does not receive wallet owner, spender, or allowance data. Treat
 logos as visual convenience only; explorer links and live chain reads remain
 the source of verification.
+
+Gnosis rows still render with token symbols and initials. Dex Screener did not
+return Gnosis pair data in the current token lookup checks, so the app leaves
+Gnosis logo lookup disabled instead of surfacing a failed logo request.
 
 ### `BSC_EXPLORER_API_URL`
 
@@ -549,6 +592,39 @@ Required for reliable hosted web Berachain discovery unless
 not configure this value as `NEXT_PUBLIC_*`; the frontend does not need a
 Berachain explorer key.
 
+### `CELO_EXPLORER_API_URL` / `GNOSIS_EXPLORER_API_URL` / `UNICHAIN_EXPLORER_API_URL` / `WORLDCHAIN_EXPLORER_API_URL`
+
+Optional server-only historical logs API base URLs for Celo, Gnosis, Unichain,
+and World Chain. The default for all four is:
+
+```text
+https://api.etherscan.io/v2/api
+```
+
+The user-facing explorer links remain CeloScan, Gnosisscan, Uniscan, and
+Worldscan; historical log reads use Etherscan API V2.
+
+### `CELO_EXPLORER_CHAIN_ID` / `GNOSIS_EXPLORER_CHAIN_ID` / `UNICHAIN_EXPLORER_CHAIN_ID` / `WORLDCHAIN_EXPLORER_CHAIN_ID`
+
+Optional server-only Etherscan API V2 chain ID parameters. Defaults:
+
+```text
+42220
+100
+130
+480
+```
+
+Historical log requests should include `chainid=42220` for Celo, `chainid=100`
+for Gnosis, `chainid=130` for Unichain, and `chainid=480` for World Chain.
+
+### `CELO_EXPLORER_API_KEY` / `GNOSIS_EXPLORER_API_KEY` / `UNICHAIN_EXPLORER_API_KEY` / `WORLDCHAIN_EXPLORER_API_KEY`
+
+Optional chain-specific server-only API keys. If unset, each chain uses
+`ETHERSCAN_API_KEY` as the shared server-side Etherscan API V2 key. Do not
+configure these values as `NEXT_PUBLIC_*`; the frontend does not need these
+explorer keys.
+
 ### `MAINNET_RPC_URL` / `ETHEREUM_RPC_URL`
 
 Required for Ethereum Mainnet approval discovery. These are server-only values
@@ -723,6 +799,10 @@ NEXT_PUBLIC_MANTLE_RPC_URL=
 NEXT_PUBLIC_LINEA_RPC_URL=
 NEXT_PUBLIC_BLAST_RPC_URL=
 NEXT_PUBLIC_BERACHAIN_RPC_URL=
+NEXT_PUBLIC_CELO_RPC_URL=
+NEXT_PUBLIC_GNOSIS_RPC_URL=
+NEXT_PUBLIC_UNICHAIN_RPC_URL=
+NEXT_PUBLIC_WORLDCHAIN_RPC_URL=
 NEXT_PUBLIC_MAINNET_RPC_URL=
 NEXT_PUBLIC_ETHEREUM_RPC_URL=
 NEXT_PUBLIC_PULSECHAIN_EXPLORER_API=
@@ -751,6 +831,14 @@ NEXT_PUBLIC_BLAST_EXPLORER_API_URL=
 NEXT_PUBLIC_BLAST_EXPLORER_CHAIN_ID=81457
 NEXT_PUBLIC_BERACHAIN_EXPLORER_API_URL=
 NEXT_PUBLIC_BERACHAIN_EXPLORER_CHAIN_ID=80094
+NEXT_PUBLIC_CELO_EXPLORER_API_URL=
+NEXT_PUBLIC_CELO_EXPLORER_CHAIN_ID=42220
+NEXT_PUBLIC_GNOSIS_EXPLORER_API_URL=
+NEXT_PUBLIC_GNOSIS_EXPLORER_CHAIN_ID=100
+NEXT_PUBLIC_UNICHAIN_EXPLORER_API_URL=
+NEXT_PUBLIC_UNICHAIN_EXPLORER_CHAIN_ID=130
+NEXT_PUBLIC_WORLDCHAIN_EXPLORER_API_URL=
+NEXT_PUBLIC_WORLDCHAIN_EXPLORER_CHAIN_ID=480
 NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID=
 NEXT_PUBLIC_TELEMETRY_ENABLED=
 
@@ -795,6 +883,26 @@ BERACHAIN_MAINNET_RPC_URL=
 BERACHAIN_EXPLORER_API_URL=
 BERACHAIN_EXPLORER_CHAIN_ID=80094
 BERACHAIN_EXPLORER_API_KEY=
+CELO_RPC_URL=
+CELO_MAINNET_RPC_URL=
+CELO_EXPLORER_API_URL=
+CELO_EXPLORER_CHAIN_ID=42220
+CELO_EXPLORER_API_KEY=
+GNOSIS_RPC_URL=
+GNOSIS_MAINNET_RPC_URL=
+GNOSIS_EXPLORER_API_URL=
+GNOSIS_EXPLORER_CHAIN_ID=100
+GNOSIS_EXPLORER_API_KEY=
+UNICHAIN_RPC_URL=
+UNICHAIN_MAINNET_RPC_URL=
+UNICHAIN_EXPLORER_API_URL=
+UNICHAIN_EXPLORER_CHAIN_ID=130
+UNICHAIN_EXPLORER_API_KEY=
+WORLDCHAIN_RPC_URL=
+WORLDCHAIN_MAINNET_RPC_URL=
+WORLDCHAIN_EXPLORER_API_URL=
+WORLDCHAIN_EXPLORER_CHAIN_ID=480
+WORLDCHAIN_EXPLORER_API_KEY=
 MAINNET_RPC_URL=
 ETHEREUM_RPC_URL=
 ETHEREUM_EXPLORER_API_URL=
@@ -825,10 +933,11 @@ HYPEREVM_ETHERSCAN_API_KEY=
 Explorer APIs and public RPC endpoints can rate-limit, cap responses, or fail.
 The app should surface incomplete discovery or validation instead of displaying
 a false "clear" state. For production BSC, Base, Polygon, Sonic, Avalanche,
-Mantle, Linea, Blast, and Berachain discovery, use Etherscan API V2 keys
-server-side and account plans that support BNB Smart Chain, Base Mainnet,
-Polygon Mainnet, Sonic Mainnet, Avalanche C-Chain, Mantle Mainnet, Linea
-Mainnet, Blast Mainnet, and Berachain Mainnet logs.
+Mantle, Linea, Blast, Berachain, Celo, Gnosis, Unichain, and World Chain
+discovery, use Etherscan API V2 keys server-side and account plans that support
+BNB Smart Chain, Base Mainnet, Polygon Mainnet, Sonic Mainnet, Avalanche
+C-Chain, Mantle Mainnet, Linea Mainnet, Blast Mainnet, Berachain Mainnet, Celo,
+Gnosis, Unichain Mainnet, and World Mainnet logs.
 For Arbitrum, configure server-only managed RPC plus an Arbiscan or
 Etherscan-compatible API key with Arbitrum One log access. For Optimism,
 configure server-only managed RPC plus an Etherscan API V2 key with OP Mainnet
