@@ -81,8 +81,10 @@ describe("token logo helpers", () => {
     );
     expect(isTokenLogoSupportedChain(CELO_CHAIN_ID)).toBe(true);
     expect(getDexScreenerChainSlugForTokenLogos(CELO_CHAIN_ID)).toBe("celo");
-    expect(isTokenLogoSupportedChain(GNOSIS_CHAIN_ID)).toBe(false);
-    expect(getDexScreenerChainSlugForTokenLogos(GNOSIS_CHAIN_ID)).toBeNull();
+    expect(isTokenLogoSupportedChain(GNOSIS_CHAIN_ID)).toBe(true);
+    expect(getDexScreenerChainSlugForTokenLogos(GNOSIS_CHAIN_ID)).toBe(
+      "gnosischain",
+    );
     expect(isTokenLogoSupportedChain(UNICHAIN_CHAIN_ID)).toBe(true);
     expect(getDexScreenerChainSlugForTokenLogos(UNICHAIN_CHAIN_ID)).toBe(
       "unichain",
