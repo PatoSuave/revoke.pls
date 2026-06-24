@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { GET } from "@/app/api/gas/route";
+import { resetGasRouteCacheForTests } from "@/lib/gas/gas-route-cache";
 import {
   GAS_API_RATE_LIMIT,
   resetGasApiRateLimitForTests,
@@ -18,6 +19,7 @@ function rpcResponse(result: unknown): Response {
 describe("/api/gas", () => {
   afterEach(() => {
     vi.unstubAllGlobals();
+    resetGasRouteCacheForTests();
     resetGasApiRateLimitForTests();
     resetNativeUsdPriceCacheForTests();
     resetOwlracleAdvisoryCacheForTests();
@@ -113,6 +115,53 @@ describe("/api/gas", () => {
     expect(secondPayload.blockNumber).toBe("32");
     expect(firstPayload.nativeTokenPriceUsd).toBe("$0.00000695");
     expect(firstPayload.typicalTransactions[0].costUsd).toBe("<$0.000001");
+    expect(fetchMock).toHaveBeenCalledTimes(4);
+  });
+
+  it("reuses a short-lived successful sample for sequential requests", async () => {
+    const fetchMock = vi.fn<typeof fetch>(async (input, init) => {
+      const url = String(input);
+      if (url.includes("api.owlracle.info")) {
+        return Response.json({
+          timestamp: "2026-05-27T18:19:07.120Z",
+          speeds: [{ acceptance: 0.35, gasPrice: 100 }],
+        });
+      }
+      if (url.includes("api.coingecko.com")) {
+        return Response.json({
+          pulsechain: {
+            usd: 0.00000695,
+            last_updated_at: 1_779_927_849,
+          },
+        });
+      }
+
+      const body = JSON.parse(String(init?.body ?? "{}")) as {
+        method?: string;
+      };
+      if (body.method === "eth_blockNumber") return rpcResponse("0x21");
+      if (body.method === "eth_feeHistory") {
+        return rpcResponse({
+          oldestBlock: "0x21",
+          baseFeePerGas: ["0x174876e800", "0x174876e800"],
+          reward: [["0x0"]],
+        });
+      }
+      return new Response("unknown method", { status: 400 });
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    const first = await GET(new Request("https://example.test/api/gas?chainId=369"));
+    const second = await GET(new Request("https://example.test/api/gas?chainId=369"));
+    const [firstPayload, secondPayload] = await Promise.all([
+      first.json(),
+      second.json(),
+    ]);
+
+    expect(first.status).toBe(200);
+    expect(second.status).toBe(200);
+    expect(firstPayload.blockNumber).toBe("33");
+    expect(secondPayload.blockNumber).toBe("33");
     expect(fetchMock).toHaveBeenCalledTimes(4);
   });
 
