@@ -10,17 +10,11 @@ import {
 import {
   GAS_TRACKER_CHAIN_IDS,
   getGasTrackerChainConfig,
-  type GasTrackerChainConfig,
 } from "@/lib/gas/gas-chains";
-import {
-  fetchGasData,
-  unavailableGasResponseForChain,
-} from "@/lib/gas/evm-gas";
-import type { GasApiResponse } from "@/lib/gas/gas-types";
+import { fetchCachedRouteGasData } from "@/lib/gas/gas-route-cache";
+import { unavailableGasResponseForChain } from "@/lib/gas/evm-gas";
 
 export const runtime = "nodejs";
-
-const inFlightGasData = new Map<number, Promise<GasApiResponse>>();
 
 export async function GET(request: Request) {
   const url = new URL(request.url);
@@ -62,7 +56,7 @@ export async function GET(request: Request) {
   }
 
   try {
-    const result = await fetchRouteGasData(chain);
+    const result = await fetchCachedRouteGasData(chain);
     return NextResponse.json(result, {
       status: 200,
       headers: approvalApiNoStoreHeaders({
@@ -84,21 +78,6 @@ export async function GET(request: Request) {
       },
     );
   }
-}
-
-function fetchRouteGasData(
-  chain: GasTrackerChainConfig,
-): Promise<GasApiResponse> {
-  const existing = inFlightGasData.get(chain.chainId);
-  if (existing) return existing;
-
-  const promise = fetchGasData(chain, {
-    includeAdvisory: chain.advisoryProvider === "owlracle-pulse",
-  }).finally(() => {
-    inFlightGasData.delete(chain.chainId);
-  });
-  inFlightGasData.set(chain.chainId, promise);
-  return promise;
 }
 
 function rateLimitHeaders(
