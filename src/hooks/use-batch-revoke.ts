@@ -23,6 +23,7 @@ import {
 } from "@/lib/preflight";
 import { verifyErc20PostRevokeCleared } from "@/lib/post-revoke-verification";
 import { buildRevokeCall, getWalletRevokeBlockReason } from "@/lib/revoke";
+import { getRevokeMaxTransactionGas } from "@/lib/revoke-gas";
 import { trackEvent } from "@/lib/telemetry";
 
 export type BatchItemStatus =
@@ -330,10 +331,9 @@ export function useBatchRevoke({
         continue;
       }
 
-      const chainConfig = getChainConfig(item.chainId);
       const safeGas = safeGasForRevokeRequest(
         latest,
-        chainConfig?.maxTransactionGas,
+        getRevokeMaxTransactionGas(item.chainId),
       );
       if (!safeGas.ok) {
         patch(item.key, resultFromPreflight(safeGas.preflight));
@@ -539,7 +539,8 @@ async function refreshErc20PreflightForItem(
     if (allowancePreflight.status !== "active") return allowancePreflight;
 
     const chainConfig = getChainConfig(item.chainId);
-    if (!chainConfig?.maxTransactionGas) return allowancePreflight;
+    const maxTransactionGas = getRevokeMaxTransactionGas(item.chainId);
+    if (!maxTransactionGas) return allowancePreflight;
 
     const estimatedGas = await client.estimateContractGas({
       ...buildRevokeCall({
@@ -556,13 +557,13 @@ async function refreshErc20PreflightForItem(
     return applyGasEstimateToPreflight(
       allowancePreflight,
       estimatedGas,
-      chainConfig.maxTransactionGas,
-      chainConfig.highGasWarningThreshold,
+      maxTransactionGas,
+      chainConfig?.highGasWarningThreshold,
       {
         chainId: item.chainId,
         callKind: "erc20",
         gasPriceWei,
-        nativeSymbol: chainConfig.nativeSymbol,
+        nativeSymbol: chainConfig?.nativeSymbol,
       },
     );
   } catch (error) {
@@ -627,7 +628,7 @@ function withGasCapContext(
   result: Erc20PreflightResult,
   chainId: number,
 ): Erc20PreflightResult {
-  const maxTransactionGas = getChainConfig(chainId)?.maxTransactionGas;
+  const maxTransactionGas = getRevokeMaxTransactionGas(chainId);
   if (!result.gasCapExceeded || !maxTransactionGas) return result;
   return { ...result, maxTransactionGas };
 }

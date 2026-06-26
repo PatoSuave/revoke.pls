@@ -87,7 +87,12 @@ export interface SerializableNftDiscoveryResult {
 
 export interface ServerApprovalDiscoveryResponse {
   ok: boolean;
-  status: "complete" | "config-missing" | "bad-request" | "upstream-failure";
+  status:
+    | "complete"
+    | "verification-incomplete"
+    | "config-missing"
+    | "bad-request"
+    | "upstream-failure";
   chainId: ServerApprovalDiscoveryChainId;
   erc20: SerializableDiscoveryResult;
   permit2: SerializablePermit2DiscoveryResult;
@@ -98,7 +103,12 @@ export interface ServerApprovalDiscoveryResponse {
 
 export interface ServerNftDiscoveryResponse {
   ok: boolean;
-  status: "complete" | "config-missing" | "bad-request" | "upstream-failure";
+  status:
+    | "complete"
+    | "verification-incomplete"
+    | "config-missing"
+    | "bad-request"
+    | "upstream-failure";
   chainId: ServerApprovalDiscoveryChainId;
   nft: SerializableNftDiscoveryResult;
   warnings: string[];

@@ -5,6 +5,8 @@ import { resolve } from "node:path";
 
 const PUBLIC_SECRET_NAME_PATTERN =
   /^NEXT_PUBLIC_.*(?:API[_-]?KEY|PRIVATE[_-]?KEY|SECRET|TOKEN|MNEMONIC|SEED)/i;
+const PUBLIC_SECRET_URL_PARAM_PATTERN =
+  /^(?:API[_-]?KEY|KEY|TOKEN|ACCESS[_-]?TOKEN|SECRET|CLIENT[_-]?SECRET|AUTH|SIGNATURE|SIG)$/i;
 
 const DENIED_PUBLIC_EXPLORER_KEYS = new Set([
   "NEXT_PUBLIC_BSC_EXPLORER_API_KEY",
@@ -135,6 +137,22 @@ function isDeniedPublicName(name) {
   return DENIED_PUBLIC_EXPLORER_KEYS.has(name) || PUBLIC_SECRET_NAME_PATTERN.test(name);
 }
 
+function isDeniedPublicValue(name, value) {
+  if (!name.startsWith("NEXT_PUBLIC_") || !isMeaningfullySet(value)) {
+    return false;
+  }
+
+  try {
+    const url = new URL(value.trim());
+    if (url.username || url.password) return true;
+    return [...url.searchParams.keys()].some((key) =>
+      PUBLIC_SECRET_URL_PARAM_PATTERN.test(key),
+    );
+  } catch {
+    return false;
+  }
+}
+
 function collectSources(options) {
   const sources = [{ label: "process.env", env: process.env }];
   for (const filePath of options.envFiles) {
@@ -160,7 +178,10 @@ function main() {
   const findings = [];
   for (const source of collectSources(options)) {
     for (const [name, value] of Object.entries(source.env)) {
-      if (isDeniedPublicName(name) && isMeaningfullySet(value)) {
+      if (
+        (isDeniedPublicName(name) && isMeaningfullySet(value)) ||
+        isDeniedPublicValue(name, value)
+      ) {
         findings.push({ source: source.label, name });
       }
     }

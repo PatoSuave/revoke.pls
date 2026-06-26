@@ -233,14 +233,22 @@ export async function discoverServerErc20Approvals({
         requests: 0,
       }),
   ]);
+  const serializedErc20 = serializeDiscoveryResult(erc20);
+  const serializedPermit2 = serializePermit2DiscoveryResult(permit2);
+  const verificationIncomplete =
+    serializedErc20.truncated || serializedPermit2.truncated;
 
   return {
     ok: true,
-    status: "complete",
+    status: verificationIncomplete ? "verification-incomplete" : "complete",
     chainId,
-    erc20: serializeDiscoveryResult(erc20),
-    permit2: serializePermit2DiscoveryResult(permit2),
-    warnings: [],
+    erc20: serializedErc20,
+    permit2: serializedPermit2,
+    warnings: verificationIncomplete
+      ? [
+          `${CHAIN_CONFIGS[chainId].displayName} approval discovery was truncated. Do not treat this wallet as clear.`,
+        ]
+      : [],
     errors: [],
     missingConfig: [],
   };
@@ -269,13 +277,19 @@ export async function discoverServerNftApprovals({
 
   const source = createServerDiscoverySource(chainId, config);
   const nft = await source.discoverNftApprovals(owner, { signal });
+  const serializedNft = serializeNftDiscoveryResult(nft);
+  const verificationIncomplete = serializedNft.truncated;
 
   return {
     ok: true,
-    status: "complete",
+    status: verificationIncomplete ? "verification-incomplete" : "complete",
     chainId,
-    nft: serializeNftDiscoveryResult(nft),
-    warnings: [],
+    nft: serializedNft,
+    warnings: verificationIncomplete
+      ? [
+          `${CHAIN_CONFIGS[chainId].displayName} NFT approval discovery was truncated. Do not treat this wallet as clear.`,
+        ]
+      : [],
     errors: [],
     missingConfig: [],
   };

@@ -1,5 +1,6 @@
 import { formatUnits } from "viem";
 
+import { getChainCapability } from "@/lib/chain-capabilities";
 import { BSC_CHAIN_ID } from "@/lib/chains";
 import {
   ETHEREUM_MAINNET_CLIENT_CHAIN_ID,
@@ -55,8 +56,15 @@ export const WALLET_ESTIMATE_MAY_DIFFER_COPY =
 export function shouldEstimateRevokeGas(chainId: number | undefined): boolean {
   return (
     chainId === ETHEREUM_MAINNET_CLIENT_CHAIN_ID ||
-    chainId === BSC_CHAIN_ID
+    chainId === BSC_CHAIN_ID ||
+    Boolean(getRevokeMaxTransactionGas(chainId))
   );
+}
+
+export function getRevokeMaxTransactionGas(
+  chainId: number | undefined,
+): bigint | undefined {
+  return getChainCapability(chainId)?.perTxGasCap;
 }
 
 export function getRevokeGasThresholds({

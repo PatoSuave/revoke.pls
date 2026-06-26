@@ -5,6 +5,7 @@ import {
   BERACHAIN_EXPLORER_CHAIN_ID_DEFAULT,
   BLAST_CHAIN_ID,
   BLAST_EXPLORER_CHAIN_ID_DEFAULT,
+  BSC_CHAIN_ID,
   CELO_CHAIN_ID,
   CELO_EXPLORER_CHAIN_ID_DEFAULT,
   GNOSIS_CHAIN_ID,
@@ -37,6 +38,9 @@ import {
 
 const OWNER = "0xcae394005c9c4c309621c53d53db9ceb701fc8d8";
 const SHARED_TEST_KEY = "shared-etherscan-test-key";
+let erc20Truncated = false;
+let permit2Truncated = false;
+let nftTruncated = false;
 
 function lastSourceConfig(): DiscoverySourceConfig {
   const call = createBlockscoutDiscoverySource.mock.calls.at(-1);
@@ -45,6 +49,9 @@ function lastSourceConfig(): DiscoverySourceConfig {
 }
 
 beforeEach(() => {
+  erc20Truncated = false;
+  permit2Truncated = false;
+  nftTruncated = false;
   createBlockscoutDiscoverySource.mockReset();
   createBlockscoutDiscoverySource.mockImplementation(
     ({ chainId, source }: { chainId: number; source: DiscoverySourceConfig }) => ({
@@ -68,7 +75,7 @@ beforeEach(() => {
           samplePairs: [],
         },
         rawCount: 0,
-        truncated: false,
+        truncated: erc20Truncated,
         windows: 0,
         requests: 0,
       })),
@@ -76,7 +83,7 @@ beforeEach(() => {
         approvals: [],
         source: { id: source.id, name: source.name, url: source.url, chainId },
         rawCount: 0,
-        truncated: false,
+        truncated: nftTruncated,
         windows: 0,
         requests: 0,
       })),
@@ -84,7 +91,7 @@ beforeEach(() => {
         allowances: [],
         source: { id: source.id, name: source.name, url: source.url, chainId },
         rawCount: 0,
-        truncated: false,
+        truncated: permit2Truncated,
         windows: 0,
         requests: 0,
       })),
@@ -173,5 +180,41 @@ describe("server approval discovery shared Etherscan key", () => {
       "LINEA_EXPLORER_API_KEY or ETHERSCAN_API_KEY",
     ]);
     expect(createBlockscoutDiscoverySource).not.toHaveBeenCalled();
+  });
+
+  it("marks truncated ERC-20 or Permit2 discovery as verification-incomplete", async () => {
+    erc20Truncated = true;
+    permit2Truncated = true;
+
+    const response = await discoverServerErc20Approvals({
+      chainId: BSC_CHAIN_ID,
+      owner: OWNER,
+      env: { NODE_ENV: "test", ETHERSCAN_API_KEY: SHARED_TEST_KEY },
+    });
+
+    expect(response.ok).toBe(true);
+    expect(response.status).toBe("verification-incomplete");
+    expect(response.erc20.truncated).toBe(true);
+    expect(response.permit2.truncated).toBe(true);
+    expect(response.warnings.join(" ")).toContain(
+      "Do not treat this wallet as clear",
+    );
+  });
+
+  it("marks truncated NFT discovery as verification-incomplete", async () => {
+    nftTruncated = true;
+
+    const response = await discoverServerNftApprovals({
+      chainId: BSC_CHAIN_ID,
+      owner: OWNER,
+      env: { NODE_ENV: "test", ETHERSCAN_API_KEY: SHARED_TEST_KEY },
+    });
+
+    expect(response.ok).toBe(true);
+    expect(response.status).toBe("verification-incomplete");
+    expect(response.nft.truncated).toBe(true);
+    expect(response.warnings.join(" ")).toContain(
+      "Do not treat this wallet as clear",
+    );
   });
 });

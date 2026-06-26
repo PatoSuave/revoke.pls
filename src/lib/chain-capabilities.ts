@@ -6,6 +6,7 @@ import {
   BSC_CHAIN_ID,
   BSC_OSAKA_MAX_TRANSACTION_GAS,
   CELO_CHAIN_ID,
+  EIP_7825_MAX_TRANSACTION_GAS,
   GNOSIS_CHAIN_ID,
   LINEA_CHAIN_ID,
   MANTLE_CHAIN_ID,
@@ -48,7 +49,11 @@ export const CHAIN_CAPABILITIES: Record<number, ChainCapability> = {
     batchRevokeEnabled: true,
     websocketSupport: "unknown",
     confirmationStrategy: "receipt-plus-live-recheck",
-    notes: ["Ethereum Pectra activated EIP-7702 on mainnet."],
+    perTxGasCap: EIP_7825_MAX_TRANSACTION_GAS,
+    notes: [
+      "Ethereum Pectra activated EIP-7702 on mainnet.",
+      "Ethereum Fusaka/EIP-7825 enforces a 16,777,216 gas per-transaction cap.",
+    ],
   },
   [BSC_CHAIN_ID]: {
     chainId: BSC_CHAIN_ID,
@@ -70,7 +75,7 @@ export const CHAIN_CAPABILITIES: Record<number, ChainCapability> = {
     batchRevokeEnabled: true,
     websocketSupport: "flashblocks",
     confirmationStrategy: "preconfirm-aware-receipt-plus-live-recheck",
-    perTxGasCap: BSC_OSAKA_MAX_TRANSACTION_GAS,
+    perTxGasCap: EIP_7825_MAX_TRANSACTION_GAS,
     hasPerTxGasMaximum: true,
     notes: [
       "Base Flashblocks can expose fast preconfirmation signals.",

@@ -33,7 +33,10 @@ import {
   type PostRevokeVerificationState,
 } from "@/lib/post-revoke-verification";
 import { getWalletRevokeBlockReason } from "@/lib/revoke";
-import { shouldEstimateRevokeGas } from "@/lib/revoke-gas";
+import {
+  getRevokeMaxTransactionGas,
+  shouldEstimateRevokeGas,
+} from "@/lib/revoke-gas";
 import { trackEvent } from "@/lib/telemetry";
 
 import type { RevokeStatus } from "@/hooks/use-revoke-approval";
@@ -260,10 +263,10 @@ export function useRevokeNftApproval({
       }
 
       const chainConfig = getChainConfig(target.chainId);
+      const maxTransactionGas = getRevokeMaxTransactionGas(target.chainId);
       const revokeCall = buildNftRevokeCall(target);
       const shouldEstimate =
-        shouldEstimateRevokeGas(target.chainId) ||
-        Boolean(chainConfig?.maxTransactionGas);
+        shouldEstimateRevokeGas(target.chainId) || Boolean(maxTransactionGas);
       if (!shouldEstimate) {
         setPreflight(approvalPreflight);
         return approvalPreflight;
@@ -279,7 +282,7 @@ export function useRevokeNftApproval({
         next = applyGasEstimateToPreflight(
           approvalPreflight,
           estimatedGas,
-          chainConfig?.maxTransactionGas,
+          maxTransactionGas,
           chainConfig?.highGasWarningThreshold,
           {
             chainId: target.chainId,
@@ -321,10 +324,9 @@ export function useRevokeNftApproval({
     setPostRevokeVerificationState("not-run");
     const latest = await refreshPreflight();
     if (latest.status !== "active" && latest.status !== "highGasWarning") return;
-    const chainConfig = getChainConfig(target.chainId);
     const safeGas = safeGasForRevokeRequest(
       latest,
-      chainConfig?.maxTransactionGas,
+      getRevokeMaxTransactionGas(target.chainId),
       options?.allowHighGasWarning === true,
     );
     if (!safeGas.ok) {
@@ -406,7 +408,7 @@ function withGasCapContext(
   result: NftPreflightResult,
   chainId: number,
 ): NftPreflightResult {
-  const maxTransactionGas = getChainConfig(chainId)?.maxTransactionGas;
+  const maxTransactionGas = getRevokeMaxTransactionGas(chainId);
   if (!result.gasCapExceeded || !maxTransactionGas) return result;
   return { ...result, maxTransactionGas };
 }
