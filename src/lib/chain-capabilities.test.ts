@@ -14,6 +14,7 @@ import {
   BSC_CHAIN_ID,
   BSC_OSAKA_MAX_TRANSACTION_GAS,
   CELO_CHAIN_ID,
+  EIP_7825_MAX_TRANSACTION_GAS,
   GNOSIS_CHAIN_ID,
   LINEA_CHAIN_ID,
   MANTLE_CHAIN_ID,
@@ -119,11 +120,14 @@ describe("chain capability metadata", () => {
   });
 
   it("records confirmed gas caps as chain metadata", () => {
+    expect(
+      CHAIN_CAPABILITIES[ETHEREUM_MAINNET_CLIENT_CHAIN_ID].perTxGasCap,
+    ).toBe(EIP_7825_MAX_TRANSACTION_GAS);
     expect(CHAIN_CAPABILITIES[BSC_CHAIN_ID].perTxGasCap).toBe(
       BSC_OSAKA_MAX_TRANSACTION_GAS,
     );
     expect(CHAIN_CAPABILITIES[BASE_CHAIN_ID].perTxGasCap).toBe(
-      BSC_OSAKA_MAX_TRANSACTION_GAS,
+      EIP_7825_MAX_TRANSACTION_GAS,
     );
     expect(CHAIN_CAPABILITIES[BASE_CHAIN_ID].hasPerTxGasMaximum).toBe(true);
     expect(CHAIN_CAPABILITIES[POLYGON_CHAIN_ID].perTxGasCap).toBeUndefined();

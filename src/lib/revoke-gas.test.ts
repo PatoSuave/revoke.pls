@@ -24,6 +24,7 @@ import {
   WALLET_HIGHER_FEE_CANCEL_COPY,
   WALLET_PROMPT_SAFETY_COPY,
   getGasWarningLevel,
+  getRevokeMaxTransactionGas,
   requiresGasWarningAcknowledgement,
   shouldEstimateRevokeGas,
 } from "@/lib/revoke-gas";
@@ -162,11 +163,16 @@ describe("revoke gas safety policy", () => {
     });
   });
 
-  it("keeps non-Ethereum chain estimation behavior scoped to the existing BSC gas cap lane", () => {
+  it("estimates revoke gas on chains with configured hard gas caps", () => {
     expect(shouldEstimateRevokeGas(ETHEREUM_MAINNET_CLIENT_CHAIN_ID)).toBe(true);
     expect(shouldEstimateRevokeGas(BSC_CHAIN_ID)).toBe(true);
+    expect(shouldEstimateRevokeGas(BASE_CHAIN_ID)).toBe(true);
+    expect(getRevokeMaxTransactionGas(ETHEREUM_MAINNET_CLIENT_CHAIN_ID)).toBe(
+      16_777_216n,
+    );
+    expect(getRevokeMaxTransactionGas(BSC_CHAIN_ID)).toBe(16_777_216n);
+    expect(getRevokeMaxTransactionGas(BASE_CHAIN_ID)).toBe(16_777_216n);
     expect(shouldEstimateRevokeGas(PULSECHAIN_CHAIN_ID)).toBe(false);
-    expect(shouldEstimateRevokeGas(BASE_CHAIN_ID)).toBe(false);
     expect(shouldEstimateRevokeGas(POLYGON_CHAIN_ID)).toBe(false);
     expect(shouldEstimateRevokeGas(SONIC_CHAIN_ID)).toBe(false);
   });
