@@ -7,12 +7,10 @@ import {
   ARBITRUM_ONE_CHAIN_ID,
 } from "@/lib/arbitrum-approval-api";
 import {
-  BASE_CHAIN_ID,
-  BSC_CHAIN_ID,
-  POLYGON_CHAIN_ID,
-  PULSECHAIN_CHAIN_ID,
-  getChainConfig,
-} from "@/lib/chains";
+  CHAIN_CAPABILITY_CHAIN_IDS,
+  getChainCapability,
+} from "@/lib/chain-capabilities";
+import { getChainConfig } from "@/lib/chains";
 import {
   ETHEREUM_EXPLORER_BASE_URL,
   ETHEREUM_MAINNET_CHAIN_ID,
@@ -34,15 +32,7 @@ import {
 
 const EIP7702_REQUEST_TIMEOUT_MS = 10_000;
 
-type Eip7702DiagnosticChainId =
-  | typeof ETHEREUM_MAINNET_CHAIN_ID
-  | typeof ARBITRUM_ONE_CHAIN_ID
-  | typeof OPTIMISM_CHAIN_ID
-  | typeof BASE_CHAIN_ID
-  | typeof POLYGON_CHAIN_ID
-  | typeof PULSECHAIN_CHAIN_ID
-  | typeof BSC_CHAIN_ID
-  | typeof HYPEREVM_CHAIN_ID;
+type Eip7702DiagnosticChainId = number;
 
 interface Eip7702ChainConfig {
   chainId: Eip7702DiagnosticChainId;
@@ -66,7 +56,7 @@ interface JsonRpcResponse {
   };
 }
 
-const CHAIN_CONFIGS: Record<Eip7702DiagnosticChainId, Eip7702ChainConfig> = {
+const SPECIAL_CHAIN_CONFIGS: Record<number, Omit<Eip7702ChainConfig, "supportNotes">> = {
   [ETHEREUM_MAINNET_CHAIN_ID]: {
     chainId: ETHEREUM_MAINNET_CHAIN_ID,
     chainName: "Ethereum Mainnet",
@@ -74,9 +64,6 @@ const CHAIN_CONFIGS: Record<Eip7702DiagnosticChainId, Eip7702ChainConfig> = {
     rpcUrl: "https://ethereum-rpc.publicnode.com",
     rpcEnvNames: ["MAINNET_RPC_URL", "ETHEREUM_RPC_URL"],
     supported: true,
-    supportNotes: [
-      "Ethereum mainnet supports EIP-7702 after the Pectra upgrade.",
-    ],
   },
   [ARBITRUM_ONE_CHAIN_ID]: {
     chainId: ARBITRUM_ONE_CHAIN_ID,
@@ -85,9 +72,6 @@ const CHAIN_CONFIGS: Record<Eip7702DiagnosticChainId, Eip7702ChainConfig> = {
     rpcUrl: "https://arb1.arbitrum.io/rpc",
     rpcEnvNames: ["ARBITRUM_ONE_RPC_URL", "ARBITRUM_RPC_URL"],
     supported: true,
-    supportNotes: [
-      "Arbitrum is marked supported for account-code reads and EIP-7702 delegation designator detection.",
-    ],
   },
   [OPTIMISM_CHAIN_ID]: {
     chainId: OPTIMISM_CHAIN_ID,
@@ -100,53 +84,6 @@ const CHAIN_CONFIGS: Record<Eip7702DiagnosticChainId, Eip7702ChainConfig> = {
       "OP_MAINNET_RPC_URL",
     ],
     supported: true,
-    supportNotes: [
-      "Optimism is marked supported for account-code reads and EIP-7702 delegation designator detection.",
-    ],
-  },
-  [BASE_CHAIN_ID]: {
-    chainId: BASE_CHAIN_ID,
-    chainName: "Base",
-    explorerBaseUrl: "https://basescan.org",
-    rpcUrl: "https://mainnet.base.org",
-    rpcEnvNames: ["BASE_RPC_URL", "NEXT_PUBLIC_BASE_RPC_URL"],
-    supported: true,
-    supportNotes: [
-      "Base is marked supported for account-code reads and EIP-7702 delegation designator detection.",
-    ],
-  },
-  [POLYGON_CHAIN_ID]: {
-    chainId: POLYGON_CHAIN_ID,
-    chainName: "Polygon",
-    explorerBaseUrl: "https://polygonscan.com",
-    rpcUrl: "https://polygon.drpc.org",
-    rpcEnvNames: ["POLYGON_RPC_URL", "NEXT_PUBLIC_POLYGON_RPC_URL"],
-    supported: true,
-    supportNotes: [
-      "Polygon is marked supported for account-code reads and EIP-7702 delegation designator detection.",
-    ],
-  },
-  [PULSECHAIN_CHAIN_ID]: {
-    chainId: PULSECHAIN_CHAIN_ID,
-    chainName: "PulseChain",
-    explorerBaseUrl: "https://scan.pulsechain.com",
-    rpcUrl: "https://rpc.pulsechain.com",
-    rpcEnvNames: ["PULSECHAIN_RPC_URL", "NEXT_PUBLIC_PULSECHAIN_RPC_URL"],
-    supported: true,
-    supportNotes: [
-      "PulseChain is checked with latest account-code reads, but EIP-7702 support is not marked confirmed.",
-    ],
-  },
-  [BSC_CHAIN_ID]: {
-    chainId: BSC_CHAIN_ID,
-    chainName: "BNB Smart Chain",
-    explorerBaseUrl: "https://bscscan.com",
-    rpcUrl: "https://bsc-dataseed.bnbchain.org",
-    rpcEnvNames: ["BSC_RPC_URL", "NEXT_PUBLIC_BSC_RPC_URL"],
-    supported: true,
-    supportNotes: [
-      "BNB Smart Chain Pascal added EIP-7702 compatibility.",
-    ],
   },
   [HYPEREVM_CHAIN_ID]: {
     chainId: HYPEREVM_CHAIN_ID,
@@ -159,16 +96,17 @@ const CHAIN_CONFIGS: Record<Eip7702DiagnosticChainId, Eip7702ChainConfig> = {
       "HYPERLIQUID_EVM_RPC_URL",
     ],
     supported: true,
-    supportNotes: [
-      "HyperEVM is checked with latest account-code reads, but EIP-7702 support is not marked confirmed.",
-    ],
   },
 };
+
+const EIP7702_DIAGNOSTIC_CHAIN_ID_SET = new Set<number>(
+  CHAIN_CAPABILITY_CHAIN_IDS,
+);
 
 export function isEip7702DiagnosticChainId(
   value: number,
 ): value is Eip7702DiagnosticChainId {
-  return Object.prototype.hasOwnProperty.call(CHAIN_CONFIGS, value.toString());
+  return EIP7702_DIAGNOSTIC_CHAIN_ID_SET.has(value);
 }
 
 export async function discoverEip7702Delegation({
@@ -262,7 +200,19 @@ function resolveEip7702Config(
   chainId: Eip7702DiagnosticChainId,
   env: NodeJS.ProcessEnv,
 ): ResolvedEip7702Config {
-  const settings = CHAIN_CONFIGS[chainId];
+  const settings = getEip7702BaseConfig(chainId);
+  if (!settings) {
+    return {
+      chainId,
+      chainName: "Unknown",
+      explorerBaseUrl: "",
+      rpcUrl: "",
+      rpcEnvNames: [],
+      supported: false,
+      supportNotes: [],
+      missingConfig: [],
+    };
+  }
   const configuredRpcUrl = validHttpUrl(firstEnv(env, settings.rpcEnvNames));
   const rpcUrl = configuredRpcUrl ?? settings.rpcUrl;
   const missingConfig: string[] = [];
@@ -275,6 +225,48 @@ function resolveEip7702Config(
     rpcUrl,
     missingConfig,
   };
+}
+
+function getEip7702BaseConfig(
+  chainId: Eip7702DiagnosticChainId,
+): Eip7702ChainConfig | undefined {
+  const genericConfig = getChainConfig(chainId);
+  if (genericConfig) {
+    return {
+      chainId,
+      chainName: genericConfig.displayName,
+      explorerBaseUrl: genericConfig.explorer.baseUrl,
+      rpcUrl: genericConfig.rpc.defaultUrl,
+      rpcEnvNames: [genericConfig.rpc.envVar],
+      supported: true,
+      supportNotes: eip7702SupportNotes(chainId, genericConfig.displayName),
+    };
+  }
+
+  const specialConfig = SPECIAL_CHAIN_CONFIGS[chainId];
+  if (!specialConfig) return undefined;
+  return {
+    ...specialConfig,
+    supportNotes: eip7702SupportNotes(chainId, specialConfig.chainName),
+  };
+}
+
+function eip7702SupportNotes(
+  chainId: Eip7702DiagnosticChainId,
+  chainName: string,
+): string[] {
+  const support = getChainCapability(chainId)?.supportsEip7702;
+  if (support === "confirmed") {
+    return [
+      `${chainName} is marked confirmed for EIP-7702 capability.`,
+      "This diagnostic reads latest account code only.",
+    ];
+  }
+
+  return [
+    `${chainName} is checked with latest account-code reads, but EIP-7702 support is not marked confirmed.`,
+    "This diagnostic can detect visible EIP-7702 delegation code when the RPC returns it.",
+  ];
 }
 
 async function readAccountCode({
@@ -357,6 +349,7 @@ function emptyEip7702Response(
 }
 
 function addressUrl(config: Eip7702ChainConfig, address: Address): string {
+  if (!config.explorerBaseUrl) return "";
   return `${config.explorerBaseUrl}/address/${address}`;
 }
 

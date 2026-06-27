@@ -23,6 +23,7 @@ export interface RevokeGasThresholds {
 }
 
 export const ETHEREUM_ERC20_APPROVE_ZERO_REFERENCE_GAS = 45_000n;
+export const CAPPED_CHAIN_HIGH_GAS_WARNING_PERCENT = 85n;
 
 export const ETHEREUM_REVOKE_GAS_THRESHOLDS: Record<
   RevokeGasCallKind,
@@ -57,7 +58,8 @@ export function shouldEstimateRevokeGas(chainId: number | undefined): boolean {
   return (
     chainId === ETHEREUM_MAINNET_CLIENT_CHAIN_ID ||
     chainId === BSC_CHAIN_ID ||
-    Boolean(getRevokeMaxTransactionGas(chainId))
+    Boolean(getRevokeMaxTransactionGas(chainId)) ||
+    Boolean(getPlannedRevokeMaxTransactionGas(chainId))
   );
 }
 
@@ -65,6 +67,33 @@ export function getRevokeMaxTransactionGas(
   chainId: number | undefined,
 ): bigint | undefined {
   return getChainCapability(chainId)?.perTxGasCap;
+}
+
+export function getPlannedRevokeMaxTransactionGas(
+  chainId: number | undefined,
+): bigint | undefined {
+  return getChainCapability(chainId)?.plannedPerTxGasCapValue;
+}
+
+export function estimateExceedsPlannedRevokeGasCap({
+  chainId,
+  estimatedGas,
+}: {
+  chainId: number | undefined;
+  estimatedGas: bigint | undefined;
+}): boolean {
+  const plannedCap = getPlannedRevokeMaxTransactionGas(chainId);
+  return plannedCap !== undefined && estimatedGas !== undefined
+    ? estimatedGas > plannedCap
+    : false;
+}
+
+export function getCappedChainHighGasWarningThreshold(
+  chainId: number | undefined,
+): bigint | undefined {
+  const maxTransactionGas = getRevokeMaxTransactionGas(chainId);
+  if (!maxTransactionGas) return undefined;
+  return (maxTransactionGas * CAPPED_CHAIN_HIGH_GAS_WARNING_PERCENT) / 100n;
 }
 
 export function getRevokeGasThresholds({
@@ -78,6 +107,11 @@ export function getRevokeGasThresholds({
 }): RevokeGasThresholds {
   if (chainId === ETHEREUM_MAINNET_CLIENT_CHAIN_ID) {
     return ETHEREUM_REVOKE_GAS_THRESHOLDS[kind];
+  }
+
+  const cappedChainThreshold = getCappedChainHighGasWarningThreshold(chainId);
+  if (cappedChainThreshold) {
+    return { high: cappedChainThreshold };
   }
 
   if (highGasWarningThreshold) {

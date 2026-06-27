@@ -1,5 +1,8 @@
 import type { PostRevokeVerificationState } from "@/lib/post-revoke-verification";
-import { chainRequiresPreconfirmAwareCopy } from "@/lib/chain-capabilities";
+import {
+  getChainConfirmationStrategy,
+  type ConfirmationStrategy,
+} from "@/lib/chain-capabilities";
 
 export type RevokeReceiptKind = "erc20" | "nft-operator" | "nft-token";
 export type RevokeReceiptVerificationState = PostRevokeVerificationState;
@@ -22,6 +25,12 @@ export const TRANSACTION_SUBMITTED_INCOMPLETE_COPY =
 export const PRECONFIRM_TRANSACTION_SEEN_COPY =
   "Transaction seen. Waiting for standard confirmation and live approval re-check before updating the approval state.";
 
+export const ROLLUP_FINALITY_AWARE_TRANSACTION_COPY =
+  "Transaction submitted. Waiting for chain confirmation and live approval re-check before updating the approval state.";
+
+export const HYPEREVM_DUAL_BLOCK_TRANSACTION_COPY =
+  "Transaction submitted on HyperEVM. Waiting for EVM confirmation and live approval re-check before updating the approval state.";
+
 export const LIVE_VERIFICATION_INCOMPLETE_COPY =
   "Live verification incomplete. Rescan this wallet to verify the approval cleared.";
 
@@ -39,17 +48,15 @@ export function getRevokeReceiptCopy({
   verificationState?: PostRevokeVerificationState;
 }): RevokeReceiptCopy {
   const method = revokeMethodLabel(kind);
-  const preconfirmAware = chainRequiresPreconfirmAwareCopy(chainId);
+  const confirmationStrategy = getChainConfirmationStrategy(chainId);
   const verification = verificationLabel(status, verificationState, {
-    preconfirmAware,
+    confirmationStrategy,
   });
 
   if (status === "pending") {
     return {
       title: "Transaction submitted",
-      body: preconfirmAware
-        ? PRECONFIRM_TRANSACTION_SEEN_COPY
-        : TRANSACTION_SUBMITTED_INCOMPLETE_COPY,
+      body: pendingBodyForStrategy(confirmationStrategy),
       method,
       verification,
     };
@@ -102,15 +109,24 @@ export function revokeSummary(kind: RevokeReceiptKind): string {
 function verificationLabel(
   status: RevokeReceiptStatus,
   verificationState: PostRevokeVerificationState,
-  options: { preconfirmAware?: boolean } = {},
+  options: { confirmationStrategy?: ConfirmationStrategy } = {},
 ): string {
   if (status === "success" && verificationState === "confirmed-cleared") {
     return LIVE_VERIFICATION_CONFIRMED_COPY;
   }
 
   if (status === "pending") {
-    if (options.preconfirmAware) {
+    if (
+      options.confirmationStrategy ===
+      "preconfirm-aware-receipt-plus-live-recheck"
+    ) {
       return "Waiting for standard confirmation and live approval re-check.";
+    }
+    if (options.confirmationStrategy === "rollup-safe-finalized-aware") {
+      return "Waiting for chain confirmation and live approval re-check.";
+    }
+    if (options.confirmationStrategy === "hyperevm-dual-block-awareness") {
+      return "Waiting for HyperEVM EVM confirmation and live approval re-check.";
     }
     return "Waiting for chain confirmation. Rescan this wallet after confirmation.";
   }
@@ -119,8 +135,17 @@ function verificationLabel(
     status === "success" &&
     (verificationState === "not-run" || verificationState === "pending")
   ) {
-    if (options.preconfirmAware) {
+    if (
+      options.confirmationStrategy ===
+      "preconfirm-aware-receipt-plus-live-recheck"
+    ) {
       return "Transaction confirmed. Re-checking approval state on-chain before marking it revoked.";
+    }
+    if (options.confirmationStrategy === "rollup-safe-finalized-aware") {
+      return "Chain confirmation observed. Re-checking approval state on-chain before marking it revoked.";
+    }
+    if (options.confirmationStrategy === "hyperevm-dual-block-awareness") {
+      return "HyperEVM EVM confirmation observed. Re-checking approval state on-chain before marking it revoked.";
     }
     return "Checking live approval state...";
   }
@@ -130,4 +155,19 @@ function verificationLabel(
   }
 
   return "Verification incomplete.";
+}
+
+function pendingBodyForStrategy(
+  strategy: ConfirmationStrategy,
+): string {
+  if (strategy === "preconfirm-aware-receipt-plus-live-recheck") {
+    return PRECONFIRM_TRANSACTION_SEEN_COPY;
+  }
+  if (strategy === "rollup-safe-finalized-aware") {
+    return ROLLUP_FINALITY_AWARE_TRANSACTION_COPY;
+  }
+  if (strategy === "hyperevm-dual-block-awareness") {
+    return HYPEREVM_DUAL_BLOCK_TRANSACTION_COPY;
+  }
+  return TRANSACTION_SUBMITTED_INCOMPLETE_COPY;
 }

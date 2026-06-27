@@ -2,7 +2,13 @@ import { describe, expect, it, vi } from "vitest";
 
 vi.mock("server-only", () => ({}));
 
-import { BSC_CHAIN_ID, PULSECHAIN_CHAIN_ID } from "@/lib/chains";
+import { CHAIN_CAPABILITY_CHAIN_IDS } from "@/lib/chain-capabilities";
+import {
+  BSC_CHAIN_ID,
+  CELO_CHAIN_ID,
+  LINEA_CHAIN_ID,
+  PULSECHAIN_CHAIN_ID,
+} from "@/lib/chains";
 import { HYPEREVM_CHAIN_ID } from "@/lib/hyperevm-approval-api";
 import {
   discoverEip7702Delegation,
@@ -24,10 +30,12 @@ function jsonRpcFetcher(result: string): typeof fetch {
 }
 
 describe("EIP-7702 account-code server diagnostic", () => {
-  it("recognizes BSC, PulseChain, and HyperEVM as bounded account-code check targets", () => {
-    expect(isEip7702DiagnosticChainId(BSC_CHAIN_ID)).toBe(true);
-    expect(isEip7702DiagnosticChainId(PULSECHAIN_CHAIN_ID)).toBe(true);
-    expect(isEip7702DiagnosticChainId(HYPEREVM_CHAIN_ID)).toBe(true);
+  it("recognizes all capability chains as bounded account-code check targets", () => {
+    expect(CHAIN_CAPABILITY_CHAIN_IDS).toHaveLength(18);
+    for (const chainId of CHAIN_CAPABILITY_CHAIN_IDS) {
+      expect(isEip7702DiagnosticChainId(chainId)).toBe(true);
+    }
+    expect(isEip7702DiagnosticChainId(123456)).toBe(false);
   });
 
   it("maps empty account code to none_detected", async () => {
@@ -42,6 +50,7 @@ describe("EIP-7702 account-code server diagnostic", () => {
     expect(result.status).toBe("complete");
     expect(result.riskLevel).toBe("none_detected");
     expect(result.summary.hasCode).toBe(false);
+    expect(result.supportNotes.join(" ")).toContain("confirmed");
     expect(fetcher).toHaveBeenCalledWith(
       "https://bsc-dataseed.bnbchain.org",
       expect.objectContaining({
@@ -49,6 +58,51 @@ describe("EIP-7702 account-code server diagnostic", () => {
         cache: "no-store",
       }),
     );
+  });
+
+  it("uses existing generic chain RPC config for newly covered chains", async () => {
+    const fetcher = jsonRpcFetcher("0x");
+    const result = await discoverEip7702Delegation({
+      owner: OWNER,
+      chainId: LINEA_CHAIN_ID,
+      fetcher,
+      env: TEST_ENV,
+    });
+
+    expect(result.status).toBe("complete");
+    expect(result.chainName).toBe("Linea");
+    expect(result.supportNotes.join(" ")).toContain("confirmed");
+    expect(fetcher).toHaveBeenCalledWith(
+      "https://rpc.linea.build",
+      expect.objectContaining({
+        method: "POST",
+        cache: "no-store",
+      }),
+    );
+  });
+
+  it("keeps unknown EIP-7702 support separate from account-code read coverage", async () => {
+    const result = await discoverEip7702Delegation({
+      owner: OWNER,
+      chainId: PULSECHAIN_CHAIN_ID,
+      fetcher: jsonRpcFetcher("0x"),
+      env: TEST_ENV,
+    });
+
+    expect(result.status).toBe("complete");
+    expect(result.supportNotes.join(" ")).toContain("not marked confirmed");
+  });
+
+  it("marks Celo as confirmed for EIP-7702 diagnostics", async () => {
+    const result = await discoverEip7702Delegation({
+      owner: OWNER,
+      chainId: CELO_CHAIN_ID,
+      fetcher: jsonRpcFetcher("0x"),
+      env: TEST_ENV,
+    });
+
+    expect(result.status).toBe("complete");
+    expect(result.supportNotes.join(" ")).toContain("confirmed");
   });
 
   it("maps valid EIP-7702 delegation code to elevated risk with a delegate", async () => {

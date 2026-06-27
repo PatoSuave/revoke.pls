@@ -23,6 +23,7 @@ import {
   CELO_CHAIN_ID,
   CELO_EXPLORER_API_DEFAULT,
   CELO_EXPLORER_CHAIN_ID_DEFAULT,
+  EIP_7825_MAX_TRANSACTION_GAS,
   GNOSIS_CHAIN_ID,
   GNOSIS_EXPLORER_API_DEFAULT,
   GNOSIS_EXPLORER_CHAIN_ID_DEFAULT,
@@ -192,8 +193,10 @@ describe("supported chain config", () => {
     expect(config?.displayName).toBe("Base");
     expect(config?.shortName).toBe("Base");
     expect(config?.nativeSymbol).toBe("ETH");
-    expect(config?.maxTransactionGas).toBeUndefined();
-    expect(config?.highGasWarningThreshold).toBeUndefined();
+    expect(config?.maxTransactionGas).toBe(EIP_7825_MAX_TRANSACTION_GAS);
+    expect(config?.highGasWarningThreshold).toBe(
+      (EIP_7825_MAX_TRANSACTION_GAS * 85n) / 100n,
+    );
     expect(config?.standardLabels).toMatchObject({
       fungible: "ERC-20",
       nft: "ERC-721",

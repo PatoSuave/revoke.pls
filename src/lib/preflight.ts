@@ -26,17 +26,21 @@ export type PreflightStatus =
   | "cleared"
   | "unverified";
 
-export const BSC_GAS_CAP_TITLE = "BSC gas limit exceeded";
-export const BSC_GAS_CAP_BODY =
-  "BNB Smart Chain rejects individual transactions above 16,777,216 gas after the Osaka/Mendel upgrade. This revoke estimated above that cap, so it was blocked before wallet submission.";
-export const BSC_GAS_CAP_HELPER =
-  "Try again with a different RPC or verify directly on BscScan. If the token requires more gas than the chain allows, it may not be revokable through a standard approve(spender, 0) transaction.";
-export const BSC_GAS_CAP_ERROR = `${BSC_GAS_CAP_TITLE}. ${BSC_GAS_CAP_BODY} ${BSC_GAS_CAP_HELPER}`;
+export const REVOKE_GAS_CAP_TITLE = "Transaction gas cap exceeded";
+export const REVOKE_GAS_CAP_BODY =
+  "This chain rejects individual transactions above its per-transaction gas cap. This revoke estimated above that cap, so it was blocked before wallet submission.";
+export const REVOKE_GAS_CAP_HELPER =
+  "Try again with a different RPC or verify directly on the chain explorer. If the token requires more gas than the chain allows, it may not be revokable through a standard approval-reset transaction.";
+export const REVOKE_GAS_CAP_ERROR = `${REVOKE_GAS_CAP_TITLE}. ${REVOKE_GAS_CAP_BODY} ${REVOKE_GAS_CAP_HELPER}`;
+export const BSC_GAS_CAP_TITLE = REVOKE_GAS_CAP_TITLE;
+export const BSC_GAS_CAP_BODY = REVOKE_GAS_CAP_BODY;
+export const BSC_GAS_CAP_HELPER = REVOKE_GAS_CAP_HELPER;
+export const BSC_GAS_CAP_ERROR = REVOKE_GAS_CAP_ERROR;
 export const HIGH_GAS_WARNING_TITLE = "Unusually high gas estimate";
 export const HIGH_GAS_WARNING_BODY =
-  "This revoke estimates above 1,000,000 gas on BSC. That is unusually high for a standard token approval revoke. Rabby or another wallet may warn that this could be risky. Only continue if you recognize this token and spender.";
+  "This revoke estimates unusually high gas for a standard approval reset. Your wallet may show an additional warning. Continue only after reviewing the token, spender, and wallet prompt.";
 export const HIGH_GAS_WARNING_HELPER =
-  "This does not mean the transaction is automatically malicious, but it is abnormal for a normal BEP-20 revoke. You can cancel and verify directly on BscScan.";
+  "This does not mean the transaction is automatically malicious, but it is abnormal for a normal revoke. You can cancel and verify directly on the chain explorer.";
 
 export interface Erc20PreflightContext {
   tokenSymbol: string;

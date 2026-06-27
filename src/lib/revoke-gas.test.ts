@@ -9,8 +9,10 @@ import {
   POLYGON_CHAIN_ID,
   PULSECHAIN_CHAIN_ID,
   SONIC_CHAIN_ID,
+  UNICHAIN_CHAIN_ID,
 } from "@/lib/chains";
 import { ETHEREUM_MAINNET_CLIENT_CHAIN_ID } from "@/lib/ethereum-approval-client";
+import { OPTIMISM_CLIENT_CHAIN_ID } from "@/lib/optimism-approval-client";
 import {
   blockGasEstimateFailure,
   applyGasEstimateToPreflight,
@@ -23,8 +25,12 @@ import {
   ETHEREUM_REVOKE_GAS_THRESHOLDS,
   WALLET_HIGHER_FEE_CANCEL_COPY,
   WALLET_PROMPT_SAFETY_COPY,
+  estimateExceedsPlannedRevokeGasCap,
+  getCappedChainHighGasWarningThreshold,
   getGasWarningLevel,
+  getPlannedRevokeMaxTransactionGas,
   getRevokeMaxTransactionGas,
+  getRevokeGasThresholds,
   requiresGasWarningAcknowledgement,
   shouldEstimateRevokeGas,
 } from "@/lib/revoke-gas";
@@ -167,6 +173,8 @@ describe("revoke gas safety policy", () => {
     expect(shouldEstimateRevokeGas(ETHEREUM_MAINNET_CLIENT_CHAIN_ID)).toBe(true);
     expect(shouldEstimateRevokeGas(BSC_CHAIN_ID)).toBe(true);
     expect(shouldEstimateRevokeGas(BASE_CHAIN_ID)).toBe(true);
+    expect(shouldEstimateRevokeGas(OPTIMISM_CLIENT_CHAIN_ID)).toBe(true);
+    expect(shouldEstimateRevokeGas(UNICHAIN_CHAIN_ID)).toBe(true);
     expect(getRevokeMaxTransactionGas(ETHEREUM_MAINNET_CLIENT_CHAIN_ID)).toBe(
       16_777_216n,
     );
@@ -175,6 +183,68 @@ describe("revoke gas safety policy", () => {
     expect(shouldEstimateRevokeGas(PULSECHAIN_CHAIN_ID)).toBe(false);
     expect(shouldEstimateRevokeGas(POLYGON_CHAIN_ID)).toBe(false);
     expect(shouldEstimateRevokeGas(SONIC_CHAIN_ID)).toBe(false);
+  });
+
+  it("uses 85 percent of active chain caps as the capped-chain warning threshold", () => {
+    const threshold = 14_260_633n;
+
+    expect(getCappedChainHighGasWarningThreshold(BSC_CHAIN_ID)).toBe(threshold);
+    expect(getCappedChainHighGasWarningThreshold(BASE_CHAIN_ID)).toBe(threshold);
+    expect(
+      getRevokeGasThresholds({
+        chainId: BSC_CHAIN_ID,
+        kind: "erc20",
+        highGasWarningThreshold: 1_000_000n,
+      }).high,
+    ).toBe(threshold);
+    expect(
+      getGasWarningLevel({
+        chainId: BASE_CHAIN_ID,
+        kind: "erc20",
+        estimatedGas: threshold,
+      }),
+    ).toBe("none");
+    expect(
+      getGasWarningLevel({
+        chainId: BASE_CHAIN_ID,
+        kind: "erc20",
+        estimatedGas: threshold + 1n,
+      }),
+    ).toBe("high");
+  });
+
+  it("tracks Optimism and Unichain planned gas caps without making them hard caps", () => {
+    for (const chainId of [OPTIMISM_CLIENT_CHAIN_ID, UNICHAIN_CHAIN_ID]) {
+      expect(getRevokeMaxTransactionGas(chainId)).toBeUndefined();
+      expect(getPlannedRevokeMaxTransactionGas(chainId)).toBe(16_777_216n);
+      expect(
+        estimateExceedsPlannedRevokeGasCap({
+          chainId,
+          estimatedGas: 16_777_217n,
+        }),
+      ).toBe(true);
+
+      const result = applyGasEstimateToPreflight(
+        { kind: "erc20", status: "active", currentAllowance: 1n },
+        16_777_217n,
+        getRevokeMaxTransactionGas(chainId),
+        undefined,
+        {
+          chainId,
+          callKind: "erc20",
+        },
+      );
+
+      expect(result).toMatchObject({
+        status: "active",
+        gasCapExceeded: false,
+        highGasWarning: false,
+      });
+      expect(safeGasForRevokeRequest(result, undefined)).toEqual({
+        ok: true,
+        gas: 16_777_217n,
+      });
+    }
   });
 
   it("keeps the Ethereum gas warning and wallet-safety copy explicit", () => {

@@ -26,6 +26,11 @@ import {
 } from "@/lib/chains";
 import { ARBITRUM_ONE_CLIENT_CHAIN_ID } from "@/lib/arbitrum-approval-client";
 import { ETHEREUM_MAINNET_CLIENT_CHAIN_ID } from "@/lib/ethereum-approval-client";
+import {
+  HYPEREVM_CORE_WRITER_ADDRESS,
+  HYPEREVM_HYPE_SYSTEM_ADDRESS,
+  HYPEREVM_WHYPE_ADDRESS,
+} from "@/lib/hyperevm-system-contracts";
 import { HYPEREVM_CLIENT_CHAIN_ID } from "@/lib/hyperevm-approval-client";
 import { OPTIMISM_CLIENT_CHAIN_ID } from "@/lib/optimism-approval-client";
 
@@ -102,12 +107,16 @@ describe("chain capability metadata", () => {
     expect(CHAIN_CAPABILITIES[MANTLE_CHAIN_ID].supportsEip7702).toBe(
       "unknown",
     );
-    expect(CHAIN_CAPABILITIES[LINEA_CHAIN_ID].supportsEip7702).toBe("unknown");
+    expect(CHAIN_CAPABILITIES[LINEA_CHAIN_ID].supportsEip7702).toBe(
+      "confirmed",
+    );
     expect(CHAIN_CAPABILITIES[BLAST_CHAIN_ID].supportsEip7702).toBe("unknown");
     expect(CHAIN_CAPABILITIES[BERACHAIN_CHAIN_ID].supportsEip7702).toBe(
       "unknown",
     );
-    expect(CHAIN_CAPABILITIES[CELO_CHAIN_ID].supportsEip7702).toBe("unknown");
+    expect(CHAIN_CAPABILITIES[CELO_CHAIN_ID].supportsEip7702).toBe(
+      "confirmed",
+    );
     expect(CHAIN_CAPABILITIES[GNOSIS_CHAIN_ID].supportsEip7702).toBe(
       "unknown",
     );
@@ -145,12 +154,73 @@ describe("chain capability metadata", () => {
     ).toBeUndefined();
   });
 
+  it("records planned gas caps without treating them as active caps", () => {
+    for (const chainId of [OPTIMISM_CLIENT_CHAIN_ID, UNICHAIN_CHAIN_ID]) {
+      expect(CHAIN_CAPABILITIES[chainId].plannedPerTxGasCap).toBe(true);
+      expect(CHAIN_CAPABILITIES[chainId].plannedPerTxGasCapValue).toBe(
+        EIP_7825_MAX_TRANSACTION_GAS,
+      );
+      expect(CHAIN_CAPABILITIES[chainId].perTxGasCap).toBeUndefined();
+    }
+  });
+
+  it("records RPC and explorer reliability flags from the capability refresh", () => {
+    expect(CHAIN_CAPABILITIES[AVALANCHE_CHAIN_ID].rpcBatchLimit).toBe(40);
+    expect(CHAIN_CAPABILITIES[AVALANCHE_CHAIN_ID].websocketSupport).toBe("yes");
+    expect(CHAIN_CAPABILITIES[POLYGON_CHAIN_ID].requiresChunkedLogs).toBe(true);
+    expect(CHAIN_CAPABILITIES[GNOSIS_CHAIN_ID].requiresChunkedLogs).toBe(true);
+    expect(CHAIN_CAPABILITIES[MANTLE_CHAIN_ID].supportsEstimateTotalFee).toBe(
+      true,
+    );
+    expect(CHAIN_CAPABILITIES[CELO_CHAIN_ID].supportsCustomFeeCurrency).toBe(
+      true,
+    );
+    expect(CHAIN_CAPABILITIES[WORLDCHAIN_CHAIN_ID].mayUsePaymasters).toBe(true);
+    expect(CHAIN_CAPABILITIES[WORLDCHAIN_CHAIN_ID].gasLimit).toBe(80_000_000n);
+    expect(CHAIN_CAPABILITIES[WORLDCHAIN_CHAIN_ID].gasTarget).toBe(40_000_000n);
+  });
+
   it("identifies preconfirmation-aware chains for receipt copy", () => {
     expect(chainRequiresPreconfirmAwareCopy(BASE_CHAIN_ID)).toBe(true);
+    expect(chainRequiresPreconfirmAwareCopy(UNICHAIN_CHAIN_ID)).toBe(true);
     expect(chainRequiresPreconfirmAwareCopy(OPTIMISM_CLIENT_CHAIN_ID)).toBe(
       true,
     );
     expect(chainRequiresPreconfirmAwareCopy(BSC_CHAIN_ID)).toBe(false);
     expect(getChainCapability(123456)).toBeUndefined();
+  });
+
+  it("records L2 and HyperEVM confirmation strategies", () => {
+    for (const chainId of [
+      MANTLE_CHAIN_ID,
+      LINEA_CHAIN_ID,
+      BLAST_CHAIN_ID,
+      WORLDCHAIN_CHAIN_ID,
+    ]) {
+      expect(CHAIN_CAPABILITIES[chainId].confirmationStrategy).toBe(
+        "rollup-safe-finalized-aware",
+      );
+    }
+
+    expect(CHAIN_CAPABILITIES[HYPEREVM_CLIENT_CHAIN_ID].confirmationStrategy).toBe(
+      "hyperevm-dual-block-awareness",
+    );
+  });
+
+  it("reuses existing HyperEVM system contract metadata", () => {
+    const contracts =
+      CHAIN_CAPABILITIES[HYPEREVM_CLIENT_CHAIN_ID].systemContracts ?? [];
+    const addresses = contracts.map((contract) => contract.address);
+
+    expect(addresses).toEqual(
+      expect.arrayContaining([
+        HYPEREVM_CORE_WRITER_ADDRESS,
+        HYPEREVM_HYPE_SYSTEM_ADDRESS,
+        HYPEREVM_WHYPE_ADDRESS,
+      ]),
+    );
+    expect(contracts.map((contract) => contract.label).join(" ")).not.toMatch(
+      /\b(safe|trusted|guaranteed)\b/i,
+    );
   });
 });

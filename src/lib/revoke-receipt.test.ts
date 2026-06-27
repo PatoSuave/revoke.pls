@@ -3,13 +3,23 @@ import { describe, expect, it } from "vitest";
 import {
   LIVE_VERIFICATION_CONFIRMED_COPY,
   LIVE_VERIFICATION_INCOMPLETE_COPY,
+  HYPEREVM_DUAL_BLOCK_TRANSACTION_COPY,
   PRECONFIRM_TRANSACTION_SEEN_COPY,
+  ROLLUP_FINALITY_AWARE_TRANSACTION_COPY,
   TRANSACTION_SUBMITTED_INCOMPLETE_COPY,
   getRevokeReceiptCopy,
   revokeMethodLabel,
   revokeSummary,
 } from "./revoke-receipt";
-import { BASE_CHAIN_ID } from "./chains";
+import {
+  BASE_CHAIN_ID,
+  BLAST_CHAIN_ID,
+  LINEA_CHAIN_ID,
+  MANTLE_CHAIN_ID,
+  UNICHAIN_CHAIN_ID,
+  WORLDCHAIN_CHAIN_ID,
+} from "./chains";
+import { HYPEREVM_CLIENT_CHAIN_ID } from "./hyperevm-approval-client";
 import { OPTIMISM_CLIENT_CHAIN_ID } from "./optimism-approval-client";
 
 describe("revoke receipt copy", () => {
@@ -61,8 +71,12 @@ describe("revoke receipt copy", () => {
     expect(copy.verification).not.toContain("Confirmed cleared");
   });
 
-  it("uses preconfirmation-aware pending copy on Base and Optimism", () => {
-    for (const chainId of [BASE_CHAIN_ID, OPTIMISM_CLIENT_CHAIN_ID]) {
+  it("uses preconfirmation-aware pending copy on Base, Optimism, and Unichain", () => {
+    for (const chainId of [
+      BASE_CHAIN_ID,
+      OPTIMISM_CLIENT_CHAIN_ID,
+      UNICHAIN_CHAIN_ID,
+    ]) {
       const copy = getRevokeReceiptCopy({
         status: "pending",
         kind: "erc20",
@@ -73,6 +87,37 @@ describe("revoke receipt copy", () => {
       expect(copy.verification).toContain("standard confirmation");
       expect(copy.verification).not.toContain("Confirmed cleared");
     }
+  });
+
+  it("uses rollup finality-aware pending copy without marking rows cleared", () => {
+    for (const chainId of [
+      MANTLE_CHAIN_ID,
+      LINEA_CHAIN_ID,
+      BLAST_CHAIN_ID,
+      WORLDCHAIN_CHAIN_ID,
+    ]) {
+      const copy = getRevokeReceiptCopy({
+        status: "pending",
+        kind: "erc20",
+        chainId,
+      });
+
+      expect(copy.body).toBe(ROLLUP_FINALITY_AWARE_TRANSACTION_COPY);
+      expect(copy.verification).toContain("live approval re-check");
+      expect(copy.verification).not.toBe(LIVE_VERIFICATION_CONFIRMED_COPY);
+    }
+  });
+
+  it("uses HyperEVM confirmation copy without marking rows cleared", () => {
+    const copy = getRevokeReceiptCopy({
+      status: "pending",
+      kind: "erc20",
+      chainId: HYPEREVM_CLIENT_CHAIN_ID,
+    });
+
+    expect(copy.body).toBe(HYPEREVM_DUAL_BLOCK_TRANSACTION_COPY);
+    expect(copy.verification).toContain("HyperEVM EVM confirmation");
+    expect(copy.verification).not.toBe(LIVE_VERIFICATION_CONFIRMED_COPY);
   });
 
   it("does not mark preconfirmation-aware success cleared before live re-check", () => {
@@ -158,6 +203,8 @@ describe("revoke receipt copy", () => {
       revokeSummary("nft-token"),
       TRANSACTION_SUBMITTED_INCOMPLETE_COPY,
       PRECONFIRM_TRANSACTION_SEEN_COPY,
+      ROLLUP_FINALITY_AWARE_TRANSACTION_COPY,
+      HYPEREVM_DUAL_BLOCK_TRANSACTION_COPY,
       LIVE_VERIFICATION_CONFIRMED_COPY,
       LIVE_VERIFICATION_INCOMPLETE_COPY,
       getRevokeReceiptCopy({ status: "error", kind: "erc20" }).body,

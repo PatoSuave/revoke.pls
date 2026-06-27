@@ -117,7 +117,8 @@ export const WORLDCHAIN_EXPLORER_CHAIN_ID_DEFAULT =
   WORLDCHAIN_CHAIN_ID.toString();
 export const EIP_7825_MAX_TRANSACTION_GAS = 16_777_216n;
 export const BSC_OSAKA_MAX_TRANSACTION_GAS = EIP_7825_MAX_TRANSACTION_GAS;
-export const BSC_HIGH_GAS_WARNING_THRESHOLD = 1_000_000n;
+export const BSC_HIGH_GAS_WARNING_THRESHOLD =
+  (BSC_OSAKA_MAX_TRANSACTION_GAS * 85n) / 100n;
 
 export type SupportedChainKey =
   | "pulsechain"
@@ -1529,6 +1530,9 @@ export const supportedChainConfigs = {
       multiToken: "ERC-1155",
       nftOperator: "ERC-721/ERC-1155",
     },
+    maxTransactionGas: EIP_7825_MAX_TRANSACTION_GAS,
+    highGasWarningThreshold:
+      (EIP_7825_MAX_TRANSACTION_GAS * 85n) / 100n,
   },
   [POLYGON_CHAIN_ID]: {
     key: "polygon",

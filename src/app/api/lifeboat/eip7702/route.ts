@@ -41,7 +41,7 @@ export async function GET(request: Request) {
   const chainId = Number(url.searchParams.get("chainId"));
   if (!Number.isInteger(chainId) || !isEip7702DiagnosticChainId(chainId)) {
     return badRequest(
-      "Wallet Lifeboat EIP-7702 diagnostics currently recognize chainId=1, 10, 56, 137, 369, 999, 8453, and 42161.",
+      "Wallet Lifeboat EIP-7702 diagnostics currently recognize supported Pulse Revoke chain IDs only.",
     );
   }
 
