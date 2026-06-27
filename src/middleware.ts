@@ -3,7 +3,7 @@ import { NextResponse } from "next/server";
 
 import { buildContentSecurityPolicy } from "@/lib/security/content-security-policy";
 
-const FROZEN_PATH_PREFIXES = ["/app/wallet-lifeboat", "/api/lifeboat"];
+const UNPUBLISHED_PATH_PREFIXES = ["/app/wallet-lifeboat", "/api/lifeboat"];
 
 export function middleware(request: NextRequest) {
   const nonce = crypto.randomUUID();
@@ -12,11 +12,11 @@ export function middleware(request: NextRequest) {
   });
   const path = request.nextUrl.pathname;
 
-  if (FROZEN_PATH_PREFIXES.some((prefix) => isPathOrChild(path, prefix))) {
+  if (UNPUBLISHED_PATH_PREFIXES.some((prefix) => isPathOrChild(path, prefix))) {
     return NextResponse.json(
       {
         error: "not_found",
-        message: "This feature is frozen and not published on main.",
+        message: "Not found.",
       },
       {
         status: 404,

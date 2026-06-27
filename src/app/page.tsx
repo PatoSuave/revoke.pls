@@ -9,13 +9,6 @@ import { PulseChainResourceLinks } from "@/components/sections/pulsechain-resour
 import { PulseMark } from "@/components/pulse-mark";
 import { ThemeModeToggle } from "@/components/theme-mode-toggle";
 import { getChainVisual } from "@/lib/chain-visuals";
-import {
-  currentRelease,
-  isPlaceholderCid,
-  isPlaceholderUrl,
-  type ReleaseArtifact,
-  type ReleaseManifest,
-} from "@/lib/release";
 import { absoluteUrl, siteConfig } from "@/lib/site";
 import {
   formatRevokeSupport,
@@ -182,23 +175,12 @@ const FAQ_ITEMS = [
       "For PRC-20, BEP-20, and ERC-20 tokens, revoking sets the spender allowance to zero. For NFTs, it clears the relevant operator or per-token approval.",
   },
   {
-    question: "Is the desktop app available yet?",
-    answer:
-      "Not yet. The Tauri desktop path is prepared for a future signed release, but public desktop artifacts are still pending.",
-  },
-  {
     question: "What chains are supported?",
     answer: `${LIVE_SUPPORTED_CHAIN_LIST} are live in the scanner. ${VERIFIED_ROW_SUPPORT_NOTE} Results should still be checked on the relevant explorer before signing.`,
   },
 ] as const;
 
 export default function LauncherPage() {
-  const release = currentRelease;
-  const desktopReady = release.artifacts.some(
-    (artifact) => !isPlaceholderUrl(artifact.href),
-  );
-  const ipfsReady = !isPlaceholderCid(release.ipfs.cid);
-
   return (
     <div className="min-h-dvh bg-pulse-bg text-pulse-text">
       <SiteHeader />
@@ -209,11 +191,9 @@ export default function LauncherPage() {
         <TrustStrip />
         <AntiPhishingBanner />
         <PulseChainResourceLinks />
-        <DesktopSection release={release} desktopReady={desktopReady} />
-        <IpfsSection release={release} ipfsReady={ipfsReady} />
         <FAQSection />
       </main>
-      <SiteFooter desktopReady={desktopReady} />
+      <SiteFooter />
     </div>
   );
 }
@@ -377,8 +357,8 @@ function ScannerPathPanel() {
       </div>
 
       <p className="rounded-2xl border border-pulse-border bg-pulse-bg/55 p-4 text-xs leading-5 text-pulse-muted">
-        Desktop and IPFS releases are tracked below as roadmap status. The live
-        product action is the web scanner.
+        The live product action is the web scanner. Revokes are only submitted
+        after you review and confirm them in your own wallet.
       </p>
     </aside>
   );
@@ -552,195 +532,6 @@ function HowItWorks() {
   );
 }
 
-function DesktopSection({
-  release,
-  desktopReady,
-}: {
-  release: ReleaseManifest;
-  desktopReady: boolean;
-}) {
-  return (
-    <section id="desktop" className="border-b border-pulse-border/60 py-16 sm:py-20">
-      <div className="mx-auto grid max-w-6xl gap-8 px-4 sm:px-6 lg:grid-cols-[0.95fr_1.05fr] lg:items-start">
-        <div>
-          <SectionKicker>Roadmap status</SectionKicker>
-          <h2 className="mt-2 text-3xl font-bold sm:text-4xl">
-            Desktop builds are planned, not live yet.
-          </h2>
-          <p className="mt-4 text-sm leading-7 text-pulse-muted">
-            The live scanner is the hosted /app. The desktop path is prepared
-            for a future signed Tauri build, and no public artifact is linked
-            until release files and checksums are real.
-          </p>
-          <div className="mt-5 grid gap-2 text-sm text-pulse-muted">
-            <CheckLine>Future local interface after installation.</CheckLine>
-            <CheckLine>WalletConnect pairing planned for desktop use.</CheckLine>
-            <CheckLine>Same approval review and revoke model as /app.</CheckLine>
-          </div>
-        </div>
-
-        <div className="grid gap-3">
-          <div className="rounded-2xl border border-pulse-border bg-pulse-panel/70 p-5">
-            <div className="flex flex-wrap items-center justify-between gap-3">
-              <div>
-                <p className="text-sm font-semibold text-pulse-text">
-                  Desktop release status
-                </p>
-                <p className="mt-1 text-xs text-pulse-muted">
-                  {desktopReady
-                    ? `Artifacts listed for ${release.version}.`
-                    : "No public desktop artifact or checksum is published yet."}
-                </p>
-              </div>
-              <StatusPill tone={desktopReady ? "success" : "neutral"}>
-                {desktopReady ? release.version : "Pending"}
-              </StatusPill>
-            </div>
-          </div>
-
-          <div className="grid gap-3 sm:grid-cols-2">
-            {release.artifacts.map((artifact) => (
-              <ArtifactCard key={artifact.id} artifact={artifact} />
-            ))}
-          </div>
-
-          <div className="rounded-2xl border border-pulse-border bg-pulse-panel/60 p-5">
-            <div>
-              <p className="text-sm font-semibold text-pulse-text">
-                Release guardrail
-              </p>
-              <p className="mt-2 text-xs leading-5 text-pulse-muted">
-                Desktop downloads remain disabled until signed release
-                artifacts and checksums are available. Placeholder manifest
-                values never render as download links.
-              </p>
-            </div>
-          </div>
-        </div>
-      </div>
-    </section>
-  );
-}
-
-function ArtifactCard({ artifact }: { artifact: ReleaseArtifact }) {
-  const ready = !isPlaceholderUrl(artifact.href);
-
-  if (!ready) {
-    return (
-      <div className="rounded-xl border border-pulse-border bg-pulse-bg/55 p-4">
-        <div className="flex items-start justify-between gap-3">
-          <div>
-            <p className="text-sm font-semibold text-pulse-text">
-              {artifact.platform}
-            </p>
-            <p className="mt-1 text-xs text-pulse-muted">
-              {artifact.architecture}
-            </p>
-          </div>
-          <span className="rounded-full border border-pulse-border bg-pulse-panel/70 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-pulse-muted">
-            Pending
-          </span>
-        </div>
-        <p className="mt-3 text-xs text-pulse-muted">Download coming soon.</p>
-      </div>
-    );
-  }
-
-  return (
-    <a
-      href={artifact.href}
-      className="block rounded-xl border border-pulse-cyan/40 bg-pulse-cyan/10 p-4 transition hover:bg-pulse-cyan/15"
-    >
-      <p className="text-sm font-semibold text-pulse-text">
-        {artifact.platform}
-      </p>
-      <p className="mt-1 text-xs text-pulse-muted">{artifact.architecture}</p>
-      <p className="mt-3 text-xs font-semibold text-pulse-cyan">Download</p>
-    </a>
-  );
-}
-
-function IpfsSection({
-  release,
-  ipfsReady,
-}: {
-  release: ReleaseManifest;
-  ipfsReady: boolean;
-}) {
-  return (
-    <section id="ipfs" className="border-b border-pulse-border/60 py-16 sm:py-20">
-      <div className="mx-auto grid max-w-6xl gap-8 px-4 sm:px-6 lg:grid-cols-[0.9fr_1.1fr] lg:items-start">
-        <div>
-          <SectionKicker>Roadmap status</SectionKicker>
-          <h2 className="mt-2 text-3xl font-bold sm:text-4xl">
-            IPFS publishing waits for a verified release artifact.
-          </h2>
-          <p className="mt-4 text-sm leading-7 text-pulse-muted">
-            The release manifest models gateways and checksums so builds can be
-            pinned later. The final CID stays pending until a real artifact is
-            published and verified.
-          </p>
-        </div>
-
-        <div className="grid gap-3">
-          <div className="rounded-2xl border border-pulse-border bg-pulse-panel/70 p-5">
-            <div className="flex flex-wrap items-center justify-between gap-3">
-              <div>
-                <p className="text-sm font-semibold text-pulse-text">
-                  IPFS status
-                </p>
-                <p className="mt-1 text-xs text-pulse-muted">
-                  {ipfsReady
-                    ? "A pinned CID is present in the release manifest."
-                    : "Final CID pending release."}
-                </p>
-              </div>
-              <StatusPill tone={ipfsReady ? "success" : "neutral"}>
-                {ipfsReady ? "Pinned" : "CID pending"}
-              </StatusPill>
-            </div>
-          </div>
-
-          <div className="rounded-2xl border border-pulse-border bg-pulse-panel/60 p-5">
-            <div>
-              <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-pulse-muted">
-                Content ID
-              </p>
-              {ipfsReady ? (
-                <p className="mt-2 break-all font-mono text-sm text-pulse-text">
-                  {release.ipfs.cid}
-                </p>
-              ) : (
-                <p className="mt-2 text-sm text-pulse-muted">
-                  No final CID has been published yet.
-                </p>
-              )}
-            </div>
-          </div>
-
-          <div className="flex flex-wrap gap-2">
-            {[release.ipfs.preferredGateway, ...release.ipfs.alternateGateways].map(
-              (gateway) => (
-                <span
-                  key={gateway.base}
-                  className="rounded-full border border-pulse-border bg-pulse-bg/55 px-3 py-1 text-xs text-pulse-muted"
-                >
-                  {gateway.label}
-                </span>
-              ),
-            )}
-          </div>
-
-          <p className="rounded-2xl border border-pulse-border bg-pulse-panel/60 p-5 text-xs leading-5 text-pulse-muted">
-            Gateway links stay disabled until a real CID is present. Checksums
-            should be published with the same release.
-          </p>
-        </div>
-      </div>
-    </section>
-  );
-}
-
 function FAQSection() {
   return (
     <section id="faq" className="py-16 sm:py-20">
@@ -774,7 +565,7 @@ function FAQSection() {
   );
 }
 
-function SiteFooter({ desktopReady }: { desktopReady: boolean }) {
+function SiteFooter() {
   return (
     <footer className="border-t border-pulse-border/60 bg-pulse-bg py-10">
       <div className="mx-auto flex max-w-6xl flex-col gap-6 px-4 text-sm text-pulse-muted sm:px-6 lg:flex-row lg:items-center lg:justify-between">
@@ -809,9 +600,6 @@ function SiteFooter({ desktopReady }: { desktopReady: boolean }) {
           >
             X
           </a>
-          <a href="#desktop" className="transition hover:text-pulse-text">
-            Desktop {desktopReady ? "downloads" : "coming soon"}
-          </a>
         </nav>
       </div>
     </footer>
@@ -845,40 +633,5 @@ function SectionKicker({ children }: { children: ReactNode }) {
     <p className="text-xs font-semibold uppercase tracking-[0.18em] text-pulse-cyan">
       {children}
     </p>
-  );
-}
-
-function CheckLine({ children }: { children: ReactNode }) {
-  return (
-    <p className="flex items-start gap-2">
-      <span
-        className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-pulse-green"
-        aria-hidden
-      />
-      <span>{children}</span>
-    </p>
-  );
-}
-
-function StatusPill({
-  children,
-  tone = "neutral",
-  className = "",
-}: {
-  children: ReactNode;
-  tone?: "neutral" | "success";
-  className?: string;
-}) {
-  const toneClass =
-    tone === "success"
-      ? "border-pulse-green/35 bg-pulse-green/10 text-pulse-green"
-      : "border-pulse-border bg-pulse-panel/70 text-pulse-muted";
-
-  return (
-    <span
-      className={`rounded-full border px-3 py-1 text-[11px] font-semibold uppercase tracking-wide ${toneClass} ${className}`}
-    >
-      {children}
-    </span>
   );
 }

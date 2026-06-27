@@ -70,7 +70,7 @@ describe("Wallet Lifeboat safety copy", () => {
     );
   });
 
-  it("keeps Wallet Lifeboat locked at the routing boundary", () => {
+  it("keeps Wallet Lifeboat locked behind a generic 404 at the routing boundary", () => {
     const middleware = readFileSync(
       join(process.cwd(), "src", "middleware.ts"),
       "utf8",
@@ -79,8 +79,9 @@ describe("Wallet Lifeboat safety copy", () => {
     expect(middleware).toContain("/app/wallet-lifeboat");
     expect(middleware).toContain("/api/lifeboat");
     expect(middleware).toContain("status: 404");
+    expect(middleware).toContain('message: "Not found."');
     expect(middleware).toContain("Cache-Control");
     expect(middleware).toContain("no-store");
-    expect(middleware).toContain("frozen");
+    expect(middleware).not.toContain("This feature is frozen");
   });
 });
