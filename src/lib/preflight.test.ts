@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { Address } from "viem";
 
+import { BASE_CHAIN_ID, BSC_CHAIN_ID } from "./chains";
 import {
   BSC_GAS_CAP_BODY,
   BSC_GAS_CAP_ERROR,
@@ -29,6 +30,8 @@ const SPENDER = "0x2222222222222222222222222222222222222222" as Address;
 const OTHER_SPENDER =
   "0x3333333333333333333333333333333333333333" as Address;
 const TOKEN = "0x4444444444444444444444444444444444444444" as Address;
+const ACTIVE_GAS_CAP = 16_777_216n;
+const ACTIVE_GAS_CAP_WARNING_THRESHOLD = 14_260_633n;
 
 describe("approval revoke preflight", () => {
   it("marks a zero ERC-20 allowance as already cleared", () => {
@@ -200,18 +203,23 @@ describe("approval revoke preflight", () => {
     const result = applyGasEstimateToPreflight(
       { kind: "erc20", status: "active", currentAllowance: 1n },
       120_000n,
-      16_777_216n,
+      ACTIVE_GAS_CAP,
+      undefined,
+      {
+        chainId: BSC_CHAIN_ID,
+        callKind: "erc20",
+      },
     );
 
     expect(result).toMatchObject({
       status: "active",
       estimatedGas: 120_000n,
-      maxTransactionGas: 16_777_216n,
-      highGasWarningThreshold: undefined,
+      maxTransactionGas: ACTIVE_GAS_CAP,
+      highGasWarningThreshold: ACTIVE_GAS_CAP_WARNING_THRESHOLD,
       gasCapExceeded: false,
       highGasWarning: false,
     });
-    const safeGas = safeGasForRevokeRequest(result, 16_777_216n);
+    const safeGas = safeGasForRevokeRequest(result, ACTIVE_GAS_CAP);
     expect(safeGas).toEqual({ ok: true, gas: 120_000n });
     if (safeGas.ok) {
       const requestGasFields = {
@@ -222,67 +230,79 @@ describe("approval revoke preflight", () => {
     }
   });
 
-  it("keeps BSC estimates at the high-gas threshold as normal active revokes", () => {
+  it("keeps capped-chain estimates at the high-gas threshold as normal active revokes", () => {
     const result = applyGasEstimateToPreflight(
       { kind: "erc20", status: "active", currentAllowance: 1n },
+      ACTIVE_GAS_CAP_WARNING_THRESHOLD,
+      ACTIVE_GAS_CAP,
       1_000_000n,
-      16_777_216n,
-      1_000_000n,
+      {
+        chainId: BSC_CHAIN_ID,
+        callKind: "erc20",
+      },
     );
 
     expect(result).toMatchObject({
       status: "active",
-      estimatedGas: 1_000_000n,
-      highGasWarningThreshold: 1_000_000n,
+      estimatedGas: ACTIVE_GAS_CAP_WARNING_THRESHOLD,
+      highGasWarningThreshold: ACTIVE_GAS_CAP_WARNING_THRESHOLD,
       gasCapExceeded: false,
       highGasWarning: false,
     });
-    expect(safeGasForRevokeRequest(result, 16_777_216n)).toEqual({
+    expect(safeGasForRevokeRequest(result, ACTIVE_GAS_CAP)).toEqual({
       ok: true,
-      gas: 1_000_000n,
+      gas: ACTIVE_GAS_CAP_WARNING_THRESHOLD,
     });
   });
 
-  it("marks BSC estimates above 1,000,000 and below the cap as high-gas warnings", () => {
+  it("marks capped-chain estimates above 85 percent of the cap as high-gas warnings", () => {
     const result = applyGasEstimateToPreflight(
       { kind: "erc20", status: "active", currentAllowance: 1n },
-      1_000_001n,
-      16_777_216n,
+      ACTIVE_GAS_CAP_WARNING_THRESHOLD + 1n,
+      ACTIVE_GAS_CAP,
       1_000_000n,
+      {
+        chainId: BSC_CHAIN_ID,
+        callKind: "erc20",
+      },
     );
 
     expect(result).toMatchObject({
       status: "highGasWarning",
-      estimatedGas: 1_000_001n,
-      maxTransactionGas: 16_777_216n,
-      highGasWarningThreshold: 1_000_000n,
+      estimatedGas: ACTIVE_GAS_CAP_WARNING_THRESHOLD + 1n,
+      maxTransactionGas: ACTIVE_GAS_CAP,
+      highGasWarningThreshold: ACTIVE_GAS_CAP_WARNING_THRESHOLD,
       gasCapExceeded: false,
       highGasWarning: true,
     });
     expect(HIGH_GAS_WARNING_TITLE).toBe("Unusually high gas estimate");
-    expect(HIGH_GAS_WARNING_BODY).toContain("above 1,000,000 gas on BSC");
+    expect(HIGH_GAS_WARNING_BODY).toContain("unusually high gas");
     expect(HIGH_GAS_WARNING_HELPER).toContain("not mean the transaction");
-    expect(safeGasForRevokeRequest(result, 16_777_216n).ok).toBe(false);
+    expect(safeGasForRevokeRequest(result, ACTIVE_GAS_CAP).ok).toBe(false);
   });
 
   it("allows a high-gas BSC revoke only after explicit confirmation", () => {
     const result = applyGasEstimateToPreflight(
       { kind: "erc20", status: "active", currentAllowance: 1n },
-      1_500_000n,
-      16_777_216n,
+      14_500_000n,
+      ACTIVE_GAS_CAP,
       1_000_000n,
+      {
+        chainId: BSC_CHAIN_ID,
+        callKind: "erc20",
+      },
     );
 
-    const firstClick = safeGasForRevokeRequest(result, 16_777_216n);
+    const firstClick = safeGasForRevokeRequest(result, ACTIVE_GAS_CAP);
     expect(firstClick.ok).toBe(false);
 
-    const confirmed = safeGasForRevokeRequest(result, 16_777_216n, true);
-    expect(confirmed).toEqual({ ok: true, gas: 1_500_000n });
+    const confirmed = safeGasForRevokeRequest(result, ACTIVE_GAS_CAP, true);
+    expect(confirmed).toEqual({ ok: true, gas: 14_500_000n });
     if (confirmed.ok) {
       const requestGasFields = {
         ...(confirmed.gas !== undefined ? { gas: confirmed.gas } : {}),
       };
-      expect(requestGasFields).toEqual({ gas: 1_500_000n });
+      expect(requestGasFields).toEqual({ gas: 14_500_000n });
       expect("gasLimit" in requestGasFields).toBe(false);
     }
   });
@@ -295,22 +315,49 @@ describe("approval revoke preflight", () => {
     };
     const result = applyGasEstimateToPreflight(
       active,
-      16_777_217n,
-      16_777_216n,
+      ACTIVE_GAS_CAP + 1n,
+      ACTIVE_GAS_CAP,
+      undefined,
+      {
+        chainId: BSC_CHAIN_ID,
+        callKind: "erc20",
+      },
     );
 
     expect(result).toMatchObject({
       status: "unverified",
       error: BSC_GAS_CAP_ERROR,
-      estimatedGas: 16_777_217n,
-      maxTransactionGas: 16_777_216n,
+      estimatedGas: ACTIVE_GAS_CAP + 1n,
+      maxTransactionGas: ACTIVE_GAS_CAP,
       gasCapExceeded: true,
     });
     expect(result.error).toContain(BSC_GAS_CAP_TITLE);
     expect(result.error).toContain(BSC_GAS_CAP_BODY);
     expect(result.error).toContain(BSC_GAS_CAP_HELPER);
-    expect(result.error).toContain("Osaka/Mendel");
-    expect(safeGasForRevokeRequest(result, 16_777_216n).ok).toBe(false);
+    expect(result.error).not.toContain("BSC");
+    expect(safeGasForRevokeRequest(result, ACTIVE_GAS_CAP).ok).toBe(false);
+  });
+
+  it("blocks a Base revoke gas estimate above the active cap with chain-neutral copy", () => {
+    const result: Erc20PreflightResult = applyGasEstimateToPreflight(
+      { kind: "erc20", status: "active", currentAllowance: 1n },
+      ACTIVE_GAS_CAP + 1n,
+      ACTIVE_GAS_CAP,
+      undefined,
+      {
+        chainId: BASE_CHAIN_ID,
+        callKind: "erc20",
+      },
+    );
+
+    expect(result).toMatchObject({
+      status: "unverified",
+      error: BSC_GAS_CAP_ERROR,
+      gasCapExceeded: true,
+      maxTransactionGas: ACTIVE_GAS_CAP,
+    });
+    expect(result.error).toContain("per-transaction gas cap");
+    expect(result.error).not.toContain("BNB Smart Chain");
   });
 
   it("blocks capped BSC revokes that do not have a safe gas estimate", () => {
@@ -320,14 +367,14 @@ describe("approval revoke preflight", () => {
       currentAllowance: 1n,
     };
 
-    const safeGas = safeGasForRevokeRequest(result, 16_777_216n);
+    const safeGas = safeGasForRevokeRequest(result, ACTIVE_GAS_CAP);
 
     expect(safeGas.ok).toBe(false);
     if (!safeGas.ok) {
       expect(safeGas.preflight).toMatchObject({
         status: "unverified",
         error: BSC_GAS_CAP_ERROR,
-        maxTransactionGas: 16_777_216n,
+        maxTransactionGas: ACTIVE_GAS_CAP,
         gasCapExceeded: true,
       });
     }
@@ -370,7 +417,7 @@ describe("approval revoke preflight", () => {
     const result = applyGasEstimateToPreflight(
       { kind: "nft-operator", status: "active", approvedForAll: true },
       20_000_000n,
-      16_777_216n,
+      ACTIVE_GAS_CAP,
     );
 
     expect(result).toMatchObject({
@@ -378,9 +425,9 @@ describe("approval revoke preflight", () => {
       status: "unverified",
       gasCapExceeded: true,
       estimatedGas: 20_000_000n,
-      maxTransactionGas: 16_777_216n,
+      maxTransactionGas: ACTIVE_GAS_CAP,
     });
-    expect(safeGasForRevokeRequest(result, 16_777_216n).ok).toBe(false);
+    expect(safeGasForRevokeRequest(result, ACTIVE_GAS_CAP).ok).toBe(false);
   });
 
   it("classifies Osaka/Mendel estimate failures as BSC gas-cap preflight blocks", () => {
@@ -423,7 +470,7 @@ describe("approval revoke preflight", () => {
     const aboveCap = applyGasEstimateToPreflight(
       { kind: "erc20", status: "active", currentAllowance: 1n },
       30_000_000n,
-      16_777_216n,
+      ACTIVE_GAS_CAP,
     );
 
     expect(summarizeBatchPreflight([aboveCap])).toMatchObject({
@@ -439,9 +486,13 @@ describe("approval revoke preflight", () => {
   it("counts high-gas warning items separately so batch can skip them by default", () => {
     const highGas = applyGasEstimateToPreflight(
       { kind: "erc20", status: "active", currentAllowance: 1n },
-      1_500_000n,
-      16_777_216n,
+      14_500_000n,
+      ACTIVE_GAS_CAP,
       1_000_000n,
+      {
+        chainId: BSC_CHAIN_ID,
+        callKind: "erc20",
+      },
     );
 
     expect(summarizeBatchPreflight([highGas])).toMatchObject({
@@ -453,6 +504,6 @@ describe("approval revoke preflight", () => {
       highGasWarning: 1,
       unverified: 0,
     });
-    expect(safeGasForRevokeRequest(highGas, 16_777_216n).ok).toBe(false);
+    expect(safeGasForRevokeRequest(highGas, ACTIVE_GAS_CAP).ok).toBe(false);
   });
 });

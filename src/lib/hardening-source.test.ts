@@ -91,9 +91,33 @@ describe("hardening source invariants", () => {
       ),
       "utf8",
     );
+    const eip7702Route = readFileSync(
+      join(
+        process.cwd(),
+        "src",
+        "app",
+        "api",
+        "lifeboat",
+        "eip7702",
+        "route.ts",
+      ),
+      "utf8",
+    );
+    const eip7702Server = readFileSync(
+      join(process.cwd(), "src", "lib", "lifeboat", "eip7702-server.ts"),
+      "utf8",
+    );
 
     expect(
-      `${ethereumRoute}\n${arbitrumRoute}\n${optimismRoute}\n${hyperevmRoute}\n${bscBaseRoute}`,
+      [
+        ethereumRoute,
+        arbitrumRoute,
+        optimismRoute,
+        hyperevmRoute,
+        bscBaseRoute,
+        eip7702Route,
+        eip7702Server,
+      ].join("\n"),
     ).not.toMatch(
       /writeContract|sendTransaction|signTransaction|privateKey|mnemonic|seed|relayer/i,
     );
