@@ -5,6 +5,7 @@ import type { CSSProperties, ReactNode } from "react";
 import { ChainLogo } from "@/components/chains/chain-logo";
 import { HoverVideoLayer } from "@/components/hover-video-layer";
 import { AntiPhishingBanner } from "@/components/sections/anti-phishing-banner";
+import { OrbitCommandHero } from "@/components/sections/orbit-command";
 import { PulseChainResourceLinks } from "@/components/sections/pulsechain-resource-links";
 import { PulseMark } from "@/components/pulse-mark";
 import { ThemeModeToggle } from "@/components/theme-mode-toggle";
@@ -61,13 +62,6 @@ const TRUST_POINTS = [
   },
 ] as const;
 
-const HERO_TRUST_ITEMS = [
-  "No seed phrase",
-  "No custody",
-  "Wallet confirmed revokes",
-  "Scan first, connect only when ready",
-] as const;
-
 const CHAIN_CARD_COPY: Record<string, string> = {
   PulseChain:
     "Primary Pulse Revoke lane for PRC-20, ERC-721, and ERC-1155 approvals.",
@@ -105,21 +99,6 @@ const CHAIN_CARD_COPY: Record<string, string> = {
   HyperEVM:
     "Hosted approval discovery with verified ERC-20 and NFT revokes per row on chain ID 999.",
 };
-
-const SCANNER_PANEL_POINTS = [
-  {
-    title: "Address review",
-    body: "Start with a pasted EVM wallet address before connecting anything.",
-  },
-  {
-    title: "Live verification",
-    body: "Rows stay actionable only after current approval state is checked.",
-  },
-  {
-    title: "Wallet prompt is final",
-    body: "Revoke writes appear in your wallet only after you choose an action.",
-  },
-] as const;
 
 const RICHARD_HEART_HOVER_VIDEO_SRC =
   "/media/richard-heart-twerking.mp4";
@@ -185,7 +164,7 @@ export default function LauncherPage() {
     <div className="min-h-dvh bg-pulse-bg text-pulse-text">
       <SiteHeader />
       <main>
-        <Hero />
+        <OrbitCommandHero />
         <SupportedChainsSection />
         <HowItWorks />
         <TrustStrip />
@@ -249,118 +228,6 @@ function SiteHeader() {
         </div>
       </div>
     </header>
-  );
-}
-
-function Hero() {
-  return (
-    <section className="relative overflow-hidden border-b border-pulse-border/50">
-      <div className="absolute inset-0 bg-pulse-radial opacity-90" aria-hidden />
-      <div
-        className="absolute inset-x-0 bottom-0 h-28 bg-gradient-to-t from-pulse-bg to-transparent"
-        aria-hidden
-      />
-
-      <div className="relative mx-auto grid max-w-6xl gap-10 px-4 py-14 sm:px-6 sm:py-20 lg:grid-cols-[1.02fr_0.98fr] lg:items-center">
-        <div className="min-w-0">
-          <div className="inline-flex max-w-full items-center gap-2 rounded-full border border-pulse-cyan/35 bg-pulse-panel/75 px-3 py-1 text-xs font-semibold text-pulse-cyan">
-            <span
-              className="h-1.5 w-1.5 rounded-full bg-pulse-green"
-              aria-hidden
-            />
-            <span>{LIVE_SUPPORTED_CHAIN_COUNT} live EVM networks</span>
-          </div>
-
-          <h1 className="mt-5 max-w-3xl text-4xl font-bold leading-[1.08] sm:text-6xl">
-            Review risky approvals before they become a problem.
-          </h1>
-
-          <p className="mt-5 max-w-2xl text-base leading-7 text-pulse-muted sm:text-lg">
-            Scan token and NFT approvals across {LIVE_SUPPORTED_CHAIN_LIST}.
-            Revoke only after live verification confirms an approval is still
-            active.
-          </p>
-
-          <div className="mt-8 flex flex-col gap-3 sm:flex-row">
-            <Link
-              href="/app"
-              className="inline-flex items-center justify-center rounded-xl bg-pulse-gradient px-6 py-3 text-sm font-semibold text-pulse-on-gradient shadow-glow transition hover:brightness-110"
-            >
-              Launch Scanner
-            </Link>
-            <Link
-              href="/security"
-              className="inline-flex items-center justify-center rounded-xl border border-pulse-border bg-pulse-text/5 px-6 py-3 text-sm font-semibold text-pulse-text transition hover:bg-pulse-text/10"
-            >
-              Security &amp; Trust
-            </Link>
-          </div>
-
-          <HeroTrustStrip />
-        </div>
-
-        <ScannerPathPanel />
-      </div>
-    </section>
-  );
-}
-
-function HeroTrustStrip() {
-  return (
-    <ul className="mt-6 grid max-w-2xl gap-2 text-sm text-pulse-muted sm:grid-cols-2">
-      {HERO_TRUST_ITEMS.map((item) => (
-        <li
-          key={item}
-          className="flex min-w-0 items-center gap-2 rounded-xl border border-pulse-border/70 bg-pulse-panel/45 px-3 py-2"
-        >
-          <span
-            className="h-1.5 w-1.5 shrink-0 rounded-full bg-pulse-green"
-            aria-hidden
-          />
-          <span className="min-w-0">{item}</span>
-        </li>
-      ))}
-    </ul>
-  );
-}
-
-function ScannerPathPanel() {
-  return (
-    <aside aria-label="Scanner workflow" className="grid gap-3">
-      <div className="rounded-2xl border border-pulse-cyan/30 bg-pulse-panel/70 p-5">
-        <p className="text-xs font-semibold uppercase tracking-[0.18em] text-pulse-cyan">
-          Live scanner
-        </p>
-        <p className="mt-2 text-2xl font-semibold leading-8 text-pulse-text">
-          Scan first. Connect only when you are ready to revoke.
-        </p>
-        <p className="mt-3 text-sm leading-6 text-pulse-muted">
-          PulseChain is the primary lane, and the same wallet confirmation
-          model applies across every supported EVM network.
-        </p>
-      </div>
-
-      <div className="grid gap-3">
-        {SCANNER_PANEL_POINTS.map((item) => (
-          <div
-            key={item.title}
-            className="rounded-2xl border border-pulse-border bg-pulse-bg/60 p-4"
-          >
-            <p className="text-base font-semibold text-pulse-text">
-              {item.title}
-            </p>
-            <p className="mt-1 text-sm leading-6 text-pulse-muted">
-              {item.body}
-            </p>
-          </div>
-        ))}
-      </div>
-
-      <p className="rounded-2xl border border-pulse-border bg-pulse-bg/55 p-4 text-xs leading-5 text-pulse-muted">
-        The live product action is the web scanner. Revokes are only submitted
-        after you review and confirm them in your own wallet.
-      </p>
-    </aside>
   );
 }
 

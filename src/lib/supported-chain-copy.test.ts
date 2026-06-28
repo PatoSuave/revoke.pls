@@ -80,6 +80,7 @@ describe("supported chain copy", () => {
     const sources = [
       join(process.cwd(), "src", "app", "page.tsx"),
       join(process.cwd(), "src", "app", "app", "page.tsx"),
+      join(process.cwd(), "src", "components", "sections", "orbit-command.tsx"),
       join(process.cwd(), "src", "app", "security", "page.tsx"),
       join(process.cwd(), "src", "components", "sections", "approval-scanner.tsx"),
       join(process.cwd(), "src", "components", "sections", "faq.tsx"),
@@ -88,10 +89,12 @@ describe("supported chain copy", () => {
       join(process.cwd(), "src", "components", "sections", "trust-safety.tsx"),
     ].map((path) => readFileSync(path, "utf8"));
 
-    expect(sources[0]).toContain("LIVE_SUPPORTED_CHAIN_ROWS");
-    expect(sources[1]).toContain("LIVE_SUPPORTED_CHAIN_ROWS");
+    expect(sources[0]).toContain("OrbitCommandHero");
+    expect(sources[1]).toContain("OrbitCommandAppIntro");
+    expect(sources[2]).toContain("LIVE_SUPPORTED_CHAIN_ROWS");
     expect(sources[2]).toContain("LIVE_SUPPORTED_CHAIN_COUNT");
-    for (const source of sources.slice(3)) {
+    expect(sources[3]).toContain("LIVE_SUPPORTED_CHAIN_COUNT");
+    for (const source of sources.slice(4)) {
       expect(source).toContain("LIVE_SUPPORTED_CHAIN");
     }
   });
