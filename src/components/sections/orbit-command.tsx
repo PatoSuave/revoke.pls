@@ -152,9 +152,9 @@ export function OrbitCommandHero() {
   return (
     <section className="orbit-command-section relative overflow-hidden border-b border-pulse-border/50">
       <div className="orbit-command-space" aria-hidden />
-      <div className="relative mx-auto max-w-7xl px-4 pb-10 pt-12 sm:px-6 sm:pb-14 sm:pt-16">
-        <div className="grid gap-8 lg:grid-cols-[0.82fr_1.18fr] lg:items-center">
-          <div className="min-w-0">
+      <div className="relative mx-auto max-w-[112rem] px-4 pb-8 pt-10 sm:px-6 sm:pb-12 sm:pt-14">
+        <div className="grid gap-7 lg:grid-cols-[23rem_minmax(0,1fr)] lg:items-center xl:grid-cols-[26rem_minmax(0,1fr)]">
+          <div className="min-w-0 lg:pt-2">
             <div className="inline-flex max-w-full items-center gap-2 rounded-full border border-pulse-cyan/35 bg-pulse-panel/75 px-3 py-1 text-xs font-semibold text-pulse-cyan">
               <span
                 className="h-1.5 w-1.5 rounded-full bg-pulse-green"
@@ -173,16 +173,18 @@ export function OrbitCommandHero() {
               wallet only when a verified active row is ready to review.
             </p>
 
-            <ul className="mt-7 grid gap-3 text-sm text-pulse-muted sm:grid-cols-2">
+            <ul className="mt-8 grid gap-x-6 gap-y-4 text-sm text-pulse-muted sm:grid-cols-2">
               {trustItems.map((item) => (
                 <li
                   key={item.title}
-                  className="flex min-w-0 gap-2.5 rounded-lg border border-pulse-border/55 bg-pulse-panel/35 px-3 py-2.5"
+                  className="flex min-w-0 gap-2.5"
                 >
                   <span
-                    className="mt-1 h-1.5 w-1.5 shrink-0 rounded-full bg-pulse-cyan shadow-[0_0_12px_rgb(var(--pulse-cyan)/0.72)]"
+                    className="mt-1 flex h-4 w-4 shrink-0 items-center justify-center rounded-full border border-pulse-cyan/55"
                     aria-hidden
-                  />
+                  >
+                    <span className="h-1.5 w-1.5 rounded-full bg-pulse-green shadow-[0_0_12px_rgb(var(--pulse-green)/0.72)]" />
+                  </span>
                   <span className="min-w-0">
                     <span className="block font-semibold text-pulse-text">
                       {item.title}
@@ -245,13 +247,13 @@ export function OrbitCommandAppIntro() {
 
 function OrbitCommandBar() {
   return (
-    <div className="orbit-command-bar relative z-10 mt-8 rounded-lg border border-pulse-border/80 bg-pulse-panel/80 p-3 shadow-[0_24px_80px_-54px_rgb(var(--pulse-cyan)/0.72)] backdrop-blur-xl">
-      <div className="grid gap-3 lg:grid-cols-[1fr_auto] lg:items-center">
-        <div className="min-w-0 rounded-md border border-pulse-border/80 bg-pulse-bg/70 px-3 py-2">
+    <div className="orbit-command-bar relative z-10 rounded-xl border border-pulse-border/80 bg-pulse-panel/80 p-4 shadow-[0_30px_100px_-62px_rgb(var(--pulse-cyan)/0.8)] backdrop-blur-xl">
+      <div className="grid gap-3 xl:grid-cols-[minmax(0,1fr)_16rem_16rem] xl:items-end">
+        <div className="min-w-0">
           <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-pulse-muted">
-            Paste EVM wallet address
+            Scan address
           </p>
-          <div className="mt-1 flex min-w-0 items-center gap-2">
+          <div className="mt-2 flex min-w-0 items-center gap-2 rounded-md border border-pulse-border/80 bg-pulse-bg/72 px-3 py-3">
             <span className="h-2 w-2 shrink-0 rounded-full bg-pulse-green shadow-[0_0_14px_rgb(var(--pulse-green)/0.72)]" />
             <code className="truncate font-mono text-sm text-pulse-text">
               0x96A17f3d7c8E9A135b886F42e1D3C9a8bE74f219aD8
@@ -259,26 +261,35 @@ function OrbitCommandBar() {
           </div>
         </div>
 
-        <div className="flex flex-wrap items-center gap-2">
-          <span className="rounded-md border border-pulse-green/30 bg-pulse-green/10 px-3 py-2 text-xs font-semibold text-pulse-green">
+        <div className="flex h-full items-end">
+          <span className="inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-md border border-pulse-green/30 bg-pulse-green/10 px-4 py-3 text-sm font-semibold text-pulse-green">
+            <span className="h-2 w-2 rounded-full bg-pulse-green shadow-[0_0_14px_rgb(var(--pulse-green)/0.72)]" />
             Read-only scan
           </span>
+        </div>
+
+        <div className="flex h-full items-end">
           <Link
             href="/app"
-            className="inline-flex items-center justify-center rounded-md bg-pulse-gradient px-5 py-2.5 text-sm font-semibold text-pulse-on-gradient shadow-glow transition hover:brightness-110"
+            className="inline-flex min-h-12 w-full items-center justify-center rounded-md bg-pulse-gradient px-5 py-3 text-sm font-semibold text-pulse-on-gradient shadow-glow transition hover:brightness-110"
           >
             Scan approvals
           </Link>
         </div>
       </div>
 
-      <div className="mt-3 flex max-w-full gap-2 overflow-x-auto pb-1 text-xs">
-        <span className="shrink-0 rounded-md border border-pulse-cyan/45 bg-pulse-cyan/10 px-2.5 py-1 font-semibold text-pulse-cyan">
-          All 18
-        </span>
-        {orbitRows.slice(0, 7).map((row) => (
-          <OrbitChainChip key={row.chain} row={row} />
-        ))}
+      <div className="mt-5 grid gap-3 lg:grid-cols-[7rem_minmax(0,1fr)] lg:items-center">
+        <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-pulse-muted">
+          Filter chains
+        </p>
+        <div className="flex max-w-full gap-2 overflow-x-auto pb-1 text-xs">
+          <span className="shrink-0 rounded-md border border-pulse-cyan/45 bg-pulse-cyan/10 px-3 py-2 font-semibold text-pulse-cyan">
+            All 18
+          </span>
+          {orbitRows.slice(0, 7).map((row) => (
+            <OrbitChainChip key={row.chain} row={row} />
+          ))}
+        </div>
       </div>
     </div>
   );
@@ -286,42 +297,26 @@ function OrbitCommandBar() {
 
 function OrbitScannerPreview() {
   return (
-    <div className="orbit-scanner-preview relative z-10 mt-4 grid gap-3 lg:grid-cols-[15rem_minmax(0,1fr)_19rem]">
-      <div className="rounded-lg border border-pulse-border/80 bg-pulse-panel/72 p-4">
-        <div className="flex items-center justify-between gap-3">
-          <p className="text-xs font-semibold uppercase tracking-[0.16em] text-pulse-muted">
-            Chain orbits
-          </p>
-          <span className="rounded bg-pulse-text/10 px-2 py-0.5 font-mono text-[11px] text-pulse-muted">
-            18
-          </span>
-        </div>
-        <div className="mt-4 grid gap-2">
-          {orbitRows.slice(0, 6).map((row) => (
-            <OrbitChainRailItem key={row.chain} row={row} />
-          ))}
-        </div>
-        <p className="mt-4 text-xs leading-5 text-pulse-muted">
-          +{LIVE_SUPPORTED_CHAIN_COUNT - 6} more chains available in the live
-          scanner.
-        </p>
-      </div>
-
-      <div className="min-w-0 rounded-lg border border-pulse-border/80 bg-pulse-panel/78">
-        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-pulse-border/70 px-4 py-3">
-          <div>
-            <p className="text-sm font-semibold text-pulse-text">Overview</p>
+    <div className="orbit-scanner-preview relative z-10 mt-3 overflow-hidden rounded-xl border border-pulse-border/80 bg-pulse-panel/72 shadow-[0_28px_100px_-70px_rgb(var(--pulse-purple)/0.75)] backdrop-blur-xl">
+      <div className="grid lg:grid-cols-[minmax(0,1fr)_24rem]">
+        <div className="min-w-0">
+          <div className="flex flex-wrap items-center justify-between gap-3 border-b border-pulse-border/70 px-4 py-3">
+            <div className="flex items-center gap-3">
+              <p className="text-xs font-semibold uppercase tracking-[0.16em] text-pulse-muted">
+                Preview
+              </p>
+              <span className="inline-flex items-center gap-1.5 rounded border border-pulse-green/30 bg-pulse-green/10 px-2 py-0.5 text-xs font-semibold text-pulse-green">
+                <span className="h-1.5 w-1.5 rounded-full bg-pulse-green" />
+                Live
+              </span>
+            </div>
             <p className="text-xs text-pulse-muted">
-              Showing active approvals after live verification
+              Last updated a few seconds ago
             </p>
           </div>
-          <span className="rounded-md border border-pulse-green/30 bg-pulse-green/10 px-2.5 py-1 text-xs font-semibold text-pulse-green">
-            Live data
-          </span>
-        </div>
 
-        <div className="overflow-x-auto">
-          <table className="min-w-[42rem] w-full text-left text-xs">
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[42rem] text-left text-xs">
             <thead className="text-pulse-muted">
               <tr className="border-b border-pulse-border/60">
                 <th className="px-4 py-3 font-medium">Asset</th>
@@ -335,8 +330,26 @@ function OrbitScannerPreview() {
               {previewRows.map((row) => (
                 <tr key={`${row.chain}-${row.asset}`} className="border-b border-pulse-border/45 last:border-0">
                   <td className="px-4 py-3">
-                    <p className="font-semibold text-pulse-text">{row.asset}</p>
-                    <p className="text-pulse-muted">{row.chain}</p>
+                    <div className="flex items-center gap-2.5">
+                      <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-pulse-border/70 bg-pulse-bg/58">
+                        <ChainLogo
+                          chainId={Number(
+                            LIVE_SUPPORTED_CHAIN_ROWS.find(
+                              (supportedRow) => supportedRow.chain === row.chain,
+                            )?.chainId ?? 1,
+                          )}
+                          className="h-5 w-5"
+                        />
+                      </span>
+                      <span>
+                        <span className="block font-semibold text-pulse-text">
+                          {row.asset}
+                        </span>
+                        <span className="block text-pulse-muted">
+                          {row.chain}
+                        </span>
+                      </span>
+                    </div>
                   </td>
                   <td className="px-4 py-3 text-pulse-muted">{row.spender}</td>
                   <td className="px-4 py-3 text-pulse-text">{row.allowance}</td>
@@ -354,36 +367,32 @@ function OrbitScannerPreview() {
                 </tr>
               ))}
             </tbody>
-          </table>
-        </div>
-      </div>
-
-      <div className="rounded-lg border border-pulse-border/80 bg-pulse-panel/72 p-4">
-        <div className="flex items-start justify-between gap-3">
-          <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.16em] text-pulse-muted">
-              Spender details
-            </p>
-            <p className="mt-2 font-mono text-sm font-semibold text-pulse-text">
-              0xA...eC7B
-            </p>
+            </table>
           </div>
-          <span className="rounded border border-pulse-red/35 bg-pulse-red/10 px-2 py-1 text-xs font-semibold text-pulse-red">
-            High risk
-          </span>
         </div>
-        <div className="mt-4 grid gap-3 text-xs">
-          <PreviewDetail label="EIP-7702 account-code check" value="Read-only diagnostic available" />
-          <PreviewDetail label="Live verification" value="Active allowance confirmed" />
-          <PreviewDetail label="Gas preflight" value="Estimated before wallet opens" />
-          <PreviewDetail label="Action gate" value="Matching wallet required" />
+
+        <div className="border-t border-pulse-border/70 p-4 lg:border-l lg:border-t-0">
+          <div className="grid grid-cols-2 gap-3">
+            <PreviewMetric label="Networks" value={`${LIVE_SUPPORTED_CHAIN_COUNT}`} />
+            <PreviewMetric label="Live approvals" value="142" />
+            <PreviewMetric label="High risk" value="7" />
+            <PreviewMetric label="Rate-limited" value="3" />
+          </div>
+          <div className="mt-4 rounded-lg border border-pulse-border/70 bg-pulse-bg/45 p-3 text-xs">
+            <p className="font-semibold text-pulse-text">Security &amp; trust</p>
+            <div className="mt-3 grid gap-2">
+              <PreviewDetail label="EIP-7702 account-code check" value="Read-only diagnostic available" />
+              <PreviewDetail label="Live verification" value="Active allowance confirmed" />
+              <PreviewDetail label="Action gate" value="Matching wallet required" />
+            </div>
+          </div>
+          <Link
+            href="/app"
+            className="mt-4 inline-flex w-full items-center justify-center rounded-md border border-pulse-cyan/35 bg-pulse-cyan/10 px-4 py-2.5 text-sm font-semibold text-pulse-cyan transition hover:bg-pulse-cyan/15"
+          >
+            Review in app
+          </Link>
         </div>
-        <Link
-          href="/app"
-          className="mt-4 inline-flex w-full items-center justify-center rounded-md bg-pulse-gradient px-4 py-2.5 text-sm font-semibold text-pulse-on-gradient transition hover:brightness-110"
-        >
-          Connect wallet to revoke
-        </Link>
       </div>
     </div>
   );
@@ -397,10 +406,12 @@ function OrbitMap({ variant }: { variant: "hero" | "compact" }) {
       className={`orbit-command-map ${variant === "compact" ? "orbit-command-map-compact" : ""}`}
       aria-label="Supported chain orbit map"
     >
+      <div className="orbit-command-map-backdrop" aria-hidden />
       <div className="orbit-command-rings" aria-hidden>
         <span className="orbit-command-ring orbit-command-ring-outer" />
         <span className="orbit-command-ring orbit-command-ring-middle" />
         <span className="orbit-command-ring orbit-command-ring-inner" />
+        <span className="orbit-command-ring orbit-command-ring-far" />
       </div>
 
       <div className="orbit-command-core">
@@ -442,18 +453,31 @@ function OrbitMap({ variant }: { variant: "hero" | "compact" }) {
             style={style}
           >
             <div className="orbit-command-node-card">
-              <ChainLogo
-                chainId={Number(row.chainId)}
-                className="h-5 w-5 shrink-0"
-              />
-              <span className="truncate">{settings.label}</span>
-              <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-pulse-green shadow-[0_0_10px_rgb(var(--pulse-green)/0.8)]" />
+              <span className="orbit-command-planet">
+                <ChainLogo
+                  chainId={Number(row.chainId)}
+                  className="h-6 w-6"
+                />
+              </span>
+              <span className="orbit-command-node-label truncate">
+                {settings.label}
+              </span>
+              <span className="orbit-command-node-status" aria-hidden />
             </div>
           </div>
         );
       })}
 
       <div className="orbit-command-more">+{LIVE_SUPPORTED_CHAIN_COUNT - visibleRows.length} more</div>
+    </div>
+  );
+}
+
+function PreviewMetric({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded-md border border-pulse-border/60 bg-pulse-bg/42 px-3 py-2">
+      <p className="font-mono text-lg font-semibold text-pulse-text">{value}</p>
+      <p className="mt-1 text-xs text-pulse-muted">{label}</p>
     </div>
   );
 }
@@ -479,38 +503,6 @@ function OrbitChainChip({
       <ChainLogo chainId={Number(row.chainId)} className="h-3.5 w-3.5" />
       <span className="brand-accent-text">{row.chain}</span>
     </span>
-  );
-}
-
-function OrbitChainRailItem({
-  row,
-}: {
-  row: (typeof LIVE_SUPPORTED_CHAIN_ROWS)[number];
-}) {
-  const visual = getChainVisual(row.chain);
-  const style = {
-    "--accent-color": visual.accent,
-    "--accent-readable": visual.accentReadable,
-    "--accent-soft": visual.accentSoft,
-    "--accent-border": visual.accentBorder,
-  } as CSSProperties;
-
-  return (
-    <div
-      style={style}
-      className="flex items-center gap-2 rounded-md border border-[color:var(--accent-border)] bg-pulse-bg/45 px-2.5 py-2"
-    >
-      <ChainLogo chainId={Number(row.chainId)} className="h-5 w-5 shrink-0" />
-      <div className="min-w-0 flex-1">
-        <p className="truncate text-sm font-semibold text-pulse-text">
-          {row.chain}
-        </p>
-        <p className="font-mono text-[11px] text-pulse-muted">
-          ID {row.chainId}
-        </p>
-      </div>
-      <span className="h-1.5 w-1.5 rounded-full bg-pulse-green" />
-    </div>
   );
 }
 

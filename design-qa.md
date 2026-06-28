@@ -1,31 +1,31 @@
-source visual truth path: C:\Users\afils\.codex\generated_images\019f0aaa-4d86-7fb2-a9cd-d14ea308a8b1\ig_03012c2d06eb2018016a404678d4f48196b8b4b67fb87899ad.png
-reported problem screenshot path: C:\Users\afils\OneDrive\Desktop\Plants.png
-implementation screenshot path: C:\Users\afils\AppData\Local\Temp\revoke-orbit-fix-qa-4\home-user-size.png
-viewport: 1445x670 desktop, with additional checks at 390x1200 mobile and /app desktop
-state: default dark theme, unauthenticated, scanner preview state
-full-view comparison evidence: reference image, reported problem screenshot, and repaired implementation screenshots were opened and compared. The repaired implementation preserves the Orbit Command direction while removing the warped chip treatment from the reported screenshot.
-focused region comparison evidence: repaired home desktop, home mobile, and app desktop screenshots were inspected for clipped labels, orbit overlap, command bar layout, stacked mobile rhythm, and scanner intro continuity.
+source visual truth path: C:\Users\afils\.codex\generated_images\019f0aaa-4d86-7fb2-a9cd-d14ea308a8b1\ig_0bdd3a9b2ee7ec5d016a40747a04248194891549460946df66.png
+implementation screenshot path: C:\Users\afils\AppData\Local\Temp\revoke-orbit-celestial-final-c28e9d6\home-desktop-670.png
+implementation preview URL: https://revoke-pls-git-orbit-command-design-squikyus-8256s-projects.vercel.app/?_vercel_share=ieqPKd91tndONmiWxtqCmUx6I9M1VqwE
+viewport: 1445x670 desktop, with additional mobile and /app desktop checks from the same branch preview flow
+state: default dark theme, unauthenticated, landing hero with scanner command deck visible
+full-view comparison evidence: C:\Users\afils\AppData\Local\Temp\revoke-orbit-celestial-final-c28e9d6\comparison-desktop-670.png
+focused region comparison evidence: final 1445x670 desktop screenshot was inspected for orbit quality, readable chain labels, visible scanner command deck, CTA placement, and text overlap. Mobile and /app intro screenshots were checked during the same build iteration; no mobile-specific code changed after that pass.
 
 **Findings**
 - No actionable P0/P1/P2 findings.
 
 **Intentional Product Constraints**
-- The implementation keeps the existing Pulse Revoke header, routes, typography system, and supported-chain metadata instead of recreating the mock navigation exactly.
-- Unsupported mock chains were not copied into the product surface. The orbit uses existing supported EVM chain metadata and logos.
-- The scanner table is a visual preview on the landing page. Existing revoke execution behavior and live scanner gates remain unchanged.
+- The implementation keeps the existing Pulse Revoke header, routes, typography system, supported-chain metadata, and chain logo components instead of recreating the mock navigation exactly.
+- The hero uses a generated background asset only for the orbital space backdrop; labels, controls, chain logos, CTAs, and scanner preview remain editable app UI.
+- The landing scanner table is a visual preview. Existing scanner and revoke execution behavior remain unchanged.
 
 **Required Fidelity Surfaces**
-- Fonts and typography: existing product typography is retained; hero scale, compact table text, and mobile wrapping are readable in captured viewports.
-- Spacing and layout rhythm: desktop preview aligns as a scanner console; mobile stacks without overlapping controls or clipped orbit labels.
-- Colors and visual tokens: implementation stays within the existing dark Pulse Revoke token system while matching the reference's cyan, purple, pink, and green scanner accents.
-- Image quality and asset fidelity: no raster placeholder assets were introduced; existing chain logo assets render inside orbit nodes and rail rows.
-- Copy and content: address-first, read-only scan, no custody, no seed phrase, wallet-confirmed revoke, and incomplete-verification messaging are present without adding new revoke claims.
+- Fonts and typography: existing product typography is retained; hero scale, compact scanner labels, and CTA copy remain readable at the checked desktop and mobile sizes.
+- Spacing and layout rhythm: the orbit panel and scanner deck now read as a connected console on 1445x670 desktop, while mobile keeps a stacked rhythm without overlapping text.
+- Colors and visual tokens: the implementation stays within the Pulse Revoke dark token system while matching the selected option's cyan, purple, pink, green, and warm orbit accents.
+- Image quality and asset fidelity: a high-resolution generated orbital backdrop is used; existing chain logo assets render inside animated planet nodes instead of placeholder shapes.
+- Copy and content: address-first, read-only scan, wallet-confirmed revoke, and incomplete-verification messaging remain present without adding new revoke or recovery claims.
 
 **Patches Made Since QA**
-- Replaced skewed orbit-track scaling with upright chain nodes on desktop motion paths.
-- Reduced the hero orbit panel height and tightened desktop radii so chain chips stay inside the panel.
-- Changed mobile orbit nodes to compact icon chips and static placement to avoid crowded clipped labels.
-- Froze the compact /app intro orbit into deliberate static positions so labels do not pass behind the center card.
-- Kept reduced-motion handling for orbit and preview animations.
+- Added the generated orbital background asset at `public/images/orbit-system-bg.png`.
+- Reworked the hero orbit into slower animated planet nodes with a brighter central scan core.
+- Replaced the old three-card preview with a more integrated scanner command deck and compact preview area.
+- Tucked the scanner command deck upward on desktop so it is visible in the first 1445x670 viewport; mobile keeps normal stacked spacing.
+- Verified the /app intro orbit still uses the same existing component path and remains readable.
 
 final result: passed
