@@ -587,60 +587,113 @@ body {
 
   .orbit-command-map {
     position: relative;
-    min-height: 34rem;
+    min-height: 29rem;
     overflow: hidden;
-    border: 1px solid rgb(var(--pulse-border) / 0.72);
-    border-radius: 0.75rem;
+    border: 1px solid rgb(var(--pulse-border) / 0.66);
+    border-radius: 1rem;
     background:
       radial-gradient(
-        circle at 50% 50%,
-        rgb(var(--pulse-cyan) / 0.14),
-        transparent 11rem
+        ellipse at 50% 48%,
+        rgb(var(--pulse-cyan) / 0.16),
+        transparent 15rem
       ),
       radial-gradient(
-        circle at 50% 50%,
-        rgb(var(--pulse-purple) / 0.08),
-        transparent 18rem
+        ellipse at 50% 55%,
+        rgb(var(--pulse-purple) / 0.1),
+        transparent 22rem
       ),
       linear-gradient(
         180deg,
-        rgb(var(--pulse-panel) / 0.66),
-        rgb(var(--pulse-bg) / 0.78)
+        rgb(var(--pulse-panel) / 0.54),
+        rgb(var(--pulse-bg) / 0.72)
       );
     box-shadow:
-      0 28px 90px -58px rgb(var(--pulse-cyan) / 0.8),
+      0 28px 80px -56px rgb(var(--pulse-cyan) / 0.76),
       inset 0 1px 0 rgb(255 255 255 / 0.05);
   }
 
-  .orbit-command-map::before,
-  .orbit-command-map::after {
+  .orbit-command-map::before {
     content: "";
     position: absolute;
-    inset: 8%;
-    border-radius: 9999px;
-    border: 1px dashed rgb(var(--pulse-cyan) / 0.12);
-    transform: scaleX(1.28) scaleY(0.58);
-  }
-
-  .orbit-command-map::after {
-    inset: 16%;
-    border-color: rgb(var(--pulse-pink) / 0.16);
-    transform: scaleX(1.44) scaleY(0.64) rotate(-8deg);
+    inset: 0;
+    background:
+      linear-gradient(
+        90deg,
+        rgb(var(--pulse-cyan) / 0.035) 1px,
+        transparent 1px
+      ),
+      linear-gradient(
+        0deg,
+        rgb(var(--pulse-cyan) / 0.03) 1px,
+        transparent 1px
+      );
+    background-size: 72px 72px;
+    mask-image: radial-gradient(ellipse at center, #000 12%, transparent 76%);
+    pointer-events: none;
   }
 
   .orbit-command-map-compact {
-    min-height: 22rem;
+    min-height: 21rem;
+  }
+
+  .orbit-command-map-compact .orbit-command-node {
+    left: var(--node-left);
+    top: var(--node-top);
+    transform: translate(-50%, -50%);
+    offset-path: none;
+    animation: none;
+  }
+
+  .orbit-command-map-compact .orbit-command-node-card {
+    transform: none;
+  }
+
+  .orbit-command-rings {
+    pointer-events: none;
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+  }
+
+  .orbit-command-ring {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    border: 1px solid rgb(var(--pulse-cyan) / 0.18);
+    border-radius: 9999px;
+    transform: translate(-50%, -50%) rotate(-3deg);
+    box-shadow: 0 0 26px rgb(var(--pulse-cyan) / 0.08);
+  }
+
+  .orbit-command-ring-outer {
+    width: min(84%, 39rem);
+    height: 15.5rem;
+    border-color: rgb(var(--pulse-purple) / 0.26);
+  }
+
+  .orbit-command-ring-middle {
+    width: min(70%, 31rem);
+    height: 11.5rem;
+    border-color: rgb(var(--pulse-pink) / 0.24);
+    transform: translate(-50%, -50%) rotate(5deg);
+  }
+
+  .orbit-command-ring-inner {
+    width: min(54%, 23rem);
+    height: 8rem;
+    border-color: rgb(var(--pulse-cyan) / 0.28);
+    transform: translate(-50%, -50%) rotate(-8deg);
   }
 
   .orbit-command-core {
     position: absolute;
     left: 50%;
     top: 50%;
-    z-index: 5;
-    width: min(17rem, 72%);
+    z-index: 6;
+    width: min(15.5rem, 72%);
     transform: translate(-50%, -50%);
-    border: 1px solid rgb(var(--pulse-cyan) / 0.32);
-    border-radius: 0.75rem;
+    border: 1px solid rgb(var(--pulse-cyan) / 0.38);
+    border-radius: 0.9rem;
     background:
       radial-gradient(
         circle at 50% 0%,
@@ -656,84 +709,74 @@ body {
     backdrop-filter: blur(14px);
   }
 
-  .orbit-command-track-frame {
-    --orbit-size: 20rem;
+  .orbit-command-node {
+    --orbit-rx: 16rem;
+    --orbit-ry: 7rem;
+    --orbit-offset: 0%;
     --orbit-duration: 120s;
-    --orbit-delay: 0s;
-    --orbit-angle: 0deg;
     position: absolute;
-    left: 50%;
-    top: 50%;
-    z-index: 2;
-    width: var(--orbit-size);
-    height: var(--orbit-size);
-    border: 1px solid color-mix(in srgb, var(--accent-color) 30%, transparent);
-    border-radius: 9999px;
-    transform: translate(-50%, -50%) scaleX(1.34) scaleY(0.58);
-    box-shadow:
-      inset 0 0 18px color-mix(in srgb, var(--accent-color) 10%, transparent),
-      0 0 26px color-mix(in srgb, var(--accent-color) 10%, transparent);
-  }
-
-  .orbit-command-track-motion {
-    position: absolute;
-    inset: 0;
-    border-radius: inherit;
-    animation: orbit-command-spin var(--orbit-duration) linear infinite;
-    animation-delay: var(--orbit-delay);
-  }
-
-  .orbit-command-node-anchor {
-    position: absolute;
-    left: 50%;
-    top: 50%;
-    transform:
-      rotate(var(--orbit-angle))
-      translateX(calc(var(--orbit-size) / 2))
-      rotate(var(--orbit-counter-angle));
+    left: var(--node-left);
+    top: var(--node-top);
+    z-index: 7;
+    transform: translate(-50%, -50%);
   }
 
   .orbit-command-node-card {
     display: inline-flex;
-    max-width: 9.5rem;
+    max-width: 8.75rem;
     align-items: center;
-    gap: 0.45rem;
-    border: 1px solid color-mix(in srgb, var(--accent-color) 48%, transparent);
-    border-radius: 0.5rem;
-    background: rgb(var(--pulse-bg) / 0.86);
-    padding: 0.45rem 0.62rem;
+    gap: 0.5rem;
+    border: 1px solid color-mix(in srgb, var(--accent-color) 54%, transparent);
+    border-radius: 9999px;
+    background:
+      linear-gradient(180deg, rgb(255 255 255 / 0.055), transparent),
+      rgb(var(--pulse-bg) / 0.88);
+    padding: 0.42rem 0.62rem 0.42rem 0.46rem;
     color: rgb(var(--pulse-text));
     font-size: 0.75rem;
     font-weight: 700;
     line-height: 1;
     white-space: nowrap;
     box-shadow:
-      0 0 18px color-mix(in srgb, var(--accent-color) 30%, transparent),
+      0 0 20px color-mix(in srgb, var(--accent-color) 24%, transparent),
       inset 0 1px 0 rgb(255 255 255 / 0.06);
-    transform: scaleX(0.746) scaleY(1.724);
-    animation: orbit-command-counter-spin var(--orbit-duration) linear infinite;
-    animation-delay: var(--orbit-delay);
     backdrop-filter: blur(10px);
   }
 
-  .orbit-command-track-frame:hover .orbit-command-track-motion,
-  .orbit-command-track-frame:hover .orbit-command-node-card {
+  .orbit-command-node:hover {
+    z-index: 8;
     animation-play-state: paused;
   }
 
-  .orbit-command-track-frame:hover {
-    z-index: 4;
-    border-color: color-mix(in srgb, var(--accent-color) 72%, transparent);
+  .orbit-command-node:hover .orbit-command-node-card {
+    border-color: color-mix(in srgb, var(--accent-color) 78%, transparent);
+    background: rgb(var(--pulse-bg) / 0.94);
+  }
+
+  @supports (offset-path: ellipse(1px 1px at 50% 50%)) {
+    .orbit-command-node {
+      left: 0;
+      top: 0;
+      transform: none;
+      offset-path: ellipse(var(--orbit-rx) var(--orbit-ry) at 50% 50%);
+      offset-distance: var(--orbit-offset);
+      offset-rotate: 0deg;
+      animation: orbit-command-orbit var(--orbit-duration) linear infinite;
+    }
+
+    .orbit-command-node-card {
+      transform: translate(-50%, -50%);
+    }
   }
 
   .orbit-command-more {
     position: absolute;
-    right: 8%;
-    top: 38%;
-    z-index: 3;
+    right: 2rem;
+    bottom: 2rem;
+    z-index: 8;
     border: 1px solid rgb(var(--pulse-border) / 0.72);
     border-radius: 9999px;
-    background: rgb(var(--pulse-bg) / 0.66);
+    background: rgb(var(--pulse-bg) / 0.78);
     padding: 0.4rem 0.7rem;
     color: rgb(var(--pulse-muted));
     font-size: 0.75rem;
@@ -935,23 +978,12 @@ body {
   }
 }
 
-@keyframes orbit-command-spin {
+@keyframes orbit-command-orbit {
   0% {
-    transform: rotate(0deg);
+    offset-distance: var(--orbit-offset);
   }
-
   100% {
-    transform: rotate(360deg);
-  }
-}
-
-@keyframes orbit-command-counter-spin {
-  0% {
-    transform: scaleX(0.746) scaleY(1.724) rotate(0deg);
-  }
-
-  100% {
-    transform: scaleX(0.746) scaleY(1.724) rotate(-360deg);
+    offset-distance: calc(var(--orbit-offset) + 100%);
   }
 }
 
@@ -969,30 +1001,55 @@ body {
 
 @media (max-width: 767px) {
   .orbit-command-map {
-    min-height: 27rem;
+    min-height: 24rem;
   }
 
   .orbit-command-map-compact {
-    min-height: 18rem;
+    min-height: 17.5rem;
   }
 
   .orbit-command-core {
-    width: min(15rem, 74%);
+    width: min(14rem, 72%);
     padding: 0.8rem;
   }
 
-  .orbit-command-track-frame {
-    transform: translate(-50%, -50%) scale(0.72) scaleX(1.34) scaleY(0.58);
+  .orbit-command-ring-outer {
+    width: 118%;
+    height: 12rem;
   }
 
-  .orbit-command-map-compact .orbit-command-track-frame {
-    transform: translate(-50%, -50%) scale(0.86) scaleX(1.34) scaleY(0.58);
+  .orbit-command-ring-middle {
+    width: 96%;
+    height: 9rem;
+  }
+
+  .orbit-command-ring-inner {
+    width: 72%;
+    height: 6.5rem;
   }
 
   .orbit-command-node-card {
-    max-width: 7.5rem;
-    padding: 0.38rem 0.52rem;
+    max-width: 7.25rem;
+    padding: 0.34rem 0.48rem 0.34rem 0.38rem;
     font-size: 0.68rem;
+  }
+
+  .orbit-command-node-card > span:first-of-type {
+    display: none;
+  }
+
+  @supports (offset-path: ellipse(1px 1px at 50% 50%)) {
+    .orbit-command-node {
+      left: var(--node-left);
+      top: var(--node-top);
+      transform: translate(-50%, -50%);
+      offset-path: none;
+      animation: none;
+    }
+
+    .orbit-command-node-card {
+      transform: none;
+    }
   }
 
   .orbit-command-more {
@@ -1041,10 +1098,23 @@ body {
     animation: none;
   }
 
-  .orbit-command-track-motion,
+  .orbit-command-node,
   .orbit-command-node-card,
   .orbit-command-bar,
   .orbit-scanner-preview {
     animation: none;
+  }
+
+  @supports (offset-path: ellipse(1px 1px at 50% 50%)) {
+    .orbit-command-node {
+      left: var(--node-left);
+      top: var(--node-top);
+      transform: translate(-50%, -50%);
+      offset-path: none;
+    }
+
+    .orbit-command-node-card {
+      transform: none;
+    }
   }
 }

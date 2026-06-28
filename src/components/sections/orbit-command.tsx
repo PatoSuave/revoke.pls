@@ -22,67 +22,85 @@ const orbitChains = [
 const orbitNodeSettings: Record<
   (typeof orbitChains)[number],
   {
-    orbitSize: number;
-    angle: number;
+    pathX: number;
+    pathY: number;
+    offset: string;
+    fallbackLeft: string;
+    fallbackTop: string;
     duration: string;
-    delay: string;
     label: string;
   }
 > = {
   "Ethereum Mainnet": {
-    orbitSize: 220,
-    angle: -72,
-    duration: "76s",
-    delay: "-18s",
+    pathX: 238,
+    pathY: 102,
+    offset: "78%",
+    fallbackLeft: "49%",
+    fallbackTop: "20%",
+    duration: "98s",
     label: "Ethereum",
   },
   "Arbitrum One": {
-    orbitSize: 292,
-    angle: -136,
-    duration: "104s",
-    delay: "-48s",
+    pathX: 250,
+    pathY: 128,
+    offset: "63%",
+    fallbackLeft: "26%",
+    fallbackTop: "32%",
+    duration: "122s",
     label: "Arbitrum",
   },
   Optimism: {
-    orbitSize: 356,
-    angle: 184,
+    pathX: 250,
+    pathY: 128,
+    offset: "1%",
+    fallbackLeft: "75%",
+    fallbackTop: "50%",
     duration: "122s",
-    delay: "-62s",
     label: "Optimism",
   },
   Base: {
-    orbitSize: 292,
-    angle: 68,
+    pathX: 230,
+    pathY: 104,
+    offset: "16%",
+    fallbackLeft: "66%",
+    fallbackTop: "69%",
     duration: "104s",
-    delay: "-12s",
     label: "Base",
   },
   Polygon: {
-    orbitSize: 420,
-    angle: 212,
-    duration: "146s",
-    delay: "-94s",
+    pathX: 214,
+    pathY: 94,
+    offset: "35%",
+    fallbackLeft: "43%",
+    fallbackTop: "74%",
+    duration: "112s",
     label: "Polygon",
   },
   "BNB Smart Chain": {
-    orbitSize: 420,
-    angle: 24,
-    duration: "146s",
-    delay: "-28s",
+    pathX: 252,
+    pathY: 146,
+    offset: "28%",
+    fallbackLeft: "29%",
+    fallbackTop: "78%",
+    duration: "148s",
     label: "BNB Chain",
   },
   "Avalanche C-Chain": {
-    orbitSize: 356,
-    angle: 130,
-    duration: "122s",
-    delay: "-7s",
+    pathX: 252,
+    pathY: 146,
+    offset: "45%",
+    fallbackLeft: "18%",
+    fallbackTop: "57%",
+    duration: "148s",
     label: "Avalanche",
   },
   PulseChain: {
-    orbitSize: 500,
-    angle: 308,
-    duration: "168s",
-    delay: "-132s",
+    pathX: 252,
+    pathY: 112,
+    offset: "89%",
+    fallbackLeft: "52%",
+    fallbackTop: "27%",
+    duration: "116s",
     label: "PulseChain",
   },
 };
@@ -135,7 +153,7 @@ export function OrbitCommandHero() {
     <section className="orbit-command-section relative overflow-hidden border-b border-pulse-border/50">
       <div className="orbit-command-space" aria-hidden />
       <div className="relative mx-auto max-w-7xl px-4 pb-10 pt-12 sm:px-6 sm:pb-14 sm:pt-16">
-        <div className="grid gap-8 lg:grid-cols-[0.72fr_1.28fr] lg:items-center">
+        <div className="grid gap-8 lg:grid-cols-[0.82fr_1.18fr] lg:items-center">
           <div className="min-w-0">
             <div className="inline-flex max-w-full items-center gap-2 rounded-full border border-pulse-cyan/35 bg-pulse-panel/75 px-3 py-1 text-xs font-semibold text-pulse-cyan">
               <span
@@ -155,21 +173,27 @@ export function OrbitCommandHero() {
               wallet only when a verified active row is ready to review.
             </p>
 
-            <div className="mt-7 grid gap-3 sm:grid-cols-2">
+            <ul className="mt-7 grid gap-3 text-sm text-pulse-muted sm:grid-cols-2">
               {trustItems.map((item) => (
-                <div
+                <li
                   key={item.title}
-                  className="rounded-lg border border-pulse-border/70 bg-pulse-panel/50 px-3 py-2.5"
+                  className="flex min-w-0 gap-2.5 rounded-lg border border-pulse-border/55 bg-pulse-panel/35 px-3 py-2.5"
                 >
-                  <p className="text-sm font-semibold text-pulse-text">
-                    {item.title}
-                  </p>
-                  <p className="mt-0.5 text-xs leading-5 text-pulse-muted">
-                    {item.body}
-                  </p>
-                </div>
+                  <span
+                    className="mt-1 h-1.5 w-1.5 shrink-0 rounded-full bg-pulse-cyan shadow-[0_0_12px_rgb(var(--pulse-cyan)/0.72)]"
+                    aria-hidden
+                  />
+                  <span className="min-w-0">
+                    <span className="block font-semibold text-pulse-text">
+                      {item.title}
+                    </span>
+                    <span className="block text-xs leading-5 text-pulse-muted">
+                      {item.body}
+                    </span>
+                  </span>
+                </li>
               ))}
-            </div>
+            </ul>
           </div>
 
           <OrbitMap variant="hero" />
@@ -373,6 +397,12 @@ function OrbitMap({ variant }: { variant: "hero" | "compact" }) {
       className={`orbit-command-map ${variant === "compact" ? "orbit-command-map-compact" : ""}`}
       aria-label="Supported chain orbit map"
     >
+      <div className="orbit-command-rings" aria-hidden>
+        <span className="orbit-command-ring orbit-command-ring-outer" />
+        <span className="orbit-command-ring orbit-command-ring-middle" />
+        <span className="orbit-command-ring orbit-command-ring-inner" />
+      </div>
+
       <div className="orbit-command-core">
         <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-pulse-muted">
           Scanning address
@@ -390,12 +420,14 @@ function OrbitMap({ variant }: { variant: "hero" | "compact" }) {
         const settings = orbitNodeSettings[row.chain as (typeof orbitChains)[number]];
         if (!settings) return null;
         const visual = getChainVisual(row.chain);
+        const scale = variant === "compact" ? 0.72 : 1;
         const style = {
-          "--orbit-size": `${variant === "compact" ? settings.orbitSize * 0.72 : settings.orbitSize}px`,
+          "--orbit-rx": `${settings.pathX * scale}px`,
+          "--orbit-ry": `${settings.pathY * scale}px`,
+          "--orbit-offset": settings.offset,
           "--orbit-duration": settings.duration,
-          "--orbit-delay": settings.delay,
-          "--orbit-angle": `${settings.angle}deg`,
-          "--orbit-counter-angle": `${settings.angle * -1}deg`,
+          "--node-left": settings.fallbackLeft,
+          "--node-top": settings.fallbackTop,
           "--accent-color": visual.accent,
           "--accent-readable": visual.accentReadable,
           "--accent-soft": visual.accentSoft,
@@ -406,20 +438,16 @@ function OrbitMap({ variant }: { variant: "hero" | "compact" }) {
         return (
           <div
             key={row.chain}
-            className="orbit-command-track-frame"
+            className="orbit-command-node"
             style={style}
           >
-            <div className="orbit-command-track-motion">
-              <div className="orbit-command-node-anchor">
-                <div className="orbit-command-node-card">
-                  <ChainLogo
-                    chainId={Number(row.chainId)}
-                    className="h-5 w-5 shrink-0"
-                  />
-                  <span className="truncate">{settings.label}</span>
-                  <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-pulse-green shadow-[0_0_10px_rgb(var(--pulse-green)/0.8)]" />
-                </div>
-              </div>
+            <div className="orbit-command-node-card">
+              <ChainLogo
+                chainId={Number(row.chainId)}
+                className="h-5 w-5 shrink-0"
+              />
+              <span className="truncate">{settings.label}</span>
+              <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-pulse-green shadow-[0_0_10px_rgb(var(--pulse-green)/0.8)]" />
             </div>
           </div>
         );

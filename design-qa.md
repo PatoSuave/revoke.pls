@@ -1,9 +1,10 @@
 source visual truth path: C:\Users\afils\.codex\generated_images\019f0aaa-4d86-7fb2-a9cd-d14ea308a8b1\ig_03012c2d06eb2018016a404678d4f48196b8b4b67fb87899ad.png
-implementation screenshot path: C:\Users\afils\AppData\Local\Temp\revoke-orbit-qa\home-desktop.png
-viewport: 1440x1200 desktop, with additional checks at 390x1200 mobile and /app desktop/mobile
+reported problem screenshot path: C:\Users\afils\OneDrive\Desktop\Plants.png
+implementation screenshot path: C:\Users\afils\AppData\Local\Temp\revoke-orbit-fix-qa-4\home-user-size.png
+viewport: 1445x670 desktop, with additional checks at 390x1200 mobile and /app desktop
 state: default dark theme, unauthenticated, scanner preview state
-full-view comparison evidence: reference image and implementation screenshots were opened and compared. Implementation preserves the selected Orbit Command direction: dark scanner surface, orbiting chain badges around a scanned address, address-first scanner command bar, chain rail, table preview, and spender details panel.
-focused region comparison evidence: home desktop, home mobile, app desktop, and app mobile screenshots were inspected for clipped labels, orbit overlap, command bar layout, stacked mobile rhythm, and scanner intro continuity.
+full-view comparison evidence: reference image, reported problem screenshot, and repaired implementation screenshots were opened and compared. The repaired implementation preserves the Orbit Command direction while removing the warped chip treatment from the reported screenshot.
+focused region comparison evidence: repaired home desktop, home mobile, and app desktop screenshots were inspected for clipped labels, orbit overlap, command bar layout, stacked mobile rhythm, and scanner intro continuity.
 
 **Findings**
 - No actionable P0/P1/P2 findings.
@@ -21,8 +22,10 @@ focused region comparison evidence: home desktop, home mobile, app desktop, and 
 - Copy and content: address-first, read-only scan, no custody, no seed phrase, wallet-confirmed revoke, and incomplete-verification messaging are present without adding new revoke claims.
 
 **Patches Made Since QA**
-- Added animated orbit map and scanner preview section.
-- Replaced the home hero and /app intro with the Orbit Command treatment.
-- Added reduced-motion handling for orbit and preview animations.
+- Replaced skewed orbit-track scaling with upright chain nodes on desktop motion paths.
+- Reduced the hero orbit panel height and tightened desktop radii so chain chips stay inside the panel.
+- Changed mobile orbit nodes to compact icon chips and static placement to avoid crowded clipped labels.
+- Froze the compact /app intro orbit into deliberate static positions so labels do not pass behind the center card.
+- Kept reduced-motion handling for orbit and preview animations.
 
 final result: passed
