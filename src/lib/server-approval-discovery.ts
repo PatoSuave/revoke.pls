@@ -64,7 +64,7 @@ import {
 } from "@/lib/discovery";
 
 const SERVER_DISCOVERY_REQUEST_TIMEOUT_MS = 55_000;
-const SERVER_DISCOVERY_PRIMARY_ATTEMPT_TIMEOUT_MS = 8_000;
+const SERVER_DISCOVERY_PRIMARY_ATTEMPT_TIMEOUT_MS = 12_000;
 const MANAGED_RPC_FALLBACK_ATTEMPT_TIMEOUT_MS = 6_000;
 const OTTERSCAN_TRANSACTION_FALLBACK_ATTEMPT_TIMEOUT_MS = 20_000;
 const SMALL_RPC_FALLBACK_ATTEMPT_TIMEOUT_MS = 8_000;
@@ -536,71 +536,46 @@ async function discoverServerErc20WithFallback({
           requests: 0,
         }),
     ]);
+    if (
+      chainId === PULSECHAIN_CHAIN_ID &&
+      isEmptyErc20Discovery(erc20, permit2)
+    ) {
+      return await confirmEmptyPulseChainErc20Discovery({
+        chainId,
+        owner,
+        signal,
+        config,
+        primary: { erc20, permit2 },
+      });
+    }
     return { erc20, permit2 };
   } catch (error) {
     if (chainId !== PULSECHAIN_CHAIN_ID) throw error;
-    const fallbacks = createPulseChainRpcFallbackSources(chainId, config);
-    if (fallbacks.length === 0) {
+    const fallback = await runPulseChainErc20Fallbacks({
+      chainId,
+      owner,
+      signal,
+      config,
+    });
+    if (fallback.kind === "complete" || fallback.kind === "incomplete") {
+      return { erc20: fallback.erc20, permit2: fallback.permit2 };
+    }
+
+    if (fallback.missingConfig.length > 0) {
       return {
         response: emptyApprovalResponse(chainId, "upstream-failure", {
           errors: [
             `PulseChain PulseScan discovery failed and no RPC fallback is configured: ${redactSensitiveErrorText(errorMessage(error))}`,
           ],
-          missingConfig: pulseChainFallbackRpcEnvNames(),
+          missingConfig: fallback.missingConfig,
         }),
       };
     }
 
-    const fallbackErrors: string[] = [];
-    let incompleteFallback:
-      | { erc20: DiscoveryResult; permit2: Permit2DiscoveryResult }
-      | undefined;
-    for (const fallback of fallbacks) {
-      const fallbackTimeoutMs = pulseChainRpcFallbackAttemptTimeoutMs(fallback);
-      const fallbackSignal = attemptTimeoutSignal(
-        signal,
-        fallbackTimeoutMs,
-      );
-      try {
-        const [erc20, permit2] = await Promise.all([
-          fallback.discover(owner, { signal: fallbackSignal.signal }),
-          fallback.discoverPermit2Allowances?.(owner, {
-            signal: fallbackSignal.signal,
-          }) ??
-            Promise.resolve({
-              allowances: [],
-              source: fallback.meta,
-              rawCount: 0,
-              truncated: false,
-              windows: 0,
-              requests: 0,
-            }),
-        ]);
-        if (!erc20.truncated && !permit2.truncated) {
-          return { erc20, permit2 };
-        }
-        incompleteFallback ??= { erc20, permit2 };
-        fallbackErrors.push(`${fallback.meta.name}: discovery was truncated`);
-        continue;
-      } catch (fallbackError) {
-        fallbackErrors.push(
-          `${fallback.meta.name}: ${fallbackErrorMessage(
-            fallbackError,
-            fallbackSignal.timedOut,
-            fallbackTimeoutMs,
-          )}`,
-        );
-      } finally {
-        fallbackSignal.cleanup();
-      }
-    }
-
-    if (incompleteFallback) return incompleteFallback;
-
     return {
       response: emptyApprovalResponse(chainId, "upstream-failure", {
         errors: [
-          `PulseChain PulseScan discovery failed and all RPC fallbacks failed: ${fallbackErrors.join("; ")}`,
+          `PulseChain PulseScan discovery failed and all RPC fallbacks failed: ${fallback.errors.join("; ")}`,
         ],
         missingConfig: [],
       }),
@@ -633,56 +608,43 @@ async function discoverServerNftWithFallback({
     const nft = await source.discoverNftApprovals(owner, {
       signal: primarySignal.signal,
     });
+    if (chainId === PULSECHAIN_CHAIN_ID && isEmptyNftDiscovery(nft)) {
+      return await confirmEmptyPulseChainNftDiscovery({
+        chainId,
+        owner,
+        signal,
+        config,
+        primary: { nft },
+      });
+    }
     return { nft };
   } catch (error) {
     if (chainId !== PULSECHAIN_CHAIN_ID) throw error;
-    const fallbacks = createPulseChainRpcFallbackSources(chainId, config);
-    if (fallbacks.length === 0) {
+    const fallback = await runPulseChainNftFallbacks({
+      chainId,
+      owner,
+      signal,
+      config,
+    });
+    if (fallback.kind === "complete" || fallback.kind === "incomplete") {
+      return { nft: fallback.nft };
+    }
+
+    if (fallback.missingConfig.length > 0) {
       return {
         response: emptyNftResponse(chainId, "upstream-failure", {
           errors: [
             `PulseChain PulseScan NFT discovery failed and no RPC fallback is configured: ${redactSensitiveErrorText(errorMessage(error))}`,
           ],
-          missingConfig: pulseChainFallbackRpcEnvNames(),
+          missingConfig: fallback.missingConfig,
         }),
       };
     }
 
-    const fallbackErrors: string[] = [];
-    let incompleteFallback: { nft: NftDiscoveryResult } | undefined;
-    for (const fallback of fallbacks) {
-      const fallbackTimeoutMs = pulseChainRpcFallbackAttemptTimeoutMs(fallback);
-      const fallbackSignal = attemptTimeoutSignal(
-        signal,
-        fallbackTimeoutMs,
-      );
-      try {
-        const nft = await fallback.discoverNftApprovals(owner, {
-          signal: fallbackSignal.signal,
-        });
-        if (!nft.truncated) return { nft };
-        incompleteFallback ??= { nft };
-        fallbackErrors.push(`${fallback.meta.name}: discovery was truncated`);
-        continue;
-      } catch (fallbackError) {
-        fallbackErrors.push(
-          `${fallback.meta.name}: ${fallbackErrorMessage(
-            fallbackError,
-            fallbackSignal.timedOut,
-            fallbackTimeoutMs,
-          )}`,
-        );
-      } finally {
-        fallbackSignal.cleanup();
-      }
-    }
-
-    if (incompleteFallback) return incompleteFallback;
-
     return {
       response: emptyNftResponse(chainId, "upstream-failure", {
         errors: [
-          `PulseChain PulseScan NFT discovery failed and all RPC fallbacks failed: ${fallbackErrors.join("; ")}`,
+          `PulseChain PulseScan NFT discovery failed and all RPC fallbacks failed: ${fallback.errors.join("; ")}`,
         ],
         missingConfig: [],
       }),
@@ -690,6 +652,272 @@ async function discoverServerNftWithFallback({
   } finally {
     primarySignal.cleanup();
   }
+}
+
+type PulseChainErc20FallbackResult =
+  | {
+      kind: "complete" | "incomplete";
+      erc20: DiscoveryResult;
+      permit2: Permit2DiscoveryResult;
+      errors: string[];
+      missingConfig: string[];
+    }
+  | { kind: "failed"; errors: string[]; missingConfig: string[] };
+
+type PulseChainNftFallbackResult =
+  | {
+      kind: "complete" | "incomplete";
+      nft: NftDiscoveryResult;
+      errors: string[];
+      missingConfig: string[];
+    }
+  | { kind: "failed"; errors: string[]; missingConfig: string[] };
+
+async function confirmEmptyPulseChainErc20Discovery({
+  chainId,
+  owner,
+  signal,
+  config,
+  primary,
+}: {
+  chainId: ServerDiscoveryChainId;
+  owner: Address;
+  signal?: AbortSignal;
+  config: ReturnType<typeof resolveServerDiscoveryConfig>;
+  primary: { erc20: DiscoveryResult; permit2: Permit2DiscoveryResult };
+}): Promise<{ erc20: DiscoveryResult; permit2: Permit2DiscoveryResult }> {
+  const fallback = await runPulseChainErc20Fallbacks({
+    chainId,
+    owner,
+    signal,
+    config,
+  });
+
+  if (fallback.kind === "complete") {
+    return { erc20: fallback.erc20, permit2: fallback.permit2 };
+  }
+  if (fallback.kind === "incomplete" && hasErc20DiscoveryCandidates(fallback)) {
+    return { erc20: fallback.erc20, permit2: fallback.permit2 };
+  }
+
+  return markErc20DiscoveryIncomplete(primary);
+}
+
+async function confirmEmptyPulseChainNftDiscovery({
+  chainId,
+  owner,
+  signal,
+  config,
+  primary,
+}: {
+  chainId: ServerDiscoveryChainId;
+  owner: Address;
+  signal?: AbortSignal;
+  config: ReturnType<typeof resolveServerDiscoveryConfig>;
+  primary: { nft: NftDiscoveryResult };
+}): Promise<{ nft: NftDiscoveryResult }> {
+  const fallback = await runPulseChainNftFallbacks({
+    chainId,
+    owner,
+    signal,
+    config,
+  });
+
+  if (fallback.kind === "complete") return { nft: fallback.nft };
+  if (fallback.kind === "incomplete" && fallback.nft.approvals.length > 0) {
+    return { nft: fallback.nft };
+  }
+
+  return markNftDiscoveryIncomplete(primary);
+}
+
+async function runPulseChainErc20Fallbacks({
+  chainId,
+  owner,
+  signal,
+  config,
+}: {
+  chainId: ServerDiscoveryChainId;
+  owner: Address;
+  signal?: AbortSignal;
+  config: ReturnType<typeof resolveServerDiscoveryConfig>;
+}): Promise<PulseChainErc20FallbackResult> {
+  const fallbacks = createPulseChainRpcFallbackSources(chainId, config);
+  if (fallbacks.length === 0) {
+    return {
+      kind: "failed",
+      errors: [],
+      missingConfig: pulseChainFallbackRpcEnvNames(),
+    };
+  }
+
+  const fallbackErrors: string[] = [];
+  let incompleteFallback:
+    | { erc20: DiscoveryResult; permit2: Permit2DiscoveryResult }
+    | undefined;
+  for (const fallback of fallbacks) {
+    const fallbackTimeoutMs = pulseChainRpcFallbackAttemptTimeoutMs(fallback);
+    const fallbackSignal = attemptTimeoutSignal(signal, fallbackTimeoutMs);
+    try {
+      const [erc20, permit2] = await Promise.all([
+        fallback.discover(owner, { signal: fallbackSignal.signal }),
+        fallback.discoverPermit2Allowances?.(owner, {
+          signal: fallbackSignal.signal,
+        }) ??
+          Promise.resolve({
+            allowances: [],
+            source: fallback.meta,
+            rawCount: 0,
+            truncated: false,
+            windows: 0,
+            requests: 0,
+          }),
+      ]);
+      if (!erc20.truncated && !permit2.truncated) {
+        return {
+          kind: "complete",
+          erc20,
+          permit2,
+          errors: fallbackErrors,
+          missingConfig: [],
+        };
+      }
+      incompleteFallback ??= { erc20, permit2 };
+      fallbackErrors.push(`${fallback.meta.name}: discovery was truncated`);
+    } catch (fallbackError) {
+      fallbackErrors.push(
+        `${fallback.meta.name}: ${fallbackErrorMessage(
+          fallbackError,
+          fallbackSignal.timedOut,
+          fallbackTimeoutMs,
+        )}`,
+      );
+    } finally {
+      fallbackSignal.cleanup();
+    }
+  }
+
+  if (incompleteFallback) {
+    return {
+      kind: "incomplete",
+      ...incompleteFallback,
+      errors: fallbackErrors,
+      missingConfig: [],
+    };
+  }
+
+  return { kind: "failed", errors: fallbackErrors, missingConfig: [] };
+}
+
+async function runPulseChainNftFallbacks({
+  chainId,
+  owner,
+  signal,
+  config,
+}: {
+  chainId: ServerDiscoveryChainId;
+  owner: Address;
+  signal?: AbortSignal;
+  config: ReturnType<typeof resolveServerDiscoveryConfig>;
+}): Promise<PulseChainNftFallbackResult> {
+  const fallbacks = createPulseChainRpcFallbackSources(chainId, config);
+  if (fallbacks.length === 0) {
+    return {
+      kind: "failed",
+      errors: [],
+      missingConfig: pulseChainFallbackRpcEnvNames(),
+    };
+  }
+
+  const fallbackErrors: string[] = [];
+  let incompleteFallback: { nft: NftDiscoveryResult } | undefined;
+  for (const fallback of fallbacks) {
+    const fallbackTimeoutMs = pulseChainRpcFallbackAttemptTimeoutMs(fallback);
+    const fallbackSignal = attemptTimeoutSignal(signal, fallbackTimeoutMs);
+    try {
+      const nft = await fallback.discoverNftApprovals(owner, {
+        signal: fallbackSignal.signal,
+      });
+      if (!nft.truncated) {
+        return {
+          kind: "complete",
+          nft,
+          errors: fallbackErrors,
+          missingConfig: [],
+        };
+      }
+      incompleteFallback ??= { nft };
+      fallbackErrors.push(`${fallback.meta.name}: discovery was truncated`);
+    } catch (fallbackError) {
+      fallbackErrors.push(
+        `${fallback.meta.name}: ${fallbackErrorMessage(
+          fallbackError,
+          fallbackSignal.timedOut,
+          fallbackTimeoutMs,
+        )}`,
+      );
+    } finally {
+      fallbackSignal.cleanup();
+    }
+  }
+
+  if (incompleteFallback) {
+    return {
+      kind: "incomplete",
+      ...incompleteFallback,
+      errors: fallbackErrors,
+      missingConfig: [],
+    };
+  }
+
+  return { kind: "failed", errors: fallbackErrors, missingConfig: [] };
+}
+
+function isEmptyErc20Discovery(
+  erc20: DiscoveryResult,
+  permit2: Permit2DiscoveryResult,
+): boolean {
+  return (
+    !erc20.truncated &&
+    !permit2.truncated &&
+    erc20.pairs.length === 0 &&
+    permit2.allowances.length === 0
+  );
+}
+
+function hasErc20DiscoveryCandidates({
+  erc20,
+  permit2,
+}: {
+  erc20: DiscoveryResult;
+  permit2: Permit2DiscoveryResult;
+}): boolean {
+  return erc20.pairs.length > 0 || permit2.allowances.length > 0;
+}
+
+function isEmptyNftDiscovery(nft: NftDiscoveryResult): boolean {
+  return !nft.truncated && nft.approvals.length === 0;
+}
+
+function markErc20DiscoveryIncomplete({
+  erc20,
+  permit2,
+}: {
+  erc20: DiscoveryResult;
+  permit2: Permit2DiscoveryResult;
+}): { erc20: DiscoveryResult; permit2: Permit2DiscoveryResult } {
+  return {
+    erc20: { ...erc20, truncated: true },
+    permit2: { ...permit2, truncated: true },
+  };
+}
+
+function markNftDiscoveryIncomplete({
+  nft,
+}: {
+  nft: NftDiscoveryResult;
+}): { nft: NftDiscoveryResult } {
+  return { nft: { ...nft, truncated: true } };
 }
 
 function createPulseChainRpcFallbackSources(
