@@ -42,10 +42,19 @@ import {
 } from "@/lib/server-approval-discovery";
 
 const OWNER = "0xcae394005c9c4c309621c53d53db9ceb701fc8d8";
+const TOKEN = "0x0000000000000000000000000000000000000001";
+const COLLECTION = "0x0000000000000000000000000000000000000002";
+const SPENDER = "0x0000000000000000000000000000000000000003";
 const SHARED_TEST_KEY = "shared-etherscan-test-key";
 let erc20Truncated = false;
 let permit2Truncated = false;
 let nftTruncated = false;
+let primaryErc20PairCount = 0;
+let primaryNftApprovalCount = 0;
+let otsErc20PairCount = 0;
+let otsNftApprovalCount = 0;
+let rpcErc20PairCount = 0;
+let rpcNftApprovalCount = 0;
 let primaryThrows = false;
 let rpcThrows = false;
 let dwellirRpcThrows = false;
@@ -132,6 +141,12 @@ beforeEach(() => {
   erc20Truncated = false;
   permit2Truncated = false;
   nftTruncated = false;
+  primaryErc20PairCount = 0;
+  primaryNftApprovalCount = 0;
+  otsErc20PairCount = 0;
+  otsNftApprovalCount = 0;
+  rpcErc20PairCount = 0;
+  rpcNftApprovalCount = 0;
   primaryThrows = false;
   rpcThrows = false;
   dwellirRpcThrows = false;
@@ -157,6 +172,7 @@ beforeEach(() => {
           chainId,
           source,
           truncated: erc20Truncated,
+          pairCount: primaryErc20PairCount,
         });
       }),
       discoverNftApprovals: vi.fn(async () => {
@@ -165,6 +181,7 @@ beforeEach(() => {
           chainId,
           source,
           truncated: nftTruncated,
+          approvalCount: primaryNftApprovalCount,
         });
       }),
       discoverPermit2Allowances: vi.fn(async () => {
@@ -197,6 +214,7 @@ beforeEach(() => {
           chainId,
           source,
           truncated: rpcErc20Truncated,
+          pairCount: rpcErc20PairCount,
         });
       }),
       discoverNftApprovals: vi.fn(
@@ -211,6 +229,7 @@ beforeEach(() => {
             chainId,
             source,
             truncated: rpcNftTruncated,
+            approvalCount: rpcNftApprovalCount,
           });
         },
       ),
@@ -248,6 +267,7 @@ beforeEach(() => {
           chainId,
           source,
           truncated: otsErc20Truncated,
+          pairCount: otsErc20PairCount,
         });
       }),
       discoverNftApprovals: vi.fn(async () => {
@@ -258,6 +278,7 @@ beforeEach(() => {
           chainId,
           source,
           truncated: otsNftTruncated,
+          approvalCount: otsNftApprovalCount,
         });
       }),
       discoverPermit2Allowances: vi.fn(async () => {
@@ -314,18 +335,31 @@ function approvalDiscoveryResult({
   chainId,
   source,
   truncated,
+  pairCount = 0,
 }: {
   chainId: number;
   source: { id: string; name: string; url?: string };
   truncated: boolean;
+  pairCount?: number;
 }) {
+  const pairs = Array.from({ length: pairCount }, (_, index) => ({
+    chainId,
+    approvalType: "fungible" as const,
+    tokenAddress: TOKEN,
+    ownerAddress: OWNER,
+    spenderAddress: SPENDER,
+    rawApprovalValue: BigInt(index + 1),
+    blockNumber: BigInt(index + 100),
+    transactionHash: `0x${String(index + 1).padStart(64, "0")}` as const,
+    logIndex: `0x${index.toString(16)}`,
+  }));
   return {
-    pairs: [],
+    pairs,
     source: { id: source.id, name: source.name, url: source.url, chainId },
     erc20Parse: {
-      rawLogs: 0,
-      decodeAttempts: 0,
-      erc20TopicShape: 0,
+      rawLogs: pairCount,
+      decodeAttempts: pairCount,
+      erc20TopicShape: pairCount,
       erc721TokenApprovalShape: 0,
       unsupportedTopicShape: 0,
       missingTopics: 0,
@@ -333,11 +367,11 @@ function approvalDiscoveryResult({
       invalidTokenAddress: 0,
       missingSpenderTopic: 0,
       invalidSpenderTopic: 0,
-      decodedPairs: 0,
-      uniquePairs: 0,
-      samplePairs: [],
+      decodedPairs: pairCount,
+      uniquePairs: pairCount,
+      samplePairs: pairs,
     },
-    rawCount: 0,
+    rawCount: pairCount,
     truncated,
     windows: 0,
     requests: 0,
@@ -348,15 +382,27 @@ function nftDiscoveryResult({
   chainId,
   source,
   truncated,
+  approvalCount = 0,
 }: {
   chainId: number;
   source: { id: string; name: string; url?: string };
   truncated: boolean;
+  approvalCount?: number;
 }) {
+  const approvals = Array.from({ length: approvalCount }, (_, index) => ({
+    chainId,
+    kind: "approvalForAll" as const,
+    collectionAddress: COLLECTION,
+    ownerAddress: OWNER,
+    operatorAddress: SPENDER,
+    blockNumber: BigInt(index + 100),
+    transactionHash: `0x${String(index + 1).padStart(64, "0")}` as const,
+    logIndex: `0x${index.toString(16)}`,
+  }));
   return {
-    approvals: [],
+    approvals,
     source: { id: source.id, name: source.name, url: source.url, chainId },
-    rawCount: 0,
+    rawCount: approvalCount,
     truncated,
     windows: 0,
     requests: 0,
@@ -383,7 +429,9 @@ function permit2DiscoveryResult({
 }
 
 describe("server approval discovery shared Etherscan key", () => {
-  it("uses PulseScan primary discovery for PulseChain without a Dwellir RPC URL", async () => {
+  it("uses PulseScan primary discovery for PulseChain when it finds approval history", async () => {
+    primaryErc20PairCount = 1;
+
     const response = await discoverServerErc20Approvals({
       chainId: PULSECHAIN_CHAIN_ID,
       owner: OWNER,
@@ -396,7 +444,95 @@ describe("server approval discovery shared Etherscan key", () => {
     expect(source.apiUrl).toBe("https://api.scan.pulsechain.com/api");
     expect(source.requiresApiKey).toBe(false);
     expect(source.apiKeyEnvVars).toBeUndefined();
+    expect(response.erc20.pairs).toHaveLength(1);
     expect(createRpcLogDiscoverySource).not.toHaveBeenCalled();
+  });
+
+  it("confirms empty PulseScan ERC-20 history with PulseChain fallbacks before returning clear", async () => {
+    const response = await discoverServerErc20Approvals({
+      chainId: PULSECHAIN_CHAIN_ID,
+      owner: OWNER,
+      env: { NODE_ENV: "test" },
+    });
+
+    expect(response.ok).toBe(true);
+    expect(response.status).toBe("complete");
+    expect(response.erc20.source.id).toBe("server-otherscan-pulsechain-ots");
+    expect(response.permit2.source.id).toBe(
+      "server-otherscan-pulsechain-ots",
+    );
+    expect(otsSourceIds()).toEqual(["server-otherscan-pulsechain-ots"]);
+  });
+
+  it("uses fallback ERC-20 approvals when PulseScan returns empty history", async () => {
+    otsErc20PairCount = 1;
+
+    const response = await discoverServerErc20Approvals({
+      chainId: PULSECHAIN_CHAIN_ID,
+      owner: OWNER,
+      env: { NODE_ENV: "test" },
+    });
+
+    expect(response.ok).toBe(true);
+    expect(response.status).toBe("complete");
+    expect(response.erc20.source.id).toBe("server-otherscan-pulsechain-ots");
+    expect(response.erc20.pairs).toHaveLength(1);
+    expect(response.erc20.pairs[0].tokenAddress).toBe(TOKEN);
+  });
+
+  it("keeps empty PulseScan ERC-20 history verification-incomplete when fallbacks cannot confirm", async () => {
+    otsErc20Truncated = true;
+    otsPermit2Truncated = true;
+    publicRpcThrows = true;
+    otherScanRpcThrows = true;
+
+    const response = await discoverServerErc20Approvals({
+      chainId: PULSECHAIN_CHAIN_ID,
+      owner: OWNER,
+      env: { NODE_ENV: "test" },
+    });
+
+    expect(response.ok).toBe(true);
+    expect(response.status).toBe("verification-incomplete");
+    expect(response.erc20.source.id).toBe("server-pulsescan-pulsechain");
+    expect(response.erc20.truncated).toBe(true);
+    expect(response.permit2.truncated).toBe(true);
+    expect(response.warnings.join(" ")).toContain(
+      "Do not treat this wallet as clear",
+    );
+  });
+
+  it("confirms empty PulseScan NFT history with PulseChain fallbacks before returning clear", async () => {
+    const response = await discoverServerNftApprovals({
+      chainId: PULSECHAIN_CHAIN_ID,
+      owner: OWNER,
+      env: { NODE_ENV: "test" },
+    });
+
+    expect(response.ok).toBe(true);
+    expect(response.status).toBe("complete");
+    expect(response.nft.source.id).toBe("server-otherscan-pulsechain-ots");
+    expect(otsSourceIds()).toEqual(["server-otherscan-pulsechain-ots"]);
+  });
+
+  it("keeps empty PulseScan NFT history verification-incomplete when fallbacks cannot confirm", async () => {
+    otsNftTruncated = true;
+    publicRpcThrows = true;
+    otherScanRpcThrows = true;
+
+    const response = await discoverServerNftApprovals({
+      chainId: PULSECHAIN_CHAIN_ID,
+      owner: OWNER,
+      env: { NODE_ENV: "test" },
+    });
+
+    expect(response.ok).toBe(true);
+    expect(response.status).toBe("verification-incomplete");
+    expect(response.nft.source.id).toBe("server-pulsescan-pulsechain");
+    expect(response.nft.truncated).toBe(true);
+    expect(response.warnings.join(" ")).toContain(
+      "Do not treat this wallet as clear",
+    );
   });
 
   it("uses the Dwellir RPC fallback only after PulseScan discovery fails", async () => {
