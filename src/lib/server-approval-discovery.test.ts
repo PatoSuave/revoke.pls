@@ -49,6 +49,7 @@ let nftTruncated = false;
 let primaryThrows = false;
 let rpcThrows = false;
 let dwellirRpcThrows = false;
+let dwellirRpcHangs = false;
 let otsThrows = false;
 let publicRpcThrows = false;
 let otherScanRpcThrows = false;
@@ -134,6 +135,7 @@ beforeEach(() => {
   primaryThrows = false;
   rpcThrows = false;
   dwellirRpcThrows = false;
+  dwellirRpcHangs = false;
   otsThrows = false;
   publicRpcThrows = false;
   otherScanRpcThrows = false;
@@ -184,7 +186,10 @@ beforeEach(() => {
       source: { id: string; name: string; url?: string };
     }) => ({
       meta: { id: source.id, name: source.name, url: source.url, chainId },
-      discover: vi.fn(async () => {
+      discover: vi.fn(async (_owner: unknown, options?: { signal?: AbortSignal }) => {
+        if (shouldRpcSourceHang(source.id)) {
+          return waitForAbort(options?.signal);
+        }
         if (shouldRpcSourceThrow(source.id)) {
           throw new Error(rpcSourceErrorMessage(source.id));
         }
@@ -194,26 +199,36 @@ beforeEach(() => {
           truncated: rpcErc20Truncated,
         });
       }),
-      discoverNftApprovals: vi.fn(async () => {
-        if (shouldRpcSourceThrow(source.id)) {
-          throw new Error(rpcSourceErrorMessage(source.id));
-        }
-        return nftDiscoveryResult({
-          chainId,
-          source,
-          truncated: rpcNftTruncated,
-        });
-      }),
-      discoverPermit2Allowances: vi.fn(async () => {
-        if (shouldRpcSourceThrow(source.id)) {
-          throw new Error(rpcSourceErrorMessage(source.id));
-        }
-        return permit2DiscoveryResult({
-          chainId,
-          source,
-          truncated: rpcPermit2Truncated,
-        });
-      }),
+      discoverNftApprovals: vi.fn(
+        async (_owner: unknown, options?: { signal?: AbortSignal }) => {
+          if (shouldRpcSourceHang(source.id)) {
+            return waitForAbort(options?.signal);
+          }
+          if (shouldRpcSourceThrow(source.id)) {
+            throw new Error(rpcSourceErrorMessage(source.id));
+          }
+          return nftDiscoveryResult({
+            chainId,
+            source,
+            truncated: rpcNftTruncated,
+          });
+        },
+      ),
+      discoverPermit2Allowances: vi.fn(
+        async (_owner: unknown, options?: { signal?: AbortSignal }) => {
+          if (shouldRpcSourceHang(source.id)) {
+            return waitForAbort(options?.signal);
+          }
+          if (shouldRpcSourceThrow(source.id)) {
+            throw new Error(rpcSourceErrorMessage(source.id));
+          }
+          return permit2DiscoveryResult({
+            chainId,
+            source,
+            truncated: rpcPermit2Truncated,
+          });
+        },
+      ),
     }),
   );
   createOtterscanTransactionDiscoverySource.mockImplementation(
@@ -268,6 +283,10 @@ function shouldRpcSourceThrow(sourceId: string) {
   );
 }
 
+function shouldRpcSourceHang(sourceId: string) {
+  return sourceId === "server-dwellir-pulsechain-rpc" && dwellirRpcHangs;
+}
+
 function rpcSourceErrorMessage(sourceId: string) {
   if (sourceId === "server-dwellir-pulsechain-rpc") {
     return "Dwellir failed at https://api-pulse-mainnet.n.dwellir.com/super-secret-key";
@@ -276,6 +295,19 @@ function rpcSourceErrorMessage(sourceId: string) {
     return "Public PulseChain RPC failed at https://rpc.pulsechain.com";
   }
   return "OtherScan failed at https://rpc.pulsechain.box";
+}
+
+function waitForAbort(signal: AbortSignal | undefined): Promise<never> {
+  return new Promise((_, reject) => {
+    if (!signal) return;
+    if (signal.aborted) {
+      reject(new Error("aborted"));
+      return;
+    }
+    signal.addEventListener("abort", () => reject(new Error("aborted")), {
+      once: true,
+    });
+  });
 }
 
 function approvalDiscoveryResult({
@@ -388,10 +420,10 @@ describe("server approval discovery shared Etherscan key", () => {
     );
     expect(source.rpcUrlEnvVar).toContain("PULSECHAIN_DISCOVERY_RPC_URL");
     expect(rpcSourceLimitsById("server-dwellir-pulsechain-rpc")).toMatchObject({
-      maxRequests: 40,
-      requestTimeoutMs: 8000,
+      maxRequests: 20,
+      requestTimeoutMs: 5000,
       maxInitialBlockSpan: 2_000_000,
-      retryAttempts: 1,
+      retryAttempts: 0,
     });
     expect(rpcSourceIds()).toEqual([
       "server-dwellir-pulsechain-rpc",
@@ -419,10 +451,10 @@ describe("server approval discovery shared Etherscan key", () => {
     expect(source.rpcUrl).toBe("https://rpc.pulsechain.box");
     expect(source.rpcUrlEnvVar).toContain("PULSECHAIN_OTHERSCAN_RPC_URL");
     expect(otsSourceLimitsById("server-otherscan-pulsechain-ots")).toMatchObject({
-      maxRequests: 24,
-      requestTimeoutMs: 8_000,
+      maxRequests: 18,
+      requestTimeoutMs: 5_000,
       pageCap: 500,
-      retryAttempts: 1,
+      retryAttempts: 0,
     });
     expect(otsSourceIds()).toEqual(["server-otherscan-pulsechain-ots"]);
     expect(rpcSourceIds()).toEqual([
@@ -447,8 +479,8 @@ describe("server approval discovery shared Etherscan key", () => {
     expect(source.rpcUrl).toBe("https://rpc.pulsechain.com");
     expect(source.rpcUrlEnvVar).toBeUndefined();
     expect(rpcSourceLimitsById("server-public-pulsechain-rpc")).toMatchObject({
-      maxRequests: 6,
-      requestTimeoutMs: 12_000,
+      maxRequests: 4,
+      requestTimeoutMs: 5_000,
       maxInitialBlockSpan: 10_000,
       retryAttempts: 0,
     });
@@ -477,8 +509,8 @@ describe("server approval discovery shared Etherscan key", () => {
     expect(source.rpcUrlEnvVar).toContain("PULSECHAIN_OTHERSCAN_RPC_URL");
     expect(rpcSourceLimitsById("server-otherscan-pulsechain-rpc")).toMatchObject(
       {
-        maxRequests: 6,
-        requestTimeoutMs: 12_000,
+        maxRequests: 4,
+        requestTimeoutMs: 5_000,
         maxInitialBlockSpan: 10_000,
         retryAttempts: 0,
       },
@@ -512,6 +544,35 @@ describe("server approval discovery shared Etherscan key", () => {
       "server-public-pulsechain-rpc",
       "server-otherscan-pulsechain-rpc",
     ]);
+  });
+
+  it("keeps later fallbacks reachable when configured Dwellir RPC hangs", async () => {
+    vi.useFakeTimers();
+    primaryThrows = true;
+    dwellirRpcHangs = true;
+
+    try {
+      const pending = discoverServerErc20Approvals({
+        chainId: PULSECHAIN_CHAIN_ID,
+        owner: OWNER,
+        env: {
+          NODE_ENV: "test",
+          PULSECHAIN_DISCOVERY_RPC_URL:
+            "https://api-pulse-mainnet.n.dwellir.com/test-key",
+        },
+      });
+
+      await vi.advanceTimersByTimeAsync(6_000);
+      const response = await pending;
+
+      expect(response.ok).toBe(true);
+      expect(response.erc20.source.id).toBe("server-otherscan-pulsechain-ots");
+      expect(response.permit2.source.id).toBe(
+        "server-otherscan-pulsechain-ots",
+      );
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it("keeps truncated Dwellir fallback discovery verification-incomplete", async () => {

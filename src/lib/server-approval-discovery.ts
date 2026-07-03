@@ -65,8 +65,9 @@ import {
 
 const SERVER_DISCOVERY_REQUEST_TIMEOUT_MS = 55_000;
 const SERVER_DISCOVERY_PRIMARY_ATTEMPT_TIMEOUT_MS = 8_000;
-const DWELLIR_RPC_FALLBACK_ATTEMPT_TIMEOUT_MS = 10_000;
-const OTHERSCAN_RPC_FALLBACK_ATTEMPT_TIMEOUT_MS = 35_000;
+const MANAGED_RPC_FALLBACK_ATTEMPT_TIMEOUT_MS = 6_000;
+const OTTERSCAN_TRANSACTION_FALLBACK_ATTEMPT_TIMEOUT_MS = 20_000;
+const SMALL_RPC_FALLBACK_ATTEMPT_TIMEOUT_MS = 8_000;
 const SERVER_DISCOVERY_EXPLORER_MIN_INTERVAL_MS = 350;
 const PULSECHAIN_PUBLIC_RPC_URL = "https://rpc.pulsechain.com";
 const PULSECHAIN_OTHERSCAN_RPC_URL = "https://rpc.pulsechain.box";
@@ -81,20 +82,26 @@ const SERVER_DISCOVERY_LIMITS = {
   retryDelayMs: 500,
   minRequestIntervalMs: SERVER_DISCOVERY_EXPLORER_MIN_INTERVAL_MS,
 } as const;
+const PULSECHAIN_MANAGED_RPC_DISCOVERY_LIMITS = {
+  ...SERVER_DISCOVERY_LIMITS,
+  maxRequests: 20,
+  requestTimeoutMs: 5_000,
+  retryAttempts: 0,
+} as const;
 const PULSECHAIN_SMALL_RPC_DISCOVERY_LIMITS = {
   ...SERVER_DISCOVERY_LIMITS,
-  maxRequests: 6,
-  requestTimeoutMs: 12_000,
+  maxRequests: 4,
+  requestTimeoutMs: 5_000,
   maxInitialBlockSpan: 10_000,
   retryAttempts: 0,
 } as const;
 const PULSECHAIN_OTTERSCAN_TRANSACTION_DISCOVERY_LIMITS = {
   ...SERVER_DISCOVERY_LIMITS,
-  maxRequests: 24,
-  requestTimeoutMs: 8_000,
+  maxRequests: 18,
+  requestTimeoutMs: 5_000,
   pageCap: 500,
   maxInitialBlockSpan: undefined,
-  retryAttempts: 1,
+  retryAttempts: 0,
   minRequestIntervalMs: 0,
 } as const;
 
@@ -549,9 +556,10 @@ async function discoverServerErc20WithFallback({
       | { erc20: DiscoveryResult; permit2: Permit2DiscoveryResult }
       | undefined;
     for (const fallback of fallbacks) {
+      const fallbackTimeoutMs = pulseChainRpcFallbackAttemptTimeoutMs(fallback);
       const fallbackSignal = attemptTimeoutSignal(
         signal,
-        pulseChainRpcFallbackAttemptTimeoutMs(fallback),
+        fallbackTimeoutMs,
       );
       try {
         const [erc20, permit2] = await Promise.all([
@@ -576,7 +584,11 @@ async function discoverServerErc20WithFallback({
         continue;
       } catch (fallbackError) {
         fallbackErrors.push(
-          `${fallback.meta.name}: ${redactSensitiveErrorText(errorMessage(fallbackError))}`,
+          `${fallback.meta.name}: ${fallbackErrorMessage(
+            fallbackError,
+            fallbackSignal.timedOut,
+            fallbackTimeoutMs,
+          )}`,
         );
       } finally {
         fallbackSignal.cleanup();
@@ -639,9 +651,10 @@ async function discoverServerNftWithFallback({
     const fallbackErrors: string[] = [];
     let incompleteFallback: { nft: NftDiscoveryResult } | undefined;
     for (const fallback of fallbacks) {
+      const fallbackTimeoutMs = pulseChainRpcFallbackAttemptTimeoutMs(fallback);
       const fallbackSignal = attemptTimeoutSignal(
         signal,
-        pulseChainRpcFallbackAttemptTimeoutMs(fallback),
+        fallbackTimeoutMs,
       );
       try {
         const nft = await fallback.discoverNftApprovals(owner, {
@@ -653,7 +666,11 @@ async function discoverServerNftWithFallback({
         continue;
       } catch (fallbackError) {
         fallbackErrors.push(
-          `${fallback.meta.name}: ${redactSensitiveErrorText(errorMessage(fallbackError))}`,
+          `${fallback.meta.name}: ${fallbackErrorMessage(
+            fallbackError,
+            fallbackSignal.timedOut,
+            fallbackTimeoutMs,
+          )}`,
         );
       } finally {
         fallbackSignal.cleanup();
@@ -693,7 +710,7 @@ function createPulseChainRpcFallbackSources(
           rpcUrl: config.fallbackRpcUrl,
           rpcUrlEnvVar: pulseChainFallbackRpcEnvNames().join(" / "),
         },
-        limits: SERVER_DISCOVERY_LIMITS,
+        limits: PULSECHAIN_MANAGED_RPC_DISCOVERY_LIMITS,
       }),
     );
   }
@@ -749,9 +766,13 @@ function createPulseChainRpcFallbackSources(
 }
 
 function pulseChainRpcFallbackAttemptTimeoutMs(source: DiscoverySource): number {
-  return source.meta.id === "server-dwellir-pulsechain-rpc"
-    ? DWELLIR_RPC_FALLBACK_ATTEMPT_TIMEOUT_MS
-    : OTHERSCAN_RPC_FALLBACK_ATTEMPT_TIMEOUT_MS;
+  if (source.meta.id === "server-dwellir-pulsechain-rpc") {
+    return MANAGED_RPC_FALLBACK_ATTEMPT_TIMEOUT_MS;
+  }
+  if (source.meta.id === "server-otherscan-pulsechain-ots") {
+    return OTTERSCAN_TRANSACTION_FALLBACK_ATTEMPT_TIMEOUT_MS;
+  }
+  return SMALL_RPC_FALLBACK_ATTEMPT_TIMEOUT_MS;
 }
 
 function sameUrl(a: string | undefined, b: string): boolean {
@@ -878,7 +899,11 @@ function emptySource(chainId: ServerDiscoveryChainId) {
 
 function attemptTimeoutSignal(parentSignal: AbortSignal | undefined, timeoutMs: number) {
   const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), timeoutMs);
+  let timedOut = false;
+  const timeout = setTimeout(() => {
+    timedOut = true;
+    controller.abort();
+  }, timeoutMs);
 
   const abort = () => controller.abort();
   if (parentSignal) {
@@ -888,6 +913,9 @@ function attemptTimeoutSignal(parentSignal: AbortSignal | undefined, timeoutMs: 
 
   return {
     signal: controller.signal,
+    get timedOut() {
+      return timedOut;
+    },
     cleanup() {
       clearTimeout(timeout);
       parentSignal?.removeEventListener("abort", abort);
@@ -936,6 +964,17 @@ function pulseChainOtherScanRpcEnvNames(): string[] {
 
 function errorMessage(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
+}
+
+function fallbackErrorMessage(
+  error: unknown,
+  timedOut: boolean,
+  timeoutMs: number,
+): string {
+  if (timedOut) {
+    return `discovery attempt timed out after ${Math.round(timeoutMs / 1000)}s`;
+  }
+  return redactSensitiveErrorText(errorMessage(error));
 }
 
 function redactSensitiveErrorText(value: string): string {
