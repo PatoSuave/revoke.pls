@@ -33,6 +33,8 @@ import {
   POLYGON_CHAIN_ID,
   POLYGON_EXPLORER_API_DEFAULT,
   POLYGON_EXPLORER_CHAIN_ID_DEFAULT,
+  PULSECHAIN_CHAIN_ID,
+  PULSECHAIN_EXPLORER_API_DEFAULT,
   SONIC_CHAIN_ID,
   SONIC_EXPLORER_API_DEFAULT,
   SONIC_EXPLORER_CHAIN_ID_DEFAULT,
@@ -51,22 +53,74 @@ import {
   type ServerApprovalDiscoveryResponse,
   type ServerNftDiscoveryResponse,
 } from "@/lib/approval-discovery-api";
-import { createBlockscoutDiscoverySource } from "@/lib/discovery";
+import {
+  createBlockscoutDiscoverySource,
+  createOtterscanTransactionDiscoverySource,
+  createRpcLogDiscoverySource,
+  type DiscoveryResult,
+  type DiscoverySource,
+  type NftDiscoveryResult,
+  type Permit2DiscoveryResult,
+} from "@/lib/discovery";
 
-const SERVER_DISCOVERY_REQUEST_TIMEOUT_MS = 25_000;
+const SERVER_DISCOVERY_REQUEST_TIMEOUT_MS = 55_000;
+const SERVER_DISCOVERY_PRIMARY_ATTEMPT_TIMEOUT_MS = 8_000;
+const DWELLIR_RPC_FALLBACK_ATTEMPT_TIMEOUT_MS = 10_000;
+const OTHERSCAN_RPC_FALLBACK_ATTEMPT_TIMEOUT_MS = 35_000;
 const SERVER_DISCOVERY_EXPLORER_MIN_INTERVAL_MS = 350;
+const PULSECHAIN_PUBLIC_RPC_URL = "https://rpc.pulsechain.com";
+const PULSECHAIN_OTHERSCAN_RPC_URL = "https://rpc.pulsechain.box";
 const SERVER_DISCOVERY_LIMITS = {
   maxRequests: 40,
   maxRawLogs: 20_000,
   requestTimeoutMs: 8_000,
   pageCap: 1000,
   minSplitSpan: 64,
+  maxInitialBlockSpan: 2_000_000,
   retryAttempts: 1,
   retryDelayMs: 500,
   minRequestIntervalMs: SERVER_DISCOVERY_EXPLORER_MIN_INTERVAL_MS,
 } as const;
+const PULSECHAIN_SMALL_RPC_DISCOVERY_LIMITS = {
+  ...SERVER_DISCOVERY_LIMITS,
+  maxRequests: 6,
+  requestTimeoutMs: 12_000,
+  maxInitialBlockSpan: 10_000,
+  retryAttempts: 0,
+} as const;
+const PULSECHAIN_OTTERSCAN_TRANSACTION_DISCOVERY_LIMITS = {
+  ...SERVER_DISCOVERY_LIMITS,
+  maxRequests: 24,
+  requestTimeoutMs: 8_000,
+  pageCap: 500,
+  maxInitialBlockSpan: undefined,
+  retryAttempts: 1,
+  minRequestIntervalMs: 0,
+} as const;
 
 const CHAIN_CONFIGS = {
+  [PULSECHAIN_CHAIN_ID]: {
+    displayName: "PulseChain",
+    explorerBaseUrl: "https://scan.pulsechain.com",
+    apiUrlDefault: PULSECHAIN_EXPLORER_API_DEFAULT,
+    apiUrlEnvNames: [
+      "PULSECHAIN_EXPLORER_API_URL",
+      "NEXT_PUBLIC_PULSECHAIN_EXPLORER_API",
+    ],
+    apiKeyEnvNames: [],
+    apiChainIdDefault: undefined,
+    apiChainIdEnvNames: [],
+    apiProviderKind: "blockscout-compatible",
+    apiProviderName: "PulseScan",
+    requiresApiKey: false,
+    fallbackRpcEnvNames: [
+      "PULSECHAIN_DISCOVERY_RPC_URL",
+      "PULSECHAIN_RPC_URL",
+      "PULSECHAIN_MAINNET_RPC_URL",
+    ],
+    otherScanRpcUrlDefault: PULSECHAIN_OTHERSCAN_RPC_URL,
+    otherScanRpcEnvNames: ["PULSECHAIN_OTHERSCAN_RPC_URL"],
+  },
   [BSC_CHAIN_ID]: {
     displayName: "BSC",
     explorerBaseUrl: "https://bscscan.com",
@@ -75,6 +129,9 @@ const CHAIN_CONFIGS = {
     apiUrlEnvNames: ["BSC_EXPLORER_API_URL"],
     apiKeyEnvNames: ["BSC_EXPLORER_API_KEY", "ETHERSCAN_API_KEY"],
     apiChainIdEnvNames: ["BSC_EXPLORER_CHAIN_ID"],
+    apiProviderKind: "etherscan-v2",
+    apiProviderName: "Etherscan API V2",
+    requiresApiKey: true,
   },
   [BASE_CHAIN_ID]: {
     displayName: "Base",
@@ -84,6 +141,9 @@ const CHAIN_CONFIGS = {
     apiUrlEnvNames: ["BASE_EXPLORER_API_URL"],
     apiKeyEnvNames: ["BASE_EXPLORER_API_KEY", "ETHERSCAN_API_KEY"],
     apiChainIdEnvNames: ["BASE_EXPLORER_CHAIN_ID"],
+    apiProviderKind: "etherscan-v2",
+    apiProviderName: "Etherscan API V2",
+    requiresApiKey: true,
   },
   [POLYGON_CHAIN_ID]: {
     displayName: "Polygon",
@@ -93,6 +153,9 @@ const CHAIN_CONFIGS = {
     apiUrlEnvNames: ["POLYGON_EXPLORER_API_URL"],
     apiKeyEnvNames: ["POLYGON_EXPLORER_API_KEY", "ETHERSCAN_API_KEY"],
     apiChainIdEnvNames: ["POLYGON_EXPLORER_CHAIN_ID"],
+    apiProviderKind: "etherscan-v2",
+    apiProviderName: "Etherscan API V2",
+    requiresApiKey: true,
   },
   [SONIC_CHAIN_ID]: {
     displayName: "Sonic",
@@ -102,6 +165,9 @@ const CHAIN_CONFIGS = {
     apiUrlEnvNames: ["SONIC_EXPLORER_API_URL"],
     apiKeyEnvNames: ["SONIC_EXPLORER_API_KEY", "ETHERSCAN_API_KEY"],
     apiChainIdEnvNames: ["SONIC_EXPLORER_CHAIN_ID"],
+    apiProviderKind: "etherscan-v2",
+    apiProviderName: "Etherscan API V2",
+    requiresApiKey: true,
   },
   [AVALANCHE_CHAIN_ID]: {
     displayName: "Avalanche",
@@ -111,6 +177,9 @@ const CHAIN_CONFIGS = {
     apiUrlEnvNames: ["AVALANCHE_EXPLORER_API_URL"],
     apiKeyEnvNames: ["AVALANCHE_EXPLORER_API_KEY", "ETHERSCAN_API_KEY"],
     apiChainIdEnvNames: ["AVALANCHE_EXPLORER_CHAIN_ID"],
+    apiProviderKind: "etherscan-v2",
+    apiProviderName: "Etherscan API V2",
+    requiresApiKey: true,
   },
   [MANTLE_CHAIN_ID]: {
     displayName: "Mantle",
@@ -120,6 +189,9 @@ const CHAIN_CONFIGS = {
     apiUrlEnvNames: ["MANTLE_EXPLORER_API_URL"],
     apiKeyEnvNames: ["MANTLE_EXPLORER_API_KEY", "ETHERSCAN_API_KEY"],
     apiChainIdEnvNames: ["MANTLE_EXPLORER_CHAIN_ID"],
+    apiProviderKind: "etherscan-v2",
+    apiProviderName: "Etherscan API V2",
+    requiresApiKey: true,
   },
   [LINEA_CHAIN_ID]: {
     displayName: "Linea",
@@ -129,6 +201,9 @@ const CHAIN_CONFIGS = {
     apiUrlEnvNames: ["LINEA_EXPLORER_API_URL"],
     apiKeyEnvNames: ["LINEA_EXPLORER_API_KEY", "ETHERSCAN_API_KEY"],
     apiChainIdEnvNames: ["LINEA_EXPLORER_CHAIN_ID"],
+    apiProviderKind: "etherscan-v2",
+    apiProviderName: "Etherscan API V2",
+    requiresApiKey: true,
   },
   [BLAST_CHAIN_ID]: {
     displayName: "Blast",
@@ -138,6 +213,9 @@ const CHAIN_CONFIGS = {
     apiUrlEnvNames: ["BLAST_EXPLORER_API_URL"],
     apiKeyEnvNames: ["BLAST_EXPLORER_API_KEY", "ETHERSCAN_API_KEY"],
     apiChainIdEnvNames: ["BLAST_EXPLORER_CHAIN_ID"],
+    apiProviderKind: "etherscan-v2",
+    apiProviderName: "Etherscan API V2",
+    requiresApiKey: true,
   },
   [BERACHAIN_CHAIN_ID]: {
     displayName: "Berachain",
@@ -147,6 +225,9 @@ const CHAIN_CONFIGS = {
     apiUrlEnvNames: ["BERACHAIN_EXPLORER_API_URL"],
     apiKeyEnvNames: ["BERACHAIN_EXPLORER_API_KEY", "ETHERSCAN_API_KEY"],
     apiChainIdEnvNames: ["BERACHAIN_EXPLORER_CHAIN_ID"],
+    apiProviderKind: "etherscan-v2",
+    apiProviderName: "Etherscan API V2",
+    requiresApiKey: true,
   },
   [CELO_CHAIN_ID]: {
     displayName: "Celo",
@@ -156,6 +237,9 @@ const CHAIN_CONFIGS = {
     apiUrlEnvNames: ["CELO_EXPLORER_API_URL"],
     apiKeyEnvNames: ["CELO_EXPLORER_API_KEY", "ETHERSCAN_API_KEY"],
     apiChainIdEnvNames: ["CELO_EXPLORER_CHAIN_ID"],
+    apiProviderKind: "etherscan-v2",
+    apiProviderName: "Etherscan API V2",
+    requiresApiKey: true,
   },
   [GNOSIS_CHAIN_ID]: {
     displayName: "Gnosis",
@@ -165,6 +249,9 @@ const CHAIN_CONFIGS = {
     apiUrlEnvNames: ["GNOSIS_EXPLORER_API_URL"],
     apiKeyEnvNames: ["GNOSIS_EXPLORER_API_KEY", "ETHERSCAN_API_KEY"],
     apiChainIdEnvNames: ["GNOSIS_EXPLORER_CHAIN_ID"],
+    apiProviderKind: "etherscan-v2",
+    apiProviderName: "Etherscan API V2",
+    requiresApiKey: true,
   },
   [UNICHAIN_CHAIN_ID]: {
     displayName: "Unichain",
@@ -174,6 +261,9 @@ const CHAIN_CONFIGS = {
     apiUrlEnvNames: ["UNICHAIN_EXPLORER_API_URL"],
     apiKeyEnvNames: ["UNICHAIN_EXPLORER_API_KEY", "ETHERSCAN_API_KEY"],
     apiChainIdEnvNames: ["UNICHAIN_EXPLORER_CHAIN_ID"],
+    apiProviderKind: "etherscan-v2",
+    apiProviderName: "Etherscan API V2",
+    requiresApiKey: true,
   },
   [WORLDCHAIN_CHAIN_ID]: {
     displayName: "World Chain",
@@ -183,6 +273,9 @@ const CHAIN_CONFIGS = {
     apiUrlEnvNames: ["WORLDCHAIN_EXPLORER_API_URL"],
     apiKeyEnvNames: ["WORLDCHAIN_EXPLORER_API_KEY", "ETHERSCAN_API_KEY"],
     apiChainIdEnvNames: ["WORLDCHAIN_EXPLORER_CHAIN_ID"],
+    apiProviderKind: "etherscan-v2",
+    apiProviderName: "Etherscan API V2",
+    requiresApiKey: true,
   },
 } as const;
 
@@ -220,19 +313,15 @@ export async function discoverServerErc20Approvals({
     });
   }
 
-  const source = createServerDiscoverySource(chainId, config);
-  const [erc20, permit2] = await Promise.all([
-    source.discover(owner, { signal }),
-    source.discoverPermit2Allowances?.(owner, { signal }) ??
-      Promise.resolve({
-        allowances: [],
-        source: source.meta,
-        rawCount: 0,
-        truncated: false,
-        windows: 0,
-        requests: 0,
-      }),
-  ]);
+  const discovery = await discoverServerErc20WithFallback({
+    chainId,
+    owner,
+    signal,
+    config,
+  });
+  if ("response" in discovery) return discovery.response;
+
+  const { erc20, permit2 } = discovery;
   const serializedErc20 = serializeDiscoveryResult(erc20);
   const serializedPermit2 = serializePermit2DiscoveryResult(permit2);
   const verificationIncomplete =
@@ -275,8 +364,15 @@ export async function discoverServerNftApprovals({
     });
   }
 
-  const source = createServerDiscoverySource(chainId, config);
-  const nft = await source.discoverNftApprovals(owner, { signal });
+  const discovery = await discoverServerNftWithFallback({
+    chainId,
+    owner,
+    signal,
+    config,
+  });
+  if ("response" in discovery) return discovery.response;
+
+  const { nft } = discovery;
   const serializedNft = serializeNftDiscoveryResult(nft);
   const verificationIncomplete = serializedNft.truncated;
 
@@ -302,19 +398,45 @@ function resolveServerDiscoveryConfig(
   const settings = CHAIN_CONFIGS[chainId];
   const apiUrl = validHttpUrl(firstEnv(env, settings.apiUrlEnvNames)) ??
     settings.apiUrlDefault;
-  const apiKey = cleanEnv(firstEnv(env, settings.apiKeyEnvNames));
+  const apiKey =
+    settings.apiKeyEnvNames.length > 0
+      ? cleanEnv(firstEnv(env, settings.apiKeyEnvNames))
+      : undefined;
   const apiChainId =
-    cleanEnv(firstEnv(env, settings.apiChainIdEnvNames)) ??
-    settings.apiChainIdDefault;
+    settings.apiChainIdEnvNames.length > 0
+      ? cleanEnv(firstEnv(env, settings.apiChainIdEnvNames)) ??
+        settings.apiChainIdDefault
+      : undefined;
+  const fallbackRpcUrl =
+    "fallbackRpcEnvNames" in settings
+      ? validHttpUrl(firstEnv(env, settings.fallbackRpcEnvNames))
+      : undefined;
+  const otherScanRpcUrl =
+    "otherScanRpcEnvNames" in settings
+      ? validHttpUrl(firstEnv(env, settings.otherScanRpcEnvNames)) ??
+        settings.otherScanRpcUrlDefault
+      : undefined;
   const missingConfig: string[] = [];
 
   if (!apiUrl) missingConfig.push(settings.apiUrlEnvNames.join(" or "));
-  if (!apiKey) missingConfig.push(settings.apiKeyEnvNames.join(" or "));
-  if (apiChainId !== settings.apiChainIdDefault) {
+  if (settings.requiresApiKey && !apiKey) {
+    missingConfig.push(settings.apiKeyEnvNames.join(" or "));
+  }
+  if (
+    settings.apiChainIdEnvNames.length > 0 &&
+    apiChainId !== settings.apiChainIdDefault
+  ) {
     missingConfig.push(settings.apiChainIdEnvNames.join(" or "));
   }
 
-  return { apiUrl, apiKey, apiChainId, missingConfig };
+  return {
+    apiUrl,
+    apiKey,
+    apiChainId,
+    fallbackRpcUrl,
+    otherScanRpcUrl,
+    missingConfig,
+  };
 }
 
 function createServerDiscoverySource(
@@ -323,26 +445,47 @@ function createServerDiscoverySource(
 ) {
   const settings = CHAIN_CONFIGS[chainId];
   const source: DiscoverySourceConfig = {
-    id: `server-etherscan-v2-${settings.displayName.toLowerCase()}`,
-    name: `Server-side Etherscan API V2 (${settings.displayName} logs)`,
-    apiProviderKind: "etherscan-v2",
-    apiProviderName: "Etherscan API V2",
+    id:
+      settings.apiProviderKind === "etherscan-v2"
+        ? `server-etherscan-v2-${settings.displayName.toLowerCase()}`
+        : `server-pulsescan-${settings.displayName.toLowerCase()}`,
+    name:
+      settings.apiProviderKind === "etherscan-v2"
+        ? `Server-side Etherscan API V2 (${settings.displayName} logs)`
+        : `Server-side PulseScan (${settings.displayName} logs)`,
+    apiProviderKind: settings.apiProviderKind,
+    apiProviderName: settings.apiProviderName,
     url: settings.explorerBaseUrl,
     apiUrl: config.apiUrl,
     apiUrlEnvVar: settings.apiUrlEnvNames.join(" / "),
     apiChainId: settings.apiChainIdDefault,
-    apiChainIdEnvVar: settings.apiChainIdEnvNames.join(" / "),
+    apiChainIdEnvVar:
+      settings.apiChainIdEnvNames.length > 0
+        ? settings.apiChainIdEnvNames.join(" / ")
+        : undefined,
     apiKey: config.apiKey,
-    apiKeyEnvVar: settings.apiKeyEnvNames.join(" / "),
-    apiKeyEnvVars: settings.apiKeyEnvNames,
-    requiresApiKey: true,
+    apiKeyEnvVar:
+      settings.apiKeyEnvNames.length > 0
+        ? settings.apiKeyEnvNames.join(" / ")
+        : undefined,
+    apiKeyEnvVars:
+      settings.apiKeyEnvNames.length > 0 ? settings.apiKeyEnvNames : undefined,
+    requiresApiKey: settings.requiresApiKey,
     hasApiKey: Boolean(config.apiKey),
     hasApiUrl: Boolean(config.apiUrl),
     usesDefaultApiUrl: config.apiUrl === settings.apiUrlDefault,
-    queryParams: { chainid: settings.apiChainIdDefault },
+    queryParams:
+      settings.apiProviderKind === "etherscan-v2" &&
+      settings.apiChainIdDefault
+        ? { chainid: settings.apiChainIdDefault }
+        : undefined,
     limitations:
-      "Server-side Etherscan API V2 discovery is capped and timeout-bounded.",
-    missingApiKeyMessage: `${settings.displayName} discovery requires a server-side Etherscan API key.`,
+      settings.apiProviderKind === "etherscan-v2"
+        ? "Server-side Etherscan API V2 discovery is capped and timeout-bounded."
+        : "Server-side PulseScan discovery is capped and timeout-bounded.",
+    missingApiKeyMessage: settings.requiresApiKey
+      ? `${settings.displayName} discovery requires a server-side Etherscan API key.`
+      : undefined,
   };
 
   return createBlockscoutDiscoverySource({
@@ -350,6 +493,274 @@ function createServerDiscoverySource(
     source,
     limits: SERVER_DISCOVERY_LIMITS,
   });
+}
+
+async function discoverServerErc20WithFallback({
+  chainId,
+  owner,
+  signal,
+  config,
+}: {
+  chainId: ServerDiscoveryChainId;
+  owner: Address;
+  signal?: AbortSignal;
+  config: ReturnType<typeof resolveServerDiscoveryConfig>;
+}): Promise<
+  | { erc20: DiscoveryResult; permit2: Permit2DiscoveryResult }
+  | { response: ServerApprovalDiscoveryResponse }
+> {
+  const source = createServerDiscoverySource(chainId, config);
+  const primarySignal = attemptTimeoutSignal(
+    signal,
+    SERVER_DISCOVERY_PRIMARY_ATTEMPT_TIMEOUT_MS,
+  );
+  try {
+    const [erc20, permit2] = await Promise.all([
+      source.discover(owner, { signal: primarySignal.signal }),
+      source.discoverPermit2Allowances?.(owner, {
+        signal: primarySignal.signal,
+      }) ??
+        Promise.resolve({
+          allowances: [],
+          source: source.meta,
+          rawCount: 0,
+          truncated: false,
+          windows: 0,
+          requests: 0,
+        }),
+    ]);
+    return { erc20, permit2 };
+  } catch (error) {
+    if (chainId !== PULSECHAIN_CHAIN_ID) throw error;
+    const fallbacks = createPulseChainRpcFallbackSources(chainId, config);
+    if (fallbacks.length === 0) {
+      return {
+        response: emptyApprovalResponse(chainId, "upstream-failure", {
+          errors: [
+            `PulseChain PulseScan discovery failed and no RPC fallback is configured: ${redactSensitiveErrorText(errorMessage(error))}`,
+          ],
+          missingConfig: pulseChainFallbackRpcEnvNames(),
+        }),
+      };
+    }
+
+    const fallbackErrors: string[] = [];
+    let incompleteFallback:
+      | { erc20: DiscoveryResult; permit2: Permit2DiscoveryResult }
+      | undefined;
+    for (const fallback of fallbacks) {
+      const fallbackSignal = attemptTimeoutSignal(
+        signal,
+        pulseChainRpcFallbackAttemptTimeoutMs(fallback),
+      );
+      try {
+        const [erc20, permit2] = await Promise.all([
+          fallback.discover(owner, { signal: fallbackSignal.signal }),
+          fallback.discoverPermit2Allowances?.(owner, {
+            signal: fallbackSignal.signal,
+          }) ??
+            Promise.resolve({
+              allowances: [],
+              source: fallback.meta,
+              rawCount: 0,
+              truncated: false,
+              windows: 0,
+              requests: 0,
+            }),
+        ]);
+        if (!erc20.truncated && !permit2.truncated) {
+          return { erc20, permit2 };
+        }
+        incompleteFallback ??= { erc20, permit2 };
+        fallbackErrors.push(`${fallback.meta.name}: discovery was truncated`);
+        continue;
+      } catch (fallbackError) {
+        fallbackErrors.push(
+          `${fallback.meta.name}: ${redactSensitiveErrorText(errorMessage(fallbackError))}`,
+        );
+      } finally {
+        fallbackSignal.cleanup();
+      }
+    }
+
+    if (incompleteFallback) return incompleteFallback;
+
+    return {
+      response: emptyApprovalResponse(chainId, "upstream-failure", {
+        errors: [
+          `PulseChain PulseScan discovery failed and all RPC fallbacks failed: ${fallbackErrors.join("; ")}`,
+        ],
+        missingConfig: [],
+      }),
+    };
+  } finally {
+    primarySignal.cleanup();
+  }
+}
+
+async function discoverServerNftWithFallback({
+  chainId,
+  owner,
+  signal,
+  config,
+}: {
+  chainId: ServerDiscoveryChainId;
+  owner: Address;
+  signal?: AbortSignal;
+  config: ReturnType<typeof resolveServerDiscoveryConfig>;
+}): Promise<
+  | { nft: NftDiscoveryResult }
+  | { response: ServerNftDiscoveryResponse }
+> {
+  const source = createServerDiscoverySource(chainId, config);
+  const primarySignal = attemptTimeoutSignal(
+    signal,
+    SERVER_DISCOVERY_PRIMARY_ATTEMPT_TIMEOUT_MS,
+  );
+  try {
+    const nft = await source.discoverNftApprovals(owner, {
+      signal: primarySignal.signal,
+    });
+    return { nft };
+  } catch (error) {
+    if (chainId !== PULSECHAIN_CHAIN_ID) throw error;
+    const fallbacks = createPulseChainRpcFallbackSources(chainId, config);
+    if (fallbacks.length === 0) {
+      return {
+        response: emptyNftResponse(chainId, "upstream-failure", {
+          errors: [
+            `PulseChain PulseScan NFT discovery failed and no RPC fallback is configured: ${redactSensitiveErrorText(errorMessage(error))}`,
+          ],
+          missingConfig: pulseChainFallbackRpcEnvNames(),
+        }),
+      };
+    }
+
+    const fallbackErrors: string[] = [];
+    let incompleteFallback: { nft: NftDiscoveryResult } | undefined;
+    for (const fallback of fallbacks) {
+      const fallbackSignal = attemptTimeoutSignal(
+        signal,
+        pulseChainRpcFallbackAttemptTimeoutMs(fallback),
+      );
+      try {
+        const nft = await fallback.discoverNftApprovals(owner, {
+          signal: fallbackSignal.signal,
+        });
+        if (!nft.truncated) return { nft };
+        incompleteFallback ??= { nft };
+        fallbackErrors.push(`${fallback.meta.name}: discovery was truncated`);
+        continue;
+      } catch (fallbackError) {
+        fallbackErrors.push(
+          `${fallback.meta.name}: ${redactSensitiveErrorText(errorMessage(fallbackError))}`,
+        );
+      } finally {
+        fallbackSignal.cleanup();
+      }
+    }
+
+    if (incompleteFallback) return incompleteFallback;
+
+    return {
+      response: emptyNftResponse(chainId, "upstream-failure", {
+        errors: [
+          `PulseChain PulseScan NFT discovery failed and all RPC fallbacks failed: ${fallbackErrors.join("; ")}`,
+        ],
+        missingConfig: [],
+      }),
+    };
+  } finally {
+    primarySignal.cleanup();
+  }
+}
+
+function createPulseChainRpcFallbackSources(
+  chainId: ServerDiscoveryChainId,
+  config: ReturnType<typeof resolveServerDiscoveryConfig>,
+) {
+  if (chainId !== PULSECHAIN_CHAIN_ID) return [];
+
+  const fallbacks: DiscoverySource[] = [];
+  if (config.fallbackRpcUrl) {
+    fallbacks.push(
+      createRpcLogDiscoverySource({
+        chainId,
+        source: {
+          id: "server-dwellir-pulsechain-rpc",
+          name: "Server-side Dwellir PulseChain RPC",
+          url: "https://www.dwellir.com/docs/pulsechain",
+          rpcUrl: config.fallbackRpcUrl,
+          rpcUrlEnvVar: pulseChainFallbackRpcEnvNames().join(" / "),
+        },
+        limits: SERVER_DISCOVERY_LIMITS,
+      }),
+    );
+  }
+
+  if (config.otherScanRpcUrl) {
+    fallbacks.push(
+      createOtterscanTransactionDiscoverySource({
+        chainId,
+        source: {
+          id: "server-otherscan-pulsechain-ots",
+          name: "Server-side OtherScan PulseChain transactions",
+          url: "https://otherscan.pulsechain.box",
+          rpcUrl: config.otherScanRpcUrl,
+          rpcUrlEnvVar: pulseChainOtherScanRpcEnvNames().join(" / "),
+        },
+        limits: PULSECHAIN_OTTERSCAN_TRANSACTION_DISCOVERY_LIMITS,
+      }),
+    );
+  }
+
+  if (!sameUrl(config.fallbackRpcUrl, PULSECHAIN_PUBLIC_RPC_URL)) {
+    fallbacks.push(
+      createRpcLogDiscoverySource({
+        chainId,
+        source: {
+          id: "server-public-pulsechain-rpc",
+          name: "Server-side public PulseChain RPC",
+          url: PULSECHAIN_PUBLIC_RPC_URL,
+          rpcUrl: PULSECHAIN_PUBLIC_RPC_URL,
+        },
+        limits: PULSECHAIN_SMALL_RPC_DISCOVERY_LIMITS,
+      }),
+    );
+  }
+
+  if (config.otherScanRpcUrl) {
+    fallbacks.push(
+      createRpcLogDiscoverySource({
+        chainId,
+        source: {
+          id: "server-otherscan-pulsechain-rpc",
+          name: "Server-side OtherScan PulseChain RPC",
+          url: "https://otherscan.pulsechain.box",
+          rpcUrl: config.otherScanRpcUrl,
+          rpcUrlEnvVar: pulseChainOtherScanRpcEnvNames().join(" / "),
+        },
+        limits: PULSECHAIN_SMALL_RPC_DISCOVERY_LIMITS,
+      }),
+    );
+  }
+
+  return fallbacks;
+}
+
+function pulseChainRpcFallbackAttemptTimeoutMs(source: DiscoverySource): number {
+  return source.meta.id === "server-dwellir-pulsechain-rpc"
+    ? DWELLIR_RPC_FALLBACK_ATTEMPT_TIMEOUT_MS
+    : OTHERSCAN_RPC_FALLBACK_ATTEMPT_TIMEOUT_MS;
+}
+
+function sameUrl(a: string | undefined, b: string): boolean {
+  if (!a) return false;
+  try {
+    return new URL(a).toString() === new URL(b).toString();
+  } catch {
+    return a === b;
+  }
 }
 
 export function serverDiscoveryTimeoutSignal(requestSignal?: AbortSignal) {
@@ -452,11 +863,35 @@ function emptyNftResponse(
 
 function emptySource(chainId: ServerDiscoveryChainId) {
   const settings = CHAIN_CONFIGS[chainId];
+  const isEtherscan = settings.apiProviderKind === "etherscan-v2";
   return {
-    id: `server-etherscan-v2-${settings.displayName.toLowerCase()}`,
-    name: `Server-side Etherscan API V2 (${settings.displayName} logs)`,
+    id: isEtherscan
+      ? `server-etherscan-v2-${settings.displayName.toLowerCase()}`
+      : `server-pulsescan-${settings.displayName.toLowerCase()}`,
+    name: isEtherscan
+      ? `Server-side Etherscan API V2 (${settings.displayName} logs)`
+      : `Server-side PulseScan (${settings.displayName} logs)`,
     url: settings.explorerBaseUrl,
     chainId,
+  };
+}
+
+function attemptTimeoutSignal(parentSignal: AbortSignal | undefined, timeoutMs: number) {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), timeoutMs);
+
+  const abort = () => controller.abort();
+  if (parentSignal) {
+    if (parentSignal.aborted) controller.abort();
+    else parentSignal.addEventListener("abort", abort, { once: true });
+  }
+
+  return {
+    signal: controller.signal,
+    cleanup() {
+      clearTimeout(timeout);
+      parentSignal?.removeEventListener("abort", abort);
+    },
   };
 }
 
@@ -487,4 +922,29 @@ function validHttpUrl(value: string | undefined): string | undefined {
   } catch {
     return undefined;
   }
+}
+
+function pulseChainFallbackRpcEnvNames(): string[] {
+  const settings = CHAIN_CONFIGS[PULSECHAIN_CHAIN_ID];
+  return [...settings.fallbackRpcEnvNames];
+}
+
+function pulseChainOtherScanRpcEnvNames(): string[] {
+  const settings = CHAIN_CONFIGS[PULSECHAIN_CHAIN_ID];
+  return [...settings.otherScanRpcEnvNames];
+}
+
+function errorMessage(error: unknown): string {
+  return error instanceof Error ? error.message : String(error);
+}
+
+function redactSensitiveErrorText(value: string): string {
+  return value
+    .replace(
+      /(https?:\/\/api-[\w.-]+\.dwellir\.com\/)[^/\s"'?)]+/gi,
+      "$1[redacted]",
+    )
+    .replace(/([?&]apikey=)[^&\s)]+/gi, "$1[redacted]")
+    .replace(/([?&]api_key=)[^&\s)]+/gi, "$1[redacted]")
+    .replace(/([?&]key=)[^&\s)]+/gi, "$1[redacted]");
 }

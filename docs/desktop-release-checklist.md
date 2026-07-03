@@ -29,6 +29,14 @@ does not mean a desktop release exists today.
   fallback RPC from `src/lib/chains.ts` is used.
 - `NEXT_PUBLIC_PULSECHAIN_EXPLORER_API` is optional. If unset, the PulseScan
   API default is used.
+- `PULSECHAIN_DISCOVERY_RPC_URL` is a hosted server-only fallback and is not
+  bundled into the static desktop build. Do not put a private Dwellir key in a
+  `NEXT_PUBLIC_*` variable for desktop packaging.
+- Hosted web can use OtherScan transaction receipts plus bounded PulseChain RPC
+  fallbacks when PulseScan and configured server RPC fallbacks fail.
+  Desktop/static builds still use the normal client-side RPC configuration.
+- `PULSECHAIN_OTHERSCAN_RPC_URL` is also hosted server-only. Desktop/static
+  builds must not depend on the hosted OtherScan fallback route.
 - `NEXT_PUBLIC_BSC_EXPLORER_API_URL` is an optional BSC historical logs API
   override. It defaults to Etherscan API V2 at
   `https://api.etherscan.io/v2/api`; the old BscScan V1 endpoint is deprecated

@@ -132,6 +132,24 @@ interface BlockscoutLogEntry {
   logIndex?: string;
 }
 
+interface OtterscanTransactionEntry {
+  hash?: string;
+  blockNumber?: string;
+}
+
+interface OtterscanTransactionReceipt {
+  transactionHash?: string;
+  blockNumber?: string;
+  logs?: readonly BlockscoutLogEntry[] | null;
+}
+
+interface OtterscanTransactionSearchResponse {
+  txs?: readonly OtterscanTransactionEntry[];
+  receipts?: readonly OtterscanTransactionReceipt[];
+  firstPage?: boolean;
+  lastPage?: boolean;
+}
+
 export interface Erc20ApprovalParseDiagnostics {
   rawLogs: number;
   decodeAttempts: number;
@@ -160,6 +178,22 @@ interface BlockscoutNumberResponse {
   result?: string;
 }
 
+interface RpcLogResponse {
+  result?: BlockscoutLogEntry[];
+  error?: {
+    code?: number | string;
+    message?: string;
+  };
+}
+
+interface RpcNumberResponse {
+  result?: string;
+  error?: {
+    code?: number | string;
+    message?: string;
+  };
+}
+
 /**
  * Tunables for the windowed logs fetcher. Deliberately small integer caps so
  * that browser memory and round-trip budget stay bounded even for wallets
@@ -184,6 +218,8 @@ export interface DiscoveryLimits {
    * the cap regardless of range density.
    */
   minSplitSpan: number;
+  /** Optional latest-first block span for initial RPC log windows. */
+  maxInitialBlockSpan?: number;
   /** Optional retries for transient explorer throttling or server errors. */
   retryAttempts?: number;
   /** Delay between retry attempts for transient explorer failures. */
@@ -200,6 +236,7 @@ export const DEFAULT_DISCOVERY_LIMITS: DiscoveryLimits = {
   requestTimeoutMs: 15_000,
   pageCap: 1000,
   minSplitSpan: 16,
+  maxInitialBlockSpan: undefined,
   retryAttempts: 2,
   retryDelayMs: 750,
   minRequestIntervalMs: 0,
@@ -611,6 +648,17 @@ function discoveryErrorMessage(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
 }
 
+function redactDiscoveryErrorText(value: string): string {
+  return value
+    .replace(
+      /(https?:\/\/api-[\w.-]+\.dwellir\.com\/)[^/\s"'?)]+/gi,
+      "$1[redacted]",
+    )
+    .replace(/([?&]apikey=)[^&\s)]+/gi, "$1[redacted]")
+    .replace(/([?&]api_key=)[^&\s)]+/gi, "$1[redacted]")
+    .replace(/([?&]key=)[^&\s)]+/gi, "$1[redacted]");
+}
+
 function delayDiscoveryRetry(
   retryDelayMs: number,
   signal: AbortSignal | undefined,
@@ -727,6 +775,575 @@ function maxBlockFrom(logs: readonly BlockscoutLogEntry[]): bigint | null {
     if (max === null || block > max) max = block;
   }
   return max;
+}
+
+function rpcQuantity(value: bigint): `0x${string}` {
+  return `0x${value.toString(16)}`;
+}
+
+async function fetchRpcDiscovery(
+  rpcUrl: string,
+  method: string,
+  params: unknown[],
+  signal: AbortSignal | undefined,
+  timeoutMs: number,
+): Promise<Response> {
+  const controller = new AbortController();
+  let didTimeout = false;
+  const timeout =
+    timeoutMs > 0
+      ? setTimeout(() => {
+          didTimeout = true;
+          controller.abort();
+        }, timeoutMs)
+      : undefined;
+
+  const abortFromParent = () => controller.abort();
+  if (signal) {
+    if (signal.aborted) {
+      controller.abort();
+    } else {
+      signal.addEventListener("abort", abortFromParent, { once: true });
+    }
+  }
+
+  try {
+    return await fetch(rpcUrl, {
+      method: "POST",
+      signal: controller.signal,
+      headers: {
+        accept: "application/json",
+        "content-type": "application/json",
+      },
+      body: JSON.stringify({
+        jsonrpc: "2.0",
+        id: 1,
+        method,
+        params,
+      }),
+    });
+  } catch (error) {
+    if (didTimeout) {
+      throw new Error(
+        `RPC discovery source timed out after ${Math.round(timeoutMs / 1000)}s`,
+      );
+    }
+    throw error;
+  } finally {
+    if (timeout) clearTimeout(timeout);
+    if (signal) signal.removeEventListener("abort", abortFromParent);
+  }
+}
+
+async function rpcCall<TResult>({
+  rpcUrl,
+  method,
+  params,
+  timeoutMs,
+  retryAttempts,
+  retryDelayMs,
+  minRequestIntervalMs,
+  throttleKey,
+  signal,
+}: {
+  rpcUrl: string;
+  method: string;
+  params: unknown[];
+  timeoutMs: number;
+  retryAttempts: number;
+  retryDelayMs: number;
+  minRequestIntervalMs: number;
+  throttleKey: string | undefined;
+  signal: AbortSignal | undefined;
+}): Promise<TResult> {
+  for (let attempt = 0; ; attempt += 1) {
+    try {
+      await waitForDiscoveryThrottle(throttleKey, minRequestIntervalMs, signal);
+      return await rpcCallOnce<TResult>({
+        rpcUrl,
+        method,
+        params,
+        timeoutMs,
+        signal,
+      });
+    } catch (error) {
+      if (
+        attempt >= retryAttempts ||
+        !isRetryableDiscoveryFailure(error) ||
+        signal?.aborted
+      ) {
+        throw error;
+      }
+      await delayDiscoveryRetry(retryDelayMs, signal);
+    }
+  }
+}
+
+async function rpcCallOnce<TResult>({
+  rpcUrl,
+  method,
+  params,
+  timeoutMs,
+  signal,
+}: {
+  rpcUrl: string;
+  method: string;
+  params: unknown[];
+  timeoutMs: number;
+  signal: AbortSignal | undefined;
+}): Promise<TResult> {
+  const response = await fetchRpcDiscovery(
+    rpcUrl,
+    method,
+    params,
+    signal,
+    timeoutMs,
+  );
+  if (!response.ok) {
+    throw new Error(
+      `RPC discovery source returned HTTP ${response.status} ${response.statusText}`,
+    );
+  }
+
+  let body: RpcLogResponse | RpcNumberResponse;
+  try {
+    body = (await response.json()) as RpcLogResponse | RpcNumberResponse;
+  } catch {
+    throw new Error("RPC discovery source returned malformed JSON.");
+  }
+
+  if (body.error) {
+    const code = body.error.code === undefined ? "" : ` ${body.error.code}`;
+    const message = redactDiscoveryErrorText(body.error.message ?? "unknown");
+    throw new Error(`RPC discovery source error${code}: ${message}`);
+  }
+
+  if (body.result === undefined) {
+    throw new Error("RPC discovery source returned no result.");
+  }
+
+  return body.result as TResult;
+}
+
+function rpcThrottleKey(rpcUrl: string | undefined): string | undefined {
+  if (!rpcUrl) return undefined;
+  try {
+    const parsed = new URL(rpcUrl);
+    return `rpc:${parsed.origin}${parsed.pathname.replace(/\/[^/]*$/, "/[key]")}`;
+  } catch {
+    return "rpc";
+  }
+}
+
+function isRpcRangeLimitFailure(error: unknown): boolean {
+  const message = discoveryErrorMessage(error).toLowerCase();
+  if (message.includes("rate limit") || message.includes("too many requests")) {
+    return false;
+  }
+  return (
+    message.includes("too many results") ||
+    message.includes("more than") ||
+    message.includes("block range") ||
+    message.includes("response size") ||
+    message.includes("limit exceeded") ||
+    message.includes("exceed") ||
+    message.includes("query returned")
+  );
+}
+
+async function otterscanSearchTransactionsBefore({
+  rpcUrl,
+  owner,
+  cursorBlock,
+  pageSize,
+  limits,
+  signal,
+  throttleKey,
+}: {
+  rpcUrl: string;
+  owner: Address;
+  cursorBlock: number;
+  pageSize: number;
+  limits: DiscoveryLimits;
+  signal: AbortSignal | undefined;
+  throttleKey: string | undefined;
+}): Promise<OtterscanTransactionSearchResponse> {
+  const retryAttempts =
+    limits.retryAttempts ?? DEFAULT_DISCOVERY_LIMITS.retryAttempts ?? 0;
+  const retryDelayMs =
+    limits.retryDelayMs ?? DEFAULT_DISCOVERY_LIMITS.retryDelayMs ?? 0;
+  const minRequestIntervalMs =
+    limits.minRequestIntervalMs ??
+    DEFAULT_DISCOVERY_LIMITS.minRequestIntervalMs ??
+    0;
+
+  const result = await rpcCall<OtterscanTransactionSearchResponse>({
+    rpcUrl,
+    method: "ots_searchTransactionsBefore",
+    params: [owner, cursorBlock, pageSize],
+    timeoutMs: limits.requestTimeoutMs,
+    retryAttempts,
+    retryDelayMs,
+    minRequestIntervalMs,
+    throttleKey,
+    signal,
+  });
+
+  if (!Array.isArray(result.txs) || !Array.isArray(result.receipts)) {
+    throw new Error("Otterscan discovery source returned malformed transactions.");
+  }
+
+  return result;
+}
+
+async function rpcBlockTip({
+  rpcUrl,
+  limits,
+  signal,
+  throttleKey,
+}: {
+  rpcUrl: string;
+  limits: DiscoveryLimits;
+  signal: AbortSignal | undefined;
+  throttleKey: string | undefined;
+}): Promise<bigint> {
+  const retryAttempts =
+    limits.retryAttempts ?? DEFAULT_DISCOVERY_LIMITS.retryAttempts ?? 0;
+  const retryDelayMs =
+    limits.retryDelayMs ?? DEFAULT_DISCOVERY_LIMITS.retryDelayMs ?? 0;
+  const minRequestIntervalMs =
+    limits.minRequestIntervalMs ??
+    DEFAULT_DISCOVERY_LIMITS.minRequestIntervalMs ??
+    0;
+  const result = await rpcCall<string>({
+    rpcUrl,
+    method: "eth_blockNumber",
+    params: [],
+    timeoutMs: limits.requestTimeoutMs,
+    retryAttempts,
+    retryDelayMs,
+    minRequestIntervalMs,
+    throttleKey,
+    signal,
+  });
+  const tip = parseHexNumber(result);
+  if (tip === null) {
+    throw new Error("RPC discovery source returned an invalid block number.");
+  }
+  return tip;
+}
+
+async function rpcHasCode({
+  rpcUrl,
+  owner,
+  limits,
+  signal,
+  throttleKey,
+}: {
+  rpcUrl: string;
+  owner: Address;
+  limits: DiscoveryLimits;
+  signal: AbortSignal | undefined;
+  throttleKey: string | undefined;
+}): Promise<boolean> {
+  const retryAttempts =
+    limits.retryAttempts ?? DEFAULT_DISCOVERY_LIMITS.retryAttempts ?? 0;
+  const retryDelayMs =
+    limits.retryDelayMs ?? DEFAULT_DISCOVERY_LIMITS.retryDelayMs ?? 0;
+  const minRequestIntervalMs =
+    limits.minRequestIntervalMs ??
+    DEFAULT_DISCOVERY_LIMITS.minRequestIntervalMs ??
+    0;
+  const code = await rpcCall<string>({
+    rpcUrl,
+    method: "eth_getCode",
+    params: [owner, "latest"],
+    timeoutMs: limits.requestTimeoutMs,
+    retryAttempts,
+    retryDelayMs,
+    minRequestIntervalMs,
+    throttleKey,
+    signal,
+  });
+  return code !== "0x" && code !== "0x0";
+}
+
+async function rpcFetchLogsRange({
+  rpcUrl,
+  paddedOwner,
+  topic0,
+  from,
+  to,
+  limits,
+  signal,
+  throttleKey,
+  contractAddress,
+}: {
+  rpcUrl: string;
+  paddedOwner: string;
+  topic0: string;
+  from: bigint;
+  to: bigint;
+  limits: DiscoveryLimits;
+  signal: AbortSignal | undefined;
+  throttleKey: string | undefined;
+  contractAddress?: Address;
+}): Promise<BlockscoutLogEntry[]> {
+  const retryAttempts =
+    limits.retryAttempts ?? DEFAULT_DISCOVERY_LIMITS.retryAttempts ?? 0;
+  const retryDelayMs =
+    limits.retryDelayMs ?? DEFAULT_DISCOVERY_LIMITS.retryDelayMs ?? 0;
+  const minRequestIntervalMs =
+    limits.minRequestIntervalMs ??
+    DEFAULT_DISCOVERY_LIMITS.minRequestIntervalMs ??
+    0;
+  const filter: Record<string, unknown> = {
+    fromBlock: rpcQuantity(from),
+    toBlock: rpcQuantity(to),
+    topics: [topic0, paddedOwner],
+  };
+  if (contractAddress) filter.address = contractAddress;
+
+  const logs = await rpcCall<BlockscoutLogEntry[]>({
+    rpcUrl,
+    method: "eth_getLogs",
+    params: [filter],
+    timeoutMs: limits.requestTimeoutMs,
+    retryAttempts,
+    retryDelayMs,
+    minRequestIntervalMs,
+    throttleKey,
+    signal,
+  });
+
+  if (!Array.isArray(logs)) {
+    throw new Error("RPC discovery source returned malformed logs.");
+  }
+  return logs;
+}
+
+async function windowedRpcFetchLogs(
+  rpcUrl: string,
+  paddedOwner: string,
+  topic0: string,
+  limits: DiscoveryLimits,
+  signal: AbortSignal | undefined,
+  throttleKey: string | undefined,
+  contractAddress?: Address,
+): Promise<{
+  logs: BlockscoutLogEntry[];
+  stats: WindowedFetchStats;
+}> {
+  let requests = 0;
+  const tip = await rpcBlockTip({ rpcUrl, limits, signal, throttleKey });
+  requests += 1;
+
+  const collected: BlockscoutLogEntry[] = [];
+  let truncated = false;
+  let windows = 0;
+  const stack = initialRpcLogRanges(tip, limits.maxInitialBlockSpan);
+
+  while (stack.length > 0) {
+    if (requests >= limits.maxRequests) {
+      truncated = true;
+      break;
+    }
+    if (collected.length >= limits.maxRawLogs) {
+      truncated = true;
+      break;
+    }
+
+    const range = stack.pop()!;
+    const span = range.to - range.from;
+    let logs: BlockscoutLogEntry[];
+    try {
+      logs = await rpcFetchLogsRange({
+        rpcUrl,
+        paddedOwner,
+        topic0,
+        from: range.from,
+        to: range.to,
+        limits,
+        signal,
+        throttleKey,
+        contractAddress,
+      });
+      requests += 1;
+      windows += 1;
+    } catch (error) {
+      requests += 1;
+      if (
+        span > BigInt(limits.minSplitSpan) &&
+        isRpcRangeLimitFailure(error)
+      ) {
+        const mid = range.from + span / BIGINT_TWO;
+        stack.push({ from: mid + 1n, to: range.to });
+        stack.push({ from: range.from, to: mid });
+        continue;
+      }
+      throw error;
+    }
+
+    if (logs.length >= limits.pageCap && span > BigInt(limits.minSplitSpan)) {
+      const mid = range.from + span / BIGINT_TWO;
+      stack.push({ from: mid + 1n, to: range.to });
+      stack.push({ from: range.from, to: mid });
+      continue;
+    }
+    if (logs.length >= limits.pageCap) truncated = true;
+
+    const remaining = limits.maxRawLogs - collected.length;
+    if (logs.length > remaining) {
+      collected.push(...logs.slice(0, remaining));
+      truncated = true;
+    } else {
+      collected.push(...logs);
+    }
+  }
+
+  if (stack.length > 0) truncated = true;
+
+  return {
+    logs: collected,
+    stats: {
+      rawCount: collected.length,
+      truncated,
+      windows,
+      requests,
+    },
+  };
+}
+
+function initialRpcLogRanges(
+  tip: bigint,
+  maxInitialBlockSpan: number | undefined,
+): Array<{ from: bigint; to: bigint }> {
+  const span = Math.floor(maxInitialBlockSpan ?? 0);
+  if (span <= 0) return [{ from: 0n, to: tip }];
+
+  const maxSpan = BigInt(span);
+  const ranges: Array<{ from: bigint; to: bigint }> = [];
+  let to = tip;
+  while (true) {
+    const from = to > maxSpan ? to - maxSpan : 0n;
+    ranges.push({ from, to });
+    if (from === 0n) break;
+    to = from - 1n;
+  }
+
+  // The window loop pops from the end, so keep newest ranges last.
+  return ranges.reverse();
+}
+
+async function windowedOtterscanReceiptLogs({
+  rpcUrl,
+  owner,
+  limits,
+  signal,
+  throttleKey,
+}: {
+  rpcUrl: string;
+  owner: Address;
+  limits: DiscoveryLimits;
+  signal: AbortSignal | undefined;
+  throttleKey: string | undefined;
+}): Promise<{
+  logs: BlockscoutLogEntry[];
+  stats: WindowedFetchStats;
+}> {
+  const pageSize = Math.max(1, Math.min(limits.pageCap, 500));
+  const collected: BlockscoutLogEntry[] = [];
+  const seenTransactions = new Set<string>();
+  let cursorBlock = 0;
+  let requests = 0;
+  let windows = 0;
+  let truncated = false;
+  let reachedLastPage = false;
+  const ownerIsContract = await rpcHasCode({
+    rpcUrl,
+    owner,
+    limits,
+    signal,
+    throttleKey,
+  });
+  requests += 1;
+
+  while (requests < limits.maxRequests && collected.length < limits.maxRawLogs) {
+    const page = await otterscanSearchTransactionsBefore({
+      rpcUrl,
+      owner,
+      cursorBlock,
+      pageSize,
+      limits,
+      signal,
+      throttleKey,
+    });
+    requests += 1;
+    windows += 1;
+
+    const txs = page.txs ?? [];
+    const receipts = page.receipts ?? [];
+    let oldestBlock: bigint | null = null;
+    let newTransactions = 0;
+
+    for (let i = 0; i < receipts.length; i += 1) {
+      const receipt = receipts[i];
+      const tx = txs[i];
+      const txHash = receipt.transactionHash ?? tx?.hash;
+      if (txHash) {
+        const key = txHash.toLowerCase();
+        if (seenTransactions.has(key)) continue;
+        seenTransactions.add(key);
+      }
+      newTransactions += 1;
+
+      const blockNumber =
+        parseHexNumber(receipt.blockNumber) ?? parseHexNumber(tx?.blockNumber);
+      if (blockNumber !== null && (oldestBlock === null || blockNumber < oldestBlock)) {
+        oldestBlock = blockNumber;
+      }
+
+      const logs = Array.isArray(receipt.logs) ? receipt.logs : [];
+      for (const log of logs) {
+        if (collected.length >= limits.maxRawLogs) {
+          truncated = true;
+          break;
+        }
+        collected.push({
+          ...log,
+          blockNumber: log.blockNumber ?? receipt.blockNumber ?? tx?.blockNumber,
+          transactionHash: log.transactionHash ?? txHash,
+        });
+      }
+    }
+
+    if (page.lastPage) {
+      reachedLastPage = true;
+      break;
+    }
+    if (txs.length === 0 || receipts.length === 0 || newTransactions === 0) {
+      truncated = true;
+      break;
+    }
+    if (oldestBlock === null) {
+      truncated = true;
+      break;
+    }
+
+    cursorBlock = Number(oldestBlock);
+  }
+
+  if (!reachedLastPage || ownerIsContract) truncated = true;
+
+  return {
+    logs: collected,
+    stats: {
+      rawCount: collected.length,
+      truncated,
+      windows,
+      requests,
+    },
+  };
 }
 
 /**
@@ -1287,6 +1904,285 @@ export function createBlockscoutDiscoverySource({
         allowances: dedupePermit2Allowances(candidates),
         source: meta,
         ...mergeStats(approvals.stats, permits.stats),
+      };
+    },
+  };
+}
+
+export interface RpcLogDiscoverySourceConfig {
+  id: string;
+  name: string;
+  url?: string;
+  rpcUrl?: string;
+  rpcUrlEnvVar?: string;
+}
+
+export interface RpcLogDiscoveryOptions {
+  chainId: number;
+  source: RpcLogDiscoverySourceConfig;
+  limits?: DiscoveryLimits;
+}
+
+export interface OtterscanTransactionDiscoveryOptions {
+  chainId: number;
+  source: RpcLogDiscoverySourceConfig;
+  limits?: DiscoveryLimits;
+}
+
+function filterLogsByTopicOwner(
+  logs: readonly BlockscoutLogEntry[],
+  topic0: string,
+  paddedOwner: string,
+  contractAddress?: Address,
+): BlockscoutLogEntry[] {
+  const normalizedTopic0 = topic0.toLowerCase();
+  const normalizedOwner = paddedOwner.toLowerCase();
+  const normalizedContract = contractAddress?.toLowerCase();
+  return logs.filter((log) => {
+    const topics = normalizeTopics(log.topics);
+    if (!topics || topics[0]?.toLowerCase() !== normalizedTopic0) return false;
+    if (topics[1]?.toLowerCase() !== normalizedOwner) return false;
+    if (
+      normalizedContract &&
+      log.address?.toLowerCase() !== normalizedContract
+    ) {
+      return false;
+    }
+    return true;
+  });
+}
+
+export function createRpcLogDiscoverySource({
+  chainId,
+  source,
+  limits = DEFAULT_DISCOVERY_LIMITS,
+}: RpcLogDiscoveryOptions): DiscoverySource {
+  const meta: DiscoverySourceMeta = {
+    id: source.id,
+    name: source.name,
+    url: source.url,
+    chainId,
+  };
+  const { rpcUrl } = source;
+  const throttleKey = rpcThrottleKey(rpcUrl);
+
+  const assertReady = () => {
+    if (!rpcUrl) {
+      throw new Error(
+        `${source.name} discovery is missing an RPC URL. Set ${source.rpcUrlEnvVar ?? "the configured RPC env var"}.`,
+      );
+    }
+  };
+
+  return {
+    meta,
+    async discover(owner, options) {
+      assertReady();
+      const padded = padTopicAddress(owner);
+      const { logs, stats } = await windowedRpcFetchLogs(
+        rpcUrl!,
+        padded,
+        ERC20_APPROVAL_TOPIC0,
+        limits,
+        options?.signal,
+        throttleKey,
+      );
+      const parsed = extractErc20Pairs(logs, chainId);
+      return {
+        pairs: parsed.pairs,
+        source: meta,
+        erc20Parse: parsed.diagnostics,
+        ...stats,
+      };
+    },
+
+    async discoverNftApprovals(owner, options) {
+      assertReady();
+      const padded = padTopicAddress(owner);
+      const [forAll, perToken] = await Promise.all([
+        windowedRpcFetchLogs(
+          rpcUrl!,
+          padded,
+          ERC_APPROVAL_FOR_ALL_TOPIC0,
+          limits,
+          options?.signal,
+          throttleKey,
+        ),
+        windowedRpcFetchLogs(
+          rpcUrl!,
+          padded,
+          ERC20_APPROVAL_TOPIC0,
+          limits,
+          options?.signal,
+          throttleKey,
+        ),
+      ]);
+
+      const candidates: NftDiscoveredApproval[] = [
+        ...extractNftApprovalForAll(forAll.logs, chainId),
+        ...extractErc721TokenApprovals(perToken.logs, chainId),
+      ];
+
+      return {
+        approvals: dedupeNftApprovals(candidates),
+        source: meta,
+        ...mergeStats(forAll.stats, perToken.stats),
+      };
+    },
+
+    async discoverPermit2Allowances(owner, options) {
+      assertReady();
+      const padded = padTopicAddress(owner);
+      const [approvals, permits] = await Promise.all([
+        windowedRpcFetchLogs(
+          rpcUrl!,
+          padded,
+          PERMIT2_APPROVAL_TOPIC0,
+          limits,
+          options?.signal,
+          throttleKey,
+          PERMIT2_ADDRESS,
+        ),
+        windowedRpcFetchLogs(
+          rpcUrl!,
+          padded,
+          PERMIT2_PERMIT_TOPIC0,
+          limits,
+          options?.signal,
+          throttleKey,
+          PERMIT2_ADDRESS,
+        ),
+      ]);
+
+      const candidates: Permit2DiscoveredAllowance[] = [
+        ...extractPermit2Allowances(approvals.logs, chainId, "Approval"),
+        ...extractPermit2Allowances(permits.logs, chainId, "Permit"),
+      ];
+
+      return {
+        allowances: dedupePermit2Allowances(candidates),
+        source: meta,
+        ...mergeStats(approvals.stats, permits.stats),
+      };
+    },
+  };
+}
+
+export function createOtterscanTransactionDiscoverySource({
+  chainId,
+  source,
+  limits = DEFAULT_DISCOVERY_LIMITS,
+}: OtterscanTransactionDiscoveryOptions): DiscoverySource {
+  const meta: DiscoverySourceMeta = {
+    id: source.id,
+    name: source.name,
+    url: source.url,
+    chainId,
+  };
+  const { rpcUrl } = source;
+  const throttleKey = rpcThrottleKey(rpcUrl);
+  const ownerLogs = new Map<
+    string,
+    Promise<{ logs: BlockscoutLogEntry[]; stats: WindowedFetchStats }>
+  >();
+
+  const assertReady = () => {
+    if (!rpcUrl) {
+      throw new Error(
+        `${source.name} discovery is missing an RPC URL. Set ${source.rpcUrlEnvVar ?? "the configured RPC env var"}.`,
+      );
+    }
+  };
+
+  const readLogs = (owner: Address, signal: AbortSignal | undefined) => {
+    const key = owner.toLowerCase();
+    const existing = ownerLogs.get(key);
+    if (existing) return existing;
+    const promise = windowedOtterscanReceiptLogs({
+      rpcUrl: rpcUrl!,
+      owner,
+      limits,
+      signal,
+      throttleKey,
+    });
+    ownerLogs.set(key, promise);
+    return promise;
+  };
+
+  return {
+    meta,
+    async discover(owner, options) {
+      assertReady();
+      const padded = padTopicAddress(owner);
+      const { logs, stats } = await readLogs(owner, options?.signal);
+      const approvalLogs = filterLogsByTopicOwner(
+        logs,
+        ERC20_APPROVAL_TOPIC0,
+        padded,
+      );
+      const parsed = extractErc20Pairs(approvalLogs, chainId);
+      return {
+        pairs: parsed.pairs,
+        source: meta,
+        erc20Parse: parsed.diagnostics,
+        ...stats,
+        rawCount: approvalLogs.length,
+      };
+    },
+
+    async discoverNftApprovals(owner, options) {
+      assertReady();
+      const padded = padTopicAddress(owner);
+      const { logs, stats } = await readLogs(owner, options?.signal);
+      const forAllLogs = filterLogsByTopicOwner(
+        logs,
+        ERC_APPROVAL_FOR_ALL_TOPIC0,
+        padded,
+      );
+      const perTokenLogs = filterLogsByTopicOwner(
+        logs,
+        ERC20_APPROVAL_TOPIC0,
+        padded,
+      );
+      const candidates: NftDiscoveredApproval[] = [
+        ...extractNftApprovalForAll(forAllLogs, chainId),
+        ...extractErc721TokenApprovals(perTokenLogs, chainId),
+      ];
+
+      return {
+        approvals: dedupeNftApprovals(candidates),
+        source: meta,
+        ...stats,
+        rawCount: forAllLogs.length + perTokenLogs.length,
+      };
+    },
+
+    async discoverPermit2Allowances(owner, options) {
+      assertReady();
+      const padded = padTopicAddress(owner);
+      const { logs, stats } = await readLogs(owner, options?.signal);
+      const approvalLogs = filterLogsByTopicOwner(
+        logs,
+        PERMIT2_APPROVAL_TOPIC0,
+        padded,
+        PERMIT2_ADDRESS,
+      );
+      const permitLogs = filterLogsByTopicOwner(
+        logs,
+        PERMIT2_PERMIT_TOPIC0,
+        padded,
+        PERMIT2_ADDRESS,
+      );
+      const candidates: Permit2DiscoveredAllowance[] = [
+        ...extractPermit2Allowances(approvalLogs, chainId, "Approval"),
+        ...extractPermit2Allowances(permitLogs, chainId, "Permit"),
+      ];
+
+      return {
+        allowances: dedupePermit2Allowances(candidates),
+        source: meta,
+        ...stats,
+        rawCount: approvalLogs.length + permitLogs.length,
       };
     },
   };

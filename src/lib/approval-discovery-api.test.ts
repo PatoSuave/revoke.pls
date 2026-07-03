@@ -47,7 +47,8 @@ const SOURCE = {
 };
 
 describe("approval discovery API serialization", () => {
-  it("uses server discovery for hosted Etherscan V2 generic scans", () => {
+  it("uses server discovery for hosted generic scans", () => {
+    expect(usesServerApprovalDiscovery(PULSECHAIN_CHAIN_ID)).toBe(true);
     expect(usesServerApprovalDiscovery(BSC_CHAIN_ID)).toBe(true);
     expect(usesServerApprovalDiscovery(BASE_CHAIN_ID)).toBe(true);
     expect(usesServerApprovalDiscovery(POLYGON_CHAIN_ID)).toBe(true);
@@ -61,7 +62,6 @@ describe("approval discovery API serialization", () => {
     expect(usesServerApprovalDiscovery(GNOSIS_CHAIN_ID)).toBe(true);
     expect(usesServerApprovalDiscovery(UNICHAIN_CHAIN_ID)).toBe(true);
     expect(usesServerApprovalDiscovery(WORLDCHAIN_CHAIN_ID)).toBe(true);
-    expect(usesServerApprovalDiscovery(PULSECHAIN_CHAIN_ID)).toBe(false);
     expect(usesServerApprovalDiscovery(undefined)).toBe(false);
   });
 
