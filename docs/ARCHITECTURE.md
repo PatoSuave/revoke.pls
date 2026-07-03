@@ -68,6 +68,10 @@ revoke. HyperEVM gas is paid in HYPE.
   World Chain, Ethereum Mainnet, Arbitrum One, OP Mainnet, and HyperEVM with
   wagmi. Ethereum, Arbitrum, Optimism, and HyperEVM use separate scanner lanes.
 - PulseChain RPC defaults to `https://rpc.pulsechain.com`.
+  Hosted PulseChain discovery can use server-only `PULSECHAIN_DISCOVERY_RPC_URL`
+  as a Dwellir/managed-RPC fallback when PulseScan discovery fails, then
+  OtherScan transaction receipts, the public PulseChain RPC default, and
+  OtherScan RPC as final hosted discovery fallbacks.
 - BSC RPC defaults to `https://bsc-dataseed.bnbchain.org`.
 - Base RPC defaults to `https://mainnet.base.org`.
 - Polygon RPC defaults to `https://polygon.drpc.org`.
@@ -123,6 +127,14 @@ The scanner uses a discovery-first pipeline:
    The hybrid label does not change live verification or revoke eligibility.
 7. The curated registry enriches known tokens and spenders. It is not a
    discovery source.
+
+PulseChain hosted web discovery is exposed through `/api/discovery/approvals`.
+It tries PulseScan's Blockscout-compatible logs API first, then falls back to
+bounded server-side JSON-RPC `eth_getLogs` through
+`PULSECHAIN_DISCOVERY_RPC_URL` / server-only PulseChain RPC fallbacks. If those
+fail, it uses OtherScan's Otterscan transaction receipts before trying bounded
+public PulseChain RPC and OtherScan RPC `eth_getLogs` as last resorts. The
+fallback is read-only and does not change revoke transaction execution.
 
 BSC hosted web discovery is exposed through `/api/discovery/approvals`, backed
 by Etherscan API V2 `module=logs&action=getLogs` with `chainid=56`, `topic0`
@@ -206,6 +218,12 @@ row-level revoke stays limited to verified ERC-20 and NFT rows.
 
 - PulseChain discovery API default:
   `https://api.scan.pulsechain.com/api`
+- PulseChain server-only RPC fallback:
+  `PULSECHAIN_DISCOVERY_RPC_URL` / `PULSECHAIN_RPC_URL` /
+  `PULSECHAIN_MAINNET_RPC_URL`
+- PulseChain OtherScan transaction/RPC fallback:
+  `PULSECHAIN_OTHERSCAN_RPC_URL` defaulting to
+  `https://rpc.pulsechain.box`
 - BSC discovery API default:
   `https://api.etherscan.io/v2/api`
 - BSC discovery API chain id:

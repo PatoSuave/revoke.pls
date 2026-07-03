@@ -11,6 +11,7 @@ import {
   LINEA_CHAIN_ID,
   MANTLE_CHAIN_ID,
   POLYGON_CHAIN_ID,
+  PULSECHAIN_CHAIN_ID,
   SONIC_CHAIN_ID,
   UNICHAIN_CHAIN_ID,
   WORLDCHAIN_CHAIN_ID,
@@ -117,6 +118,7 @@ export interface ServerNftDiscoveryResponse {
 }
 
 export type ServerApprovalDiscoveryChainId =
+  | typeof PULSECHAIN_CHAIN_ID
   | typeof BSC_CHAIN_ID
   | typeof BASE_CHAIN_ID
   | typeof POLYGON_CHAIN_ID
@@ -136,6 +138,7 @@ export function usesServerApprovalDiscovery(
 ): chainId is ServerApprovalDiscoveryChainId {
   if (isDesktopBuild) return false;
   return (
+    chainId === PULSECHAIN_CHAIN_ID ||
     chainId === BSC_CHAIN_ID ||
     chainId === BASE_CHAIN_ID ||
     chainId === POLYGON_CHAIN_ID ||

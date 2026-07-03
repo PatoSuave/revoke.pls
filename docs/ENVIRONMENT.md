@@ -16,6 +16,8 @@ Optimism, and HyperEVM product, configure:
 | Variable | Production status | Notes |
 | --- | --- | --- |
 | `NEXT_PUBLIC_SITE_URL` | Recommended | Use `https://pulserevoke.com` for the public deployment. |
+| `PULSECHAIN_DISCOVERY_RPC_URL` | Recommended fallback | Server-only Dwellir/managed RPC fallback for hosted PulseChain approval discovery. |
+| `PULSECHAIN_OTHERSCAN_RPC_URL` | Optional fallback | Server-only OtherScan transaction/RPC discovery fallback. Defaults to `https://rpc.pulsechain.box`. |
 | `BSC_EXPLORER_API_URL` | Optional | Server-only BSC logs API. Defaults to `https://api.etherscan.io/v2/api`. |
 | `BSC_EXPLORER_CHAIN_ID` | Optional | Must be `56` for BNB Smart Chain Etherscan API V2 logs. Defaults to `56`. |
 | `BSC_EXPLORER_API_KEY` / `ETHERSCAN_API_KEY` | Required for reliable BSC discovery | Server-only Etherscan API V2 key with BNB Smart Chain access. |
@@ -113,6 +115,37 @@ gas availability or revoke transaction execution.
 
 Optional. Overrides the PulseChain RPC used by wagmi/viem. If unset, the app
 uses `https://rpc.pulsechain.com`.
+
+Do not put an authenticated Dwellir account URL here unless it is intentionally
+public and quota-limited. `NEXT_PUBLIC_*` values are bundled into the browser.
+
+### `PULSECHAIN_DISCOVERY_RPC_URL`
+
+Optional server-only PulseChain discovery fallback. Hosted PulseChain approval
+discovery tries PulseScan first. If PulseScan/indexer discovery fails or times
+out, the server can fall back to bounded JSON-RPC `eth_getLogs` through this
+URL. For Dwellir, use the dedicated Pulse Revoke account endpoint:
+`https://api-pulse-mainnet.n.dwellir.com/<API_KEY>`.
+
+Leave this unset until the dedicated Dwellir account/key is ready. If unset,
+Pulse Revoke may fall back to `PULSECHAIN_RPC_URL` or
+`PULSECHAIN_MAINNET_RPC_URL` for this server-side discovery path. If those are
+unset or fail, hosted discovery uses OtherScan transaction receipts, then the
+public PulseChain RPC default with a small bounded window, then OtherScan RPC.
+Never commit a real RPC key.
+
+### `PULSECHAIN_OTHERSCAN_RPC_URL`
+
+Optional server-only PulseChain discovery fallback override. Hosted PulseChain
+approval discovery uses OtherScan only after PulseScan fails, the preferred
+Dwellir/server RPC fallback is unavailable or fails, or every earlier source is
+truncated. If unset, the default is `https://rpc.pulsechain.box`, the backend RPC
+host used by OtherScan. The hosted route first uses its Otterscan transaction
+receipt index and only falls back to bounded `eth_getLogs` scans if needed.
+
+Do not configure OtherScan as `NEXT_PUBLIC_PULSECHAIN_RPC_URL`. Browser wallet
+reads and wallet-signed revoke transactions continue to use the existing wallet
+RPC path.
 
 ### Gas tracker server RPC overrides
 
@@ -256,6 +289,8 @@ authenticated RPCs.
 
 Optional. Overrides the PulseChain explorer API used for historical approval log
 discovery. If unset, the app uses `https://api.scan.pulsechain.com/api`.
+Hosted web scans use this PulseScan-compatible API as the primary source before
+trying the server-only PulseChain discovery RPC fallback.
 
 ### Token Logo Lookup
 
@@ -819,6 +854,10 @@ NEXT_PUBLIC_POLYGON_EXPLORER_API_KEY=
 NEXT_PUBLIC_SONIC_EXPLORER_API_URL=
 NEXT_PUBLIC_SONIC_EXPLORER_CHAIN_ID=146
 NEXT_PUBLIC_SONIC_EXPLORER_API_KEY=
+
+# Server-only PulseChain discovery fallback. Do not expose this as NEXT_PUBLIC_*.
+PULSECHAIN_DISCOVERY_RPC_URL=
+PULSECHAIN_OTHERSCAN_RPC_URL=
 NEXT_PUBLIC_AVALANCHE_EXPLORER_API_URL=
 NEXT_PUBLIC_AVALANCHE_EXPLORER_CHAIN_ID=43114
 NEXT_PUBLIC_AVALANCHE_EXPLORER_API_KEY=

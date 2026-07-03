@@ -16,6 +16,7 @@ import {
 } from "@/lib/server-approval-api-controls";
 
 export const runtime = "nodejs";
+export const maxDuration = 60;
 
 type DiscoveryScope = "erc20" | "nft";
 
@@ -33,7 +34,7 @@ export async function GET(request: Request) {
   const chainId = Number(url.searchParams.get("chainId"));
   if (!Number.isInteger(chainId) || !isServerDiscoveryChainId(chainId)) {
     return badRequest(
-      "Server discovery currently supports chainId=56, 8453, 137, 146, 43114, 5000, 59144, 81457, 80094, 42220, 100, 130, and 480.",
+      "Server discovery currently supports chainId=369, 56, 8453, 137, 146, 43114, 5000, 59144, 81457, 80094, 42220, 100, 130, and 480.",
     );
   }
 

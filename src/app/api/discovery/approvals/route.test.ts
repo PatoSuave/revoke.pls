@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { POLYGON_CHAIN_ID } from "@/lib/chains";
+import { POLYGON_CHAIN_ID, PULSECHAIN_CHAIN_ID } from "@/lib/chains";
 import { resetServerApprovalApiRateLimitForTests } from "@/lib/server-approval-api-controls";
 import { GET } from "./route";
 
@@ -14,8 +14,8 @@ vi.mock("@/lib/server-approval-discovery", () => ({
   discoverServerNftApprovals,
   isServerDiscoveryChainId: (chainId: number) =>
     [
-      56, 8453, 137, 146, 43114, 5000, 59144, 81457, 80094, 42220, 100, 130,
-      480,
+      369, 56, 8453, 137, 146, 43114, 5000, 59144, 81457, 80094, 42220, 100,
+      130, 480,
     ].includes(chainId),
   normalizeServerDiscoveryOwner: (value: string | null) =>
     value && /^0x[a-fA-F0-9]{40}$/.test(value) ? value : null,
@@ -82,6 +82,27 @@ function completeErc20Response(chainId: number) {
 }
 
 describe("shared server approval discovery route hardening", () => {
+  it("accepts PulseChain hosted server discovery", async () => {
+    discoverServerErc20Approvals.mockImplementation(async ({ chainId }) =>
+      completeErc20Response(chainId),
+    );
+
+    const response = await GET(
+      new Request(
+        `https://pulserevoke.test/api/discovery/approvals?chainId=${PULSECHAIN_CHAIN_ID}&scope=erc20&owner=${OWNER}`,
+        { headers: { "x-forwarded-for": "203.0.113.19" } },
+      ),
+    );
+    const body = await response.json();
+
+    expect(response.status).toBe(200);
+    expectNoStore(response);
+    expect(body.chainId).toBe(PULSECHAIN_CHAIN_ID);
+    expect(discoverServerErc20Approvals).toHaveBeenCalledWith(
+      expect.objectContaining({ chainId: PULSECHAIN_CHAIN_ID, owner: OWNER }),
+    );
+  });
+
   it("keeps invalid owners as bad requests before rate limiting", async () => {
     const response = await GET(
       new Request(

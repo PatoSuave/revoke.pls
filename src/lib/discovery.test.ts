@@ -15,6 +15,8 @@ import {
 } from "./chains";
 import {
   createBlockscoutDiscoverySource,
+  createOtterscanTransactionDiscoverySource,
+  createRpcLogDiscoverySource,
   DEFAULT_DISCOVERY_LIMITS,
   discoveredPairDedupeKey,
   ERC20_APPROVAL_TOPIC0,
@@ -29,6 +31,8 @@ import {
 const OWNER = "0xcae394005c9c4c309621c53d53db9ceb701fc8d8" as Address;
 const CHECKSUM_OWNER = getAddress(OWNER);
 const SPENDER = "0x165C3410fC91EF562C50559f7d2289fEbed552d9" as Address;
+const SECOND_SPENDER =
+  "0x2222222222222222222222222222222222222222" as Address;
 const TOKEN = "0xA1077a294dDE1B09bB078844df40758a5D0f9a27" as Address;
 const COLLECTION = "0x95B303987A60C71504D99Aa1b13B4DA07b0790ab" as Address;
 
@@ -91,8 +95,470 @@ function source(options?: {
   });
 }
 
+function rpcSource(options?: {
+  pageCap?: number;
+  maxRequests?: number;
+  minSplitSpan?: number;
+  maxInitialBlockSpan?: number;
+}) {
+  return createRpcLogDiscoverySource({
+    chainId: PULSECHAIN_CHAIN_ID,
+    source: {
+      id: "test-rpc-source",
+      name: "Test RPC Source",
+      url: "https://www.dwellir.com/docs/pulsechain",
+      rpcUrl: "https://api-pulse-mainnet.n.dwellir.com/test-key",
+      rpcUrlEnvVar: "PULSECHAIN_DISCOVERY_RPC_URL",
+    },
+    limits: {
+      ...DEFAULT_DISCOVERY_LIMITS,
+      pageCap: options?.pageCap ?? 1000,
+      maxRequests: options?.maxRequests ?? 10,
+      minSplitSpan: options?.minSplitSpan ?? 16,
+      maxInitialBlockSpan: options?.maxInitialBlockSpan,
+      requestTimeoutMs: 1000,
+      retryAttempts: 0,
+      retryDelayMs: 0,
+      minRequestIntervalMs: 0,
+    },
+  });
+}
+
+function otterscanSource(options?: {
+  pageCap?: number;
+  maxRequests?: number;
+  maxRawLogs?: number;
+}) {
+  return createOtterscanTransactionDiscoverySource({
+    chainId: PULSECHAIN_CHAIN_ID,
+    source: {
+      id: "test-ots-source",
+      name: "Test OTS Source",
+      url: "https://otherscan.pulsechain.box",
+      rpcUrl: "https://rpc.pulsechain.box",
+      rpcUrlEnvVar: "PULSECHAIN_OTHERSCAN_RPC_URL",
+    },
+    limits: {
+      ...DEFAULT_DISCOVERY_LIMITS,
+      pageCap: options?.pageCap ?? 250,
+      maxRequests: options?.maxRequests ?? 10,
+      maxRawLogs: options?.maxRawLogs ?? 1000,
+      requestTimeoutMs: 1000,
+      retryAttempts: 0,
+      retryDelayMs: 0,
+      minRequestIntervalMs: 0,
+    },
+  });
+}
+
+function rpcResponse(result: unknown): Response {
+  return jsonResponse({ jsonrpc: "2.0", id: 1, result });
+}
+
+function rpcError(message: string): Response {
+  return jsonResponse({
+    jsonrpc: "2.0",
+    id: 1,
+    error: { code: -32005, message },
+  });
+}
+
 afterEach(() => {
   vi.unstubAllGlobals();
+});
+
+describe("createRpcLogDiscoverySource", () => {
+  it("decodes ERC-20, Permit2, NFT operator, and ERC-721 token approval logs", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (_url: string, init?: RequestInit) => {
+        const body = JSON.parse(String(init?.body ?? "{}")) as {
+          method?: string;
+          params?: [{ topics?: string[]; address?: string }];
+        };
+        if (body.method === "eth_blockNumber") return rpcResponse("0x64");
+        const filter = body.params?.[0] ?? {};
+        const topic0 = filter.topics?.[0];
+        if (filter.address?.toLowerCase() === PERMIT2_ADDRESS.toLowerCase()) {
+          return rpcResponse([
+            {
+              address: PERMIT2_ADDRESS,
+              data:
+                topic0 === PERMIT2_PERMIT_TOPIC0
+                  ? `0x${word(7n)}${word(8n)}${word(9n)}`
+                  : `0x${word(4n)}${word(5n)}`,
+              blockNumber: "0x4",
+              transactionHash: "0xpermit",
+              logIndex: "0x0",
+              topics: [
+                topic0,
+                pad(OWNER),
+                pad(TOKEN),
+                topic0 === PERMIT2_PERMIT_TOPIC0
+                  ? pad(SECOND_SPENDER)
+                  : pad(SPENDER),
+              ],
+            },
+          ]);
+        }
+        if (topic0 === ERC_APPROVAL_FOR_ALL_TOPIC0) {
+          return rpcResponse([
+            {
+              address: COLLECTION,
+              data: `0x${word(1n)}`,
+              blockNumber: "0x5",
+              transactionHash: "0xnftall",
+              logIndex: "0x1",
+              topics: [topic0, pad(OWNER), pad(SPENDER)],
+            },
+          ]);
+        }
+        return rpcResponse([
+          {
+            address: TOKEN,
+            data: "0x7b",
+            blockNumber: "0x6",
+            transactionHash: "0xerc20",
+            logIndex: "0x2",
+            topics: [ERC20_APPROVAL_TOPIC0, pad(OWNER), pad(SPENDER)],
+          },
+          {
+            address: COLLECTION,
+            data: "0x",
+            blockNumber: "0x7",
+            transactionHash: "0xnfttoken",
+            logIndex: "0x3",
+            topics: [
+              ERC20_APPROVAL_TOPIC0,
+              pad(OWNER),
+              pad(SPENDER),
+              `0x${word(42n)}`,
+            ],
+          },
+        ]);
+      }),
+    );
+
+    const discovery = rpcSource();
+    const erc20 = await discovery.discover(OWNER);
+    const permit2 = await discovery.discoverPermit2Allowances?.(OWNER);
+    const nft = await discovery.discoverNftApprovals(OWNER);
+
+    expect(erc20.pairs).toEqual([
+      expect.objectContaining({
+        chainId: PULSECHAIN_CHAIN_ID,
+        tokenAddress: TOKEN,
+        ownerAddress: CHECKSUM_OWNER,
+        spenderAddress: SPENDER,
+        rawApprovalValue: 123n,
+        blockNumber: 6n,
+      }),
+    ]);
+    expect(permit2?.allowances).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          sourceEvent: "Approval",
+          rawAmount: 4n,
+          expiration: 5n,
+        }),
+        expect.objectContaining({
+          sourceEvent: "Permit",
+          rawAmount: 7n,
+          expiration: 8n,
+          nonce: 9n,
+        }),
+      ]),
+    );
+    expect(nft.approvals).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          kind: "approvalForAll",
+          collectionAddress: COLLECTION,
+          operatorAddress: SPENDER,
+        }),
+        expect.objectContaining({
+          kind: "tokenApproval",
+          collectionAddress: COLLECTION,
+          operatorAddress: SPENDER,
+          tokenId: 42n,
+        }),
+      ]),
+    );
+  });
+
+  it("splits RPC log ranges when the provider rejects a broad query", async () => {
+    const ranges: string[] = [];
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (_url: string, init?: RequestInit) => {
+        const body = JSON.parse(String(init?.body ?? "{}")) as {
+          method?: string;
+          params?: [{ fromBlock?: string; toBlock?: string }];
+        };
+        if (body.method === "eth_blockNumber") return rpcResponse("0x4");
+        const filter = body.params?.[0] ?? {};
+        ranges.push(`${filter.fromBlock}-${filter.toBlock}`);
+        if (filter.fromBlock === "0x0" && filter.toBlock === "0x4") {
+          return rpcError("query returned more than the maximum result count");
+        }
+        return rpcResponse([]);
+      }),
+    );
+
+    const result = await rpcSource({ minSplitSpan: 1 }).discover(OWNER);
+
+    expect(result.truncated).toBe(false);
+    expect(ranges).toEqual(["0x0-0x4", "0x0-0x2", "0x3-0x4"]);
+  });
+
+  it("starts RPC log discovery with bounded latest-first chunks when configured", async () => {
+    const ranges: string[] = [];
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (_url: string, init?: RequestInit) => {
+        const body = JSON.parse(String(init?.body ?? "{}")) as {
+          method?: string;
+          params?: [{ fromBlock?: string; toBlock?: string }];
+        };
+        if (body.method === "eth_blockNumber") return rpcResponse("0xa");
+        const filter = body.params?.[0] ?? {};
+        ranges.push(`${filter.fromBlock}-${filter.toBlock}`);
+        return rpcResponse([]);
+      }),
+    );
+
+    const result = await rpcSource({
+      maxInitialBlockSpan: 4,
+      maxRequests: 10,
+    }).discover(OWNER);
+
+    expect(result.truncated).toBe(false);
+    expect(ranges).toEqual(["0x6-0xa", "0x1-0x5", "0x0-0x0"]);
+  });
+
+  it("marks RPC discovery truncated when request caps stop range splitting", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (_url: string, init?: RequestInit) => {
+        const body = JSON.parse(String(init?.body ?? "{}")) as {
+          method?: string;
+        };
+        if (body.method === "eth_blockNumber") return rpcResponse("0x10");
+        return rpcResponse([
+          {
+            address: TOKEN,
+            data: "0x1",
+            blockNumber: "0x1",
+            transactionHash: "0x1",
+            logIndex: "0x0",
+            topics: [ERC20_APPROVAL_TOPIC0, pad(OWNER), pad(SPENDER)],
+          },
+          {
+            address: TOKEN,
+            data: "0x2",
+            blockNumber: "0x2",
+            transactionHash: "0x2",
+            logIndex: "0x1",
+            topics: [ERC20_APPROVAL_TOPIC0, pad(OWNER), pad(SPENDER)],
+          },
+        ]);
+      }),
+    );
+
+    const result = await rpcSource({
+      pageCap: 2,
+      maxRequests: 3,
+      minSplitSpan: 1,
+    }).discover(OWNER);
+
+    expect(result.truncated).toBe(true);
+    expect(result.requests).toBe(3);
+  });
+
+  it("redacts Dwellir key material from RPC errors", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (_url: string, init?: RequestInit) => {
+        const body = JSON.parse(String(init?.body ?? "{}")) as {
+          method?: string;
+        };
+        if (body.method === "eth_blockNumber") return rpcResponse("0x1");
+        return rpcError(
+          "failed https://api-pulse-mainnet.n.dwellir.com/super-secret-key?apikey=also-secret",
+        );
+      }),
+    );
+
+    await expect(rpcSource().discover(OWNER)).rejects.toThrow("[redacted]");
+    await expect(rpcSource().discover(OWNER)).rejects.not.toThrow(
+      "super-secret-key",
+    );
+    await expect(rpcSource().discover(OWNER)).rejects.not.toThrow(
+      "also-secret",
+    );
+  });
+});
+
+describe("createOtterscanTransactionDiscoverySource", () => {
+  it("parses ERC-20, Permit2, NFT operator, and ERC-721 token approvals from OTS receipts", async () => {
+    const fetch = vi.fn(async (_url: string, init?: RequestInit) => {
+      const body = JSON.parse(String(init?.body ?? "{}")) as {
+        method?: string;
+      };
+      if (body.method === "eth_getCode") return rpcResponse("0x");
+      return rpcResponse({
+        txs: [
+          {
+            hash: "0xtransaction",
+            blockNumber: "0x10",
+          },
+        ],
+        receipts: [
+          {
+            transactionHash: "0xtransaction",
+            blockNumber: "0x10",
+            logs: [
+              {
+                address: TOKEN,
+                data: `0x${word(123n)}`,
+                logIndex: "0x0",
+                topics: [ERC20_APPROVAL_TOPIC0, pad(OWNER), pad(SPENDER)],
+              },
+              {
+                address: PERMIT2_ADDRESS,
+                data: `0x${word(456n)}${word(3000n)}`,
+                logIndex: "0x1",
+                topics: [
+                  PERMIT2_APPROVAL_TOPIC0,
+                  pad(OWNER),
+                  pad(TOKEN),
+                  pad(SECOND_SPENDER),
+                ],
+              },
+              {
+                address: COLLECTION,
+                data: `0x${word(1n)}`,
+                logIndex: "0x2",
+                topics: [
+                  ERC_APPROVAL_FOR_ALL_TOPIC0,
+                  pad(OWNER),
+                  pad(SPENDER),
+                ],
+              },
+              {
+                address: COLLECTION,
+                data: "0x",
+                logIndex: "0x3",
+                topics: [
+                  ERC20_APPROVAL_TOPIC0,
+                  pad(OWNER),
+                  pad(SECOND_SPENDER),
+                  `0x${word(42n)}`,
+                ],
+              },
+            ],
+          },
+        ],
+        firstPage: true,
+        lastPage: true,
+      });
+    });
+    vi.stubGlobal("fetch", fetch);
+
+    const discovery = otterscanSource();
+    const [erc20, permit2, nft] = await Promise.all([
+      discovery.discover(OWNER),
+      discovery.discoverPermit2Allowances?.(OWNER),
+      discovery.discoverNftApprovals(OWNER),
+    ]);
+
+    expect(fetch).toHaveBeenCalledTimes(2);
+    expect(erc20.truncated).toBe(false);
+    expect(erc20.pairs).toEqual([
+      expect.objectContaining({
+        tokenAddress: TOKEN,
+        ownerAddress: CHECKSUM_OWNER,
+        spenderAddress: SPENDER,
+        rawApprovalValue: 123n,
+        blockNumber: 16n,
+        transactionHash: "0xtransaction",
+      }),
+    ]);
+    expect(permit2?.allowances).toEqual([
+      expect.objectContaining({
+        permit2Address: PERMIT2_ADDRESS,
+        tokenAddress: TOKEN,
+        ownerAddress: CHECKSUM_OWNER,
+        spenderAddress: SECOND_SPENDER,
+        rawAmount: 456n,
+        expiration: 3000n,
+      }),
+    ]);
+    expect(nft.truncated).toBe(false);
+    expect(nft.approvals).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          kind: "approvalForAll",
+          collectionAddress: COLLECTION,
+          ownerAddress: CHECKSUM_OWNER,
+          operatorAddress: SPENDER,
+        }),
+        expect.objectContaining({
+          kind: "tokenApproval",
+          collectionAddress: COLLECTION,
+          ownerAddress: CHECKSUM_OWNER,
+          operatorAddress: SECOND_SPENDER,
+          tokenId: 42n,
+        }),
+      ]),
+    );
+  });
+
+  it("marks OTS receipt discovery truncated when transaction pages exceed the request cap", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (_url: string, init?: RequestInit) => {
+        const body = JSON.parse(String(init?.body ?? "{}")) as {
+          method?: string;
+        };
+        if (body.method === "eth_getCode") return rpcResponse("0x");
+        return rpcResponse({
+          txs: [{ hash: "0xtransaction", blockNumber: "0x10" }],
+          receipts: [{ transactionHash: "0xtransaction", blockNumber: "0x10" }],
+          firstPage: true,
+          lastPage: false,
+        });
+      }),
+    );
+
+    const result = await otterscanSource({ maxRequests: 2 }).discover(OWNER);
+
+    expect(result.truncated).toBe(true);
+    expect(result.requests).toBe(2);
+  });
+
+  it("keeps OTS receipt discovery incomplete for contract-wallet owners", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (_url: string, init?: RequestInit) => {
+        const body = JSON.parse(String(init?.body ?? "{}")) as {
+          method?: string;
+        };
+        if (body.method === "eth_getCode") return rpcResponse("0x1234");
+        return rpcResponse({
+          txs: [],
+          receipts: [],
+          firstPage: true,
+          lastPage: true,
+        });
+      }),
+    );
+
+    const result = await otterscanSource().discover(OWNER);
+
+    expect(result.truncated).toBe(true);
+    expect(result.requests).toBe(2);
+  });
 });
 
 describe("createBlockscoutDiscoverySource", () => {

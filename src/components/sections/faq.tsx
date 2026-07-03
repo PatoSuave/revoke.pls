@@ -52,6 +52,18 @@ const QUESTIONS: ReadonlyArray<{ q: string; a: React.ReactNode }> = [
     ),
   },
   {
+    q: "What if my PulseChain wallet RPC is unreliable?",
+    a: (
+      <>
+        Pulse Revoke can use hosted read fallbacks for scanning, but your wallet
+        still signs and submits revoke transactions through the RPC configured in
+        that wallet. If wallet reads or submissions fail, add a trusted
+        PulseChain RPC from your own provider account in the wallet network
+        settings. Do not use someone else&apos;s private RPC key.
+      </>
+    ),
+  },
+  {
     q: "What chains and tokens are supported?",
     a: (
       <>
