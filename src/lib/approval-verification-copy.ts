@@ -44,6 +44,7 @@ export function isCurrentApprovalStateUnverifiedReason(
 
   const normalized = reason.toLowerCase();
   if (normalized.includes("verified row; revoke available")) return false;
+  if (normalized.includes("verified rows can still be revoked")) return false;
 
   return (
     normalized.includes("verification incomplete") ||

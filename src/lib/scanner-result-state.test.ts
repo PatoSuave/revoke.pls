@@ -52,7 +52,7 @@ describe("ERC-20 scanner result state", () => {
     ).toBe("active");
   });
 
-  it("disables revoke when discovery is truncated even with visible approvals", () => {
+  it("warns when discovery is truncated while keeping verified rows individually revokable", () => {
     expect(
       getScanRevokeDisabledReason({
         status: "success",
@@ -60,10 +60,12 @@ describe("ERC-20 scanner result state", () => {
         discoveryTruncated: true,
         approvalLabel: "ERC-20",
       }),
-    ).toContain("truncated");
+    ).toBe(
+      "ERC-20 discovery was truncated - verified rows can still be revoked one at a time.",
+    );
   });
 
-  it("disables revoke when any live read failed", () => {
+  it("warns when any live read failed while keeping verified rows individually revokable", () => {
     expect(
       getScanRevokeDisabledReason({
         status: "success",
@@ -71,7 +73,9 @@ describe("ERC-20 scanner result state", () => {
         discoveryTruncated: false,
         approvalLabel: "NFT",
       }),
-    ).toBe("2 live reads failed - revoke unavailable until verification completes.");
+    ).toBe(
+      "2 live reads failed - verified rows can still be revoked one at a time.",
+    );
   });
 
   it("does not label wallet-only address scan state as verification incomplete", () => {
@@ -84,34 +88,34 @@ describe("ERC-20 scanner result state", () => {
   it("keeps verification-incomplete reasons explicit and separate", () => {
     expect(
       getRevokeDisabledNoticeCopy(
-        "2 live reads failed - revoke unavailable until verification completes.",
+        "2 live reads failed - verified rows can still be revoked one at a time.",
       ),
     ).toEqual({
       title:
         "Verification incomplete - current approval state could not be fully confirmed.",
-      body: "Pulse Revoke found approval history, but some live contract reads failed. Those rows stay disabled because the app could not confirm whether the approval is active right now. Try rescanning; if the message remains, the token or NFT contract may be nonstandard, temporarily unavailable, or failing live approval reads.",
+      body: "Pulse Revoke found approval history, but some live contract reads failed. Visible active rows passed their own live verification and can still be revoked one at a time when wallet and chain checks pass. Batch revoke stays disabled while coverage is incomplete.",
       detail:
-        "2 live reads failed - revoke unavailable until verification completes.",
+        "2 live reads failed - verified rows can still be revoked one at a time.",
     });
   });
 
   it("explains truncated discovery without claiming approval state", () => {
     expect(
       getRevokeDisabledNoticeCopy(
-        "ERC-20 discovery was truncated - revoke unavailable until verification completes.",
+        "ERC-20 discovery was truncated - verified rows can still be revoked one at a time.",
       ),
     ).toEqual({
       title:
         "Verification incomplete - current approval state could not be fully confirmed.",
-      body: "Pulse Revoke found approval history, but discovery ended before every current approval state could be confirmed. Affected rows stay disabled because the app could not confirm whether the approval is active right now. Try rescanning; if the message remains, the explorer response may be capped or temporarily unavailable.",
+      body: "Pulse Revoke found approval history, but discovery ended before every candidate could be checked. Visible active rows passed their own live verification and can still be revoked one at a time when wallet and chain checks pass. Batch revoke stays disabled while coverage is incomplete.",
       detail:
-        "ERC-20 discovery was truncated - revoke unavailable until verification completes.",
+        "ERC-20 discovery was truncated - verified rows can still be revoked one at a time.",
     });
   });
 
   it("does not use safe wording in verification-incomplete notice copy", () => {
     const notice = getRevokeDisabledNoticeCopy(
-      "2 live reads failed - revoke unavailable until verification completes.",
+      "2 live reads failed - verified rows can still be revoked one at a time.",
     );
 
     expect(`${notice?.title} ${notice?.body}`.toLowerCase()).not.toMatch(

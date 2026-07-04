@@ -1008,8 +1008,9 @@ function ConnectedScanner({
     rowChainId: chainConfig.chainId,
     chainName: chainConfig.displayName,
   });
-  const erc20RevokeDisabledReason =
+  const erc20BatchDisabledReason =
     scanRevokeDisabledReason ?? walletRevokeDisabledReason;
+  const erc20RowRevokeDisabledReason = walletRevokeDisabledReason;
 
   const [query, setQuery] = useState("");
   const [sort, setSort] = useState<ApprovalSort>("risk");
@@ -1162,9 +1163,9 @@ function ConnectedScanner({
   );
 
   const onReviewBatch = useCallback(() => {
-    if (erc20RevokeDisabledReason) return;
+    if (erc20BatchDisabledReason) return;
     batch.beginConfirm(selectedApprovals);
-  }, [batch, erc20RevokeDisabledReason, selectedApprovals]);
+  }, [batch, erc20BatchDisabledReason, selectedApprovals]);
 
   return (
     <div className="space-y-6">
@@ -1243,7 +1244,9 @@ function ConnectedScanner({
         selectedHighRisk={selectedHighRisk}
         selectedUnlimited={selectedUnlimited}
         onReviewBatch={onReviewBatch}
-        revokeDisabledReason={erc20RevokeDisabledReason}
+        scanVerificationWarningReason={scanRevokeDisabledReason}
+        revokeDisabledReason={erc20RowRevokeDisabledReason}
+        batchDisabledReason={erc20BatchDisabledReason}
         batch={batch}
         approvalAgeByKey={approvalAgeByKey}
         debugMode={debugMode}
@@ -1263,7 +1266,7 @@ function ConnectedScanner({
         scanTargetAddress={owner}
         connectedWalletAddress={connectedAddress}
         walletMatchesScanTarget={walletMatchesScanTarget}
-        revokeDisabledReason={erc20RevokeDisabledReason}
+        revokeDisabledReason={erc20RowRevokeDisabledReason}
         isConnected={isConnected}
         erc20={scan}
         nft={nft}
@@ -1764,8 +1767,7 @@ function NftSection({
     discoveryTruncated: nft.truncated,
     approvalLabel: "NFT approval",
   });
-  const revokeDisabledReason =
-    scanRevokeDisabledReason ?? walletRevokeDisabledReason;
+  const revokeDisabledReason = walletRevokeDisabledReason;
 
   return (
     <section className="space-y-4 rounded-2xl border border-pulse-border bg-pulse-bg/45 p-4 sm:p-5">
@@ -1933,6 +1935,9 @@ function NftSectionBody({
 
   return (
     <div className="space-y-3">
+      {scanRevokeDisabledReason ? (
+        <ScanRevokeDisabledWarning reason={scanRevokeDisabledReason} />
+      ) : null}
       {revokeDisabledReason ? (
         <ScanRevokeDisabledWarning reason={revokeDisabledReason} />
       ) : null}
@@ -2027,7 +2032,9 @@ function ScanContent({
   selectedUnlimited,
   onReviewBatch,
   batch,
+  scanVerificationWarningReason,
   revokeDisabledReason,
+  batchDisabledReason,
   approvalAgeByKey,
   debugMode,
 }: {
@@ -2051,7 +2058,9 @@ function ScanContent({
   selectedUnlimited: number;
   onReviewBatch: () => void;
   batch: ReturnType<typeof useBatchRevoke>;
+  scanVerificationWarningReason: string | null;
   revokeDisabledReason: string | null;
+  batchDisabledReason: string | null;
   approvalAgeByKey: ReadonlyMap<string, ApprovalAgeInfo>;
   debugMode: boolean;
 }) {
@@ -2165,9 +2174,13 @@ function ScanContent({
     <div className="space-y-4">
       <GuidancePanel />
 
+      {scanVerificationWarningReason ? (
+        <ScanRevokeDisabledWarning reason={scanVerificationWarningReason} />
+      ) : null}
+
       {revokeDisabledReason ? (
         <ScanRevokeDisabledWarning reason={revokeDisabledReason} />
-      ) : failedAllowanceReads > 0 ? (
+      ) : !scanVerificationWarningReason && failedAllowanceReads > 0 ? (
         <AllowanceReadWarning
           count={failedAllowanceReads}
           explorerName={chainConfig.explorer.name}
@@ -2195,7 +2208,7 @@ function ScanContent({
         onSelectAllVisible={onToggleSelectAllVisible}
         onClear={onClearSelection}
         onReview={onReviewBatch}
-        disabled={batchInteracting || Boolean(revokeDisabledReason)}
+        disabled={batchInteracting || Boolean(batchDisabledReason)}
       />
 
       <BatchRevokePanel batch={batch} />
@@ -2227,7 +2240,7 @@ function ScanContent({
                 onRevoked={scan.refetch}
                 selected={selected.has(approval.key)}
                 onToggleSelect={onToggleSelect}
-                selectionDisabled={batchInteracting || Boolean(revokeDisabledReason)}
+                selectionDisabled={batchInteracting || Boolean(batchDisabledReason)}
                 batchActive={batchActive}
                 batchResult={batch.results[approval.key]}
                 revokeDisabledReason={revokeDisabledReason}

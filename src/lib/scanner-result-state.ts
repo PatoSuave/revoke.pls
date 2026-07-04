@@ -40,12 +40,12 @@ export function getScanRevokeDisabledReason(input: {
     return "Scan has not completed - revoke unavailable.";
   }
   if (input.discoveryTruncated) {
-    return `${input.approvalLabel} discovery was truncated - revoke unavailable until verification completes.`;
+    return `${input.approvalLabel} discovery was truncated - verified rows can still be revoked one at a time.`;
   }
   if (input.failedLiveReads > 0) {
     return `${input.failedLiveReads} live read${
       input.failedLiveReads === 1 ? "" : "s"
-    } failed - revoke unavailable until verification completes.`;
+    } failed - verified rows can still be revoked one at a time.`;
   }
   return null;
 }
@@ -54,6 +54,19 @@ export function getRevokeDisabledNoticeCopy(
   reason: string | null,
 ): { title: string; body: string; detail?: string } | null {
   if (!reason) return null;
+
+  if (reason.includes("verified rows can still be revoked")) {
+    const truncated = reason.toLowerCase().includes("truncated");
+
+    return {
+      title:
+        "Verification incomplete - current approval state could not be fully confirmed.",
+      body: truncated
+        ? "Pulse Revoke found approval history, but discovery ended before every candidate could be checked. Visible active rows passed their own live verification and can still be revoked one at a time when wallet and chain checks pass. Batch revoke stays disabled while coverage is incomplete."
+        : "Pulse Revoke found approval history, but some live contract reads failed. Visible active rows passed their own live verification and can still be revoked one at a time when wallet and chain checks pass. Batch revoke stays disabled while coverage is incomplete.",
+      detail: reason,
+    };
+  }
 
   if (reason.includes("verification completes")) {
     const truncated = reason.toLowerCase().includes("truncated");

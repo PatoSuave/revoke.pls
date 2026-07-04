@@ -178,6 +178,11 @@ describe("approval row readability copy", () => {
     ).toBe(false);
     expect(
       isCurrentApprovalStateUnverifiedReason(
+        "2 live reads failed - verified rows can still be revoked one at a time.",
+      ),
+    ).toBe(false);
+    expect(
+      isCurrentApprovalStateUnverifiedReason(
         "Switch to Ethereum Mainnet to revoke.",
       ),
     ).toBe(false);
