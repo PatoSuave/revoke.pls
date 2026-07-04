@@ -1,4 +1,4 @@
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 
 import {
@@ -14,6 +14,10 @@ import {
 } from "@/lib/chains";
 
 const SOURCE = readFileSync(new URL("./chain-logo.tsx", import.meta.url), "utf8");
+const ROBINHOOD_MARK_ASSET = new URL(
+  "../../../public/protocol-logos/robinhood-chain-mark.png",
+  import.meta.url,
+);
 
 describe("ChainLogo source", () => {
   it("uses the original PulseChain vector mark instead of the generated fallback", () => {
@@ -80,6 +84,10 @@ describe("ChainLogo source", () => {
     expect(SOURCE).toContain("function WorldChainMark");
     expect(SOURCE).toContain("#6EE7F9");
     expect(SOURCE).toContain("function RobinhoodMark");
-    expect(SOURCE).toContain("#00C805");
+    expect(SOURCE).toContain("ROBINHOOD_CHAIN_MARK_PATH");
+    expect(SOURCE).toContain("/protocol-logos/robinhood-chain-mark.png");
+    expect(SOURCE).toContain("#050505");
+    expect(SOURCE).not.toContain('d="M15 13h13');
+    expect(existsSync(ROBINHOOD_MARK_ASSET)).toBe(true);
   });
 });
