@@ -113,6 +113,13 @@ export const CHAIN_VISUALS: Record<string, ChainVisual> = {
     accentBorder: "rgba(110, 231, 249, 0.34)",
     accentShadow: "0 0 20px rgba(110, 231, 249, 0.24)",
   },
+  "Robinhood Chain": {
+    accent: "#00C805",
+    accentReadable: "#047857",
+    accentSoft: "rgba(0, 200, 5, 0.12)",
+    accentBorder: "rgba(0, 200, 5, 0.34)",
+    accentShadow: "0 0 20px rgba(0, 200, 5, 0.24)",
+  },
   "Ethereum Mainnet": {
     accent: "#8EA5FF",
     accentReadable: "#4F67D8",

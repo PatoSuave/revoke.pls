@@ -142,6 +142,15 @@ describe("security content", () => {
     expect(rowsByChain.get("World Chain")?.note).toContain(
       "Gas is paid in ETH",
     );
+    expect(rowsByChain.get("Robinhood Chain")).toMatchObject({
+      chainId: "4663",
+      scan: "Yes",
+      revoke: "Yes",
+      status: "Live",
+    });
+    expect(rowsByChain.get("Robinhood Chain")?.note).toContain(
+      "Gas is paid in ETH",
+    );
     expect(rowsByChain.get("Solana")).toMatchObject({
       scan: "No",
       revoke: "No",

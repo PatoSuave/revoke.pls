@@ -35,6 +35,8 @@ import {
   POLYGON_EXPLORER_CHAIN_ID_DEFAULT,
   PULSECHAIN_CHAIN_ID,
   PULSECHAIN_EXPLORER_API_DEFAULT,
+  ROBINHOOD_CHAIN_ID,
+  ROBINHOOD_EXPLORER_API_DEFAULT,
   SONIC_CHAIN_ID,
   SONIC_EXPLORER_API_DEFAULT,
   SONIC_EXPLORER_CHAIN_ID_DEFAULT,
@@ -284,6 +286,21 @@ const CHAIN_CONFIGS = {
     apiProviderName: "Etherscan API V2",
     requiresApiKey: true,
   },
+  [ROBINHOOD_CHAIN_ID]: {
+    displayName: "Robinhood Chain",
+    explorerBaseUrl: "https://robinhoodchain.blockscout.com",
+    apiUrlDefault: ROBINHOOD_EXPLORER_API_DEFAULT,
+    apiUrlEnvNames: [
+      "ROBINHOOD_EXPLORER_API_URL",
+      "NEXT_PUBLIC_ROBINHOOD_EXPLORER_API_URL",
+    ],
+    apiKeyEnvNames: [],
+    apiChainIdDefault: undefined,
+    apiChainIdEnvNames: [],
+    apiProviderKind: "blockscout-compatible",
+    apiProviderName: "Robinhood Blockscout",
+    requiresApiKey: false,
+  },
 } as const;
 
 type ServerDiscoveryChainId = keyof typeof CHAIN_CONFIGS;
@@ -297,6 +314,35 @@ export function isServerDiscoveryChainId(
   value: number,
 ): value is ServerDiscoveryChainId {
   return value in CHAIN_CONFIGS;
+}
+
+function slugifyServerSource(value: string): string {
+  return value.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+}
+
+function serverDiscoveryProviderName(
+  settings: (typeof CHAIN_CONFIGS)[ServerDiscoveryChainId],
+): string {
+  if (settings.apiProviderKind === "etherscan-v2") return "Etherscan API V2";
+  return settings.apiProviderName ?? "Blockscout";
+}
+
+function serverDiscoverySourceId(
+  settings: (typeof CHAIN_CONFIGS)[ServerDiscoveryChainId],
+): string {
+  if (settings.apiProviderKind === "etherscan-v2") {
+    return `server-etherscan-v2-${settings.displayName.toLowerCase()}`;
+  }
+  if (settings.apiProviderName === "PulseScan") {
+    return `server-pulsescan-${settings.displayName.toLowerCase()}`;
+  }
+  return `server-blockscout-${slugifyServerSource(settings.displayName)}`;
+}
+
+function serverDiscoverySourceName(
+  settings: (typeof CHAIN_CONFIGS)[ServerDiscoveryChainId],
+): string {
+  return `Server-side ${serverDiscoveryProviderName(settings)} (${settings.displayName} logs)`;
 }
 
 export async function discoverServerErc20Approvals({
@@ -452,14 +498,8 @@ function createServerDiscoverySource(
 ) {
   const settings = CHAIN_CONFIGS[chainId];
   const source: DiscoverySourceConfig = {
-    id:
-      settings.apiProviderKind === "etherscan-v2"
-        ? `server-etherscan-v2-${settings.displayName.toLowerCase()}`
-        : `server-pulsescan-${settings.displayName.toLowerCase()}`,
-    name:
-      settings.apiProviderKind === "etherscan-v2"
-        ? `Server-side Etherscan API V2 (${settings.displayName} logs)`
-        : `Server-side PulseScan (${settings.displayName} logs)`,
+    id: serverDiscoverySourceId(settings),
+    name: serverDiscoverySourceName(settings),
     apiProviderKind: settings.apiProviderKind,
     apiProviderName: settings.apiProviderName,
     url: settings.explorerBaseUrl,
@@ -489,7 +529,7 @@ function createServerDiscoverySource(
     limitations:
       settings.apiProviderKind === "etherscan-v2"
         ? "Server-side Etherscan API V2 discovery is capped and timeout-bounded."
-        : "Server-side PulseScan discovery is capped and timeout-bounded.",
+        : `Server-side ${serverDiscoveryProviderName(settings)} discovery is capped and timeout-bounded.`,
     missingApiKeyMessage: settings.requiresApiKey
       ? `${settings.displayName} discovery requires a server-side Etherscan API key.`
       : undefined,
@@ -1112,14 +1152,9 @@ function emptyNftResponse(
 
 function emptySource(chainId: ServerDiscoveryChainId) {
   const settings = CHAIN_CONFIGS[chainId];
-  const isEtherscan = settings.apiProviderKind === "etherscan-v2";
   return {
-    id: isEtherscan
-      ? `server-etherscan-v2-${settings.displayName.toLowerCase()}`
-      : `server-pulsescan-${settings.displayName.toLowerCase()}`,
-    name: isEtherscan
-      ? `Server-side Etherscan API V2 (${settings.displayName} logs)`
-      : `Server-side PulseScan (${settings.displayName} logs)`,
+    id: serverDiscoverySourceId(settings),
+    name: serverDiscoverySourceName(settings),
     url: settings.explorerBaseUrl,
     chainId,
   };

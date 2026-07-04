@@ -13,6 +13,8 @@ import {
   LINEA_CHAIN_ID,
   LINEA_EXPLORER_CHAIN_ID_DEFAULT,
   PULSECHAIN_CHAIN_ID,
+  ROBINHOOD_CHAIN_ID,
+  ROBINHOOD_EXPLORER_API_DEFAULT,
   UNICHAIN_CHAIN_ID,
   UNICHAIN_EXPLORER_CHAIN_ID_DEFAULT,
   WORLDCHAIN_CHAIN_ID,
@@ -841,6 +843,30 @@ describe("server approval discovery shared Etherscan key", () => {
       expect(source.hasApiKey).toBe(true);
     },
   );
+
+  it("uses Robinhood Blockscout discovery without an Etherscan key", async () => {
+    const response = await discoverServerErc20Approvals({
+      chainId: ROBINHOOD_CHAIN_ID,
+      owner: OWNER,
+      env: { NODE_ENV: "test" },
+    });
+    const source = lastSourceConfig();
+
+    expect(response.ok).toBe(true);
+    expect(source.id).toBe("server-blockscout-robinhood-chain");
+    expect(source.name).toBe(
+      "Server-side Robinhood Blockscout (Robinhood Chain logs)",
+    );
+    expect(source.apiProviderKind).toBe("blockscout-compatible");
+    expect(source.apiProviderName).toBe("Robinhood Blockscout");
+    expect(source.apiUrl).toBe(ROBINHOOD_EXPLORER_API_DEFAULT);
+    expect(source.apiUrlEnvVar).toBe(
+      "ROBINHOOD_EXPLORER_API_URL / NEXT_PUBLIC_ROBINHOOD_EXPLORER_API_URL",
+    );
+    expect(source.apiKeyEnvVars).toBeUndefined();
+    expect(source.requiresApiKey).toBe(false);
+    expect(source.queryParams).toBeUndefined();
+  });
 
   it("reports missing config without accepting browser-visible explorer keys", async () => {
     const response = await discoverServerNftApprovals({

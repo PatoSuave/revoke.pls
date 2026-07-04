@@ -20,11 +20,12 @@ ship.
 - Gnosis support
 - Unichain support
 - World Chain support
+- Robinhood Chain support
 - Ethereum Mainnet read-only discovery and wallet-side revoke
 - Arbitrum One ERC-20/NFT verified-row revoke
 - Optimism / OP Mainnet ERC-20/NFT verified-row revoke
 - HyperEVM ERC-20/NFT verified-row revoke
-- First-class product copy and wallet switching for all eighteen live chains
+- First-class product copy and wallet switching for all nineteen live chains
 - Browser wallet connection
 - WalletConnect when configured
 - Historical approval log discovery
@@ -46,6 +47,7 @@ ship.
 - Gnosis Etherscan API V2 discovery with `chainid=100`
 - Unichain Etherscan API V2 discovery with `chainid=130`
 - World Chain Etherscan API V2 discovery with `chainid=480`
+- Robinhood Chain Blockscout discovery without an Etherscan API V2 key
 - Ethereum server-read-only Etherscan API V2 discovery with `chainid=1`
 - Arbitrum server-read-only Etherscan API V2 discovery with `chainid=42161`
 - Optimism server-read-only Etherscan API V2 discovery with `chainid=10`
@@ -80,8 +82,8 @@ ship.
 ## Future Ideas Requiring Review
 
 - More manually verified PulseChain, BSC, Base, Polygon, Sonic, Avalanche,
-  Mantle, Linea, Blast, Berachain, Celo, Gnosis, Unichain, and World Chain
-  registry labels
+  Mantle, Linea, Blast, Berachain, Celo, Gnosis, Unichain, World Chain, and
+  Robinhood Chain registry labels
 - Future Arbitrum batch revoke only after separate planning and QA
 - Future Optimism batch revoke only after separate planning and QA
 - Future HyperEVM batch revoke only after separate planning and QA

@@ -19,6 +19,7 @@ import {
   MANTLE_CHAIN_ID,
   POLYGON_CHAIN_ID,
   PULSECHAIN_CHAIN_ID,
+  ROBINHOOD_CHAIN_ID,
   SONIC_CHAIN_ID,
   UNICHAIN_CHAIN_ID,
   WORLDCHAIN_CHAIN_ID,
@@ -103,6 +104,7 @@ describe("address-only scan selection", () => {
       GNOSIS_CHAIN_ID,
       UNICHAIN_CHAIN_ID,
       WORLDCHAIN_CHAIN_ID,
+      ROBINHOOD_CHAIN_ID,
     ]);
     expect(ADDRESS_ONLY_SCAN_ALL_CONCURRENCY).toBe(1);
     expect(

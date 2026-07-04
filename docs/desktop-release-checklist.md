@@ -27,6 +27,9 @@ does not mean a desktop release exists today.
   RPC from `src/lib/chains.ts` is used.
 - `NEXT_PUBLIC_POLYGON_RPC_URL` is optional. If unset, the Polygon public
   fallback RPC from `src/lib/chains.ts` is used.
+- `NEXT_PUBLIC_ROBINHOOD_RPC_URL` is optional. If unset, the Robinhood Chain
+  public fallback RPC from `src/lib/chains.ts` is used; it is rate-limited, so
+  production-style desktop testing should prefer a reliable browser-safe RPC.
 - `NEXT_PUBLIC_PULSECHAIN_EXPLORER_API` is optional. If unset, the PulseScan
   API default is used.
 - `PULSECHAIN_DISCOVERY_RPC_URL` is a hosted server-only fallback and is not
@@ -58,6 +61,10 @@ does not mean a desktop release exists today.
 - `NEXT_PUBLIC_POLYGON_EXPLORER_CHAIN_ID` should be unset or set to `137`.
 - `NEXT_PUBLIC_POLYGON_EXPLORER_API_KEY` is required for desktop/static Polygon
   discovery. It should be an Etherscan API V2 key with Polygon Mainnet access.
+- `NEXT_PUBLIC_ROBINHOOD_EXPLORER_API_URL` is an optional Robinhood Chain
+  historical logs API override. It defaults to Robinhood Blockscout at
+  `https://robinhoodchain.blockscout.com/api` and does not require an Etherscan
+  API key or chain ID.
 
 Do not commit local `.env` files or release secrets.
 

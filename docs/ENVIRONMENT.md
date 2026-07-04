@@ -2,16 +2,16 @@
 
 Pulse Revoke is primarily a wallet-side frontend app, with server-side BSC,
 Base, Polygon, Sonic, Avalanche, Mantle, Linea, Blast, Berachain, Celo, Gnosis,
-Unichain, World Chain, Ethereum, Arbitrum, Optimism, and HyperEVM
-API routes for discovery plus a server-side gas tracker route. Variables prefixed with
-`NEXT_PUBLIC_` are embedded into the browser bundle and are visible to users. Do
-not store private secrets in these variables.
+Unichain, World Chain, Robinhood Chain, Ethereum, Arbitrum, Optimism, and
+HyperEVM API routes for discovery plus a server-side gas tracker route.
+Variables prefixed with `NEXT_PUBLIC_` are embedded into the browser bundle and
+are visible to users. Do not store private secrets in these variables.
 
 ## Production Requirements
 
 For the live PulseChain, BSC, Base, Polygon, Sonic, Avalanche, Mantle, Linea,
-Blast, Berachain, Celo, Gnosis, Unichain, World Chain, Ethereum, Arbitrum,
-Optimism, and HyperEVM product, configure:
+Blast, Berachain, Celo, Gnosis, Unichain, World Chain, Robinhood Chain,
+Ethereum, Arbitrum, Optimism, and HyperEVM product, configure:
 
 | Variable | Production status | Notes |
 | --- | --- | --- |
@@ -83,6 +83,9 @@ Optimism, and HyperEVM product, configure:
 | `WORLDCHAIN_EXPLORER_API_KEY` / `ETHERSCAN_API_KEY` | Required for reliable World Chain discovery | Server-only Etherscan API V2 key with World Mainnet access. Do not use a `NEXT_PUBLIC_` key. |
 | `WORLDCHAIN_RPC_URL` / `WORLDCHAIN_MAINNET_RPC_URL` | Optional | Server-only World Chain gas tracker RPC override for `/api/gas`. |
 | `NEXT_PUBLIC_WORLDCHAIN_RPC_URL` | Recommended | Public fallback is available, but production should prefer a reliable RPC for wallet reads and browser block watching. |
+| `ROBINHOOD_EXPLORER_API_URL` | Optional | Server-only Robinhood Blockscout logs API. Defaults to `https://robinhoodchain.blockscout.com/api`. |
+| `ROBINHOOD_RPC_URL` / `ROBINHOOD_MAINNET_RPC_URL` | Optional | Server-only Robinhood Chain gas tracker RPC override for `/api/gas`. |
+| `NEXT_PUBLIC_ROBINHOOD_RPC_URL` | Recommended | The public default RPC is rate-limited; production should prefer a reliable browser-safe RPC for wallet reads and browser block watching. |
 | `MAINNET_RPC_URL` / `ETHEREUM_RPC_URL` | Required for Ethereum scan | Server-only Ethereum RPC URL for `/api/ethereum/approvals` and `/api/gas`. |
 | `ETHERSCAN_API_KEY` | Required for Ethereum scan | Server-only Etherscan API key. Do not use a `NEXT_PUBLIC_` key for Ethereum server discovery. |
 | `ARBITRUM_ONE_RPC_URL` / `ARBITRUM_RPC_URL` | Required for Arbitrum scan | Server-only Arbitrum RPC URL for `/api/arbitrum/approvals` and `/api/gas`. |
@@ -98,11 +101,11 @@ variables, then browser-safe `NEXT_PUBLIC_*` RPC values, then code defaults.
 Keep private RPC URLs server-only.
 
 PulseChain, BSC, Base, Polygon, Sonic, Avalanche, Mantle, Linea, Blast,
-Berachain, Celo, Unichain, and World Chain token logos use Dex Screener's
-public token lookup endpoint through `/api/token-logos`. No API key is required.
-The app sends token contract addresses only, caps each request at `30`
-addresses, caches successful display metadata at the CDN, and falls back to
-symbol initials when no logo is returned.
+Berachain, Celo, Gnosis, Unichain, World Chain, and Robinhood Chain token logos
+use Dex Screener's public token lookup endpoint through `/api/token-logos`. No
+API key is required. The app sends token contract addresses only, caps each
+request at `30` addresses, caches successful display metadata at the CDN, and
+falls back to symbol initials when no logo is returned.
 
 Gas tracker USD estimates use CoinGecko's public `/simple/price` endpoint for
 the selected chain's native token. No environment variable or API key is
@@ -160,6 +163,7 @@ fallbacks: `PULSECHAIN_RPC_URL`, `PULSECHAIN_MAINNET_RPC_URL`, `BSC_RPC_URL`,
 `CELO_RPC_URL`, `CELO_MAINNET_RPC_URL`, `GNOSIS_RPC_URL`,
 `GNOSIS_MAINNET_RPC_URL`, `UNICHAIN_RPC_URL`, `UNICHAIN_MAINNET_RPC_URL`,
 `WORLDCHAIN_RPC_URL`, `WORLDCHAIN_MAINNET_RPC_URL`,
+`ROBINHOOD_RPC_URL`, `ROBINHOOD_MAINNET_RPC_URL`,
 `MAINNET_RPC_URL`, `ETHEREUM_RPC_URL`,
 `ARBITRUM_ONE_RPC_URL`, `ARBITRUM_RPC_URL`,
 `OPTIMISM_RPC_URL`, `OPTIMISM_MAINNET_RPC_URL`, `OP_MAINNET_RPC_URL`,
@@ -261,15 +265,18 @@ Hosted web Berachain approval discovery does not rely on public Berachain RPC
 `eth_getLogs`; it uses the server-side `/api/discovery/approvals` route with
 Etherscan API V2 logs.
 
-### `NEXT_PUBLIC_CELO_RPC_URL` / `NEXT_PUBLIC_GNOSIS_RPC_URL` / `NEXT_PUBLIC_UNICHAIN_RPC_URL` / `NEXT_PUBLIC_WORLDCHAIN_RPC_URL`
+### `NEXT_PUBLIC_CELO_RPC_URL` / `NEXT_PUBLIC_GNOSIS_RPC_URL` / `NEXT_PUBLIC_UNICHAIN_RPC_URL` / `NEXT_PUBLIC_WORLDCHAIN_RPC_URL` / `NEXT_PUBLIC_ROBINHOOD_RPC_URL`
 
-Recommended for production. These override the Celo, Gnosis, Unichain, and
-World Chain RPCs used by wagmi/viem for live validation and transaction
-submission. If unset, the app uses public defaults.
+Recommended for production. These override the Celo, Gnosis, Unichain, World
+Chain, and Robinhood Chain RPCs used by wagmi/viem for live validation and
+transaction submission. If unset, the app uses public defaults. The Robinhood
+Chain public default is rate-limited, so production should use a reliable
+browser-safe endpoint.
 
-Hosted web discovery for these chains does not rely on public RPC
-`eth_getLogs`; it uses the server-side `/api/discovery/approvals` route with
-Etherscan API V2 logs.
+Hosted web discovery for Celo, Gnosis, Unichain, and World Chain does not rely
+on public RPC `eth_getLogs`; it uses the server-side
+`/api/discovery/approvals` route with Etherscan API V2 logs. Robinhood Chain
+uses the same hosted route with Robinhood Blockscout logs.
 
 ### `NEXT_PUBLIC_MAINNET_RPC_URL` / `NEXT_PUBLIC_ETHEREUM_RPC_URL`
 
@@ -295,28 +302,13 @@ trying the server-only PulseChain discovery RPC fallback.
 ### Token Logo Lookup
 
 No environment variable is required for PulseChain, BSC, Base, Polygon, Sonic,
-Avalanche, Mantle, Linea, Blast, Berachain, Celo, Unichain, or World Chain
-token logos. The server route
-`/api/token-logos?chainId=369&addresses=...`,
-`/api/token-logos?chainId=56&addresses=...`,
-`/api/token-logos?chainId=8453&addresses=...`,
-`/api/token-logos?chainId=137&addresses=...`,
-`/api/token-logos?chainId=146&addresses=...`,
-`/api/token-logos?chainId=43114&addresses=...`,
-`/api/token-logos?chainId=5000&addresses=...`,
-`/api/token-logos?chainId=59144&addresses=...`,
-`/api/token-logos?chainId=81457&addresses=...`, or
-`/api/token-logos?chainId=80094&addresses=...`,
-`/api/token-logos?chainId=42220&addresses=...`,
-`/api/token-logos?chainId=130&addresses=...`, or
-`/api/token-logos?chainId=480&addresses=...` calls Dex Screener for display
-metadata and does not receive wallet owner, spender, or allowance data. Treat
-logos as visual convenience only; explorer links and live chain reads remain
-the source of verification.
-
-Gnosis rows still render with token symbols and initials. Dex Screener did not
-return Gnosis pair data in the current token lookup checks, so the app leaves
-Gnosis logo lookup disabled instead of surfacing a failed logo request.
+Avalanche, Mantle, Linea, Blast, Berachain, Celo, Gnosis, Unichain, World
+Chain, or Robinhood Chain token logos. The `/api/token-logos` server route
+supports chain IDs `369`, `56`, `8453`, `137`, `146`, `43114`, `5000`, `59144`,
+`81457`, `80094`, `42220`, `100`, `130`, `480`, and `4663`. It calls Dex
+Screener for display metadata and does not receive wallet owner, spender, or
+allowance data. Treat logos as visual convenience only; explorer links and live
+chain reads remain the source of verification.
 
 ### `BSC_EXPLORER_API_URL`
 
@@ -660,6 +652,22 @@ Optional chain-specific server-only API keys. If unset, each chain uses
 configure these values as `NEXT_PUBLIC_*`; the frontend does not need these
 explorer keys.
 
+### `ROBINHOOD_EXPLORER_API_URL` / `NEXT_PUBLIC_ROBINHOOD_EXPLORER_API_URL`
+
+Optional Robinhood Chain historical logs API base URL. Hosted deployments use
+the server-only `ROBINHOOD_EXPLORER_API_URL`; desktop/static builds without API
+routes may use `NEXT_PUBLIC_ROBINHOOD_EXPLORER_API_URL`. If unset, the app
+uses:
+
+```text
+https://robinhoodchain.blockscout.com/api
+```
+
+Robinhood Chain discovery uses Robinhood Blockscout logs, not Etherscan API V2,
+so no Etherscan API key or `chainid` parameter is required. Explorer/API caps or
+rate limits are still reported as incomplete discovery instead of a false clear
+state.
+
 ### `MAINNET_RPC_URL` / `ETHEREUM_RPC_URL`
 
 Required for Ethereum Mainnet approval discovery. These are server-only values
@@ -838,6 +846,7 @@ NEXT_PUBLIC_CELO_RPC_URL=
 NEXT_PUBLIC_GNOSIS_RPC_URL=
 NEXT_PUBLIC_UNICHAIN_RPC_URL=
 NEXT_PUBLIC_WORLDCHAIN_RPC_URL=
+NEXT_PUBLIC_ROBINHOOD_RPC_URL=
 NEXT_PUBLIC_MAINNET_RPC_URL=
 NEXT_PUBLIC_ETHEREUM_RPC_URL=
 NEXT_PUBLIC_PULSECHAIN_EXPLORER_API=
@@ -878,6 +887,7 @@ NEXT_PUBLIC_UNICHAIN_EXPLORER_API_URL=
 NEXT_PUBLIC_UNICHAIN_EXPLORER_CHAIN_ID=130
 NEXT_PUBLIC_WORLDCHAIN_EXPLORER_API_URL=
 NEXT_PUBLIC_WORLDCHAIN_EXPLORER_CHAIN_ID=480
+NEXT_PUBLIC_ROBINHOOD_EXPLORER_API_URL=
 NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID=
 NEXT_PUBLIC_TELEMETRY_ENABLED=
 
@@ -942,6 +952,9 @@ WORLDCHAIN_MAINNET_RPC_URL=
 WORLDCHAIN_EXPLORER_API_URL=
 WORLDCHAIN_EXPLORER_CHAIN_ID=480
 WORLDCHAIN_EXPLORER_API_KEY=
+ROBINHOOD_RPC_URL=
+ROBINHOOD_MAINNET_RPC_URL=
+ROBINHOOD_EXPLORER_API_URL=
 MAINNET_RPC_URL=
 ETHEREUM_RPC_URL=
 ETHEREUM_EXPLORER_API_URL=
@@ -977,6 +990,10 @@ discovery, use Etherscan API V2 keys server-side and account plans that support
 BNB Smart Chain, Base Mainnet, Polygon Mainnet, Sonic Mainnet, Avalanche
 C-Chain, Mantle Mainnet, Linea Mainnet, Blast Mainnet, Berachain Mainnet, Celo,
 Gnosis, Unichain Mainnet, and World Mainnet logs.
+For Robinhood Chain, configure a reliable browser-safe RPC when possible and
+optionally override the Robinhood Blockscout API URL server-side. Robinhood
+Chain scan failures should surface as incomplete/config/upstream states, not as
+false clear results.
 For Arbitrum, configure server-only managed RPC plus an Arbiscan or
 Etherscan-compatible API key with Arbitrum One log access. For Optimism,
 configure server-only managed RPC plus an Etherscan API V2 key with OP Mainnet

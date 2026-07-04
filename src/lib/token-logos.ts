@@ -12,6 +12,7 @@ import {
   MANTLE_CHAIN_ID,
   POLYGON_CHAIN_ID,
   PULSECHAIN_CHAIN_ID,
+  ROBINHOOD_CHAIN_ID,
   SONIC_CHAIN_ID,
   UNICHAIN_CHAIN_ID,
   WORLDCHAIN_CHAIN_ID,
@@ -41,6 +42,7 @@ const DEXSCREENER_CHAIN_SLUG_BY_CHAIN_ID: Readonly<Record<number, string>> = {
   [GNOSIS_CHAIN_ID]: "gnosischain",
   [UNICHAIN_CHAIN_ID]: "unichain",
   [WORLDCHAIN_CHAIN_ID]: "worldchain",
+  [ROBINHOOD_CHAIN_ID]: "robinhood",
   [ARBITRUM_TOKEN_LOGO_CHAIN_ID]: "arbitrum",
   [HYPEREVM_TOKEN_LOGO_CHAIN_ID]: "hyperevm",
 };
@@ -100,6 +102,7 @@ export function supportedTokenLogoChainSummary(): string {
     "Gnosis chainId=100",
     "Unichain chainId=130",
     "World Chain chainId=480",
+    "Robinhood Chain chainId=4663",
     "PulseChain chainId=369",
     "Base chainId=8453",
     "Arbitrum chainId=42161",

@@ -8,6 +8,7 @@ import {
   GNOSIS_CHAIN_ID,
   PULSECHAIN_CHAIN_ID,
   LINEA_CHAIN_ID,
+  ROBINHOOD_CHAIN_ID,
   UNICHAIN_CHAIN_ID,
   WORLDCHAIN_CHAIN_ID,
 } from "@/lib/chains";
@@ -24,7 +25,7 @@ describe("ChainLogo source", () => {
     expect(SOURCE).not.toContain('d="M8 24h10l4-9 6 20 4-11h8"');
   });
 
-  it("labels Etherscan V2 generic chains explicitly", () => {
+  it("labels newer generic chains explicitly", () => {
     expect(SOURCE).toContain(`[LINEA_CHAIN_ID]: "Linea"`);
     expect(SOURCE).toContain(`[BLAST_CHAIN_ID]: "Blast"`);
     expect(SOURCE).toContain(`[BERACHAIN_CHAIN_ID]: "Berachain"`);
@@ -32,9 +33,10 @@ describe("ChainLogo source", () => {
     expect(SOURCE).toContain(`[GNOSIS_CHAIN_ID]: "Gnosis"`);
     expect(SOURCE).toContain(`[UNICHAIN_CHAIN_ID]: "Unichain"`);
     expect(SOURCE).toContain(`[WORLDCHAIN_CHAIN_ID]: "World Chain"`);
+    expect(SOURCE).toContain(`[ROBINHOOD_CHAIN_ID]: "Robinhood Chain"`);
   });
 
-  it("routes Etherscan V2 generic chains away from the default mark", () => {
+  it("routes newer generic chains away from the default mark", () => {
     expect(LINEA_CHAIN_ID).toBe(59144);
     expect(BLAST_CHAIN_ID).toBe(81457);
     expect(BERACHAIN_CHAIN_ID).toBe(80094);
@@ -42,6 +44,7 @@ describe("ChainLogo source", () => {
     expect(GNOSIS_CHAIN_ID).toBe(100);
     expect(UNICHAIN_CHAIN_ID).toBe(130);
     expect(WORLDCHAIN_CHAIN_ID).toBe(480);
+    expect(ROBINHOOD_CHAIN_ID).toBe(4663);
 
     expect(SOURCE).toContain("case LINEA_CHAIN_ID:");
     expect(SOURCE).toContain("return <LineaMark muted={muted} />");
@@ -57,6 +60,8 @@ describe("ChainLogo source", () => {
     expect(SOURCE).toContain("return <UnichainMark muted={muted} />");
     expect(SOURCE).toContain("case WORLDCHAIN_CHAIN_ID:");
     expect(SOURCE).toContain("return <WorldChainMark muted={muted} />");
+    expect(SOURCE).toContain("case ROBINHOOD_CHAIN_ID:");
+    expect(SOURCE).toContain("return <RobinhoodMark muted={muted} />");
   });
 
   it("keeps branded full-color marks for new generic chains", () => {
@@ -74,5 +79,7 @@ describe("ChainLogo source", () => {
     expect(SOURCE).toContain("#FF007A");
     expect(SOURCE).toContain("function WorldChainMark");
     expect(SOURCE).toContain("#6EE7F9");
+    expect(SOURCE).toContain("function RobinhoodMark");
+    expect(SOURCE).toContain("#00C805");
   });
 });

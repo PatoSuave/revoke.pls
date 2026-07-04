@@ -23,6 +23,7 @@ export const CELO_CHAIN_ID = 42220;
 export const GNOSIS_CHAIN_ID = 100;
 export const UNICHAIN_CHAIN_ID = 130;
 export const WORLDCHAIN_CHAIN_ID = 480;
+export const ROBINHOOD_CHAIN_ID = 4663;
 export type SupportedChainId =
   | typeof PULSECHAIN_CHAIN_ID
   | typeof BSC_CHAIN_ID
@@ -37,7 +38,8 @@ export type SupportedChainId =
   | typeof CELO_CHAIN_ID
   | typeof GNOSIS_CHAIN_ID
   | typeof UNICHAIN_CHAIN_ID
-  | typeof WORLDCHAIN_CHAIN_ID;
+  | typeof WORLDCHAIN_CHAIN_ID
+  | typeof ROBINHOOD_CHAIN_ID;
 
 const PULSECHAIN_RPC_DEFAULT = "https://rpc.pulsechain.com";
 const BSC_RPC_DEFAULT = "https://bsc-dataseed.bnbchain.org";
@@ -54,6 +56,7 @@ const GNOSIS_RPC_DEFAULT = "https://rpc.gnosischain.com";
 const UNICHAIN_RPC_DEFAULT = "https://mainnet.unichain.org";
 const WORLDCHAIN_RPC_DEFAULT =
   "https://worldchain-mainnet.g.alchemy.com/public";
+const ROBINHOOD_RPC_DEFAULT = "https://rpc.mainnet.chain.robinhood.com";
 
 const PULSECHAIN_EXPLORER_BASE_URL = "https://scan.pulsechain.com";
 const BSC_EXPLORER_BASE_URL = "https://bscscan.com";
@@ -69,6 +72,7 @@ const CELO_EXPLORER_BASE_URL = "https://celoscan.io";
 const GNOSIS_EXPLORER_BASE_URL = "https://gnosisscan.io";
 const UNICHAIN_EXPLORER_BASE_URL = "https://uniscan.xyz";
 const WORLDCHAIN_EXPLORER_BASE_URL = "https://worldscan.org";
+const ROBINHOOD_EXPLORER_BASE_URL = "https://robinhoodchain.blockscout.com";
 
 export const PULSECHAIN_EXPLORER_API_DEFAULT =
   "https://api.scan.pulsechain.com/api";
@@ -91,6 +95,8 @@ export const UNICHAIN_EXPLORER_API_DEFAULT =
   "https://api.etherscan.io/v2/api";
 export const WORLDCHAIN_EXPLORER_API_DEFAULT =
   "https://api.etherscan.io/v2/api";
+export const ROBINHOOD_EXPLORER_API_DEFAULT =
+  "https://robinhoodchain.blockscout.com/api";
 export const BSC_DEPRECATED_V1_EXPLORER_API_URL =
   "https://api.bscscan.com/api";
 export const BASE_DEPRECATED_V1_EXPLORER_API_URL =
@@ -134,7 +140,8 @@ export type SupportedChainKey =
   | "celo"
   | "gnosis"
   | "unichain"
-  | "worldchain";
+  | "worldchain"
+  | "robinhood";
 
 function cleanEnv(value: string | undefined): string | undefined {
   const trimmed = value?.trim();
@@ -214,6 +221,7 @@ const celoRpcEnv = cleanEnv(process.env.NEXT_PUBLIC_CELO_RPC_URL);
 const gnosisRpcEnv = cleanEnv(process.env.NEXT_PUBLIC_GNOSIS_RPC_URL);
 const unichainRpcEnv = cleanEnv(process.env.NEXT_PUBLIC_UNICHAIN_RPC_URL);
 const worldchainRpcEnv = cleanEnv(process.env.NEXT_PUBLIC_WORLDCHAIN_RPC_URL);
+const robinhoodRpcEnv = cleanEnv(process.env.NEXT_PUBLIC_ROBINHOOD_RPC_URL);
 const pulsechainExplorerApiEnv = cleanEnv(
   process.env.NEXT_PUBLIC_PULSECHAIN_EXPLORER_API,
 );
@@ -255,6 +263,9 @@ const unichainExplorerApiEnv = cleanEnv(
 );
 const worldchainExplorerApiEnv = cleanEnv(
   process.env.NEXT_PUBLIC_WORLDCHAIN_EXPLORER_API_URL,
+);
+const robinhoodExplorerApiEnv = cleanEnv(
+  process.env.NEXT_PUBLIC_ROBINHOOD_EXPLORER_API_URL,
 );
 const bscExplorerChainIdEnv = cleanEnv(
   process.env.NEXT_PUBLIC_BSC_EXPLORER_CHAIN_ID,
@@ -841,6 +852,33 @@ export const worldchain = defineChain({
   testnet: false,
 });
 
+export const robinhood = defineChain({
+  id: ROBINHOOD_CHAIN_ID,
+  name: "Robinhood Chain",
+  nativeCurrency: {
+    name: "Ether",
+    symbol: "ETH",
+    decimals: 18,
+  },
+  rpcUrls: {
+    default: {
+      http: [robinhoodRpcEnv ?? ROBINHOOD_RPC_DEFAULT],
+    },
+  },
+  blockExplorers: {
+    default: {
+      name: "Robinhood Blockscout",
+      url: ROBINHOOD_EXPLORER_BASE_URL,
+    },
+  },
+  contracts: {
+    multicall3: {
+      address: "0xcA11bde05977b3631167028862bE2a173976CA11",
+    },
+  },
+  testnet: false,
+});
+
 export interface DiscoverySourceConfig {
   /** Short machine-friendly identifier surfaced in dev/debug views. */
   id: string;
@@ -1087,6 +1125,11 @@ const worldchainRpc = buildRpcConfig(
   "NEXT_PUBLIC_WORLDCHAIN_RPC_URL",
   WORLDCHAIN_RPC_DEFAULT,
   worldchainRpcEnv,
+);
+const robinhoodRpc = buildRpcConfig(
+  "NEXT_PUBLIC_ROBINHOOD_RPC_URL",
+  ROBINHOOD_RPC_DEFAULT,
+  robinhoodRpcEnv,
 );
 
 const pulsechainDiscovery = buildDiscoveryConfig({
@@ -1422,6 +1465,19 @@ const worldchainDiscovery = buildDiscoveryConfig({
   missingApiKeyMessage:
     "World Chain historical discovery uses Etherscan API V2. Hosted web deployments should use WORLDCHAIN_EXPLORER_API_KEY or ETHERSCAN_API_KEY server-side; do not expose explorer keys through NEXT_PUBLIC variables.",
   warnings: worldchainDiscoveryWarnings,
+});
+
+const robinhoodDiscovery = buildDiscoveryConfig({
+  id: "blockscout-robinhood-chain",
+  name: "Robinhood Blockscout",
+  apiProviderKind: "blockscout-compatible",
+  apiProviderName: "Robinhood Blockscout",
+  url: ROBINHOOD_EXPLORER_BASE_URL,
+  apiUrlEnvVar: "NEXT_PUBLIC_ROBINHOOD_EXPLORER_API_URL",
+  apiUrlDefault: ROBINHOOD_EXPLORER_API_DEFAULT,
+  apiUrlEnv: robinhoodExplorerApiEnv,
+  limitations:
+    "Robinhood Blockscout log discovery is windowed and may report truncation when explorer caps are reached.",
 });
 
 export const supportedChainConfigs = {
@@ -1919,6 +1975,40 @@ export const supportedChainConfigs = {
       nftOperator: "ERC-721/ERC-1155",
     },
   },
+  [ROBINHOOD_CHAIN_ID]: {
+    key: "robinhood",
+    chain: robinhood,
+    chainId: ROBINHOOD_CHAIN_ID,
+    displayName: "Robinhood Chain",
+    shortName: "Robinhood",
+    nativeSymbol: "ETH",
+    rpc: robinhoodRpc,
+    explorer: {
+      name: "Robinhood Blockscout",
+      baseUrl: ROBINHOOD_EXPLORER_BASE_URL,
+      apiUrl: robinhoodDiscovery.apiUrl,
+      apiUrlEnvVar: robinhoodDiscovery.apiUrlEnvVar,
+      urls: explorerUrls(ROBINHOOD_EXPLORER_BASE_URL),
+    },
+    discovery: robinhoodDiscovery,
+    discoverySettings: {
+      sourceKind: "explorer-logs",
+      providerName: "Robinhood Blockscout",
+      approvalEventTopicMode: "topic0-topic1-owner",
+      defaultFromBlock: "0",
+      defaultToBlock: "latest",
+      pageSize: 1000,
+      historicalRpcLogs: "disabled",
+      capWarning:
+        "Robinhood Blockscout can cap large log responses; the scanner reports truncation instead of showing a false clear state.",
+    },
+    standardLabels: {
+      fungible: "ERC-20",
+      nft: "ERC-721",
+      multiToken: "ERC-1155",
+      nftOperator: "ERC-721/ERC-1155",
+    },
+  },
 } as const satisfies Record<number, SupportedChainConfig>;
 
 export const supportedChains = [
@@ -1936,6 +2026,7 @@ export const supportedChains = [
   gnosis,
   unichain,
   worldchain,
+  robinhood,
 ] as const;
 
 export function isSupportedChainId(
@@ -1968,6 +2059,7 @@ export const supportedChainConfigList = [
   supportedChainConfigs[GNOSIS_CHAIN_ID],
   supportedChainConfigs[UNICHAIN_CHAIN_ID],
   supportedChainConfigs[WORLDCHAIN_CHAIN_ID],
+  supportedChainConfigs[ROBINHOOD_CHAIN_ID],
 ] as const;
 
 function joinNames(names: readonly string[]): string {

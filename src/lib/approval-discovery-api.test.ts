@@ -22,6 +22,7 @@ import {
   MANTLE_CHAIN_ID,
   POLYGON_CHAIN_ID,
   PULSECHAIN_CHAIN_ID,
+  ROBINHOOD_CHAIN_ID,
   SONIC_CHAIN_ID,
   UNICHAIN_CHAIN_ID,
   WORLDCHAIN_CHAIN_ID,
@@ -62,6 +63,7 @@ describe("approval discovery API serialization", () => {
     expect(usesServerApprovalDiscovery(GNOSIS_CHAIN_ID)).toBe(true);
     expect(usesServerApprovalDiscovery(UNICHAIN_CHAIN_ID)).toBe(true);
     expect(usesServerApprovalDiscovery(WORLDCHAIN_CHAIN_ID)).toBe(true);
+    expect(usesServerApprovalDiscovery(ROBINHOOD_CHAIN_ID)).toBe(true);
     expect(usesServerApprovalDiscovery(undefined)).toBe(false);
   });
 

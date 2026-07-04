@@ -12,6 +12,7 @@ import {
   MANTLE_CHAIN_ID,
   POLYGON_CHAIN_ID,
   PULSECHAIN_CHAIN_ID,
+  ROBINHOOD_CHAIN_ID,
   SONIC_CHAIN_ID,
   UNICHAIN_CHAIN_ID,
   WORLDCHAIN_CHAIN_ID,
@@ -131,7 +132,8 @@ export type ServerApprovalDiscoveryChainId =
   | typeof CELO_CHAIN_ID
   | typeof GNOSIS_CHAIN_ID
   | typeof UNICHAIN_CHAIN_ID
-  | typeof WORLDCHAIN_CHAIN_ID;
+  | typeof WORLDCHAIN_CHAIN_ID
+  | typeof ROBINHOOD_CHAIN_ID;
 
 export function usesServerApprovalDiscovery(
   chainId: number | undefined,
@@ -151,7 +153,8 @@ export function usesServerApprovalDiscovery(
     chainId === CELO_CHAIN_ID ||
     chainId === GNOSIS_CHAIN_ID ||
     chainId === UNICHAIN_CHAIN_ID ||
-    chainId === WORLDCHAIN_CHAIN_ID
+    chainId === WORLDCHAIN_CHAIN_ID ||
+    chainId === ROBINHOOD_CHAIN_ID
   );
 }
 

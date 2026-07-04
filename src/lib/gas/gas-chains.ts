@@ -19,6 +19,7 @@ import {
   MANTLE_CHAIN_ID,
   POLYGON_CHAIN_ID,
   PULSECHAIN_CHAIN_ID,
+  ROBINHOOD_CHAIN_ID,
   SONIC_CHAIN_ID,
   UNICHAIN_CHAIN_ID,
   WORLDCHAIN_CHAIN_ID,
@@ -61,6 +62,7 @@ export type GasTrackerChainId =
   | typeof GNOSIS_CHAIN_ID
   | typeof UNICHAIN_CHAIN_ID
   | typeof WORLDCHAIN_CHAIN_ID
+  | typeof ROBINHOOD_CHAIN_ID
   | typeof ETHEREUM_MAINNET_CLIENT_CHAIN_ID
   | typeof ARBITRUM_ONE_CLIENT_CHAIN_ID
   | typeof OPTIMISM_CLIENT_CHAIN_ID
@@ -98,6 +100,7 @@ const GNOSIS_RPC_DEFAULT = "https://rpc.gnosischain.com";
 const UNICHAIN_RPC_DEFAULT = "https://mainnet.unichain.org";
 const WORLDCHAIN_RPC_DEFAULT =
   "https://worldchain-mainnet.g.alchemy.com/public";
+const ROBINHOOD_RPC_DEFAULT = "https://rpc.mainnet.chain.robinhood.com";
 
 const ethereumGasChain = defineGasChain({
   id: ETHEREUM_MAINNET_CLIENT_CHAIN_ID,
@@ -280,6 +283,18 @@ const worldchainGasChain = defineGasChain({
   },
   rpcUrl: process.env.NEXT_PUBLIC_WORLDCHAIN_RPC_URL ?? WORLDCHAIN_RPC_DEFAULT,
   explorerUrl: "https://worldscan.org",
+});
+
+const robinhoodGasChain = defineGasChain({
+  id: ROBINHOOD_CHAIN_ID,
+  name: "Robinhood Chain",
+  nativeCurrency: {
+    name: "Ether",
+    symbol: "ETH",
+    decimals: 18,
+  },
+  rpcUrl: process.env.NEXT_PUBLIC_ROBINHOOD_RPC_URL ?? ROBINHOOD_RPC_DEFAULT,
+  explorerUrl: "https://robinhoodchain.blockscout.com",
 });
 
 const arbitrumGasChain = defineGasChain({
@@ -531,6 +546,22 @@ export const GAS_TRACKER_CHAINS = [
     coingeckoId: "ethereum",
     estimateNote:
       "World Chain wallet estimates may include L1 data fees beyond this gas-price estimate.",
+  },
+  {
+    chainId: ROBINHOOD_CHAIN_ID,
+    chainName: "Robinhood Chain",
+    shortName: "Robinhood",
+    nativeCurrency: "ETH",
+    nativeCurrencyName: "Ether",
+    viemChain: robinhoodGasChain,
+    defaultRpcUrl: ROBINHOOD_RPC_DEFAULT,
+    publicRpcUrl: robinhoodGasChain.rpcUrls.default.http[0],
+    serverRpcEnvNames: ["ROBINHOOD_RPC_URL", "ROBINHOOD_MAINNET_RPC_URL"],
+    publicRpcEnvNames: ["NEXT_PUBLIC_ROBINHOOD_RPC_URL"],
+    statusThresholds: { elevatedGwei: 0.1, highGwei: 1 },
+    coingeckoId: "ethereum",
+    estimateNote:
+      "Robinhood Chain wallet estimates may include L1 data fees beyond this gas-price estimate.",
   },
   {
     chainId: ETHEREUM_MAINNET_CLIENT_CHAIN_ID,

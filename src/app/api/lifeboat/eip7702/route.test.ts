@@ -10,7 +10,7 @@ const OWNER = "0xcae394005c9c4c309621c53d53db9ceb701fc8d8";
 const discoverEip7702Delegation = vi.hoisted(() => vi.fn());
 const diagnosticChainIds = vi.hoisted(() => [
   1, 10, 56, 100, 130, 137, 146, 369, 480, 999, 5000, 8453, 42161, 42220,
-  43114, 59144, 80094, 81457,
+  43114, 59144, 80094, 81457, 4663,
 ]);
 
 vi.mock("@/lib/lifeboat/eip7702-server", () => ({
@@ -70,7 +70,7 @@ describe("Wallet Lifeboat EIP-7702 route", () => {
     expect(discoverEip7702Delegation).not.toHaveBeenCalled();
   });
 
-  it("accepts a newly covered 18-chain diagnostic target", async () => {
+  it("accepts a newly covered 19-chain diagnostic target", async () => {
     discoverEip7702Delegation.mockImplementation(async ({ chainId }) =>
       completeEip7702Response(chainId),
     );

@@ -13,6 +13,7 @@ import {
   MANTLE_CHAIN_ID,
   POLYGON_CHAIN_ID,
   PULSECHAIN_CHAIN_ID,
+  ROBINHOOD_CHAIN_ID,
   SONIC_CHAIN_ID,
   UNICHAIN_CHAIN_ID,
   WORLDCHAIN_CHAIN_ID,
@@ -74,6 +75,7 @@ describe("wallet header network status", () => {
         GNOSIS_CHAIN_ID,
         UNICHAIN_CHAIN_ID,
         WORLDCHAIN_CHAIN_ID,
+        ROBINHOOD_CHAIN_ID,
         ETHEREUM_MAINNET_CLIENT_CHAIN_ID,
         ARBITRUM_ONE_CLIENT_CHAIN_ID,
         OPTIMISM_CLIENT_CHAIN_ID,
@@ -145,6 +147,7 @@ describe("wallet header network status", () => {
         GNOSIS_CHAIN_ID,
         UNICHAIN_CHAIN_ID,
         WORLDCHAIN_CHAIN_ID,
+        ROBINHOOD_CHAIN_ID,
       ].map((chainId) =>
         resolveHeaderNetworkStatus({
           walletChainId: chainId,
@@ -166,6 +169,7 @@ describe("wallet header network status", () => {
       expect.objectContaining({ kind: "supported", label: "Gnosis" }),
       expect.objectContaining({ kind: "supported", label: "Unichain" }),
       expect.objectContaining({ kind: "supported", label: "World Chain" }),
+      expect.objectContaining({ kind: "supported", label: "Robinhood Chain" }),
     ]);
   });
 
@@ -185,6 +189,7 @@ describe("wallet header network status", () => {
       GNOSIS_CHAIN_ID,
       UNICHAIN_CHAIN_ID,
       WORLDCHAIN_CHAIN_ID,
+      ROBINHOOD_CHAIN_ID,
     ]);
     expect(supportedChainConfigList.map((chain) => chain.chainId)).not.toContain(
       ARBITRUM_ONE_CLIENT_CHAIN_ID,

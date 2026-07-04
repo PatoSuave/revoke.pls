@@ -13,6 +13,7 @@ import {
   MANTLE_CHAIN_ID,
   POLYGON_CHAIN_ID,
   PULSECHAIN_CHAIN_ID,
+  ROBINHOOD_CHAIN_ID,
   SONIC_CHAIN_ID,
   UNICHAIN_CHAIN_ID,
   WORLDCHAIN_CHAIN_ID,
@@ -92,6 +93,10 @@ describe("token logo helpers", () => {
     expect(isTokenLogoSupportedChain(WORLDCHAIN_CHAIN_ID)).toBe(true);
     expect(getDexScreenerChainSlugForTokenLogos(WORLDCHAIN_CHAIN_ID)).toBe(
       "worldchain",
+    );
+    expect(isTokenLogoSupportedChain(ROBINHOOD_CHAIN_ID)).toBe(true);
+    expect(getDexScreenerChainSlugForTokenLogos(ROBINHOOD_CHAIN_ID)).toBe(
+      "robinhood",
     );
     expect(isTokenLogoSupportedChain(ARBITRUM_TOKEN_LOGO_CHAIN_ID)).toBe(true);
     expect(getDexScreenerChainSlugForTokenLogos(ARBITRUM_TOKEN_LOGO_CHAIN_ID)).toBe(

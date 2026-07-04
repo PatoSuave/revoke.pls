@@ -12,6 +12,7 @@ import {
   MANTLE_CHAIN_ID,
   POLYGON_CHAIN_ID,
   PULSECHAIN_CHAIN_ID,
+  ROBINHOOD_CHAIN_ID,
   SONIC_CHAIN_ID,
   UNICHAIN_CHAIN_ID,
   WORLDCHAIN_CHAIN_ID,
@@ -124,6 +125,11 @@ describe("active chain resolution", () => {
       walletChainId: WORLDCHAIN_CHAIN_ID,
       wagmiChainId: PULSECHAIN_CHAIN_ID,
     });
+    const robinhoodResult = resolveActiveChain({
+      isConnected: true,
+      walletChainId: ROBINHOOD_CHAIN_ID,
+      wagmiChainId: PULSECHAIN_CHAIN_ID,
+    });
 
     expect(sonicResult.status).toBe("supported");
     expect(sonicResult.activeChainId).toBe(SONIC_CHAIN_ID);
@@ -157,6 +163,11 @@ describe("active chain resolution", () => {
     expect(worldchainResult.status).toBe("supported");
     expect(worldchainResult.activeChainId).toBe(WORLDCHAIN_CHAIN_ID);
     expect(worldchainResult.activeChainConfig?.displayName).toBe("World Chain");
+    expect(robinhoodResult.status).toBe("supported");
+    expect(robinhoodResult.activeChainId).toBe(ROBINHOOD_CHAIN_ID);
+    expect(robinhoodResult.activeChainConfig?.displayName).toBe(
+      "Robinhood Chain",
+    );
   });
 
   it("does not default to PulseChain when disconnected", () => {
@@ -187,7 +198,7 @@ describe("active chain resolution", () => {
 
   it("uses all generic supported chains in supported-network copy", () => {
     expect(getSupportedChainShortNames()).toBe(
-      "PulseChain, BSC, Base, Polygon, Sonic, Avalanche, Mantle, Linea, Blast, Berachain, Celo, Gnosis, Unichain, or World",
+      "PulseChain, BSC, Base, Polygon, Sonic, Avalanche, Mantle, Linea, Blast, Berachain, Celo, Gnosis, Unichain, World, or Robinhood",
     );
   });
 

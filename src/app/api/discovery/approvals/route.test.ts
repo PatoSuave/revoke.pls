@@ -15,7 +15,7 @@ vi.mock("@/lib/server-approval-discovery", () => ({
   isServerDiscoveryChainId: (chainId: number) =>
     [
       369, 56, 8453, 137, 146, 43114, 5000, 59144, 81457, 80094, 42220, 100,
-      130, 480,
+      130, 480, 4663,
     ].includes(chainId),
   normalizeServerDiscoveryOwner: (value: string | null) =>
     value && /^0x[a-fA-F0-9]{40}$/.test(value) ? value : null,

@@ -37,6 +37,8 @@ import {
   POLYGON_EXPLORER_API_DEFAULT,
   POLYGON_EXPLORER_CHAIN_ID_DEFAULT,
   PULSECHAIN_CHAIN_ID,
+  ROBINHOOD_CHAIN_ID,
+  ROBINHOOD_EXPLORER_API_DEFAULT,
   SONIC_CHAIN_ID,
   SONIC_EXPLORER_API_DEFAULT,
   SONIC_EXPLORER_CHAIN_ID_DEFAULT,
@@ -59,6 +61,7 @@ import {
   linea,
   mantle,
   polygon,
+  robinhood,
   sonic,
   supportedChainConfigList,
   supportedChains,
@@ -106,6 +109,7 @@ describe("supported chain config", () => {
       GNOSIS_CHAIN_ID,
       UNICHAIN_CHAIN_ID,
       WORLDCHAIN_CHAIN_ID,
+      ROBINHOOD_CHAIN_ID,
     ]);
     expect(supportedChainConfigList.map((chain) => chain.chainId)).toEqual([
       PULSECHAIN_CHAIN_ID,
@@ -122,6 +126,7 @@ describe("supported chain config", () => {
       GNOSIS_CHAIN_ID,
       UNICHAIN_CHAIN_ID,
       WORLDCHAIN_CHAIN_ID,
+      ROBINHOOD_CHAIN_ID,
     ]);
     expect(supportedChainConfigList.map((chain) => chain.shortName)).toEqual([
       "PulseChain",
@@ -138,9 +143,10 @@ describe("supported chain config", () => {
       "Gnosis",
       "Unichain",
       "World",
+      "Robinhood",
     ]);
     expect(getSupportedChainShortNames()).toBe(
-      "PulseChain, BSC, Base, Polygon, Sonic, Avalanche, Mantle, Linea, Blast, Berachain, Celo, Gnosis, Unichain, or World",
+      "PulseChain, BSC, Base, Polygon, Sonic, Avalanche, Mantle, Linea, Blast, Berachain, Celo, Gnosis, Unichain, World, or Robinhood",
     );
     expect(isSupportedChainId(1)).toBe(false);
     expect(isSupportedChainId(ARBITRUM_ONE_CLIENT_CHAIN_ID)).toBe(false);
@@ -519,6 +525,33 @@ describe("supported chain config", () => {
     expect(config?.standardLabels.fungible).toBe("PRC-20");
   });
 
+  it("configures Robinhood Chain as Blockscout-compatible with ETH gas", () => {
+    const config = getChainConfig(ROBINHOOD_CHAIN_ID);
+
+    expect(config?.chainId).toBe(4663);
+    expect(config?.displayName).toBe("Robinhood Chain");
+    expect(config?.shortName).toBe("Robinhood");
+    expect(config?.nativeSymbol).toBe("ETH");
+    expect(config?.rpc.defaultUrl).toBe(
+      "https://rpc.mainnet.chain.robinhood.com",
+    );
+    expect(config?.explorer.name).toBe("Robinhood Blockscout");
+    expect(config?.explorer.baseUrl).toBe(
+      "https://robinhoodchain.blockscout.com",
+    );
+    expect(config?.discovery.apiProviderKind).toBe("blockscout-compatible");
+    expect(config?.discovery.apiProviderName).toBe("Robinhood Blockscout");
+    expect(config?.discovery.apiUrl).toBe(ROBINHOOD_EXPLORER_API_DEFAULT);
+    expect(config?.discovery.apiUrlEnvVar).toBe(
+      "NEXT_PUBLIC_ROBINHOOD_EXPLORER_API_URL",
+    );
+    expect(config?.discovery.requiresApiKey).toBeUndefined();
+    expect(config?.discovery.apiKeyEnvVars).toBeUndefined();
+    expect(config?.discovery.queryParams).toBeUndefined();
+    expect(robinhood.id).toBe(4663);
+    expect(robinhood.nativeCurrency.symbol).toBe("ETH");
+  });
+
   it("builds BscScan explorer links", () => {
     expect(explorerAddressUrl(BSC_CHAIN_ID, SPENDER)).toBe(
       `https://bscscan.com/address/${SPENDER}`,
@@ -655,6 +688,15 @@ describe("supported chain config", () => {
     expect(explorerTxUrl(WORLDCHAIN_CHAIN_ID, "0xabc")).toBe(
       "https://worldscan.org/tx/0xabc",
     );
+    expect(explorerAddressUrl(ROBINHOOD_CHAIN_ID, SPENDER)).toBe(
+      `https://robinhoodchain.blockscout.com/address/${SPENDER}`,
+    );
+    expect(explorerTokenUrl(ROBINHOOD_CHAIN_ID, TOKEN)).toBe(
+      `https://robinhoodchain.blockscout.com/token/${TOKEN}`,
+    );
+    expect(explorerTxUrl(ROBINHOOD_CHAIN_ID, "0xabc")).toBe(
+      "https://robinhoodchain.blockscout.com/tx/0xabc",
+    );
   });
 
   it("builds Etherscan links for wallet-only Ethereum revokes without activating Ethereum", () => {
@@ -740,6 +782,7 @@ describe("supported chain config", () => {
       GNOSIS_CHAIN_ID,
       UNICHAIN_CHAIN_ID,
       WORLDCHAIN_CHAIN_ID,
+      ROBINHOOD_CHAIN_ID,
     ]) {
       expect(getSpenderEntry(chainId, PULSEX_ROUTER)).toBeUndefined();
       expect(getTokensForChain(chainId)).toEqual([]);
@@ -834,6 +877,7 @@ describe("supported chain config", () => {
       GNOSIS_CHAIN_ID,
       UNICHAIN_CHAIN_ID,
       WORLDCHAIN_CHAIN_ID,
+      ROBINHOOD_CHAIN_ID,
     ]) {
       const request = {
         ...buildRevokeCall({

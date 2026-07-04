@@ -30,17 +30,18 @@ describe("supported chain copy", () => {
       "Gnosis",
       "Unichain",
       "World Chain",
+      "Robinhood Chain",
       "Ethereum Mainnet",
       "Arbitrum One",
       "Optimism",
       "HyperEVM",
     ]);
-    expect(LIVE_SUPPORTED_CHAIN_COUNT).toBe(18);
+    expect(LIVE_SUPPORTED_CHAIN_COUNT).toBe(19);
     expect(LIVE_SUPPORTED_CHAIN_LIST).toBe(
-      "PulseChain, BNB Smart Chain, Base, Polygon, Sonic Mainnet, Avalanche C-Chain, Mantle, Linea, Blast, Berachain, Celo, Gnosis, Unichain, World Chain, Ethereum Mainnet, Arbitrum One, Optimism, and HyperEVM",
+      "PulseChain, BNB Smart Chain, Base, Polygon, Sonic Mainnet, Avalanche C-Chain, Mantle, Linea, Blast, Berachain, Celo, Gnosis, Unichain, World Chain, Robinhood Chain, Ethereum Mainnet, Arbitrum One, Optimism, and HyperEVM",
     );
     expect(LIVE_SUPPORTED_CHAIN_COMPACT_LIST).toBe(
-      "PulseChain, BSC, Base, Polygon, Sonic, Avalanche, Mantle, Linea, Blast, Berachain, Celo, Gnosis, Unichain, World, Ethereum, Arbitrum, Optimism, and HyperEVM",
+      "PulseChain, BSC, Base, Polygon, Sonic, Avalanche, Mantle, Linea, Blast, Berachain, Celo, Gnosis, Unichain, World, Robinhood, Ethereum, Arbitrum, Optimism, and HyperEVM",
     );
   });
 

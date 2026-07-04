@@ -18,6 +18,7 @@ const LIVE_CHAIN_DISPLAY_ORDER = [
   "Gnosis",
   "Unichain",
   "World Chain",
+  "Robinhood Chain",
   "Ethereum Mainnet",
   "Arbitrum One",
   "Optimism",
@@ -31,6 +32,7 @@ const COMPACT_CHAIN_NAMES: Record<string, string> = {
   "Ethereum Mainnet": "Ethereum",
   "Arbitrum One": "Arbitrum",
   "World Chain": "World",
+  "Robinhood Chain": "Robinhood",
 };
 
 function formatList(items: readonly string[]) {

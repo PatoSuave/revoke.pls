@@ -110,9 +110,9 @@ HyperEVM secret exposure.
 - [ ] Confirm the row still shows essential top-level data: token, spender,
       exposure/risk, and action or disabled state.
 - [ ] Confirm known PulseChain, BSC, Base, Polygon, Sonic, Avalanche, Mantle,
-      Linea, Blast, Berachain, Celo, Unichain, and World Chain token
-      rows can show a token logo when Dex Screener has one, while unknown or
-      failed logo loads still show the token initials.
+      Linea, Blast, Berachain, Celo, Gnosis, Unichain, World Chain, and
+      Robinhood Chain token rows can show a token logo when Dex Screener has
+      one, while unknown or failed logo loads still show the token initials.
 - [ ] Confirm token logos do not hide the token symbol, token explorer link,
       spender, risk, or revoke state.
 - [ ] Confirm `What this approval means` is collapsed by default.
@@ -327,8 +327,8 @@ HyperEVM secret exposure.
       `ERC-20/NFT verified rows only` / `Live` and does not claim HyperEVM
       batch revoke is live.
 - [ ] Supported-chain matrix lists Linea, Blast, Berachain, Celo, Gnosis,
-      Unichain, and World Chain as full generic scan + revoke chains with no
-      safety-guarantee language.
+      Unichain, World Chain, and Robinhood Chain as full generic scan + revoke
+      chains with no safety-guarantee language.
 - [ ] The app never requests a seed phrase, private key, mnemonic, or raw
       signing secret.
 - [ ] No spender or protocol is described as safe, unsafe, endorsed, or trusted

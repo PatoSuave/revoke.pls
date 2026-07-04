@@ -17,6 +17,7 @@ import {
   mantle,
   polygon,
   pulsechain,
+  robinhood,
   sonic,
   supportedChains,
   unichain,
@@ -53,6 +54,7 @@ import {
  *  - Gnosis (100)
  *  - Unichain mainnet (130)
  *  - World Chain (480)
+ *  - Robinhood Chain (4663)
  *
  * Ethereum Mainnet (1) is registered as a wallet-only chain for the
  * Ethereum scanner/revoke flow. It is intentionally not part of the active
@@ -87,7 +89,7 @@ export const hasWalletConnect: boolean = Boolean(walletConnectProjectId);
 const WALLETCONNECT_METADATA = {
   name: "Pulse Revoke",
   description:
-    "Review token approvals on PulseChain, BSC, Base, Polygon, Sonic, Avalanche, Mantle, Linea, Blast, Berachain, Celo, Gnosis, Unichain, World Chain, Ethereum, Arbitrum, Optimism, and HyperEVM.",
+    "Review token approvals on PulseChain, BSC, Base, Polygon, Sonic, Avalanche, Mantle, Linea, Blast, Berachain, Celo, Gnosis, Unichain, World Chain, Robinhood, Ethereum, Arbitrum, Optimism, and HyperEVM.",
   url: "https://pulserevoke.com",
   icons: ["https://pulserevoke.com/icon.png"],
 };
@@ -140,6 +142,9 @@ export const wagmiConfig = createConfig({
     ),
     [worldchain.id]: http(
       process.env.NEXT_PUBLIC_WORLDCHAIN_RPC_URL ?? undefined,
+    ),
+    [robinhood.id]: http(
+      process.env.NEXT_PUBLIC_ROBINHOOD_RPC_URL ?? undefined,
     ),
     [ethereumMainnetWalletChain.id]: http(
       process.env.NEXT_PUBLIC_MAINNET_RPC_URL ??

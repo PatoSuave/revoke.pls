@@ -21,6 +21,7 @@ Current active supported networks should be exactly:
 - Gnosis, chain ID `100`
 - Unichain, chain ID `130`
 - World Chain, chain ID `480`
+- Robinhood Chain, chain ID `4663`
 - Ethereum Mainnet, chain ID `1`
 - Arbitrum One, chain ID `42161`, ERC-20/NFT verified-row revoke
 - Optimism / OP Mainnet, chain ID `10`, ERC-20/NFT verified-row revoke
@@ -74,9 +75,9 @@ submission must stay unavailable.
 
 - Are active supported chains exactly PulseChain, BSC, Base, Polygon, Sonic,
   Avalanche, Mantle, Linea, Blast, Berachain, Celo, Gnosis, Unichain, World
-  Chain, wallet-enabled Ethereum Mainnet, Arbitrum One's separate verified-row
-  revoke lane, Optimism's separate verified-row lane, and HyperEVM's separate
-  verified-row lane?
+  Chain, Robinhood Chain, wallet-enabled Ethereum Mainnet, Arbitrum One's
+  separate verified-row revoke lane, Optimism's separate verified-row lane, and
+  HyperEVM's separate verified-row lane?
 - Does `src/lib/wagmi.ts` register Ethereum, Arbitrum, Optimism, and HyperEVM
   only for their separate lanes and keep chain lists scoped correctly?
 - Is Ethereum Mainnet protected by owner, chain, preflight, gas, and row-level
@@ -278,6 +279,20 @@ submission must stay unavailable.
 - Does the shared `ETHERSCAN_API_KEY` fallback work without committing or
   browser-exposing the key?
 
+## Robinhood Chain Discovery Questions
+
+- Do Robinhood Chain historical log requests use Robinhood Blockscout at
+  `https://robinhoodchain.blockscout.com/api`?
+- Do Robinhood Chain log requests avoid Etherscan API V2 `chainid` parameters
+  and explorer API keys?
+- Are Robinhood Chain explorer links built with
+  `https://robinhoodchain.blockscout.com`?
+- Does Robinhood Chain discovery use approval logs rather than token-transfer
+  endpoints as the approval source of truth?
+- Does public Robinhood RPC avoid historical `eth_getLogs` discovery?
+- Does the scanner report incomplete discovery if Blockscout caps, rate
+  limits, malformed responses, or upstream failures prevent full discovery?
+
 ## Live Validation Questions
 
 - Are discovered fungible token candidates rechecked with `allowance(owner,
@@ -309,6 +324,11 @@ submission must stay unavailable.
 - Do Linea revokes use ETH wording and LineaScan links?
 - Do Blast revokes use ETH wording and Blastscan links?
 - Do Berachain revokes use BERA wording and Berascan links?
+- Do Celo revokes use CELO wording and CeloScan links?
+- Do Gnosis revokes use XDAI wording and Gnosisscan links?
+- Do Unichain revokes use ETH wording and Uniscan links?
+- Do World Chain revokes use ETH wording and Worldscan links?
+- Do Robinhood Chain revokes use ETH wording and Robinhood Blockscout links?
 - Does Arbitrum show only ERC-20/NFT verified-row revoke while batch
   revoke remains unavailable?
 - Does Optimism show only ERC-20/NFT verified-row revoke while batch and global
@@ -333,7 +353,8 @@ submission must stay unavailable.
 - Do PulseChain or BSC labels avoid leaking onto Base approvals?
 - Do PulseChain, BSC, or Base labels avoid leaking onto Polygon approvals?
 - Do existing registry labels avoid leaking onto Sonic, Avalanche, Mantle,
-  Linea, Blast, Berachain, Celo, Gnosis, Unichain, or World Chain approvals?
+  Linea, Blast, Berachain, Celo, Gnosis, Unichain, World Chain, or Robinhood
+  Chain approvals?
 - Are BSC labels empty unless manually verified?
 - Are Base labels empty unless manually verified?
 - Are Polygon labels empty unless manually verified?
@@ -347,16 +368,17 @@ submission must stay unavailable.
 - Are Gnosis labels empty unless manually verified?
 - Are Unichain labels empty unless manually verified?
 - Are World Chain labels empty unless manually verified?
+- Are Robinhood Chain labels empty unless manually verified?
 - Are unknown BSC, Base, Polygon, Sonic, Avalanche, Mantle, Linea, Blast, and
-  Berachain, Celo, Gnosis, Unichain, and World Chain spenders shown as unknown
-  rather than guessed?
+  Berachain, Celo, Gnosis, Unichain, World Chain, and Robinhood Chain spenders
+  shown as unknown rather than guessed?
 - Is registry data treated only as enrichment, not discovery truth?
 
 ## Token Logo Questions
 
 - Is token-logo lookup scoped to PulseChain, BSC, Base, Polygon, Sonic,
-  Avalanche, Mantle, Linea, Blast, Berachain, and explicitly reviewed
-  separate-lane chains?
+  Avalanche, Mantle, Linea, Blast, Berachain, Celo, Gnosis, Unichain, World
+  Chain, Robinhood Chain, and explicitly reviewed separate-lane chains?
 - Does the logo resolver send only token contract addresses, not scanned owner
   addresses, spender addresses, allowances, or wallet connection state?
 - Does the UI keep text symbol/address data visible when no logo exists or the
@@ -412,11 +434,12 @@ npm.cmd run security:live
 
 ## Manual Review Checklist
 
-- Load `/` and confirm it lists PulseChain, BSC / BNB Smart Chain, and Base as
-  live.
+- Load `/` and confirm it lists PulseChain, BSC / BNB Smart Chain, Base, and
+  Robinhood Chain as live.
 - Load `/app` on PulseChain and run a scan.
 - Load `/app` on BSC and run a scan.
 - Load `/app` on Base and run a scan.
+- Load `/app` on Robinhood Chain and run a scan.
 - Paste an address in address-only mode and confirm only the selected network
   scans by default.
 - Use address-only scan-all and confirm networks start one at a time.

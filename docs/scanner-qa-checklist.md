@@ -2,9 +2,9 @@
 
 Use this checklist to verify that Pulse Revoke reads approval state correctly on
 PulseChain, BSC, Base, Polygon, Sonic Mainnet, Avalanche, Mantle, Linea, Blast,
-Berachain, Celo, Gnosis, Unichain, World Chain, Ethereum, Arbitrum One
-verified-row revoke, Optimism verified-row revoke, and HyperEVM verified-row
-revoke.
+Berachain, Celo, Gnosis, Unichain, World Chain, Robinhood Chain, Ethereum,
+Arbitrum One verified-row revoke, Optimism verified-row revoke, and HyperEVM
+verified-row revoke.
 Keep all testing low-risk and manual.
 
 ## Safety Setup
@@ -48,6 +48,7 @@ Run the scanner flow on all supported chains:
 - Gnosis, chain ID `100`, gas token `XDAI`.
 - Unichain, chain ID `130`, gas token `ETH`.
 - World Chain, chain ID `480`, gas token `ETH`.
+- Robinhood Chain, chain ID `4663`, gas token `ETH`.
 - Ethereum Mainnet, chain ID `1`, gas token `ETH`.
 - Arbitrum One, chain ID `42161`, gas token `ETH`, ERC-20/NFT verified-row
   lane.
@@ -77,6 +78,8 @@ For each chain, confirm diagnostics show:
 - Gnosis API chain ID `100` when testing Gnosis.
 - Unichain API chain ID `130` when testing Unichain.
 - World Chain API chain ID `480` when testing World Chain.
+- Robinhood Blockscout source and no Etherscan API chain ID when testing
+  Robinhood Chain.
 - Arbitrum API chain ID `42161` when testing Arbitrum One.
 - Optimism API chain ID `10` when testing OP Mainnet.
 - HyperEVM API chain ID `999` when testing HyperEVM.
@@ -276,6 +279,22 @@ For each chain, confirm diagnostics show:
 - Rate limits, malformed responses, missing API keys, and capped responses are
   shown as incomplete/error states, not as "clear".
 
+## Robinhood Chain Discovery Checks
+
+- `ROBINHOOD_EXPLORER_API_URL` is unset or points to a compatible Robinhood
+  Blockscout logs API endpoint. The default is
+  `https://robinhoodchain.blockscout.com/api`.
+- `NEXT_PUBLIC_ROBINHOOD_RPC_URL` is set to a reliable browser-safe RPC for
+  production when possible; the public default RPC is rate-limited.
+- Robinhood Chain scans use Blockscout logs for historical approval discovery
+  through `/api/discovery/approvals`.
+- Robinhood Chain scans do not require `ETHERSCAN_API_KEY`,
+  `ROBINHOOD_EXPLORER_API_KEY`, or an Etherscan API V2 `chainid` parameter.
+- The app does not rely on public Robinhood RPC `eth_getLogs` for historical
+  approval discovery.
+- Rate limits, malformed responses, upstream failures, and capped responses are
+  shown as incomplete/error states, not as "clear".
+
 ## Arbitrum Verified-Row Checks
 
 - `ARBITRUM_ONE_RPC_URL` or `ARBITRUM_RPC_URL` is set server-side for
@@ -353,8 +372,8 @@ For each chain, confirm diagnostics show:
 15. Confirm the approval disappears or diagnostics show no nonzero allowance.
 16. Verify directly on PulseScan, BscScan, BaseScan, PolygonScan, SonicScan,
     SnowScan, Mantle Explorer, LineaScan, Blastscan, Berascan, CeloScan,
-    Gnosisscan, Uniscan, Worldscan, Etherscan, Arbiscan, or Optimistic
-    Etherscan if results disagree.
+    Gnosisscan, Uniscan, Worldscan, Robinhood Blockscout, Etherscan, Arbiscan,
+    or Optimistic Etherscan if results disagree.
 
 ## NFT Approval Test
 
@@ -406,6 +425,7 @@ For per-token approvals:
 - Single Gnosis revoke confirm panel says Gnosis and XDAI.
 - Single Unichain revoke confirm panel says Unichain and ETH.
 - Single World Chain revoke confirm panel says World Chain and ETH.
+- Single Robinhood Chain revoke confirm panel says Robinhood Chain and ETH.
 - Permit2 revoke confirm panel clearly identifies a Permit2 delegated allowance
   and clears it through the Permit2 contract.
 - Arbitrum One shows a revoke confirm panel only for live-verified ERC-20 and
@@ -427,6 +447,7 @@ For per-token approvals:
 - Gnosis transaction links open Gnosisscan.
 - Unichain transaction links open Uniscan.
 - World Chain transaction links open Worldscan.
+- Robinhood Chain transaction links open Robinhood Blockscout.
 - Arbitrum address and token links open Arbiscan.
 - Optimism address and token links open Optimistic Etherscan.
 - Batch revoke submits one transaction at a time.
@@ -439,7 +460,8 @@ For per-token approvals:
 - Connect to an unsupported chain.
 - Confirm the app lists PulseChain, BSC, Base, Polygon, Sonic Mainnet,
   Avalanche, Mantle, Linea, Blast, Berachain, Celo, Gnosis, Unichain, World
-  Chain, Ethereum, Arbitrum, Optimism, and HyperEVM with the correct
+  Chain, Robinhood Chain, Ethereum, Arbitrum, Optimism, and HyperEVM with the
+  correct
   scan/revoke statuses.
 - Confirm no scan starts.
 - Confirm no revoke action is available.
@@ -455,3 +477,5 @@ For per-token approvals:
 - Etherscan API V2 rate limits, the BscScan V1 deprecation error, or a missing
   BSC/Base/Polygon/Sonic/Avalanche/Mantle/Linea/Blast/Berachain/Celo/Gnosis/
   Unichain/World Chain API key show an actionable error.
+- Robinhood Blockscout caps, rate limits, or upstream failures show an
+  incomplete/error state, not a clear wallet state.

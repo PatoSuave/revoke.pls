@@ -14,6 +14,7 @@ import {
   MANTLE_CHAIN_ID,
   POLYGON_CHAIN_ID,
   PULSECHAIN_CHAIN_ID,
+  ROBINHOOD_CHAIN_ID,
   SONIC_CHAIN_ID,
   UNICHAIN_CHAIN_ID,
   WORLDCHAIN_CHAIN_ID,
@@ -48,6 +49,7 @@ const CHAIN_LOGO_LABELS: Readonly<Record<number, string>> = {
   [GNOSIS_CHAIN_ID]: "Gnosis",
   [UNICHAIN_CHAIN_ID]: "Unichain",
   [WORLDCHAIN_CHAIN_ID]: "World Chain",
+  [ROBINHOOD_CHAIN_ID]: "Robinhood Chain",
 };
 
 export function chainLogoLabel(chainId: number): string {
@@ -132,6 +134,8 @@ function renderChainMark(chainId: number, muted: boolean) {
       return <UnichainMark muted={muted} />;
     case WORLDCHAIN_CHAIN_ID:
       return <WorldChainMark muted={muted} />;
+    case ROBINHOOD_CHAIN_ID:
+      return <RobinhoodMark muted={muted} />;
     default:
       return <DefaultMark muted={muted} />;
   }
@@ -480,6 +484,26 @@ function WorldChainMark({ muted }: { muted: boolean }) {
         stroke={muted ? "#0B0A14" : "#FFFFFF"}
         strokeLinecap="round"
         strokeWidth="2.5"
+      />
+    </>
+  );
+}
+
+function RobinhoodMark({ muted }: { muted: boolean }) {
+  return (
+    <>
+      <circle cx="24" cy="24" r="21" fill={muted ? "currentColor" : "#00C805"} />
+      <path
+        d="M15 13h13c7 0 11 4 11 10 0 5-3 8-8 9l8 9h-9l-7-8h-6v8h-8V13Zm8 7v7h5c2 0 3-1 3-3s-1-4-4-4h-4Z"
+        fill={muted ? "#0B0A14" : "#FFFFFF"}
+      />
+      <path
+        d="M10 9h8v8h-8V9Zm20 22 8 10"
+        fill="none"
+        stroke={muted ? "#0B0A14" : "#101828"}
+        strokeLinecap="round"
+        strokeWidth="3"
+        opacity="0.45"
       />
     </>
   );

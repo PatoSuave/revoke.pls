@@ -164,6 +164,14 @@ export const SECURITY_CHAIN_STATUS_ROWS: readonly ChainStatusRow[] = [
     note: "Shared scanner with Worldscan discovery, live verification, and revokes through your wallet. Gas is paid in ETH.",
   },
   {
+    chain: "Robinhood Chain",
+    chainId: "4663",
+    scan: "Yes",
+    revoke: "Yes",
+    status: "Live",
+    note: "Shared scanner with Robinhood Blockscout discovery, live verification, and revokes through your wallet. Gas is paid in ETH.",
+  },
+  {
     chain: "Ethereum Mainnet",
     chainId: "1",
     scan: "Yes",
