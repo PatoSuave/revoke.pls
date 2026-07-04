@@ -91,11 +91,9 @@ describe("ERC-20 scanner result state", () => {
         "2 live reads failed - verified rows can still be revoked one at a time.",
       ),
     ).toEqual({
-      title:
-        "Verification incomplete - current approval state could not be fully confirmed.",
-      body: "Pulse Revoke found approval history, but some live contract reads failed. Visible active rows passed their own live verification and can still be revoked one at a time when wallet and chain checks pass. Batch revoke stays disabled while coverage is incomplete.",
-      detail:
-        "2 live reads failed - verified rows can still be revoked one at a time.",
+      title: "Limited approval coverage",
+      body: "Some approval checks could not be completed. Visible verified rows passed live verification and can still be revoked one at a time when wallet and chain checks pass. Batch revoke remains disabled while coverage is incomplete.",
+      detail: "2 live reads failed.",
     });
   });
 
@@ -105,11 +103,9 @@ describe("ERC-20 scanner result state", () => {
         "ERC-20 discovery was truncated - verified rows can still be revoked one at a time.",
       ),
     ).toEqual({
-      title:
-        "Verification incomplete - current approval state could not be fully confirmed.",
-      body: "Pulse Revoke found approval history, but discovery ended before every candidate could be checked. Visible active rows passed their own live verification and can still be revoked one at a time when wallet and chain checks pass. Batch revoke stays disabled while coverage is incomplete.",
-      detail:
-        "ERC-20 discovery was truncated - verified rows can still be revoked one at a time.",
+      title: "Limited approval coverage",
+      body: "Some older approvals may not have been checked. Visible verified rows passed live verification and can still be revoked one at a time when wallet and chain checks pass. Batch revoke remains disabled until coverage is complete.",
+      detail: "ERC-20 discovery was truncated.",
     });
   });
 

@@ -176,7 +176,8 @@ export function getPipelineHealthDisplay({
   if (truncated) {
     return {
       label: "Limited",
-      detail: "The indexer returned a capped result, so the scan is not complete.",
+      detail:
+        "The indexer hit a cap, so some older approvals may not have been checked.",
       tone: "warning",
     };
   }

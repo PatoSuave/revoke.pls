@@ -57,14 +57,16 @@ export function getRevokeDisabledNoticeCopy(
 
   if (reason.includes("verified rows can still be revoked")) {
     const truncated = reason.toLowerCase().includes("truncated");
+    const technicalDetail = reason.split(" - ")[0] ?? reason;
 
     return {
-      title:
-        "Verification incomplete - current approval state could not be fully confirmed.",
+      title: "Limited approval coverage",
       body: truncated
-        ? "Pulse Revoke found approval history, but discovery ended before every candidate could be checked. Visible active rows passed their own live verification and can still be revoked one at a time when wallet and chain checks pass. Batch revoke stays disabled while coverage is incomplete."
-        : "Pulse Revoke found approval history, but some live contract reads failed. Visible active rows passed their own live verification and can still be revoked one at a time when wallet and chain checks pass. Batch revoke stays disabled while coverage is incomplete.",
-      detail: reason,
+        ? "Some older approvals may not have been checked. Visible verified rows passed live verification and can still be revoked one at a time when wallet and chain checks pass. Batch revoke remains disabled until coverage is complete."
+        : "Some approval checks could not be completed. Visible verified rows passed live verification and can still be revoked one at a time when wallet and chain checks pass. Batch revoke remains disabled while coverage is incomplete.",
+      detail: technicalDetail.endsWith(".")
+        ? technicalDetail
+        : `${technicalDetail}.`,
     };
   }
 

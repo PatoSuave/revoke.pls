@@ -83,8 +83,12 @@ describe("scanner display helpers", () => {
         truncated: true,
         failureCount: 0,
         error: null,
-      }).label,
-    ).toBe("Limited");
+      }),
+    ).toMatchObject({
+      label: "Limited",
+      detail:
+        "The indexer hit a cap, so some older approvals may not have been checked.",
+    });
 
     expect(
       getPipelineHealthDisplay({
