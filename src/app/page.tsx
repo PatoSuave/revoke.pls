@@ -127,6 +127,7 @@ const RICHARD_HEART_HOVER_VIDEO_SRC =
 const CHAIN_CARD_HOVER_MEDIA_SRC: Partial<Record<string, string>> = {
   PulseChain: RICHARD_HEART_HOVER_VIDEO_SRC,
   "BNB Smart Chain": "/media/cz-hover.gif",
+  "Robinhood Chain": "/media/i-am-not-a-cat-roaring-kitty.gif",
   "Ethereum Mainnet": "/media/vitalik-hover.gif",
 };
 

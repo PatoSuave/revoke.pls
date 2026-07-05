@@ -1,4 +1,4 @@
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 
 import { describe, expect, it } from "vitest";
@@ -107,8 +107,21 @@ describe("supported chain copy", () => {
     expect(source).toContain("PulseChain: RICHARD_HEART_HOVER_VIDEO_SRC");
     expect(source).toContain('"BNB Smart Chain": "/media/cz-hover.gif"');
     expect(source).toContain(
+      '"Robinhood Chain": "/media/i-am-not-a-cat-roaring-kitty.gif"',
+    );
+    expect(source).toContain(
       '"Ethereum Mainnet": "/media/vitalik-hover.gif"',
     );
+    expect(
+      existsSync(
+        join(
+          process.cwd(),
+          "public",
+          "media",
+          "i-am-not-a-cat-roaring-kitty.gif",
+        ),
+      ),
+    ).toBe(true);
     expect(source).toContain(
       "data-hover-video-card={hoverMediaSrc ? \"\" : undefined}",
     );
