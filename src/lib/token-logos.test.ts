@@ -131,9 +131,23 @@ describe("token logo helpers", () => {
     expect(isAllowedTokenLogoUrl("https://cdn.dexscreener.com/token.png")).toBe(
       true,
     );
+    expect(
+      isAllowedTokenLogoUrl("https://dd.dexscreener.com/ds-data/token.png"),
+    ).toBe(true);
+    expect(
+      isAllowedTokenLogoUrl(
+        "https://raw.githubusercontent.com/9mm-exchange/app-tokens/main/token-logo/wpls.png",
+      ),
+    ).toBe(true);
     expect(isAllowedTokenLogoUrl("http://cdn.dexscreener.com/token.png")).toBe(
       false,
     );
+    expect(isAllowedTokenLogoUrl("https://example.com/token.png")).toBe(false);
+    expect(
+      isAllowedTokenLogoUrl(
+        "https://raw.githubusercontent.com/other/project/main/token.png",
+      ),
+    ).toBe(false);
     expect(isAllowedTokenLogoUrl("javascript:alert(1)")).toBe(false);
   });
 
@@ -147,6 +161,11 @@ describe("token logo helpers", () => {
           baseToken: { address: WPLS.toLowerCase() },
           quoteToken: { address: PLSX },
           info: { imageUrl: "https://cdn.dexscreener.com/wpls.png" },
+        },
+        {
+          url: "https://dexscreener.com/pulsechain/0xpair4",
+          baseToken: { address: PLSX },
+          info: { imageUrl: "https://example.com/tracker.png" },
         },
         {
           url: "https://dexscreener.com/pulsechain/0xpair2",

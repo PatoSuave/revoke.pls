@@ -142,10 +142,32 @@ export function tokenLogoAddressKey(address: string): string {
   return address.toLowerCase();
 }
 
+const ALLOWED_TOKEN_LOGO_IMAGE_HOSTS = new Set([
+  "cdn.dexscreener.com",
+  "dd.dexscreener.com",
+]);
+
+const NINEMM_TOKEN_LIST_LOGO_HOST = "raw.githubusercontent.com";
+const NINEMM_TOKEN_LIST_LOGO_PATH_PREFIX = "/9mm-exchange/app-tokens/";
+
 export function isAllowedTokenLogoUrl(value: string): boolean {
   try {
     const url = new URL(value);
-    return url.protocol === "https:";
+    if (url.protocol !== "https:") return false;
+    if (ALLOWED_TOKEN_LOGO_IMAGE_HOSTS.has(url.hostname)) return true;
+    return (
+      url.hostname === NINEMM_TOKEN_LIST_LOGO_HOST &&
+      url.pathname.startsWith(NINEMM_TOKEN_LIST_LOGO_PATH_PREFIX)
+    );
+  } catch {
+    return false;
+  }
+}
+
+function isAllowedDexScreenerSourceUrl(value: string): boolean {
+  try {
+    const url = new URL(value);
+    return url.protocol === "https:" && url.hostname === "dexscreener.com";
   } catch {
     return false;
   }
@@ -178,7 +200,7 @@ export function extractTokenLogosFromDexScreenerPairs({
     if (!imageUrl || !isAllowedTokenLogoUrl(imageUrl)) continue;
 
     const sourceUrl =
-      typeof item.url === "string" && isAllowedTokenLogoUrl(item.url)
+      typeof item.url === "string" && isAllowedDexScreenerSourceUrl(item.url)
         ? item.url
         : undefined;
 
