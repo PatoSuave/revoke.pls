@@ -2,25 +2,31 @@ import type { Address } from "viem";
 
 import {
   ABSTRACT_CHAIN_ID,
+  APECHAIN_CHAIN_ID,
   AVALANCHE_CHAIN_ID,
   BASE_CHAIN_ID,
   BERACHAIN_CHAIN_ID,
   BLAST_CHAIN_ID,
   BSC_CHAIN_ID,
   CELO_CHAIN_ID,
+  FRAXTAL_CHAIN_ID,
   GNOSIS_CHAIN_ID,
   KATANA_CHAIN_ID,
   LINEA_CHAIN_ID,
   MANTLE_CHAIN_ID,
   MONAD_CHAIN_ID,
+  MOONBEAM_CHAIN_ID,
+  OPBNB_CHAIN_ID,
   PLASMA_CHAIN_ID,
   POLYGON_CHAIN_ID,
   PULSECHAIN_CHAIN_ID,
   ROBINHOOD_CHAIN_ID,
   SEI_CHAIN_ID,
   SONIC_CHAIN_ID,
+  TAIKO_CHAIN_ID,
   UNICHAIN_CHAIN_ID,
   WORLDCHAIN_CHAIN_ID,
+  XDC_CHAIN_ID,
 } from "@/lib/chains";
 import type {
   DiscoveredPair,
@@ -143,7 +149,13 @@ export type ServerApprovalDiscoveryChainId =
   | typeof KATANA_CHAIN_ID
   | typeof SEI_CHAIN_ID
   | typeof PLASMA_CHAIN_ID
-  | typeof ABSTRACT_CHAIN_ID;
+  | typeof ABSTRACT_CHAIN_ID
+  | typeof FRAXTAL_CHAIN_ID
+  | typeof TAIKO_CHAIN_ID
+  | typeof OPBNB_CHAIN_ID
+  | typeof MOONBEAM_CHAIN_ID
+  | typeof APECHAIN_CHAIN_ID
+  | typeof XDC_CHAIN_ID;
 
 export function usesServerApprovalDiscovery(
   chainId: number | undefined,
@@ -169,7 +181,13 @@ export function usesServerApprovalDiscovery(
     chainId === KATANA_CHAIN_ID ||
     chainId === SEI_CHAIN_ID ||
     chainId === PLASMA_CHAIN_ID ||
-    chainId === ABSTRACT_CHAIN_ID
+    chainId === ABSTRACT_CHAIN_ID ||
+    chainId === FRAXTAL_CHAIN_ID ||
+    chainId === TAIKO_CHAIN_ID ||
+    chainId === OPBNB_CHAIN_ID ||
+    chainId === MOONBEAM_CHAIN_ID ||
+    chainId === APECHAIN_CHAIN_ID ||
+    chainId === XDC_CHAIN_ID
   );
 }
 

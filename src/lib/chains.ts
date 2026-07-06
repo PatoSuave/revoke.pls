@@ -30,6 +30,12 @@ export const KATANA_CHAIN_ID = 747474;
 export const SEI_CHAIN_ID = 1329;
 export const PLASMA_CHAIN_ID = 9745;
 export const ABSTRACT_CHAIN_ID = 2741;
+export const FRAXTAL_CHAIN_ID = 252;
+export const TAIKO_CHAIN_ID = 167000;
+export const OPBNB_CHAIN_ID = 204;
+export const MOONBEAM_CHAIN_ID = 1284;
+export const APECHAIN_CHAIN_ID = 33139;
+export const XDC_CHAIN_ID = 50;
 export type SupportedChainId =
   | typeof PULSECHAIN_CHAIN_ID
   | typeof BSC_CHAIN_ID
@@ -50,7 +56,13 @@ export type SupportedChainId =
   | typeof KATANA_CHAIN_ID
   | typeof SEI_CHAIN_ID
   | typeof PLASMA_CHAIN_ID
-  | typeof ABSTRACT_CHAIN_ID;
+  | typeof ABSTRACT_CHAIN_ID
+  | typeof FRAXTAL_CHAIN_ID
+  | typeof TAIKO_CHAIN_ID
+  | typeof OPBNB_CHAIN_ID
+  | typeof MOONBEAM_CHAIN_ID
+  | typeof APECHAIN_CHAIN_ID
+  | typeof XDC_CHAIN_ID;
 
 const PULSECHAIN_RPC_DEFAULT = "https://rpc.pulsechain.com";
 const BSC_RPC_DEFAULT = "https://bsc-dataseed.bnbchain.org";
@@ -73,6 +85,12 @@ const KATANA_RPC_DEFAULT = "https://rpc.katana.network";
 const SEI_RPC_DEFAULT = "https://evm-rpc.sei-apis.com";
 const PLASMA_RPC_DEFAULT = "https://rpc.plasma.to";
 const ABSTRACT_RPC_DEFAULT = "https://api.mainnet.abs.xyz";
+const FRAXTAL_RPC_DEFAULT = "https://rpc.frax.com";
+const TAIKO_RPC_DEFAULT = "https://rpc.mainnet.taiko.xyz";
+const OPBNB_RPC_DEFAULT = "https://opbnb-mainnet-rpc.bnbchain.org";
+const MOONBEAM_RPC_DEFAULT = "https://rpc.api.moonbeam.network";
+const APECHAIN_RPC_DEFAULT = "https://rpc.apechain.com/http";
+const XDC_RPC_DEFAULT = "https://rpc.xdcrpc.com";
 
 const PULSECHAIN_EXPLORER_BASE_URL = "https://scan.pulsechain.com";
 const BSC_EXPLORER_BASE_URL = "https://bscscan.com";
@@ -94,6 +112,12 @@ const KATANA_EXPLORER_BASE_URL = "https://katanascan.com";
 const SEI_EXPLORER_BASE_URL = "https://seiscan.io";
 const PLASMA_EXPLORER_BASE_URL = "https://plasmascan.to";
 const ABSTRACT_EXPLORER_BASE_URL = "https://abscan.org";
+const FRAXTAL_EXPLORER_BASE_URL = "https://fraxscan.com";
+const TAIKO_EXPLORER_BASE_URL = "https://taikoscan.io";
+const OPBNB_EXPLORER_BASE_URL = "https://opbnb.bscscan.com";
+const MOONBEAM_EXPLORER_BASE_URL = "https://moonbeam.moonscan.io";
+const APECHAIN_EXPLORER_BASE_URL = "https://apescan.io";
+const XDC_EXPLORER_BASE_URL = "https://xdcscan.com";
 
 export const PULSECHAIN_EXPLORER_API_DEFAULT =
   "https://api.scan.pulsechain.com/api";
@@ -124,6 +148,15 @@ export const SEI_EXPLORER_API_DEFAULT = "https://api.etherscan.io/v2/api";
 export const PLASMA_EXPLORER_API_DEFAULT = "https://api.etherscan.io/v2/api";
 export const ABSTRACT_EXPLORER_API_DEFAULT =
   "https://api.etherscan.io/v2/api";
+export const FRAXTAL_EXPLORER_API_DEFAULT =
+  "https://api.etherscan.io/v2/api";
+export const TAIKO_EXPLORER_API_DEFAULT = "https://api.etherscan.io/v2/api";
+export const OPBNB_EXPLORER_API_DEFAULT = "https://api.etherscan.io/v2/api";
+export const MOONBEAM_EXPLORER_API_DEFAULT =
+  "https://api.etherscan.io/v2/api";
+export const APECHAIN_EXPLORER_API_DEFAULT =
+  "https://api.etherscan.io/v2/api";
+export const XDC_EXPLORER_API_DEFAULT = "https://api.etherscan.io/v2/api";
 export const BSC_DEPRECATED_V1_EXPLORER_API_URL =
   "https://api.bscscan.com/api";
 export const BASE_DEPRECATED_V1_EXPLORER_API_URL =
@@ -154,6 +187,15 @@ export const SEI_EXPLORER_CHAIN_ID_DEFAULT = SEI_CHAIN_ID.toString();
 export const PLASMA_EXPLORER_CHAIN_ID_DEFAULT = PLASMA_CHAIN_ID.toString();
 export const ABSTRACT_EXPLORER_CHAIN_ID_DEFAULT =
   ABSTRACT_CHAIN_ID.toString();
+export const FRAXTAL_EXPLORER_CHAIN_ID_DEFAULT =
+  FRAXTAL_CHAIN_ID.toString();
+export const TAIKO_EXPLORER_CHAIN_ID_DEFAULT = TAIKO_CHAIN_ID.toString();
+export const OPBNB_EXPLORER_CHAIN_ID_DEFAULT = OPBNB_CHAIN_ID.toString();
+export const MOONBEAM_EXPLORER_CHAIN_ID_DEFAULT =
+  MOONBEAM_CHAIN_ID.toString();
+export const APECHAIN_EXPLORER_CHAIN_ID_DEFAULT =
+  APECHAIN_CHAIN_ID.toString();
+export const XDC_EXPLORER_CHAIN_ID_DEFAULT = XDC_CHAIN_ID.toString();
 export const EIP_7825_MAX_TRANSACTION_GAS = 16_777_216n;
 export const BSC_OSAKA_MAX_TRANSACTION_GAS = EIP_7825_MAX_TRANSACTION_GAS;
 export const BSC_HIGH_GAS_WARNING_THRESHOLD =
@@ -179,7 +221,13 @@ export type SupportedChainKey =
   | "katana"
   | "sei"
   | "plasma"
-  | "abstract";
+  | "abstract"
+  | "fraxtal"
+  | "taiko"
+  | "opbnb"
+  | "moonbeam"
+  | "apechain"
+  | "xdc";
 
 function cleanEnv(value: string | undefined): string | undefined {
   const trimmed = value?.trim();
@@ -206,6 +254,12 @@ function cleanApiKey(value: string | undefined): string | undefined {
   if (cleaned === "PASTE_YOUR_SEI_EXPLORER_KEY_HERE") return undefined;
   if (cleaned === "PASTE_YOUR_PLASMA_EXPLORER_KEY_HERE") return undefined;
   if (cleaned === "PASTE_YOUR_ABSTRACT_EXPLORER_KEY_HERE") return undefined;
+  if (cleaned === "PASTE_YOUR_FRAXTAL_EXPLORER_KEY_HERE") return undefined;
+  if (cleaned === "PASTE_YOUR_TAIKO_EXPLORER_KEY_HERE") return undefined;
+  if (cleaned === "PASTE_YOUR_OPBNB_EXPLORER_KEY_HERE") return undefined;
+  if (cleaned === "PASTE_YOUR_MOONBEAM_EXPLORER_KEY_HERE") return undefined;
+  if (cleaned === "PASTE_YOUR_APECHAIN_EXPLORER_KEY_HERE") return undefined;
+  if (cleaned === "PASTE_YOUR_XDC_EXPLORER_KEY_HERE") return undefined;
   if (cleaned === "PASTE_YOUR_ETHERSCAN_V2_KEY_HERE") return undefined;
   if (cleaned === "your_bscscan_key") return undefined;
   if (cleaned === "your_polygonscan_key") return undefined;
@@ -224,6 +278,12 @@ function cleanApiKey(value: string | undefined): string | undefined {
   if (cleaned === "your_sei_explorer_key") return undefined;
   if (cleaned === "your_plasma_explorer_key") return undefined;
   if (cleaned === "your_abstract_explorer_key") return undefined;
+  if (cleaned === "your_fraxtal_explorer_key") return undefined;
+  if (cleaned === "your_taiko_explorer_key") return undefined;
+  if (cleaned === "your_opbnb_explorer_key") return undefined;
+  if (cleaned === "your_moonbeam_explorer_key") return undefined;
+  if (cleaned === "your_apechain_explorer_key") return undefined;
+  if (cleaned === "your_xdc_explorer_key") return undefined;
   if (cleaned === "YOUR_ETHERSCAN_V2_KEY") return undefined;
   return cleaned;
 }
@@ -275,6 +335,12 @@ const katanaRpcEnv = cleanEnv(process.env.NEXT_PUBLIC_KATANA_RPC_URL);
 const seiRpcEnv = cleanEnv(process.env.NEXT_PUBLIC_SEI_RPC_URL);
 const plasmaRpcEnv = cleanEnv(process.env.NEXT_PUBLIC_PLASMA_RPC_URL);
 const abstractRpcEnv = cleanEnv(process.env.NEXT_PUBLIC_ABSTRACT_RPC_URL);
+const fraxtalRpcEnv = cleanEnv(process.env.NEXT_PUBLIC_FRAXTAL_RPC_URL);
+const taikoRpcEnv = cleanEnv(process.env.NEXT_PUBLIC_TAIKO_RPC_URL);
+const opbnbRpcEnv = cleanEnv(process.env.NEXT_PUBLIC_OPBNB_RPC_URL);
+const moonbeamRpcEnv = cleanEnv(process.env.NEXT_PUBLIC_MOONBEAM_RPC_URL);
+const apechainRpcEnv = cleanEnv(process.env.NEXT_PUBLIC_APECHAIN_RPC_URL);
+const xdcRpcEnv = cleanEnv(process.env.NEXT_PUBLIC_XDC_RPC_URL);
 const pulsechainExplorerApiEnv = cleanEnv(
   process.env.NEXT_PUBLIC_PULSECHAIN_EXPLORER_API,
 );
@@ -335,6 +401,24 @@ const plasmaExplorerApiEnv = cleanEnv(
 const abstractExplorerApiEnv = cleanEnv(
   process.env.NEXT_PUBLIC_ABSTRACT_EXPLORER_API_URL,
 );
+const fraxtalExplorerApiEnv = cleanEnv(
+  process.env.NEXT_PUBLIC_FRAXTAL_EXPLORER_API_URL,
+);
+const taikoExplorerApiEnv = cleanEnv(
+  process.env.NEXT_PUBLIC_TAIKO_EXPLORER_API_URL,
+);
+const opbnbExplorerApiEnv = cleanEnv(
+  process.env.NEXT_PUBLIC_OPBNB_EXPLORER_API_URL,
+);
+const moonbeamExplorerApiEnv = cleanEnv(
+  process.env.NEXT_PUBLIC_MOONBEAM_EXPLORER_API_URL,
+);
+const apechainExplorerApiEnv = cleanEnv(
+  process.env.NEXT_PUBLIC_APECHAIN_EXPLORER_API_URL,
+);
+const xdcExplorerApiEnv = cleanEnv(
+  process.env.NEXT_PUBLIC_XDC_EXPLORER_API_URL,
+);
 const bscExplorerChainIdEnv = cleanEnv(
   process.env.NEXT_PUBLIC_BSC_EXPLORER_CHAIN_ID,
 );
@@ -388,6 +472,24 @@ const plasmaExplorerChainIdEnv = cleanEnv(
 );
 const abstractExplorerChainIdEnv = cleanEnv(
   process.env.NEXT_PUBLIC_ABSTRACT_EXPLORER_CHAIN_ID,
+);
+const fraxtalExplorerChainIdEnv = cleanEnv(
+  process.env.NEXT_PUBLIC_FRAXTAL_EXPLORER_CHAIN_ID,
+);
+const taikoExplorerChainIdEnv = cleanEnv(
+  process.env.NEXT_PUBLIC_TAIKO_EXPLORER_CHAIN_ID,
+);
+const opbnbExplorerChainIdEnv = cleanEnv(
+  process.env.NEXT_PUBLIC_OPBNB_EXPLORER_CHAIN_ID,
+);
+const moonbeamExplorerChainIdEnv = cleanEnv(
+  process.env.NEXT_PUBLIC_MOONBEAM_EXPLORER_CHAIN_ID,
+);
+const apechainExplorerChainIdEnv = cleanEnv(
+  process.env.NEXT_PUBLIC_APECHAIN_EXPLORER_CHAIN_ID,
+);
+const xdcExplorerChainIdEnv = cleanEnv(
+  process.env.NEXT_PUBLIC_XDC_EXPLORER_CHAIN_ID,
 );
 const bscPreferredApiKeyEnv = cleanApiKey(
   process.env.NEXT_PUBLIC_BSC_EXPLORER_API_KEY,
@@ -485,6 +587,30 @@ const abstractExplorerChainId =
   abstractExplorerChainIdEnv === ABSTRACT_EXPLORER_CHAIN_ID_DEFAULT
     ? abstractExplorerChainIdEnv
     : ABSTRACT_EXPLORER_CHAIN_ID_DEFAULT;
+const fraxtalExplorerChainId =
+  fraxtalExplorerChainIdEnv === FRAXTAL_EXPLORER_CHAIN_ID_DEFAULT
+    ? fraxtalExplorerChainIdEnv
+    : FRAXTAL_EXPLORER_CHAIN_ID_DEFAULT;
+const taikoExplorerChainId =
+  taikoExplorerChainIdEnv === TAIKO_EXPLORER_CHAIN_ID_DEFAULT
+    ? taikoExplorerChainIdEnv
+    : TAIKO_EXPLORER_CHAIN_ID_DEFAULT;
+const opbnbExplorerChainId =
+  opbnbExplorerChainIdEnv === OPBNB_EXPLORER_CHAIN_ID_DEFAULT
+    ? opbnbExplorerChainIdEnv
+    : OPBNB_EXPLORER_CHAIN_ID_DEFAULT;
+const moonbeamExplorerChainId =
+  moonbeamExplorerChainIdEnv === MOONBEAM_EXPLORER_CHAIN_ID_DEFAULT
+    ? moonbeamExplorerChainIdEnv
+    : MOONBEAM_EXPLORER_CHAIN_ID_DEFAULT;
+const apechainExplorerChainId =
+  apechainExplorerChainIdEnv === APECHAIN_EXPLORER_CHAIN_ID_DEFAULT
+    ? apechainExplorerChainIdEnv
+    : APECHAIN_EXPLORER_CHAIN_ID_DEFAULT;
+const xdcExplorerChainId =
+  xdcExplorerChainIdEnv === XDC_EXPLORER_CHAIN_ID_DEFAULT
+    ? xdcExplorerChainIdEnv
+    : XDC_EXPLORER_CHAIN_ID_DEFAULT;
 const bscExplorerApiKeyEnv = bscPreferredApiKeyEnv ?? bscScanApiKeyEnv;
 const bscDiscoveryWarnings = [
   bscDeprecatedV1ApiConfigured
@@ -604,6 +730,42 @@ const abstractDiscoveryWarnings = [
   abstractExplorerChainIdEnv &&
   abstractExplorerChainIdEnv !== ABSTRACT_EXPLORER_CHAIN_ID_DEFAULT
     ? `NEXT_PUBLIC_ABSTRACT_EXPLORER_CHAIN_ID must be ${ABSTRACT_EXPLORER_CHAIN_ID_DEFAULT} for Abstract. The app is using chainid=${ABSTRACT_EXPLORER_CHAIN_ID_DEFAULT}.`
+    : null,
+].filter((warning): warning is string => Boolean(warning));
+const fraxtalDiscoveryWarnings = [
+  fraxtalExplorerChainIdEnv &&
+  fraxtalExplorerChainIdEnv !== FRAXTAL_EXPLORER_CHAIN_ID_DEFAULT
+    ? `NEXT_PUBLIC_FRAXTAL_EXPLORER_CHAIN_ID must be ${FRAXTAL_EXPLORER_CHAIN_ID_DEFAULT} for Fraxtal. The app is using chainid=${FRAXTAL_EXPLORER_CHAIN_ID_DEFAULT}.`
+    : null,
+].filter((warning): warning is string => Boolean(warning));
+const taikoDiscoveryWarnings = [
+  taikoExplorerChainIdEnv &&
+  taikoExplorerChainIdEnv !== TAIKO_EXPLORER_CHAIN_ID_DEFAULT
+    ? `NEXT_PUBLIC_TAIKO_EXPLORER_CHAIN_ID must be ${TAIKO_EXPLORER_CHAIN_ID_DEFAULT} for Taiko Mainnet. The app is using chainid=${TAIKO_EXPLORER_CHAIN_ID_DEFAULT}.`
+    : null,
+].filter((warning): warning is string => Boolean(warning));
+const opbnbDiscoveryWarnings = [
+  opbnbExplorerChainIdEnv &&
+  opbnbExplorerChainIdEnv !== OPBNB_EXPLORER_CHAIN_ID_DEFAULT
+    ? `NEXT_PUBLIC_OPBNB_EXPLORER_CHAIN_ID must be ${OPBNB_EXPLORER_CHAIN_ID_DEFAULT} for opBNB. The app is using chainid=${OPBNB_EXPLORER_CHAIN_ID_DEFAULT}.`
+    : null,
+].filter((warning): warning is string => Boolean(warning));
+const moonbeamDiscoveryWarnings = [
+  moonbeamExplorerChainIdEnv &&
+  moonbeamExplorerChainIdEnv !== MOONBEAM_EXPLORER_CHAIN_ID_DEFAULT
+    ? `NEXT_PUBLIC_MOONBEAM_EXPLORER_CHAIN_ID must be ${MOONBEAM_EXPLORER_CHAIN_ID_DEFAULT} for Moonbeam. The app is using chainid=${MOONBEAM_EXPLORER_CHAIN_ID_DEFAULT}.`
+    : null,
+].filter((warning): warning is string => Boolean(warning));
+const apechainDiscoveryWarnings = [
+  apechainExplorerChainIdEnv &&
+  apechainExplorerChainIdEnv !== APECHAIN_EXPLORER_CHAIN_ID_DEFAULT
+    ? `NEXT_PUBLIC_APECHAIN_EXPLORER_CHAIN_ID must be ${APECHAIN_EXPLORER_CHAIN_ID_DEFAULT} for ApeChain. The app is using chainid=${APECHAIN_EXPLORER_CHAIN_ID_DEFAULT}.`
+    : null,
+].filter((warning): warning is string => Boolean(warning));
+const xdcDiscoveryWarnings = [
+  xdcExplorerChainIdEnv &&
+  xdcExplorerChainIdEnv !== XDC_EXPLORER_CHAIN_ID_DEFAULT
+    ? `NEXT_PUBLIC_XDC_EXPLORER_CHAIN_ID must be ${XDC_EXPLORER_CHAIN_ID_DEFAULT} for XDC Network. The app is using chainid=${XDC_EXPLORER_CHAIN_ID_DEFAULT}.`
     : null,
 ].filter((warning): warning is string => Boolean(warning));
 
@@ -1141,6 +1303,178 @@ export const abstract = defineChain({
   },
 });
 
+export const fraxtal = defineChain({
+  id: FRAXTAL_CHAIN_ID,
+  name: "Fraxtal",
+  nativeCurrency: {
+    name: "Frax",
+    symbol: "FRAX",
+    decimals: 18,
+  },
+  rpcUrls: {
+    default: {
+      http: [fraxtalRpcEnv ?? FRAXTAL_RPC_DEFAULT],
+    },
+  },
+  blockExplorers: {
+    default: {
+      name: "Fraxscan",
+      url: FRAXTAL_EXPLORER_BASE_URL,
+    },
+  },
+  contracts: {
+    multicall3: {
+      address: "0xcA11bde05977b3631167028862bE2a173976CA11",
+    },
+  },
+  testnet: false,
+});
+
+export const taiko = defineChain({
+  id: TAIKO_CHAIN_ID,
+  name: "Taiko Mainnet",
+  nativeCurrency: {
+    name: "Ether",
+    symbol: "ETH",
+    decimals: 18,
+  },
+  rpcUrls: {
+    default: {
+      http: [taikoRpcEnv ?? TAIKO_RPC_DEFAULT],
+      ...(taikoRpcEnv ? {} : { webSocket: ["wss://ws.mainnet.taiko.xyz"] }),
+    },
+  },
+  blockExplorers: {
+    default: {
+      name: "TaikoScan",
+      url: TAIKO_EXPLORER_BASE_URL,
+    },
+  },
+  contracts: {
+    multicall3: {
+      address: "0xcA11bde05977b3631167028862bE2a173976CA11",
+      blockCreated: 11269,
+    },
+  },
+  testnet: false,
+});
+
+export const opbnb = defineChain({
+  id: OPBNB_CHAIN_ID,
+  name: "opBNB",
+  nativeCurrency: {
+    name: "BNB",
+    symbol: "BNB",
+    decimals: 18,
+  },
+  rpcUrls: {
+    default: {
+      http: [opbnbRpcEnv ?? OPBNB_RPC_DEFAULT],
+    },
+  },
+  blockExplorers: {
+    default: {
+      name: "opBNB BscScan",
+      url: OPBNB_EXPLORER_BASE_URL,
+    },
+  },
+  contracts: {
+    multicall3: {
+      address: "0xcA11bde05977b3631167028862bE2a173976CA11",
+      blockCreated: 512881,
+    },
+  },
+  testnet: false,
+});
+
+export const moonbeam = defineChain({
+  id: MOONBEAM_CHAIN_ID,
+  name: "Moonbeam",
+  nativeCurrency: {
+    name: "Moonbeam",
+    symbol: "GLMR",
+    decimals: 18,
+  },
+  rpcUrls: {
+    default: {
+      http: [moonbeamRpcEnv ?? MOONBEAM_RPC_DEFAULT],
+      ...(moonbeamRpcEnv
+        ? {}
+        : { webSocket: ["wss://wss.api.moonbeam.network"] }),
+    },
+  },
+  blockExplorers: {
+    default: {
+      name: "Moonscan",
+      url: MOONBEAM_EXPLORER_BASE_URL,
+    },
+  },
+  contracts: {
+    multicall3: {
+      address: "0xcA11bde05977b3631167028862bE2a173976CA11",
+      blockCreated: 609002,
+    },
+  },
+  testnet: false,
+});
+
+export const apechain = defineChain({
+  id: APECHAIN_CHAIN_ID,
+  name: "ApeChain",
+  nativeCurrency: {
+    name: "ApeCoin",
+    symbol: "APE",
+    decimals: 18,
+  },
+  rpcUrls: {
+    default: {
+      http: [apechainRpcEnv ?? APECHAIN_RPC_DEFAULT],
+      ...(apechainRpcEnv ? {} : { webSocket: ["wss://rpc.apechain.com/ws"] }),
+    },
+  },
+  blockExplorers: {
+    default: {
+      name: "ApeScan",
+      url: APECHAIN_EXPLORER_BASE_URL,
+    },
+  },
+  contracts: {
+    multicall3: {
+      address: "0xcA11bde05977b3631167028862bE2a173976CA11",
+      blockCreated: 20889,
+    },
+  },
+  testnet: false,
+});
+
+export const xdc = defineChain({
+  id: XDC_CHAIN_ID,
+  name: "XDC Network",
+  nativeCurrency: {
+    name: "XDC",
+    symbol: "XDC",
+    decimals: 18,
+  },
+  rpcUrls: {
+    default: {
+      http: [xdcRpcEnv ?? XDC_RPC_DEFAULT],
+    },
+  },
+  blockExplorers: {
+    default: {
+      name: "XDCScan",
+      url: XDC_EXPLORER_BASE_URL,
+    },
+  },
+  contracts: {
+    multicall3: {
+      address: "0x0B1795ccA8E4eC4df02346a082df54D437F8D9aF",
+      blockCreated: 75884020,
+    },
+  },
+  testnet: false,
+});
+
 export interface DiscoverySourceConfig {
   /** Short machine-friendly identifier surfaced in dev/debug views. */
   id: string;
@@ -1417,6 +1751,36 @@ const abstractRpc = buildRpcConfig(
   "NEXT_PUBLIC_ABSTRACT_RPC_URL",
   ABSTRACT_RPC_DEFAULT,
   abstractRpcEnv,
+);
+const fraxtalRpc = buildRpcConfig(
+  "NEXT_PUBLIC_FRAXTAL_RPC_URL",
+  FRAXTAL_RPC_DEFAULT,
+  fraxtalRpcEnv,
+);
+const taikoRpc = buildRpcConfig(
+  "NEXT_PUBLIC_TAIKO_RPC_URL",
+  TAIKO_RPC_DEFAULT,
+  taikoRpcEnv,
+);
+const opbnbRpc = buildRpcConfig(
+  "NEXT_PUBLIC_OPBNB_RPC_URL",
+  OPBNB_RPC_DEFAULT,
+  opbnbRpcEnv,
+);
+const moonbeamRpc = buildRpcConfig(
+  "NEXT_PUBLIC_MOONBEAM_RPC_URL",
+  MOONBEAM_RPC_DEFAULT,
+  moonbeamRpcEnv,
+);
+const apechainRpc = buildRpcConfig(
+  "NEXT_PUBLIC_APECHAIN_RPC_URL",
+  APECHAIN_RPC_DEFAULT,
+  apechainRpcEnv,
+);
+const xdcRpc = buildRpcConfig(
+  "NEXT_PUBLIC_XDC_RPC_URL",
+  XDC_RPC_DEFAULT,
+  xdcRpcEnv,
 );
 
 const pulsechainDiscovery = buildDiscoveryConfig({
@@ -1885,6 +2249,150 @@ const abstractDiscovery = buildDiscoveryConfig({
   missingApiKeyMessage:
     "Abstract historical discovery uses Etherscan API V2. Hosted web deployments should use ABSTRACT_EXPLORER_API_KEY or ETHERSCAN_API_KEY server-side; do not expose explorer keys through NEXT_PUBLIC variables.",
   warnings: abstractDiscoveryWarnings,
+});
+
+const fraxtalDiscovery = buildDiscoveryConfig({
+  id: "etherscan-v2-fraxtal",
+  name: "Etherscan API V2 (Fraxtal logs)",
+  apiProviderKind: "etherscan-v2",
+  apiProviderName: "Etherscan API V2",
+  url: FRAXTAL_EXPLORER_BASE_URL,
+  apiUrlEnvVar: "NEXT_PUBLIC_FRAXTAL_EXPLORER_API_URL",
+  apiUrlDefault: FRAXTAL_EXPLORER_API_DEFAULT,
+  apiChainId: fraxtalExplorerChainId,
+  apiChainIdEnvVar: "NEXT_PUBLIC_FRAXTAL_EXPLORER_CHAIN_ID",
+  apiKeyEnvVar: "FRAXTAL_EXPLORER_API_KEY / ETHERSCAN_API_KEY",
+  apiKeyEnvVars: ["FRAXTAL_EXPLORER_API_KEY", "ETHERSCAN_API_KEY"],
+  apiUrlEnv: fraxtalExplorerApiEnv,
+  requiresApiKey: true,
+  queryParams: {
+    chainid: fraxtalExplorerChainId,
+  },
+  limitations:
+    "Etherscan API V2 can rate-limit, cap responses, or require smaller block windows for Fraxtal logs.",
+  missingApiKeyMessage:
+    "Fraxtal historical discovery uses Etherscan API V2. Hosted web deployments should use FRAXTAL_EXPLORER_API_KEY or ETHERSCAN_API_KEY server-side; do not expose explorer keys through NEXT_PUBLIC variables.",
+  warnings: fraxtalDiscoveryWarnings,
+});
+
+const taikoDiscovery = buildDiscoveryConfig({
+  id: "etherscan-v2-taiko",
+  name: "Etherscan API V2 (Taiko logs)",
+  apiProviderKind: "etherscan-v2",
+  apiProviderName: "Etherscan API V2",
+  url: TAIKO_EXPLORER_BASE_URL,
+  apiUrlEnvVar: "NEXT_PUBLIC_TAIKO_EXPLORER_API_URL",
+  apiUrlDefault: TAIKO_EXPLORER_API_DEFAULT,
+  apiChainId: taikoExplorerChainId,
+  apiChainIdEnvVar: "NEXT_PUBLIC_TAIKO_EXPLORER_CHAIN_ID",
+  apiKeyEnvVar: "TAIKO_EXPLORER_API_KEY / ETHERSCAN_API_KEY",
+  apiKeyEnvVars: ["TAIKO_EXPLORER_API_KEY", "ETHERSCAN_API_KEY"],
+  apiUrlEnv: taikoExplorerApiEnv,
+  requiresApiKey: true,
+  queryParams: {
+    chainid: taikoExplorerChainId,
+  },
+  limitations:
+    "Etherscan API V2 can rate-limit, cap responses, or require smaller block windows for Taiko logs.",
+  missingApiKeyMessage:
+    "Taiko historical discovery uses Etherscan API V2. Hosted web deployments should use TAIKO_EXPLORER_API_KEY or ETHERSCAN_API_KEY server-side; do not expose explorer keys through NEXT_PUBLIC variables.",
+  warnings: taikoDiscoveryWarnings,
+});
+
+const opbnbDiscovery = buildDiscoveryConfig({
+  id: "etherscan-v2-opbnb",
+  name: "Etherscan API V2 (opBNB logs)",
+  apiProviderKind: "etherscan-v2",
+  apiProviderName: "Etherscan API V2",
+  url: OPBNB_EXPLORER_BASE_URL,
+  apiUrlEnvVar: "NEXT_PUBLIC_OPBNB_EXPLORER_API_URL",
+  apiUrlDefault: OPBNB_EXPLORER_API_DEFAULT,
+  apiChainId: opbnbExplorerChainId,
+  apiChainIdEnvVar: "NEXT_PUBLIC_OPBNB_EXPLORER_CHAIN_ID",
+  apiKeyEnvVar: "OPBNB_EXPLORER_API_KEY / ETHERSCAN_API_KEY",
+  apiKeyEnvVars: ["OPBNB_EXPLORER_API_KEY", "ETHERSCAN_API_KEY"],
+  apiUrlEnv: opbnbExplorerApiEnv,
+  requiresApiKey: true,
+  queryParams: {
+    chainid: opbnbExplorerChainId,
+  },
+  limitations:
+    "Etherscan API V2 can rate-limit, cap responses, or require smaller block windows for opBNB logs.",
+  missingApiKeyMessage:
+    "opBNB historical discovery uses Etherscan API V2. Hosted web deployments should use OPBNB_EXPLORER_API_KEY or ETHERSCAN_API_KEY server-side; do not expose explorer keys through NEXT_PUBLIC variables.",
+  warnings: opbnbDiscoveryWarnings,
+});
+
+const moonbeamDiscovery = buildDiscoveryConfig({
+  id: "etherscan-v2-moonbeam",
+  name: "Etherscan API V2 (Moonbeam logs)",
+  apiProviderKind: "etherscan-v2",
+  apiProviderName: "Etherscan API V2",
+  url: MOONBEAM_EXPLORER_BASE_URL,
+  apiUrlEnvVar: "NEXT_PUBLIC_MOONBEAM_EXPLORER_API_URL",
+  apiUrlDefault: MOONBEAM_EXPLORER_API_DEFAULT,
+  apiChainId: moonbeamExplorerChainId,
+  apiChainIdEnvVar: "NEXT_PUBLIC_MOONBEAM_EXPLORER_CHAIN_ID",
+  apiKeyEnvVar: "MOONBEAM_EXPLORER_API_KEY / ETHERSCAN_API_KEY",
+  apiKeyEnvVars: ["MOONBEAM_EXPLORER_API_KEY", "ETHERSCAN_API_KEY"],
+  apiUrlEnv: moonbeamExplorerApiEnv,
+  requiresApiKey: true,
+  queryParams: {
+    chainid: moonbeamExplorerChainId,
+  },
+  limitations:
+    "Etherscan API V2 can rate-limit, cap responses, or require smaller block windows for Moonbeam logs.",
+  missingApiKeyMessage:
+    "Moonbeam historical discovery uses Etherscan API V2. Hosted web deployments should use MOONBEAM_EXPLORER_API_KEY or ETHERSCAN_API_KEY server-side; do not expose explorer keys through NEXT_PUBLIC variables.",
+  warnings: moonbeamDiscoveryWarnings,
+});
+
+const apechainDiscovery = buildDiscoveryConfig({
+  id: "etherscan-v2-apechain",
+  name: "Etherscan API V2 (ApeChain logs)",
+  apiProviderKind: "etherscan-v2",
+  apiProviderName: "Etherscan API V2",
+  url: APECHAIN_EXPLORER_BASE_URL,
+  apiUrlEnvVar: "NEXT_PUBLIC_APECHAIN_EXPLORER_API_URL",
+  apiUrlDefault: APECHAIN_EXPLORER_API_DEFAULT,
+  apiChainId: apechainExplorerChainId,
+  apiChainIdEnvVar: "NEXT_PUBLIC_APECHAIN_EXPLORER_CHAIN_ID",
+  apiKeyEnvVar: "APECHAIN_EXPLORER_API_KEY / ETHERSCAN_API_KEY",
+  apiKeyEnvVars: ["APECHAIN_EXPLORER_API_KEY", "ETHERSCAN_API_KEY"],
+  apiUrlEnv: apechainExplorerApiEnv,
+  requiresApiKey: true,
+  queryParams: {
+    chainid: apechainExplorerChainId,
+  },
+  limitations:
+    "Etherscan API V2 can rate-limit, cap responses, or require smaller block windows for ApeChain logs.",
+  missingApiKeyMessage:
+    "ApeChain historical discovery uses Etherscan API V2. Hosted web deployments should use APECHAIN_EXPLORER_API_KEY or ETHERSCAN_API_KEY server-side; do not expose explorer keys through NEXT_PUBLIC variables.",
+  warnings: apechainDiscoveryWarnings,
+});
+
+const xdcDiscovery = buildDiscoveryConfig({
+  id: "etherscan-v2-xdc",
+  name: "Etherscan API V2 (XDC Network logs)",
+  apiProviderKind: "etherscan-v2",
+  apiProviderName: "Etherscan API V2",
+  url: XDC_EXPLORER_BASE_URL,
+  apiUrlEnvVar: "NEXT_PUBLIC_XDC_EXPLORER_API_URL",
+  apiUrlDefault: XDC_EXPLORER_API_DEFAULT,
+  apiChainId: xdcExplorerChainId,
+  apiChainIdEnvVar: "NEXT_PUBLIC_XDC_EXPLORER_CHAIN_ID",
+  apiKeyEnvVar: "XDC_EXPLORER_API_KEY / ETHERSCAN_API_KEY",
+  apiKeyEnvVars: ["XDC_EXPLORER_API_KEY", "ETHERSCAN_API_KEY"],
+  apiUrlEnv: xdcExplorerApiEnv,
+  requiresApiKey: true,
+  queryParams: {
+    chainid: xdcExplorerChainId,
+  },
+  limitations:
+    "Etherscan API V2 can rate-limit, cap responses, or require smaller block windows for XDC Network logs.",
+  missingApiKeyMessage:
+    "XDC Network historical discovery uses Etherscan API V2. Hosted web deployments should use XDC_EXPLORER_API_KEY or ETHERSCAN_API_KEY server-side; do not expose explorer keys through NEXT_PUBLIC variables.",
+  warnings: xdcDiscoveryWarnings,
 });
 
 export const supportedChainConfigs = {
@@ -2591,6 +3099,216 @@ export const supportedChainConfigs = {
       nftOperator: "ERC-721/ERC-1155",
     },
   },
+  [FRAXTAL_CHAIN_ID]: {
+    key: "fraxtal",
+    chain: fraxtal,
+    chainId: FRAXTAL_CHAIN_ID,
+    displayName: "Fraxtal",
+    shortName: "Fraxtal",
+    nativeSymbol: "FRAX",
+    rpc: fraxtalRpc,
+    explorer: {
+      name: "Fraxscan",
+      baseUrl: FRAXTAL_EXPLORER_BASE_URL,
+      apiUrl: fraxtalDiscovery.apiUrl,
+      apiUrlEnvVar: fraxtalDiscovery.apiUrlEnvVar,
+      apiKeyEnvVar: fraxtalDiscovery.apiKeyEnvVar,
+      urls: explorerUrls(FRAXTAL_EXPLORER_BASE_URL),
+    },
+    discovery: fraxtalDiscovery,
+    discoverySettings: {
+      sourceKind: "explorer-logs",
+      providerName: "Etherscan API V2",
+      approvalEventTopicMode: "topic0-topic1-owner",
+      defaultFromBlock: "0",
+      defaultToBlock: "latest",
+      pageSize: 1000,
+      historicalRpcLogs: "disabled",
+      capWarning:
+        "Etherscan API V2 may rate-limit, cap pages, or require smaller windows for Fraxtal logs; incomplete discovery is surfaced to the user.",
+    },
+    standardLabels: {
+      fungible: "ERC-20",
+      nft: "ERC-721",
+      multiToken: "ERC-1155",
+      nftOperator: "ERC-721/ERC-1155",
+    },
+  },
+  [TAIKO_CHAIN_ID]: {
+    key: "taiko",
+    chain: taiko,
+    chainId: TAIKO_CHAIN_ID,
+    displayName: "Taiko Mainnet",
+    shortName: "Taiko",
+    nativeSymbol: "ETH",
+    rpc: taikoRpc,
+    explorer: {
+      name: "TaikoScan",
+      baseUrl: TAIKO_EXPLORER_BASE_URL,
+      apiUrl: taikoDiscovery.apiUrl,
+      apiUrlEnvVar: taikoDiscovery.apiUrlEnvVar,
+      apiKeyEnvVar: taikoDiscovery.apiKeyEnvVar,
+      urls: explorerUrls(TAIKO_EXPLORER_BASE_URL),
+    },
+    discovery: taikoDiscovery,
+    discoverySettings: {
+      sourceKind: "explorer-logs",
+      providerName: "Etherscan API V2",
+      approvalEventTopicMode: "topic0-topic1-owner",
+      defaultFromBlock: "0",
+      defaultToBlock: "latest",
+      pageSize: 1000,
+      historicalRpcLogs: "disabled",
+      capWarning:
+        "Etherscan API V2 may rate-limit, cap pages, or require smaller windows for Taiko logs; incomplete discovery is surfaced to the user.",
+    },
+    standardLabels: {
+      fungible: "ERC-20",
+      nft: "ERC-721",
+      multiToken: "ERC-1155",
+      nftOperator: "ERC-721/ERC-1155",
+    },
+  },
+  [OPBNB_CHAIN_ID]: {
+    key: "opbnb",
+    chain: opbnb,
+    chainId: OPBNB_CHAIN_ID,
+    displayName: "opBNB",
+    shortName: "opBNB",
+    nativeSymbol: "BNB",
+    rpc: opbnbRpc,
+    explorer: {
+      name: "opBNB BscScan",
+      baseUrl: OPBNB_EXPLORER_BASE_URL,
+      apiUrl: opbnbDiscovery.apiUrl,
+      apiUrlEnvVar: opbnbDiscovery.apiUrlEnvVar,
+      apiKeyEnvVar: opbnbDiscovery.apiKeyEnvVar,
+      urls: explorerUrls(OPBNB_EXPLORER_BASE_URL),
+    },
+    discovery: opbnbDiscovery,
+    discoverySettings: {
+      sourceKind: "explorer-logs",
+      providerName: "Etherscan API V2",
+      approvalEventTopicMode: "topic0-topic1-owner",
+      defaultFromBlock: "0",
+      defaultToBlock: "latest",
+      pageSize: 1000,
+      historicalRpcLogs: "disabled",
+      capWarning:
+        "Etherscan API V2 may rate-limit, cap pages, or require smaller windows for opBNB logs; incomplete discovery is surfaced to the user.",
+    },
+    standardLabels: {
+      fungible: "BEP-20",
+      nft: "BEP-721",
+      multiToken: "BEP-1155",
+      nftOperator: "BEP-721/BEP-1155",
+    },
+  },
+  [MOONBEAM_CHAIN_ID]: {
+    key: "moonbeam",
+    chain: moonbeam,
+    chainId: MOONBEAM_CHAIN_ID,
+    displayName: "Moonbeam",
+    shortName: "Moonbeam",
+    nativeSymbol: "GLMR",
+    rpc: moonbeamRpc,
+    explorer: {
+      name: "Moonscan",
+      baseUrl: MOONBEAM_EXPLORER_BASE_URL,
+      apiUrl: moonbeamDiscovery.apiUrl,
+      apiUrlEnvVar: moonbeamDiscovery.apiUrlEnvVar,
+      apiKeyEnvVar: moonbeamDiscovery.apiKeyEnvVar,
+      urls: explorerUrls(MOONBEAM_EXPLORER_BASE_URL),
+    },
+    discovery: moonbeamDiscovery,
+    discoverySettings: {
+      sourceKind: "explorer-logs",
+      providerName: "Etherscan API V2",
+      approvalEventTopicMode: "topic0-topic1-owner",
+      defaultFromBlock: "0",
+      defaultToBlock: "latest",
+      pageSize: 1000,
+      historicalRpcLogs: "disabled",
+      capWarning:
+        "Etherscan API V2 may rate-limit, cap pages, or require smaller windows for Moonbeam logs; incomplete discovery is surfaced to the user.",
+    },
+    standardLabels: {
+      fungible: "ERC-20",
+      nft: "ERC-721",
+      multiToken: "ERC-1155",
+      nftOperator: "ERC-721/ERC-1155",
+    },
+  },
+  [APECHAIN_CHAIN_ID]: {
+    key: "apechain",
+    chain: apechain,
+    chainId: APECHAIN_CHAIN_ID,
+    displayName: "ApeChain",
+    shortName: "ApeChain",
+    nativeSymbol: "APE",
+    rpc: apechainRpc,
+    explorer: {
+      name: "ApeScan",
+      baseUrl: APECHAIN_EXPLORER_BASE_URL,
+      apiUrl: apechainDiscovery.apiUrl,
+      apiUrlEnvVar: apechainDiscovery.apiUrlEnvVar,
+      apiKeyEnvVar: apechainDiscovery.apiKeyEnvVar,
+      urls: explorerUrls(APECHAIN_EXPLORER_BASE_URL),
+    },
+    discovery: apechainDiscovery,
+    discoverySettings: {
+      sourceKind: "explorer-logs",
+      providerName: "Etherscan API V2",
+      approvalEventTopicMode: "topic0-topic1-owner",
+      defaultFromBlock: "0",
+      defaultToBlock: "latest",
+      pageSize: 1000,
+      historicalRpcLogs: "disabled",
+      capWarning:
+        "Etherscan API V2 may rate-limit, cap pages, or require smaller windows for ApeChain logs; incomplete discovery is surfaced to the user.",
+    },
+    standardLabels: {
+      fungible: "ERC-20",
+      nft: "ERC-721",
+      multiToken: "ERC-1155",
+      nftOperator: "ERC-721/ERC-1155",
+    },
+  },
+  [XDC_CHAIN_ID]: {
+    key: "xdc",
+    chain: xdc,
+    chainId: XDC_CHAIN_ID,
+    displayName: "XDC Network",
+    shortName: "XDC",
+    nativeSymbol: "XDC",
+    rpc: xdcRpc,
+    explorer: {
+      name: "XDCScan",
+      baseUrl: XDC_EXPLORER_BASE_URL,
+      apiUrl: xdcDiscovery.apiUrl,
+      apiUrlEnvVar: xdcDiscovery.apiUrlEnvVar,
+      apiKeyEnvVar: xdcDiscovery.apiKeyEnvVar,
+      urls: explorerUrls(XDC_EXPLORER_BASE_URL),
+    },
+    discovery: xdcDiscovery,
+    discoverySettings: {
+      sourceKind: "explorer-logs",
+      providerName: "Etherscan API V2",
+      approvalEventTopicMode: "topic0-topic1-owner",
+      defaultFromBlock: "0",
+      defaultToBlock: "latest",
+      pageSize: 1000,
+      historicalRpcLogs: "disabled",
+      capWarning:
+        "Etherscan API V2 may rate-limit, cap pages, or require smaller windows for XDC Network logs; incomplete discovery is surfaced to the user.",
+    },
+    standardLabels: {
+      fungible: "ERC-20",
+      nft: "ERC-721",
+      multiToken: "ERC-1155",
+      nftOperator: "ERC-721/ERC-1155",
+    },
+  },
 } as const satisfies Record<number, SupportedChainConfig>;
 
 export const supportedChains = [
@@ -2614,6 +3332,12 @@ export const supportedChains = [
   sei,
   plasma,
   abstract,
+  fraxtal,
+  taiko,
+  opbnb,
+  moonbeam,
+  apechain,
+  xdc,
 ] as const;
 
 export function isSupportedChainId(
@@ -2652,6 +3376,12 @@ export const supportedChainConfigList = [
   supportedChainConfigs[SEI_CHAIN_ID],
   supportedChainConfigs[PLASMA_CHAIN_ID],
   supportedChainConfigs[ABSTRACT_CHAIN_ID],
+  supportedChainConfigs[FRAXTAL_CHAIN_ID],
+  supportedChainConfigs[TAIKO_CHAIN_ID],
+  supportedChainConfigs[OPBNB_CHAIN_ID],
+  supportedChainConfigs[MOONBEAM_CHAIN_ID],
+  supportedChainConfigs[APECHAIN_CHAIN_ID],
+  supportedChainConfigs[XDC_CHAIN_ID],
 ] as const;
 
 function joinNames(names: readonly string[]): string {

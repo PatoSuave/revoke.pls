@@ -3,25 +3,31 @@ import { getAddress } from "viem";
 
 import {
   ABSTRACT_CHAIN_ID,
+  APECHAIN_CHAIN_ID,
   AVALANCHE_CHAIN_ID,
   BASE_CHAIN_ID,
   BERACHAIN_CHAIN_ID,
   BLAST_CHAIN_ID,
   BSC_CHAIN_ID,
   CELO_CHAIN_ID,
+  FRAXTAL_CHAIN_ID,
   GNOSIS_CHAIN_ID,
   KATANA_CHAIN_ID,
   LINEA_CHAIN_ID,
   MANTLE_CHAIN_ID,
   MONAD_CHAIN_ID,
+  MOONBEAM_CHAIN_ID,
+  OPBNB_CHAIN_ID,
   PLASMA_CHAIN_ID,
   POLYGON_CHAIN_ID,
   PULSECHAIN_CHAIN_ID,
   ROBINHOOD_CHAIN_ID,
   SEI_CHAIN_ID,
   SONIC_CHAIN_ID,
+  TAIKO_CHAIN_ID,
   UNICHAIN_CHAIN_ID,
   WORLDCHAIN_CHAIN_ID,
+  XDC_CHAIN_ID,
 } from "@/lib/chains";
 import {
   ARBITRUM_TOKEN_LOGO_CHAIN_ID,
@@ -119,6 +125,24 @@ describe("token logo helpers", () => {
     expect(getDexScreenerChainSlugForTokenLogos(ABSTRACT_CHAIN_ID)).toBe(
       "abstract",
     );
+    expect(isTokenLogoSupportedChain(FRAXTAL_CHAIN_ID)).toBe(true);
+    expect(getDexScreenerChainSlugForTokenLogos(FRAXTAL_CHAIN_ID)).toBe(
+      "fraxtal",
+    );
+    expect(isTokenLogoSupportedChain(TAIKO_CHAIN_ID)).toBe(true);
+    expect(getDexScreenerChainSlugForTokenLogos(TAIKO_CHAIN_ID)).toBe("taiko");
+    expect(isTokenLogoSupportedChain(OPBNB_CHAIN_ID)).toBe(true);
+    expect(getDexScreenerChainSlugForTokenLogos(OPBNB_CHAIN_ID)).toBe("opbnb");
+    expect(isTokenLogoSupportedChain(MOONBEAM_CHAIN_ID)).toBe(true);
+    expect(getDexScreenerChainSlugForTokenLogos(MOONBEAM_CHAIN_ID)).toBe(
+      "moonbeam",
+    );
+    expect(isTokenLogoSupportedChain(APECHAIN_CHAIN_ID)).toBe(true);
+    expect(getDexScreenerChainSlugForTokenLogos(APECHAIN_CHAIN_ID)).toBe(
+      "apechain",
+    );
+    expect(isTokenLogoSupportedChain(XDC_CHAIN_ID)).toBe(true);
+    expect(getDexScreenerChainSlugForTokenLogos(XDC_CHAIN_ID)).toBe("xdc");
     expect(isTokenLogoSupportedChain(ARBITRUM_TOKEN_LOGO_CHAIN_ID)).toBe(true);
     expect(getDexScreenerChainSlugForTokenLogos(ARBITRUM_TOKEN_LOGO_CHAIN_ID)).toBe(
       "arbitrum",

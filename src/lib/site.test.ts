@@ -83,6 +83,12 @@ describe("siteConfig nav", () => {
     expect(copy).toContain("Sei");
     expect(copy).toContain("Plasma");
     expect(copy).toContain("Abstract");
+    expect(copy).toContain("Fraxtal");
+    expect(copy).toContain("Taiko");
+    expect(copy).toContain("opBNB");
+    expect(copy).toContain("Moonbeam");
+    expect(copy).toContain("ApeChain");
+    expect(copy).toContain("XDC");
     expect(siteConfig.links.lineascan).toBe("https://lineascan.build");
     expect(siteConfig.links.blastscan).toBe("https://blastscan.io");
     expect(siteConfig.links.berascan).toBe("https://berascan.com");
@@ -91,5 +97,11 @@ describe("siteConfig nav", () => {
     expect(siteConfig.links.seiscan).toBe("https://seiscan.io");
     expect(siteConfig.links.plasmascan).toBe("https://plasmascan.to");
     expect(siteConfig.links.abscan).toBe("https://abscan.org");
+    expect(siteConfig.links.fraxscan).toBe("https://fraxscan.com");
+    expect(siteConfig.links.taikoscan).toBe("https://taikoscan.io");
+    expect(siteConfig.links.opbnbscan).toBe("https://opbnb.bscscan.com");
+    expect(siteConfig.links.moonscan).toBe("https://moonbeam.moonscan.io");
+    expect(siteConfig.links.apescan).toBe("https://apescan.io");
+    expect(siteConfig.links.xdcscan).toBe("https://xdcscan.com");
   });
 });

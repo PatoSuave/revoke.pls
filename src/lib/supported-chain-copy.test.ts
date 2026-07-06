@@ -36,17 +36,23 @@ describe("supported chain copy", () => {
       "Sei",
       "Plasma",
       "Abstract",
+      "Fraxtal",
+      "Taiko Mainnet",
+      "opBNB",
+      "Moonbeam",
+      "ApeChain",
+      "XDC Network",
       "Ethereum Mainnet",
       "Arbitrum One",
       "Optimism",
       "HyperEVM",
     ]);
-    expect(LIVE_SUPPORTED_CHAIN_COUNT).toBe(24);
+    expect(LIVE_SUPPORTED_CHAIN_COUNT).toBe(30);
     expect(LIVE_SUPPORTED_CHAIN_LIST).toBe(
-      "PulseChain, BNB Smart Chain, Base, Polygon, Sonic Mainnet, Avalanche C-Chain, Mantle, Linea, Blast, Berachain, Celo, Gnosis, Unichain, World Chain, Robinhood Chain, Monad, Katana, Sei, Plasma, Abstract, Ethereum Mainnet, Arbitrum One, Optimism, and HyperEVM",
+      "PulseChain, BNB Smart Chain, Base, Polygon, Sonic Mainnet, Avalanche C-Chain, Mantle, Linea, Blast, Berachain, Celo, Gnosis, Unichain, World Chain, Robinhood Chain, Monad, Katana, Sei, Plasma, Abstract, Fraxtal, Taiko Mainnet, opBNB, Moonbeam, ApeChain, XDC Network, Ethereum Mainnet, Arbitrum One, Optimism, and HyperEVM",
     );
     expect(LIVE_SUPPORTED_CHAIN_COMPACT_LIST).toBe(
-      "PulseChain, BSC, Base, Polygon, Sonic, Avalanche, Mantle, Linea, Blast, Berachain, Celo, Gnosis, Unichain, World, Robinhood, Monad, Katana, Sei, Plasma, Abstract, Ethereum, Arbitrum, Optimism, and HyperEVM",
+      "PulseChain, BSC, Base, Polygon, Sonic, Avalanche, Mantle, Linea, Blast, Berachain, Celo, Gnosis, Unichain, World, Robinhood, Monad, Katana, Sei, Plasma, Abstract, Fraxtal, Taiko, opBNB, Moonbeam, ApeChain, XDC, Ethereum, Arbitrum, Optimism, and HyperEVM",
     );
   });
 

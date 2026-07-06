@@ -328,8 +328,8 @@ HyperEVM secret exposure.
       batch revoke is live.
 - [ ] Supported-chain matrix lists Linea, Blast, Berachain, Celo, Gnosis,
       Unichain, World Chain, Robinhood Chain, Monad, Katana, Sei, Plasma, and
-      Abstract as full generic scan + revoke chains with no safety-guarantee
-      language.
+      Abstract, Fraxtal, Taiko, opBNB, Moonbeam, ApeChain, and XDC as full
+      generic scan + revoke chains with no safety-guarantee language.
 - [ ] The app never requests a seed phrase, private key, mnemonic, or raw
       signing secret.
 - [ ] No spender or protocol is described as safe, unsafe, endorsed, or trusted

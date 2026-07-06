@@ -2,25 +2,31 @@ import { describe, expect, it } from "vitest";
 
 import {
   ABSTRACT_CHAIN_ID,
+  APECHAIN_CHAIN_ID,
   AVALANCHE_CHAIN_ID,
   BASE_CHAIN_ID,
   BERACHAIN_CHAIN_ID,
   BLAST_CHAIN_ID,
   BSC_CHAIN_ID,
   CELO_CHAIN_ID,
+  FRAXTAL_CHAIN_ID,
   GNOSIS_CHAIN_ID,
   KATANA_CHAIN_ID,
   LINEA_CHAIN_ID,
   MANTLE_CHAIN_ID,
   MONAD_CHAIN_ID,
+  MOONBEAM_CHAIN_ID,
+  OPBNB_CHAIN_ID,
   PLASMA_CHAIN_ID,
   POLYGON_CHAIN_ID,
   PULSECHAIN_CHAIN_ID,
   ROBINHOOD_CHAIN_ID,
   SEI_CHAIN_ID,
   SONIC_CHAIN_ID,
+  TAIKO_CHAIN_ID,
   UNICHAIN_CHAIN_ID,
   WORLDCHAIN_CHAIN_ID,
+  XDC_CHAIN_ID,
   getSupportedChainShortNames,
   isSupportedChainId,
 } from "@/lib/chains";
@@ -160,6 +166,36 @@ describe("active chain resolution", () => {
       walletChainId: ABSTRACT_CHAIN_ID,
       wagmiChainId: PULSECHAIN_CHAIN_ID,
     });
+    const fraxtalResult = resolveActiveChain({
+      isConnected: true,
+      walletChainId: FRAXTAL_CHAIN_ID,
+      wagmiChainId: PULSECHAIN_CHAIN_ID,
+    });
+    const taikoResult = resolveActiveChain({
+      isConnected: true,
+      walletChainId: TAIKO_CHAIN_ID,
+      wagmiChainId: PULSECHAIN_CHAIN_ID,
+    });
+    const opbnbResult = resolveActiveChain({
+      isConnected: true,
+      walletChainId: OPBNB_CHAIN_ID,
+      wagmiChainId: PULSECHAIN_CHAIN_ID,
+    });
+    const moonbeamResult = resolveActiveChain({
+      isConnected: true,
+      walletChainId: MOONBEAM_CHAIN_ID,
+      wagmiChainId: PULSECHAIN_CHAIN_ID,
+    });
+    const apechainResult = resolveActiveChain({
+      isConnected: true,
+      walletChainId: APECHAIN_CHAIN_ID,
+      wagmiChainId: PULSECHAIN_CHAIN_ID,
+    });
+    const xdcResult = resolveActiveChain({
+      isConnected: true,
+      walletChainId: XDC_CHAIN_ID,
+      wagmiChainId: PULSECHAIN_CHAIN_ID,
+    });
 
     expect(sonicResult.status).toBe("supported");
     expect(sonicResult.activeChainId).toBe(SONIC_CHAIN_ID);
@@ -213,6 +249,24 @@ describe("active chain resolution", () => {
     expect(abstractResult.status).toBe("supported");
     expect(abstractResult.activeChainId).toBe(ABSTRACT_CHAIN_ID);
     expect(abstractResult.activeChainConfig?.displayName).toBe("Abstract");
+    expect(fraxtalResult.status).toBe("supported");
+    expect(fraxtalResult.activeChainId).toBe(FRAXTAL_CHAIN_ID);
+    expect(fraxtalResult.activeChainConfig?.displayName).toBe("Fraxtal");
+    expect(taikoResult.status).toBe("supported");
+    expect(taikoResult.activeChainId).toBe(TAIKO_CHAIN_ID);
+    expect(taikoResult.activeChainConfig?.displayName).toBe("Taiko Mainnet");
+    expect(opbnbResult.status).toBe("supported");
+    expect(opbnbResult.activeChainId).toBe(OPBNB_CHAIN_ID);
+    expect(opbnbResult.activeChainConfig?.displayName).toBe("opBNB");
+    expect(moonbeamResult.status).toBe("supported");
+    expect(moonbeamResult.activeChainId).toBe(MOONBEAM_CHAIN_ID);
+    expect(moonbeamResult.activeChainConfig?.displayName).toBe("Moonbeam");
+    expect(apechainResult.status).toBe("supported");
+    expect(apechainResult.activeChainId).toBe(APECHAIN_CHAIN_ID);
+    expect(apechainResult.activeChainConfig?.displayName).toBe("ApeChain");
+    expect(xdcResult.status).toBe("supported");
+    expect(xdcResult.activeChainId).toBe(XDC_CHAIN_ID);
+    expect(xdcResult.activeChainConfig?.displayName).toBe("XDC Network");
   });
 
   it("does not default to PulseChain when disconnected", () => {
@@ -243,7 +297,7 @@ describe("active chain resolution", () => {
 
   it("uses all generic supported chains in supported-network copy", () => {
     expect(getSupportedChainShortNames()).toBe(
-      "PulseChain, BSC, Base, Polygon, Sonic, Avalanche, Mantle, Linea, Blast, Berachain, Celo, Gnosis, Unichain, World, Robinhood, Monad, Katana, Sei, Plasma, or Abstract",
+      "PulseChain, BSC, Base, Polygon, Sonic, Avalanche, Mantle, Linea, Blast, Berachain, Celo, Gnosis, Unichain, World, Robinhood, Monad, Katana, Sei, Plasma, Abstract, Fraxtal, Taiko, opBNB, Moonbeam, ApeChain, or XDC",
     );
   });
 

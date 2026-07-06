@@ -12,25 +12,31 @@ import {
 } from "@/lib/approval-discovery-api";
 import {
   ABSTRACT_CHAIN_ID,
+  APECHAIN_CHAIN_ID,
   AVALANCHE_CHAIN_ID,
   BASE_CHAIN_ID,
   BERACHAIN_CHAIN_ID,
   BLAST_CHAIN_ID,
   BSC_CHAIN_ID,
   CELO_CHAIN_ID,
+  FRAXTAL_CHAIN_ID,
   GNOSIS_CHAIN_ID,
   KATANA_CHAIN_ID,
   LINEA_CHAIN_ID,
   MANTLE_CHAIN_ID,
   MONAD_CHAIN_ID,
+  MOONBEAM_CHAIN_ID,
+  OPBNB_CHAIN_ID,
   PLASMA_CHAIN_ID,
   POLYGON_CHAIN_ID,
   PULSECHAIN_CHAIN_ID,
   ROBINHOOD_CHAIN_ID,
   SEI_CHAIN_ID,
   SONIC_CHAIN_ID,
+  TAIKO_CHAIN_ID,
   UNICHAIN_CHAIN_ID,
   WORLDCHAIN_CHAIN_ID,
+  XDC_CHAIN_ID,
 } from "@/lib/chains";
 import type {
   DiscoveredPair,
@@ -74,6 +80,12 @@ describe("approval discovery API serialization", () => {
     expect(usesServerApprovalDiscovery(SEI_CHAIN_ID)).toBe(true);
     expect(usesServerApprovalDiscovery(PLASMA_CHAIN_ID)).toBe(true);
     expect(usesServerApprovalDiscovery(ABSTRACT_CHAIN_ID)).toBe(true);
+    expect(usesServerApprovalDiscovery(FRAXTAL_CHAIN_ID)).toBe(true);
+    expect(usesServerApprovalDiscovery(TAIKO_CHAIN_ID)).toBe(true);
+    expect(usesServerApprovalDiscovery(OPBNB_CHAIN_ID)).toBe(true);
+    expect(usesServerApprovalDiscovery(MOONBEAM_CHAIN_ID)).toBe(true);
+    expect(usesServerApprovalDiscovery(APECHAIN_CHAIN_ID)).toBe(true);
+    expect(usesServerApprovalDiscovery(XDC_CHAIN_ID)).toBe(true);
     expect(usesServerApprovalDiscovery(undefined)).toBe(false);
   });
 

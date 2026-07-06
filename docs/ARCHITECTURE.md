@@ -9,7 +9,7 @@
 
 ## Active Chains
 
-Twenty-four live product chains are surfaced across the app:
+Thirty live product chains are surfaced across the app:
 
 - PulseChain, chain ID `369`, native gas token `PLS`, explorer `PulseScan`
 - BSC / BNB Smart Chain, chain ID `56`, native gas token `BNB`, explorer
@@ -34,6 +34,13 @@ Twenty-four live product chains are surfaced across the app:
 - Sei, chain ID `1329`, native gas token `SEI`, explorer `Seiscan`
 - Plasma, chain ID `9745`, native gas token `XPL`, explorer `Plasmascan`
 - Abstract, chain ID `2741`, native gas token `ETH`, explorer `Abscan`
+- Fraxtal, chain ID `252`, native gas token `FRAX`, explorer `Fraxscan`
+- Taiko Mainnet, chain ID `167000`, native gas token `ETH`, explorer
+  `TaikoScan`
+- opBNB, chain ID `204`, native gas token `BNB`, explorer `opBNB BscScan`
+- Moonbeam, chain ID `1284`, native gas token `GLMR`, explorer `Moonscan`
+- ApeChain, chain ID `33139`, native gas token `APE`, explorer `ApeScan`
+- XDC Network, chain ID `50`, native gas token `XDC`, explorer `XDCScan`
 - Ethereum Mainnet, chain ID `1`, native gas token `ETH`, explorer `Etherscan`
 - Arbitrum One, chain ID `42161`, native gas token `ETH`, explorer `Arbiscan`
 - Optimism / OP Mainnet, chain ID `10`, native gas token `ETH`, explorer
@@ -43,8 +50,9 @@ Twenty-four live product chains are surfaced across the app:
 
 PulseChain, BSC, Base, Polygon, Sonic, Avalanche, Mantle, Linea, Blast,
 Berachain, Celo, Gnosis, Unichain, World Chain, Robinhood Chain, Monad, Katana,
-Sei, Plasma, and Abstract use the generic scanner registry in
-`src/lib/chains.ts`, including the shared scan, revoke, and batch lane.
+Sei, Plasma, Abstract, Fraxtal, Taiko Mainnet, opBNB, Moonbeam, ApeChain, and
+XDC Network use the generic scanner registry in `src/lib/chains.ts`, including
+the shared scan, revoke, and batch lane.
 
 Ethereum Mainnet is wallet-enabled for the Ethereum read-only discovery and
 wallet-side revoke lane. It is surfaced as a live product chain, but it is not
@@ -72,9 +80,10 @@ revoke. HyperEVM gas is paid in HYPE.
 
 - `src/lib/wagmi.ts` registers PulseChain, BSC, Base, Polygon, Sonic,
   Avalanche C-Chain, Mantle, Linea, Blast, Berachain, Celo, Gnosis, Unichain,
-  World Chain, Robinhood Chain, Monad, Katana, Sei, Plasma, Abstract, Ethereum
-  Mainnet, Arbitrum One, OP Mainnet, and HyperEVM with wagmi. Ethereum,
-  Arbitrum, Optimism, and HyperEVM use separate scanner lanes.
+  World Chain, Robinhood Chain, Monad, Katana, Sei, Plasma, Abstract, Fraxtal,
+  Taiko Mainnet, opBNB, Moonbeam, ApeChain, XDC Network, Ethereum Mainnet,
+  Arbitrum One, OP Mainnet, and HyperEVM with wagmi. Ethereum, Arbitrum,
+  Optimism, and HyperEVM use separate scanner lanes.
 - PulseChain RPC defaults to `https://rpc.pulsechain.com`.
   Hosted PulseChain discovery can use server-only `PULSECHAIN_DISCOVERY_RPC_URL`
   as a Dwellir/managed-RPC fallback when PulseScan discovery fails, then
@@ -101,6 +110,12 @@ revoke. HyperEVM gas is paid in HYPE.
 - Plasma RPC defaults to `https://rpc.plasma.to`.
 - Abstract RPC defaults to `https://api.mainnet.abs.xyz`; its chain object keeps
   viem's Abstract/ZKsync-style chain configuration.
+- Fraxtal RPC defaults to `https://rpc.frax.com`.
+- Taiko RPC defaults to `https://rpc.mainnet.taiko.xyz`.
+- opBNB RPC defaults to `https://opbnb-mainnet-rpc.bnbchain.org`.
+- Moonbeam RPC defaults to `https://rpc.api.moonbeam.network`.
+- ApeChain RPC defaults to `https://rpc.apechain.com/http`.
+- XDC Network RPC defaults to `https://rpc.xdcrpc.com`.
 - Ethereum wallet RPC defaults to `https://ethereum-rpc.publicnode.com` unless
   overridden for the wallet client.
 - Arbitrum wallet chain recognition uses `https://arb1.arbitrum.io/rpc`.
@@ -114,8 +129,9 @@ revoke. HyperEVM gas is paid in HYPE.
   through `/api/hyperevm/approvals`.
 - PulseChain, BSC, Base, Polygon, Sonic, Avalanche, Mantle, Linea, Blast,
   Berachain, Celo, Gnosis, Unichain, World Chain, Robinhood Chain, Monad,
-  Katana, Sei, Plasma, Abstract, and Ethereum wallet RPCs can be overridden
-  with browser-visible public env vars.
+  Katana, Sei, Plasma, Abstract, Fraxtal, Taiko, opBNB, Moonbeam, ApeChain,
+  XDC, and Ethereum wallet RPCs can be overridden with browser-visible public
+  env vars.
   Server-side discovery RPCs use unprefixed server-only env vars.
 - Live reads and writes always include the approval record's `chainId`.
 - When connected, the wallet account `chainId` is the active scanner source of
@@ -211,16 +227,22 @@ Etherscan API V2, does not require an explorer API key, and does not send a
 historical approval discovery. Robinhood Blockscout remains the user-facing
 explorer for address, token, and transaction links.
 
-Monad, Katana, Sei, Plasma, and Abstract hosted web discovery use the same
-server route and Etherscan API V2 logs path with `chainid=143`,
-`chainid=747474`, `chainid=1329`, `chainid=9745`, and `chainid=2741`. Hosted
+Monad, Katana, Sei, Plasma, Abstract, Fraxtal, Taiko, opBNB, Moonbeam,
+ApeChain, and XDC hosted web discovery use the same server route and Etherscan
+API V2 logs path with `chainid=143`, `chainid=747474`, `chainid=1329`,
+`chainid=9745`, `chainid=2741`, `chainid=252`, `chainid=167000`,
+`chainid=204`, `chainid=1284`, `chainid=33139`, and `chainid=50`. Hosted
 deployments can use one shared server-side `ETHERSCAN_API_KEY`; per-chain
 `MONAD_EXPLORER_API_KEY`, `KATANA_EXPLORER_API_KEY`, `SEI_EXPLORER_API_KEY`,
-`PLASMA_EXPLORER_API_KEY`, and `ABSTRACT_EXPLORER_API_KEY` values are optional
+`PLASMA_EXPLORER_API_KEY`, `ABSTRACT_EXPLORER_API_KEY`,
+`FRAXTAL_EXPLORER_API_KEY`, `TAIKO_EXPLORER_API_KEY`,
+`OPBNB_EXPLORER_API_KEY`, `MOONBEAM_EXPLORER_API_KEY`,
+`APECHAIN_EXPLORER_API_KEY`, and `XDC_EXPLORER_API_KEY` values are optional
 overrides. Public RPC `eth_getLogs` is not used for historical approval
 discovery, and explorer API keys must not be exposed through `NEXT_PUBLIC_*`.
-Monadscan, Katanascan, Seiscan, Plasmascan, and Abscan remain the user-facing
-explorers for address, token, and transaction links.
+Monadscan, Katanascan, Seiscan, Plasmascan, Abscan, Fraxscan, TaikoScan, opBNB
+BscScan, Moonscan, ApeScan, and XDCScan remain the user-facing explorers for
+address, token, and transaction links.
 
 Ethereum historical discovery is exposed through `/api/ethereum/approvals` so
 the Etherscan key stays server-only. The route is read-only, uses bounded
@@ -384,6 +406,42 @@ row-level revoke stays limited to verified ERC-20 and NFT rows.
   `ABSTRACT_EXPLORER_CHAIN_ID=2741`
 - Abstract server API key env vars:
   `ABSTRACT_EXPLORER_API_KEY` / `ETHERSCAN_API_KEY`
+- Fraxtal server discovery API default:
+  `https://api.etherscan.io/v2/api`
+- Fraxtal server discovery API chain id:
+  `FRAXTAL_EXPLORER_CHAIN_ID=252`
+- Fraxtal server API key env vars:
+  `FRAXTAL_EXPLORER_API_KEY` / `ETHERSCAN_API_KEY`
+- Taiko server discovery API default:
+  `https://api.etherscan.io/v2/api`
+- Taiko server discovery API chain id:
+  `TAIKO_EXPLORER_CHAIN_ID=167000`
+- Taiko server API key env vars:
+  `TAIKO_EXPLORER_API_KEY` / `ETHERSCAN_API_KEY`
+- opBNB server discovery API default:
+  `https://api.etherscan.io/v2/api`
+- opBNB server discovery API chain id:
+  `OPBNB_EXPLORER_CHAIN_ID=204`
+- opBNB server API key env vars:
+  `OPBNB_EXPLORER_API_KEY` / `ETHERSCAN_API_KEY`
+- Moonbeam server discovery API default:
+  `https://api.etherscan.io/v2/api`
+- Moonbeam server discovery API chain id:
+  `MOONBEAM_EXPLORER_CHAIN_ID=1284`
+- Moonbeam server API key env vars:
+  `MOONBEAM_EXPLORER_API_KEY` / `ETHERSCAN_API_KEY`
+- ApeChain server discovery API default:
+  `https://api.etherscan.io/v2/api`
+- ApeChain server discovery API chain id:
+  `APECHAIN_EXPLORER_CHAIN_ID=33139`
+- ApeChain server API key env vars:
+  `APECHAIN_EXPLORER_API_KEY` / `ETHERSCAN_API_KEY`
+- XDC Network server discovery API default:
+  `https://api.etherscan.io/v2/api`
+- XDC Network server discovery API chain id:
+  `XDC_EXPLORER_CHAIN_ID=50`
+- XDC Network server API key env vars:
+  `XDC_EXPLORER_API_KEY` / `ETHERSCAN_API_KEY`
 - Ethereum server RPC env vars:
   `MAINNET_RPC_URL` / `ETHEREUM_RPC_URL`
 - Ethereum server API key env var:
@@ -490,13 +548,21 @@ User-facing Berachain copy uses:
 - `BERA` for gas
 
 User-facing Celo, Gnosis, Unichain, World Chain, Robinhood Chain, Monad,
-Katana, Sei, Plasma, and Abstract copy uses:
+Katana, Sei, Plasma, Abstract, Fraxtal, Taiko, Moonbeam, ApeChain, and XDC
+copy uses:
 
 - `ERC-20` for fungible token approvals
 - `ERC-721` for NFT approvals
 - `ERC-1155` for multi-token NFT / semi-fungible approvals
-- `CELO`, `XDAI`, `MON`, `SEI`, `XPL`, or `ETH` for gas, matching the selected
-  chain
+- `CELO`, `XDAI`, `MON`, `SEI`, `XPL`, `ETH`, `FRAX`, `GLMR`, `APE`, or `XDC`
+  for gas, matching the selected chain
+
+User-facing opBNB copy uses:
+
+- `BEP-20` for fungible token approvals
+- `BEP-721` for NFT approvals
+- `BEP-1155` for multi-token NFT / semi-fungible approvals
+- `BNB` for gas
 
 User-facing Arbitrum copy uses:
 

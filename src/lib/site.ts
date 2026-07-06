@@ -98,10 +98,10 @@ export const siteConfig = {
   tagline: "Scan, review, revoke.",
   /** Single-sentence meta description (used for SEO + OG). */
   description:
-    "Pulse Revoke helps users review and revoke token and NFT approvals on PulseChain, BSC, Base, Polygon, Sonic Mainnet, Avalanche C-Chain, Mantle, Linea, Blast, Berachain, Celo, Gnosis, Unichain, World Chain, Robinhood Chain, Monad, Katana, Sei, Plasma, Abstract, Ethereum Mainnet, Arbitrum One, Optimism, and HyperEVM. Arbitrum, Optimism, and HyperEVM revoke support is limited to verified ERC-20 and NFT rows.",
+    "Pulse Revoke helps users review and revoke token and NFT approvals on PulseChain, BSC, Base, Polygon, Sonic Mainnet, Avalanche C-Chain, Mantle, Linea, Blast, Berachain, Celo, Gnosis, Unichain, World Chain, Robinhood Chain, Monad, Katana, Sei, Plasma, Abstract, Fraxtal, Taiko Mainnet, opBNB, Moonbeam, ApeChain, XDC Network, Ethereum Mainnet, Arbitrum One, Optimism, and HyperEVM. Arbitrum, Optimism, and HyperEVM revoke support is limited to verified ERC-20 and NFT rows.",
   /** Longer paragraph for hero copy and social previews. */
   longDescription:
-    "Review token allowances and NFT operator approvals on PulseChain, BSC, Base, Polygon, Sonic Mainnet, Avalanche, Mantle, Linea, Blast, Berachain, Celo, Gnosis, Unichain, World Chain, Robinhood Chain, Monad, Katana, Sei, Plasma, Abstract, Ethereum Mainnet, Arbitrum One, Optimism, or HyperEVM. Clear approvals you no longer trust with wallet-signed revoke transactions.",
+    "Review token allowances and NFT operator approvals on PulseChain, BSC, Base, Polygon, Sonic Mainnet, Avalanche, Mantle, Linea, Blast, Berachain, Celo, Gnosis, Unichain, World Chain, Robinhood Chain, Monad, Katana, Sei, Plasma, Abstract, Fraxtal, Taiko Mainnet, opBNB, Moonbeam, ApeChain, XDC Network, Ethereum Mainnet, Arbitrum One, Optimism, or HyperEVM. Clear approvals you no longer trust with wallet-signed revoke transactions.",
   /** Canonical public URL. Override at build time with NEXT_PUBLIC_SITE_URL. */
   url: resolvedUrl,
   /** Keywords for search engines. Keep conservative and factual. */
@@ -129,6 +129,14 @@ export const siteConfig = {
     "Sei",
     "Plasma",
     "Abstract",
+    "Fraxtal",
+    "Taiko",
+    "Taiko Mainnet",
+    "opBNB",
+    "Moonbeam",
+    "ApeChain",
+    "XDC",
+    "XDC Network",
     "Arbitrum",
     "Optimism",
     "HyperEVM",
@@ -152,6 +160,12 @@ export const siteConfig = {
     "Sei approvals",
     "Plasma approvals",
     "Abstract approvals",
+    "Fraxtal approvals",
+    "Taiko approvals",
+    "opBNB approvals",
+    "Moonbeam approvals",
+    "ApeChain approvals",
+    "XDC approvals",
     "Arbitrum approvals",
     "HyperEVM approvals",
     "Pulse Revoke",
@@ -191,6 +205,12 @@ export const siteConfig = {
     seiscan: "https://seiscan.io",
     plasmascan: "https://plasmascan.to",
     abscan: "https://abscan.org",
+    fraxscan: "https://fraxscan.com",
+    taikoscan: "https://taikoscan.io",
+    opbnbscan: "https://opbnb.bscscan.com",
+    moonscan: "https://moonbeam.moonscan.io",
+    apescan: "https://apescan.io",
+    xdcscan: "https://xdcscan.com",
     hyperevmscan: "https://hyperevmscan.io",
     pulsex: "https://pulsex.com",
     walletConnect: "https://cloud.reown.com",
@@ -199,7 +219,7 @@ export const siteConfig = {
   },
   /** Short attribution line shown in the footer. */
   attribution:
-    "Built for users on PulseChain, BSC, Base, Polygon, Sonic, Avalanche, Mantle, Linea, Blast, Berachain, Celo, Gnosis, Unichain, World Chain, Robinhood Chain, Monad, Katana, Sei, Plasma, Abstract, Ethereum, Arbitrum, Optimism, and HyperEVM.",
+    "Built for users on PulseChain, BSC, Base, Polygon, Sonic, Avalanche, Mantle, Linea, Blast, Berachain, Celo, Gnosis, Unichain, World Chain, Robinhood Chain, Monad, Katana, Sei, Plasma, Abstract, Fraxtal, Taiko, opBNB, Moonbeam, ApeChain, XDC, Ethereum, Arbitrum, Optimism, and HyperEVM.",
   /** Brand accent colors used by the OG image and icon renderers. */
   brandColors: {
     background: "#07070b",

@@ -3,8 +3,9 @@
 Use this checklist to verify that Pulse Revoke reads approval state correctly on
 PulseChain, BSC, Base, Polygon, Sonic Mainnet, Avalanche, Mantle, Linea, Blast,
 Berachain, Celo, Gnosis, Unichain, World Chain, Robinhood Chain, Monad, Katana,
-Sei, Plasma, Abstract, Ethereum, Arbitrum One verified-row revoke, Optimism
-verified-row revoke, and HyperEVM verified-row revoke.
+Sei, Plasma, Abstract, Fraxtal, Taiko, opBNB, Moonbeam, ApeChain, XDC,
+Ethereum, Arbitrum One verified-row revoke, Optimism verified-row revoke, and
+HyperEVM verified-row revoke.
 Keep all testing low-risk and manual.
 
 ## Safety Setup
@@ -49,6 +50,17 @@ Run the scanner flow on all supported chains:
 - Unichain, chain ID `130`, gas token `ETH`.
 - World Chain, chain ID `480`, gas token `ETH`.
 - Robinhood Chain, chain ID `4663`, gas token `ETH`.
+- Monad, chain ID `143`, gas token `MON`.
+- Katana, chain ID `747474`, gas token `ETH`.
+- Sei, chain ID `1329`, gas token `SEI`.
+- Plasma, chain ID `9745`, gas token `XPL`.
+- Abstract, chain ID `2741`, gas token `ETH`.
+- Fraxtal, chain ID `252`, gas token `FRAX`.
+- Taiko, chain ID `167000`, gas token `ETH`.
+- opBNB, chain ID `204`, gas token `BNB`.
+- Moonbeam, chain ID `1284`, gas token `GLMR`.
+- ApeChain, chain ID `33139`, gas token `APE`.
+- XDC Network, chain ID `50`, gas token `XDC`.
 - Ethereum Mainnet, chain ID `1`, gas token `ETH`.
 - Arbitrum One, chain ID `42161`, gas token `ETH`, ERC-20/NFT verified-row
   lane.
@@ -80,6 +92,17 @@ For each chain, confirm diagnostics show:
 - World Chain API chain ID `480` when testing World Chain.
 - Robinhood Blockscout source and no Etherscan API chain ID when testing
   Robinhood Chain.
+- Monad API chain ID `143` when testing Monad.
+- Katana API chain ID `747474` when testing Katana.
+- Sei API chain ID `1329` when testing Sei.
+- Plasma API chain ID `9745` when testing Plasma.
+- Abstract API chain ID `2741` when testing Abstract.
+- Fraxtal API chain ID `252` when testing Fraxtal.
+- Taiko API chain ID `167000` when testing Taiko.
+- opBNB API chain ID `204` when testing opBNB.
+- Moonbeam API chain ID `1284` when testing Moonbeam.
+- ApeChain API chain ID `33139` when testing ApeChain.
+- XDC API chain ID `50` when testing XDC Network.
 - Arbitrum API chain ID `42161` when testing Arbitrum One.
 - Optimism API chain ID `10` when testing OP Mainnet.
 - HyperEVM API chain ID `999` when testing HyperEVM.
@@ -460,8 +483,9 @@ For per-token approvals:
 - Connect to an unsupported chain.
 - Confirm the app lists PulseChain, BSC, Base, Polygon, Sonic Mainnet,
   Avalanche, Mantle, Linea, Blast, Berachain, Celo, Gnosis, Unichain, World
-  Chain, Robinhood Chain, Monad, Katana, Sei, Plasma, Abstract, Ethereum,
-  Arbitrum, Optimism, and HyperEVM with the correct scan/revoke statuses.
+  Chain, Robinhood Chain, Monad, Katana, Sei, Plasma, Abstract, Fraxtal, Taiko,
+  opBNB, Moonbeam, ApeChain, XDC, Ethereum, Arbitrum, Optimism, and HyperEVM
+  with the correct scan/revoke statuses.
 - Confirm no scan starts.
 - Confirm no revoke action is available.
 - Confirm stale approvals from a previous chain are not shown as current.
@@ -475,7 +499,7 @@ For per-token approvals:
 - Failed live reads show verification incomplete, not clear.
 - Etherscan API V2 rate limits, the BscScan V1 deprecation error, or a missing
   BSC/Base/Polygon/Sonic/Avalanche/Mantle/Linea/Blast/Berachain/Celo/Gnosis/
-  Unichain/World Chain/Monad/Katana/Sei/Plasma/Abstract API key show an
-  actionable error.
+  Unichain/World Chain/Monad/Katana/Sei/Plasma/Abstract/Fraxtal/Taiko/opBNB/
+  Moonbeam/ApeChain/XDC API key show an actionable error.
 - Robinhood Blockscout caps, rate limits, or upstream failures show an
   incomplete/error state, not a clear wallet state.

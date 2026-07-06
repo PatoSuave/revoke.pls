@@ -9,25 +9,31 @@ import {
 } from "@/lib/arbitrum-approval-client";
 import {
   ABSTRACT_CHAIN_ID,
+  APECHAIN_CHAIN_ID,
   AVALANCHE_CHAIN_ID,
   BASE_CHAIN_ID,
   BERACHAIN_CHAIN_ID,
   BLAST_CHAIN_ID,
   BSC_CHAIN_ID,
   CELO_CHAIN_ID,
+  FRAXTAL_CHAIN_ID,
   GNOSIS_CHAIN_ID,
   KATANA_CHAIN_ID,
   LINEA_CHAIN_ID,
   MANTLE_CHAIN_ID,
   MONAD_CHAIN_ID,
+  MOONBEAM_CHAIN_ID,
+  OPBNB_CHAIN_ID,
   PLASMA_CHAIN_ID,
   POLYGON_CHAIN_ID,
   PULSECHAIN_CHAIN_ID,
   ROBINHOOD_CHAIN_ID,
   SEI_CHAIN_ID,
   SONIC_CHAIN_ID,
+  TAIKO_CHAIN_ID,
   UNICHAIN_CHAIN_ID,
   WORLDCHAIN_CHAIN_ID,
+  XDC_CHAIN_ID,
 } from "@/lib/chains";
 import {
   ETHEREUM_MAINNET_CLIENT_CHAIN_ID,
@@ -73,6 +79,12 @@ export type GasTrackerChainId =
   | typeof SEI_CHAIN_ID
   | typeof PLASMA_CHAIN_ID
   | typeof ABSTRACT_CHAIN_ID
+  | typeof FRAXTAL_CHAIN_ID
+  | typeof TAIKO_CHAIN_ID
+  | typeof OPBNB_CHAIN_ID
+  | typeof MOONBEAM_CHAIN_ID
+  | typeof APECHAIN_CHAIN_ID
+  | typeof XDC_CHAIN_ID
   | typeof ETHEREUM_MAINNET_CLIENT_CHAIN_ID
   | typeof ARBITRUM_ONE_CLIENT_CHAIN_ID
   | typeof OPTIMISM_CLIENT_CHAIN_ID
@@ -116,6 +128,12 @@ const KATANA_RPC_DEFAULT = "https://rpc.katana.network";
 const SEI_RPC_DEFAULT = "https://evm-rpc.sei-apis.com";
 const PLASMA_RPC_DEFAULT = "https://rpc.plasma.to";
 const ABSTRACT_RPC_DEFAULT = "https://api.mainnet.abs.xyz";
+const FRAXTAL_RPC_DEFAULT = "https://rpc.frax.com";
+const TAIKO_RPC_DEFAULT = "https://rpc.mainnet.taiko.xyz";
+const OPBNB_RPC_DEFAULT = "https://opbnb-mainnet-rpc.bnbchain.org";
+const MOONBEAM_RPC_DEFAULT = "https://rpc.api.moonbeam.network";
+const APECHAIN_RPC_DEFAULT = "https://rpc.apechain.com/http";
+const XDC_RPC_DEFAULT = "https://rpc.xdcrpc.com";
 
 const ethereumGasChain = defineGasChain({
   id: ETHEREUM_MAINNET_CLIENT_CHAIN_ID,
@@ -370,6 +388,78 @@ const abstractGasChain = defineGasChain({
   },
   rpcUrl: process.env.NEXT_PUBLIC_ABSTRACT_RPC_URL ?? ABSTRACT_RPC_DEFAULT,
   explorerUrl: "https://abscan.org",
+});
+
+const fraxtalGasChain = defineGasChain({
+  id: FRAXTAL_CHAIN_ID,
+  name: "Fraxtal",
+  nativeCurrency: {
+    name: "Frax",
+    symbol: "FRAX",
+    decimals: 18,
+  },
+  rpcUrl: process.env.NEXT_PUBLIC_FRAXTAL_RPC_URL ?? FRAXTAL_RPC_DEFAULT,
+  explorerUrl: "https://fraxscan.com",
+});
+
+const taikoGasChain = defineGasChain({
+  id: TAIKO_CHAIN_ID,
+  name: "Taiko Mainnet",
+  nativeCurrency: {
+    name: "Ether",
+    symbol: "ETH",
+    decimals: 18,
+  },
+  rpcUrl: process.env.NEXT_PUBLIC_TAIKO_RPC_URL ?? TAIKO_RPC_DEFAULT,
+  explorerUrl: "https://taikoscan.io",
+});
+
+const opbnbGasChain = defineGasChain({
+  id: OPBNB_CHAIN_ID,
+  name: "opBNB",
+  nativeCurrency: {
+    name: "BNB",
+    symbol: "BNB",
+    decimals: 18,
+  },
+  rpcUrl: process.env.NEXT_PUBLIC_OPBNB_RPC_URL ?? OPBNB_RPC_DEFAULT,
+  explorerUrl: "https://opbnb.bscscan.com",
+});
+
+const moonbeamGasChain = defineGasChain({
+  id: MOONBEAM_CHAIN_ID,
+  name: "Moonbeam",
+  nativeCurrency: {
+    name: "Moonbeam",
+    symbol: "GLMR",
+    decimals: 18,
+  },
+  rpcUrl: process.env.NEXT_PUBLIC_MOONBEAM_RPC_URL ?? MOONBEAM_RPC_DEFAULT,
+  explorerUrl: "https://moonbeam.moonscan.io",
+});
+
+const apechainGasChain = defineGasChain({
+  id: APECHAIN_CHAIN_ID,
+  name: "ApeChain",
+  nativeCurrency: {
+    name: "ApeCoin",
+    symbol: "APE",
+    decimals: 18,
+  },
+  rpcUrl: process.env.NEXT_PUBLIC_APECHAIN_RPC_URL ?? APECHAIN_RPC_DEFAULT,
+  explorerUrl: "https://apescan.io",
+});
+
+const xdcGasChain = defineGasChain({
+  id: XDC_CHAIN_ID,
+  name: "XDC Network",
+  nativeCurrency: {
+    name: "XDC",
+    symbol: "XDC",
+    decimals: 18,
+  },
+  rpcUrl: process.env.NEXT_PUBLIC_XDC_RPC_URL ?? XDC_RPC_DEFAULT,
+  explorerUrl: "https://xdcscan.com",
 });
 
 const arbitrumGasChain = defineGasChain({
@@ -711,6 +801,98 @@ export const GAS_TRACKER_CHAINS = [
     coingeckoId: "ethereum",
     estimateNote:
       "Abstract wallet estimates may include L1 data fees beyond this gas-price estimate.",
+  },
+  {
+    chainId: FRAXTAL_CHAIN_ID,
+    chainName: "Fraxtal",
+    shortName: "Fraxtal",
+    nativeCurrency: "FRAX",
+    nativeCurrencyName: "Frax",
+    viemChain: fraxtalGasChain,
+    defaultRpcUrl: FRAXTAL_RPC_DEFAULT,
+    publicRpcUrl: fraxtalGasChain.rpcUrls.default.http[0],
+    serverRpcEnvNames: ["FRAXTAL_RPC_URL", "FRAXTAL_MAINNET_RPC_URL"],
+    publicRpcEnvNames: ["NEXT_PUBLIC_FRAXTAL_RPC_URL"],
+    statusThresholds: { elevatedGwei: 0.1, highGwei: 1 },
+    coingeckoId: "frax",
+    estimateNote:
+      "Fraxtal wallet estimates may include L1 data fees beyond this gas-price estimate.",
+  },
+  {
+    chainId: TAIKO_CHAIN_ID,
+    chainName: "Taiko Mainnet",
+    shortName: "Taiko",
+    nativeCurrency: "ETH",
+    nativeCurrencyName: "Ether",
+    viemChain: taikoGasChain,
+    defaultRpcUrl: TAIKO_RPC_DEFAULT,
+    publicRpcUrl: taikoGasChain.rpcUrls.default.http[0],
+    serverRpcEnvNames: ["TAIKO_RPC_URL", "TAIKO_MAINNET_RPC_URL"],
+    publicRpcEnvNames: ["NEXT_PUBLIC_TAIKO_RPC_URL"],
+    statusThresholds: { elevatedGwei: 0.1, highGwei: 1 },
+    coingeckoId: "ethereum",
+    estimateNote:
+      "Taiko wallet estimates may include L1 data fees beyond this gas-price estimate.",
+  },
+  {
+    chainId: OPBNB_CHAIN_ID,
+    chainName: "opBNB",
+    shortName: "opBNB",
+    nativeCurrency: "BNB",
+    nativeCurrencyName: "BNB",
+    viemChain: opbnbGasChain,
+    defaultRpcUrl: OPBNB_RPC_DEFAULT,
+    publicRpcUrl: opbnbGasChain.rpcUrls.default.http[0],
+    serverRpcEnvNames: ["OPBNB_RPC_URL", "OPBNB_MAINNET_RPC_URL"],
+    publicRpcEnvNames: ["NEXT_PUBLIC_OPBNB_RPC_URL"],
+    statusThresholds: { elevatedGwei: 0.05, highGwei: 0.5 },
+    coingeckoId: "binancecoin",
+    estimateNote:
+      "opBNB wallet estimates may include L1 data fees beyond this gas-price estimate.",
+  },
+  {
+    chainId: MOONBEAM_CHAIN_ID,
+    chainName: "Moonbeam",
+    shortName: "Moonbeam",
+    nativeCurrency: "GLMR",
+    nativeCurrencyName: "Moonbeam",
+    viemChain: moonbeamGasChain,
+    defaultRpcUrl: MOONBEAM_RPC_DEFAULT,
+    publicRpcUrl: moonbeamGasChain.rpcUrls.default.http[0],
+    serverRpcEnvNames: ["MOONBEAM_RPC_URL", "MOONBEAM_MAINNET_RPC_URL"],
+    publicRpcEnvNames: ["NEXT_PUBLIC_MOONBEAM_RPC_URL"],
+    statusThresholds: { elevatedGwei: 2, highGwei: 10 },
+    coingeckoId: "moonbeam",
+  },
+  {
+    chainId: APECHAIN_CHAIN_ID,
+    chainName: "ApeChain",
+    shortName: "ApeChain",
+    nativeCurrency: "APE",
+    nativeCurrencyName: "ApeCoin",
+    viemChain: apechainGasChain,
+    defaultRpcUrl: APECHAIN_RPC_DEFAULT,
+    publicRpcUrl: apechainGasChain.rpcUrls.default.http[0],
+    serverRpcEnvNames: ["APECHAIN_RPC_URL", "APECHAIN_MAINNET_RPC_URL"],
+    publicRpcEnvNames: ["NEXT_PUBLIC_APECHAIN_RPC_URL"],
+    statusThresholds: { elevatedGwei: 0.1, highGwei: 1 },
+    coingeckoId: "apecoin",
+    estimateNote:
+      "ApeChain wallet estimates may include L1 data fees beyond this gas-price estimate.",
+  },
+  {
+    chainId: XDC_CHAIN_ID,
+    chainName: "XDC Network",
+    shortName: "XDC",
+    nativeCurrency: "XDC",
+    nativeCurrencyName: "XDC",
+    viemChain: xdcGasChain,
+    defaultRpcUrl: XDC_RPC_DEFAULT,
+    publicRpcUrl: xdcGasChain.rpcUrls.default.http[0],
+    serverRpcEnvNames: ["XDC_RPC_URL", "XDC_MAINNET_RPC_URL"],
+    publicRpcEnvNames: ["NEXT_PUBLIC_XDC_RPC_URL"],
+    statusThresholds: { elevatedGwei: 2, highGwei: 10 },
+    coingeckoId: "xdce-crowd-sale",
   },
   {
     chainId: ETHEREUM_MAINNET_CLIENT_CHAIN_ID,

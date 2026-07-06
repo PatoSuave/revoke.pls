@@ -57,6 +57,12 @@ describe("hosted public env guard", () => {
       NEXT_PUBLIC_SEI_EXPLORER_API_KEY: "public-sei-key-123",
       NEXT_PUBLIC_PLASMA_EXPLORER_API_KEY: "public-plasma-key-123",
       NEXT_PUBLIC_ABSTRACT_EXPLORER_API_KEY: "public-abstract-key-123",
+      NEXT_PUBLIC_FRAXTAL_EXPLORER_API_KEY: "public-fraxtal-key-123",
+      NEXT_PUBLIC_TAIKO_EXPLORER_API_KEY: "public-taiko-key-123",
+      NEXT_PUBLIC_OPBNB_EXPLORER_API_KEY: "public-opbnb-key-123",
+      NEXT_PUBLIC_MOONBEAM_EXPLORER_API_KEY: "public-moonbeam-key-123",
+      NEXT_PUBLIC_APECHAIN_EXPLORER_API_KEY: "public-apechain-key-123",
+      NEXT_PUBLIC_XDC_EXPLORER_API_KEY: "public-xdc-key-123",
     });
 
     expect(result.status).toBe(1);
@@ -65,5 +71,11 @@ describe("hosted public env guard", () => {
     expect(result.stderr).toContain("NEXT_PUBLIC_SEI_EXPLORER_API_KEY");
     expect(result.stderr).toContain("NEXT_PUBLIC_PLASMA_EXPLORER_API_KEY");
     expect(result.stderr).toContain("NEXT_PUBLIC_ABSTRACT_EXPLORER_API_KEY");
+    expect(result.stderr).toContain("NEXT_PUBLIC_FRAXTAL_EXPLORER_API_KEY");
+    expect(result.stderr).toContain("NEXT_PUBLIC_TAIKO_EXPLORER_API_KEY");
+    expect(result.stderr).toContain("NEXT_PUBLIC_OPBNB_EXPLORER_API_KEY");
+    expect(result.stderr).toContain("NEXT_PUBLIC_MOONBEAM_EXPLORER_API_KEY");
+    expect(result.stderr).toContain("NEXT_PUBLIC_APECHAIN_EXPLORER_API_KEY");
+    expect(result.stderr).toContain("NEXT_PUBLIC_XDC_EXPLORER_API_KEY");
   });
 });

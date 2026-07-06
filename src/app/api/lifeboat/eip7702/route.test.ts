@@ -70,7 +70,7 @@ describe("Wallet Lifeboat EIP-7702 route", () => {
     expect(discoverEip7702Delegation).not.toHaveBeenCalled();
   });
 
-  it("accepts a newly covered 24-chain diagnostic target", async () => {
+  it("accepts a newly covered 30-chain diagnostic target", async () => {
     discoverEip7702Delegation.mockImplementation(async ({ chainId }) =>
       completeEip7702Response(chainId),
     );

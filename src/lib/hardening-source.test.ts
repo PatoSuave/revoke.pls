@@ -283,6 +283,12 @@ describe("hardening source invariants", () => {
     expect(liveScript).toContain("SEI_EXPLORER_API_KEY");
     expect(liveScript).toContain("PLASMA_EXPLORER_API_KEY");
     expect(liveScript).toContain("ABSTRACT_EXPLORER_API_KEY");
+    expect(liveScript).toContain("FRAXTAL_EXPLORER_API_KEY");
+    expect(liveScript).toContain("TAIKO_EXPLORER_API_KEY");
+    expect(liveScript).toContain("OPBNB_EXPLORER_API_KEY");
+    expect(liveScript).toContain("MOONBEAM_EXPLORER_API_KEY");
+    expect(liveScript).toContain("APECHAIN_EXPLORER_API_KEY");
+    expect(liveScript).toContain("XDC_EXPLORER_API_KEY");
     expect(liveScript).toContain("OPTIMISM_EXPLORER_API_KEY");
     expect(liveScript).toContain("HYPEREVM_EXPLORER_API_KEY");
     expect(liveScript).toContain("HYPEREVM_ETHERSCAN_API_KEY");
@@ -304,6 +310,12 @@ describe("hardening source invariants", () => {
     expect(envScript).toContain("NEXT_PUBLIC_SEI_EXPLORER_API_KEY");
     expect(envScript).toContain("NEXT_PUBLIC_PLASMA_EXPLORER_API_KEY");
     expect(envScript).toContain("NEXT_PUBLIC_ABSTRACT_EXPLORER_API_KEY");
+    expect(envScript).toContain("NEXT_PUBLIC_FRAXTAL_EXPLORER_API_KEY");
+    expect(envScript).toContain("NEXT_PUBLIC_TAIKO_EXPLORER_API_KEY");
+    expect(envScript).toContain("NEXT_PUBLIC_OPBNB_EXPLORER_API_KEY");
+    expect(envScript).toContain("NEXT_PUBLIC_MOONBEAM_EXPLORER_API_KEY");
+    expect(envScript).toContain("NEXT_PUBLIC_APECHAIN_EXPLORER_API_KEY");
+    expect(envScript).toContain("NEXT_PUBLIC_XDC_EXPLORER_API_KEY");
     expect(envScript).toContain("NEXT_PUBLIC_ETHERSCAN_API_KEY");
     expect(envScript).toContain("allow-desktop-public-keys");
     expect(`${hostedHardening}\n${auditGuide}`).toContain("Vercel Firewall");

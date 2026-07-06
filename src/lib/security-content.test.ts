@@ -186,6 +186,52 @@ describe("security content", () => {
       status: "Live",
     });
     expect(rowsByChain.get("Abstract")?.note).toContain("Gas is paid in ETH");
+    expect(rowsByChain.get("Fraxtal")).toMatchObject({
+      chainId: "252",
+      scan: "Yes",
+      revoke: "Yes",
+      status: "Live",
+    });
+    expect(rowsByChain.get("Fraxtal")?.note).toContain("Gas is paid in FRAX");
+    expect(rowsByChain.get("Taiko Mainnet")).toMatchObject({
+      chainId: "167000",
+      scan: "Yes",
+      revoke: "Yes",
+      status: "Live",
+    });
+    expect(rowsByChain.get("Taiko Mainnet")?.note).toContain(
+      "Gas is paid in ETH",
+    );
+    expect(rowsByChain.get("opBNB")).toMatchObject({
+      chainId: "204",
+      scan: "Yes",
+      revoke: "Yes",
+      status: "Live",
+    });
+    expect(rowsByChain.get("opBNB")?.note).toContain("Gas is paid in BNB");
+    expect(rowsByChain.get("Moonbeam")).toMatchObject({
+      chainId: "1284",
+      scan: "Yes",
+      revoke: "Yes",
+      status: "Live",
+    });
+    expect(rowsByChain.get("Moonbeam")?.note).toContain("Gas is paid in GLMR");
+    expect(rowsByChain.get("ApeChain")).toMatchObject({
+      chainId: "33139",
+      scan: "Yes",
+      revoke: "Yes",
+      status: "Live",
+    });
+    expect(rowsByChain.get("ApeChain")?.note).toContain("Gas is paid in APE");
+    expect(rowsByChain.get("XDC Network")).toMatchObject({
+      chainId: "50",
+      scan: "Yes",
+      revoke: "Yes",
+      status: "Live",
+    });
+    expect(rowsByChain.get("XDC Network")?.note).toContain(
+      "Gas is paid in XDC",
+    );
     expect(rowsByChain.get("Solana")).toMatchObject({
       scan: "No",
       revoke: "No",

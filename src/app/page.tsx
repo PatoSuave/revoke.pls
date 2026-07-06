@@ -107,6 +107,18 @@ const CHAIN_CARD_COPY: Record<string, string> = {
     "Shared scanner with PlasmaScan discovery, live checks, and revokes through your wallet.",
   Abstract:
     "Shared scanner with Abscan discovery, live checks, and revokes through your wallet.",
+  Fraxtal:
+    "Shared scanner with Fraxscan discovery, live checks, and revokes through your wallet.",
+  "Taiko Mainnet":
+    "Shared scanner with TaikoScan discovery, live checks, and revokes through your wallet.",
+  opBNB:
+    "Shared scanner with opBNB BscScan discovery, live checks, and revokes through your wallet.",
+  Moonbeam:
+    "Shared scanner with Moonscan discovery, live checks, and revokes through your wallet.",
+  ApeChain:
+    "Shared scanner with ApeScan discovery, live checks, and revokes through your wallet.",
+  "XDC Network":
+    "Shared scanner with XDCScan discovery, live checks, and revokes through your wallet.",
   "Ethereum Mainnet":
     "Hosted approval discovery with revokes through your wallet after row verification.",
   "Arbitrum One":

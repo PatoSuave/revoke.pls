@@ -75,9 +75,10 @@ submission must stay unavailable.
 
 - Are active supported chains exactly PulseChain, BSC, Base, Polygon, Sonic,
   Avalanche, Mantle, Linea, Blast, Berachain, Celo, Gnosis, Unichain, World
-  Chain, Robinhood Chain, wallet-enabled Ethereum Mainnet, Arbitrum One's
-  separate verified-row revoke lane, Optimism's separate verified-row lane, and
-  HyperEVM's separate verified-row lane?
+  Chain, Robinhood Chain, Monad, Katana, Sei, Plasma, Abstract, Fraxtal, Taiko,
+  opBNB, Moonbeam, ApeChain, XDC, wallet-enabled Ethereum Mainnet, Arbitrum
+  One's separate verified-row revoke lane, Optimism's separate verified-row
+  lane, and HyperEVM's separate verified-row lane?
 - Does `src/lib/wagmi.ts` register Ethereum, Arbitrum, Optimism, and HyperEVM
   only for their separate lanes and keep chain lists scoped correctly?
 - Is Ethereum Mainnet protected by owner, chain, preflight, gas, and row-level
@@ -354,7 +355,8 @@ submission must stay unavailable.
 - Do PulseChain, BSC, or Base labels avoid leaking onto Polygon approvals?
 - Do existing registry labels avoid leaking onto Sonic, Avalanche, Mantle,
   Linea, Blast, Berachain, Celo, Gnosis, Unichain, World Chain, Robinhood
-  Chain, Monad, Katana, Sei, Plasma, or Abstract approvals?
+  Chain, Monad, Katana, Sei, Plasma, Abstract, Fraxtal, Taiko, opBNB,
+  Moonbeam, ApeChain, or XDC approvals?
 - Are BSC labels empty unless manually verified?
 - Are Base labels empty unless manually verified?
 - Are Polygon labels empty unless manually verified?
@@ -374,18 +376,24 @@ submission must stay unavailable.
 - Are Sei labels empty unless manually verified?
 - Are Plasma labels empty unless manually verified?
 - Are Abstract labels empty unless manually verified?
+- Are Fraxtal labels empty unless manually verified?
+- Are Taiko labels empty unless manually verified?
+- Are opBNB labels empty unless manually verified?
+- Are Moonbeam labels empty unless manually verified?
+- Are ApeChain labels empty unless manually verified?
+- Are XDC labels empty unless manually verified?
 - Are unknown BSC, Base, Polygon, Sonic, Avalanche, Mantle, Linea, Blast, and
   Berachain, Celo, Gnosis, Unichain, World Chain, Robinhood Chain, Monad,
-  Katana, Sei, Plasma, and Abstract spenders shown as unknown rather than
-  guessed?
+  Katana, Sei, Plasma, Abstract, Fraxtal, Taiko, opBNB, Moonbeam, ApeChain,
+  and XDC spenders shown as unknown rather than guessed?
 - Is registry data treated only as enrichment, not discovery truth?
 
 ## Token Logo Questions
 
 - Is token-logo lookup scoped to PulseChain, BSC, Base, Polygon, Sonic,
   Avalanche, Mantle, Linea, Blast, Berachain, Celo, Gnosis, Unichain, World
-  Chain, Robinhood Chain, Monad, Katana, Sei, Plasma, Abstract, and explicitly
-  reviewed separate-lane chains?
+  Chain, Robinhood Chain, Monad, Katana, Sei, Plasma, Abstract, Fraxtal, Taiko,
+  opBNB, Moonbeam, ApeChain, XDC, and explicitly reviewed separate-lane chains?
 - Does the logo resolver send only token contract addresses, not scanned owner
   addresses, spender addresses, allowances, or wallet connection state?
 - Does the UI keep text symbol/address data visible when no logo exists or the

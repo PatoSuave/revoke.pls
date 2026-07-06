@@ -3,8 +3,8 @@
 Pulse Revoke is primarily a wallet-side frontend app, with server-side BSC,
 Base, Polygon, Sonic, Avalanche, Mantle, Linea, Blast, Berachain, Celo, Gnosis,
 Unichain, World Chain, Robinhood Chain, Monad, Katana, Sei, Plasma, Abstract,
-Ethereum, Arbitrum, Optimism, and HyperEVM API routes for discovery plus a
-server-side gas tracker route.
+Fraxtal, Taiko, opBNB, Moonbeam, ApeChain, XDC, Ethereum, Arbitrum, Optimism,
+and HyperEVM API routes for discovery plus a server-side gas tracker route.
 Variables prefixed with `NEXT_PUBLIC_` are embedded into the browser bundle and
 are visible to users. Do not store private secrets in these variables.
 
@@ -12,8 +12,8 @@ are visible to users. Do not store private secrets in these variables.
 
 For the live PulseChain, BSC, Base, Polygon, Sonic, Avalanche, Mantle, Linea,
 Blast, Berachain, Celo, Gnosis, Unichain, World Chain, Robinhood Chain,
-Monad, Katana, Sei, Plasma, Abstract, Ethereum, Arbitrum, Optimism, and
-HyperEVM product, configure:
+Monad, Katana, Sei, Plasma, Abstract, Fraxtal, Taiko, opBNB, Moonbeam,
+ApeChain, XDC, Ethereum, Arbitrum, Optimism, and HyperEVM product, configure:
 
 | Variable | Production status | Notes |
 | --- | --- | --- |
@@ -113,6 +113,36 @@ HyperEVM product, configure:
 | `ABSTRACT_EXPLORER_API_KEY` / `ETHERSCAN_API_KEY` | Required for reliable Abstract discovery | `ETHERSCAN_API_KEY` is the shared server-side default; `ABSTRACT_EXPLORER_API_KEY` is an optional override. Do not use a `NEXT_PUBLIC_` key. |
 | `ABSTRACT_RPC_URL` / `ABSTRACT_MAINNET_RPC_URL` | Optional | Server-only Abstract gas tracker RPC override for `/api/gas`. |
 | `NEXT_PUBLIC_ABSTRACT_RPC_URL` | Recommended | Public fallback is available, but production should prefer a reliable RPC for wallet reads and browser block watching. |
+| `FRAXTAL_EXPLORER_API_URL` | Optional | Server-only Fraxtal logs API. Defaults to `https://api.etherscan.io/v2/api`. |
+| `FRAXTAL_EXPLORER_CHAIN_ID` | Optional | Must be `252` for Fraxtal Etherscan API V2 logs. Defaults to `252`. |
+| `FRAXTAL_EXPLORER_API_KEY` / `ETHERSCAN_API_KEY` | Required for reliable Fraxtal discovery | `ETHERSCAN_API_KEY` is the shared server-side default; `FRAXTAL_EXPLORER_API_KEY` is an optional override. Do not use a `NEXT_PUBLIC_` key. |
+| `FRAXTAL_RPC_URL` / `FRAXTAL_MAINNET_RPC_URL` | Optional | Server-only Fraxtal gas tracker RPC override for `/api/gas`. |
+| `NEXT_PUBLIC_FRAXTAL_RPC_URL` | Recommended | Public fallback is available, but production should prefer a reliable RPC for wallet reads and browser block watching. |
+| `TAIKO_EXPLORER_API_URL` | Optional | Server-only Taiko logs API. Defaults to `https://api.etherscan.io/v2/api`. |
+| `TAIKO_EXPLORER_CHAIN_ID` | Optional | Must be `167000` for Taiko Etherscan API V2 logs. Defaults to `167000`. |
+| `TAIKO_EXPLORER_API_KEY` / `ETHERSCAN_API_KEY` | Required for reliable Taiko discovery | `ETHERSCAN_API_KEY` is the shared server-side default; `TAIKO_EXPLORER_API_KEY` is an optional override. Do not use a `NEXT_PUBLIC_` key. |
+| `TAIKO_RPC_URL` / `TAIKO_MAINNET_RPC_URL` | Optional | Server-only Taiko gas tracker RPC override for `/api/gas`. |
+| `NEXT_PUBLIC_TAIKO_RPC_URL` | Recommended | Public fallback is available, but production should prefer a reliable RPC for wallet reads and browser block watching. |
+| `OPBNB_EXPLORER_API_URL` | Optional | Server-only opBNB logs API. Defaults to `https://api.etherscan.io/v2/api`. |
+| `OPBNB_EXPLORER_CHAIN_ID` | Optional | Must be `204` for opBNB Etherscan API V2 logs. Defaults to `204`. |
+| `OPBNB_EXPLORER_API_KEY` / `ETHERSCAN_API_KEY` | Required for reliable opBNB discovery | `ETHERSCAN_API_KEY` is the shared server-side default; `OPBNB_EXPLORER_API_KEY` is an optional override. Do not use a `NEXT_PUBLIC_` key. |
+| `OPBNB_RPC_URL` / `OPBNB_MAINNET_RPC_URL` | Optional | Server-only opBNB gas tracker RPC override for `/api/gas`. |
+| `NEXT_PUBLIC_OPBNB_RPC_URL` | Recommended | Public fallback is available, but production should prefer a reliable RPC for wallet reads and browser block watching. |
+| `MOONBEAM_EXPLORER_API_URL` | Optional | Server-only Moonbeam logs API. Defaults to `https://api.etherscan.io/v2/api`. |
+| `MOONBEAM_EXPLORER_CHAIN_ID` | Optional | Must be `1284` for Moonbeam Etherscan API V2 logs. Defaults to `1284`. |
+| `MOONBEAM_EXPLORER_API_KEY` / `ETHERSCAN_API_KEY` | Required for reliable Moonbeam discovery | `ETHERSCAN_API_KEY` is the shared server-side default; `MOONBEAM_EXPLORER_API_KEY` is an optional override. Do not use a `NEXT_PUBLIC_` key. |
+| `MOONBEAM_RPC_URL` / `MOONBEAM_MAINNET_RPC_URL` | Optional | Server-only Moonbeam gas tracker RPC override for `/api/gas`. |
+| `NEXT_PUBLIC_MOONBEAM_RPC_URL` | Recommended | Public fallback is available, but production should prefer a reliable RPC for wallet reads and browser block watching. |
+| `APECHAIN_EXPLORER_API_URL` | Optional | Server-only ApeChain logs API. Defaults to `https://api.etherscan.io/v2/api`. |
+| `APECHAIN_EXPLORER_CHAIN_ID` | Optional | Must be `33139` for ApeChain Etherscan API V2 logs. Defaults to `33139`. |
+| `APECHAIN_EXPLORER_API_KEY` / `ETHERSCAN_API_KEY` | Required for reliable ApeChain discovery | `ETHERSCAN_API_KEY` is the shared server-side default; `APECHAIN_EXPLORER_API_KEY` is an optional override. Do not use a `NEXT_PUBLIC_` key. |
+| `APECHAIN_RPC_URL` / `APECHAIN_MAINNET_RPC_URL` | Optional | Server-only ApeChain gas tracker RPC override for `/api/gas`. |
+| `NEXT_PUBLIC_APECHAIN_RPC_URL` | Recommended | Public fallback is available, but production should prefer a reliable RPC for wallet reads and browser block watching. |
+| `XDC_EXPLORER_API_URL` | Optional | Server-only XDC Network logs API. Defaults to `https://api.etherscan.io/v2/api`. |
+| `XDC_EXPLORER_CHAIN_ID` | Optional | Must be `50` for XDC Network Etherscan API V2 logs. Defaults to `50`. |
+| `XDC_EXPLORER_API_KEY` / `ETHERSCAN_API_KEY` | Required for reliable XDC Network discovery | `ETHERSCAN_API_KEY` is the shared server-side default; `XDC_EXPLORER_API_KEY` is an optional override. Do not use a `NEXT_PUBLIC_` key. |
+| `XDC_RPC_URL` / `XDC_MAINNET_RPC_URL` | Optional | Server-only XDC Network gas tracker RPC override for `/api/gas`. |
+| `NEXT_PUBLIC_XDC_RPC_URL` | Recommended | Public fallback is available, but production should prefer a reliable RPC for wallet reads and browser block watching. |
 | `MAINNET_RPC_URL` / `ETHEREUM_RPC_URL` | Required for Ethereum scan | Server-only Ethereum RPC URL for `/api/ethereum/approvals` and `/api/gas`. |
 | `ETHERSCAN_API_KEY` | Required for Ethereum scan | Server-only Etherscan API key. Do not use a `NEXT_PUBLIC_` key for Ethereum server discovery. |
 | `ARBITRUM_ONE_RPC_URL` / `ARBITRUM_RPC_URL` | Required for Arbitrum scan | Server-only Arbitrum RPC URL for `/api/arbitrum/approvals` and `/api/gas`. |
@@ -129,8 +159,9 @@ Keep private RPC URLs server-only.
 
 PulseChain, BSC, Base, Polygon, Sonic, Avalanche, Mantle, Linea, Blast,
 Berachain, Celo, Gnosis, Unichain, World Chain, Robinhood Chain, Monad, Katana,
-Sei, Plasma, and Abstract token logos use Dex Screener's public token lookup
-endpoint through `/api/token-logos`. No API key is required. The app sends token
+Sei, Plasma, Abstract, Fraxtal, Taiko, opBNB, Moonbeam, ApeChain, and XDC token
+logos use Dex Screener's public token lookup endpoint through
+`/api/token-logos`. No API key is required. The app sends token
 contract addresses only, caps each request at `30` addresses, caches successful
 display metadata at the CDN, and falls back to symbol initials when no logo is
 returned.
@@ -293,21 +324,23 @@ Hosted web Berachain approval discovery does not rely on public Berachain RPC
 `eth_getLogs`; it uses the server-side `/api/discovery/approvals` route with
 Etherscan API V2 logs.
 
-### `NEXT_PUBLIC_CELO_RPC_URL` / `NEXT_PUBLIC_GNOSIS_RPC_URL` / `NEXT_PUBLIC_UNICHAIN_RPC_URL` / `NEXT_PUBLIC_WORLDCHAIN_RPC_URL` / `NEXT_PUBLIC_ROBINHOOD_RPC_URL` / `NEXT_PUBLIC_MONAD_RPC_URL` / `NEXT_PUBLIC_KATANA_RPC_URL` / `NEXT_PUBLIC_SEI_RPC_URL` / `NEXT_PUBLIC_PLASMA_RPC_URL` / `NEXT_PUBLIC_ABSTRACT_RPC_URL`
+### `NEXT_PUBLIC_CELO_RPC_URL` / `NEXT_PUBLIC_GNOSIS_RPC_URL` / `NEXT_PUBLIC_UNICHAIN_RPC_URL` / `NEXT_PUBLIC_WORLDCHAIN_RPC_URL` / `NEXT_PUBLIC_ROBINHOOD_RPC_URL` / `NEXT_PUBLIC_MONAD_RPC_URL` / `NEXT_PUBLIC_KATANA_RPC_URL` / `NEXT_PUBLIC_SEI_RPC_URL` / `NEXT_PUBLIC_PLASMA_RPC_URL` / `NEXT_PUBLIC_ABSTRACT_RPC_URL` / `NEXT_PUBLIC_FRAXTAL_RPC_URL` / `NEXT_PUBLIC_TAIKO_RPC_URL` / `NEXT_PUBLIC_OPBNB_RPC_URL` / `NEXT_PUBLIC_MOONBEAM_RPC_URL` / `NEXT_PUBLIC_APECHAIN_RPC_URL` / `NEXT_PUBLIC_XDC_RPC_URL`
 
 Recommended for production. These override the Celo, Gnosis, Unichain, World
-Chain, Robinhood Chain, Monad, Katana, Sei, Plasma, and Abstract RPCs used by
-wagmi/viem for live validation and transaction submission. If unset, the app
-uses public defaults. The Robinhood Chain public default is rate-limited, so
-production should use a reliable browser-safe endpoint. Abstract keeps viem's
-ZKsync-style chain configuration while using the configured Abstract RPC URL.
+Chain, Robinhood Chain, Monad, Katana, Sei, Plasma, Abstract, Fraxtal, Taiko,
+opBNB, Moonbeam, ApeChain, and XDC RPCs used by wagmi/viem for live validation
+and transaction submission. If unset, the app uses public defaults. The
+Robinhood Chain public default is rate-limited, so production should use a
+reliable browser-safe endpoint. Abstract keeps viem's ZKsync-style chain
+configuration while using the configured Abstract RPC URL.
 
 Hosted web discovery for Celo, Gnosis, Unichain, and World Chain does not rely
 on public RPC `eth_getLogs`; it uses the server-side
 `/api/discovery/approvals` route with Etherscan API V2 logs. Robinhood Chain
 uses the same hosted route with Robinhood Blockscout logs. Monad, Katana, Sei,
-Plasma, and Abstract also use the hosted route with Etherscan API V2 logs and
-must keep explorer API keys server-only.
+Plasma, Abstract, Fraxtal, Taiko, opBNB, Moonbeam, ApeChain, and XDC also use
+the hosted route with Etherscan API V2 logs and must keep explorer API keys
+server-only.
 
 ### `NEXT_PUBLIC_MAINNET_RPC_URL` / `NEXT_PUBLIC_ETHEREUM_RPC_URL`
 
@@ -334,13 +367,15 @@ trying the server-only PulseChain discovery RPC fallback.
 
 No environment variable is required for PulseChain, BSC, Base, Polygon, Sonic,
 Avalanche, Mantle, Linea, Blast, Berachain, Celo, Gnosis, Unichain, World
-Chain, Robinhood Chain, Monad, Katana, Sei, Plasma, or Abstract token logos.
+Chain, Robinhood Chain, Monad, Katana, Sei, Plasma, Abstract, Fraxtal, Taiko,
+opBNB, Moonbeam, ApeChain, or XDC token logos.
 The `/api/token-logos` server route supports chain IDs `369`, `56`, `8453`,
 `137`, `146`, `43114`, `5000`, `59144`, `81457`, `80094`, `42220`, `100`,
-`130`, `480`, `4663`, `143`, `747474`, `1329`, `9745`, and `2741`. It calls
-Dex Screener for display metadata and does not receive wallet owner, spender,
-or allowance data. Treat logos as visual convenience only; explorer links and
-live chain reads remain the source of verification.
+`130`, `480`, `4663`, `143`, `747474`, `1329`, `9745`, `2741`, `252`,
+`167000`, `204`, `1284`, `33139`, and `50`. It calls Dex Screener for display
+metadata and does not receive wallet owner, spender, or allowance data. Treat
+logos as visual convenience only; explorer links and live chain reads remain
+the source of verification.
 
 ### `BSC_EXPLORER_API_URL`
 
@@ -700,19 +735,21 @@ so no Etherscan API key or `chainid` parameter is required. Explorer/API caps or
 rate limits are still reported as incomplete discovery instead of a false clear
 state.
 
-### `MONAD_EXPLORER_API_URL` / `KATANA_EXPLORER_API_URL` / `SEI_EXPLORER_API_URL` / `PLASMA_EXPLORER_API_URL` / `ABSTRACT_EXPLORER_API_URL`
+### `MONAD_EXPLORER_API_URL` / `KATANA_EXPLORER_API_URL` / `SEI_EXPLORER_API_URL` / `PLASMA_EXPLORER_API_URL` / `ABSTRACT_EXPLORER_API_URL` / `FRAXTAL_EXPLORER_API_URL` / `TAIKO_EXPLORER_API_URL` / `OPBNB_EXPLORER_API_URL` / `MOONBEAM_EXPLORER_API_URL` / `APECHAIN_EXPLORER_API_URL` / `XDC_EXPLORER_API_URL`
 
 Optional server-only historical logs API base URLs for Monad, Katana, Sei,
-Plasma, and Abstract. The default for all five is:
+Plasma, Abstract, Fraxtal, Taiko, opBNB, Moonbeam, ApeChain, and XDC. The
+default for all eleven is:
 
 ```text
 https://api.etherscan.io/v2/api
 ```
 
 The user-facing explorer links remain Monadscan, Katanascan, Seiscan,
-Plasmascan, and Abscan; historical log reads use Etherscan API V2.
+Plasmascan, Abscan, Fraxscan, TaikoScan, opBNB BscScan, Moonscan, ApeScan, and
+XDCScan; historical log reads use Etherscan API V2.
 
-### `MONAD_EXPLORER_CHAIN_ID` / `KATANA_EXPLORER_CHAIN_ID` / `SEI_EXPLORER_CHAIN_ID` / `PLASMA_EXPLORER_CHAIN_ID` / `ABSTRACT_EXPLORER_CHAIN_ID`
+### `MONAD_EXPLORER_CHAIN_ID` / `KATANA_EXPLORER_CHAIN_ID` / `SEI_EXPLORER_CHAIN_ID` / `PLASMA_EXPLORER_CHAIN_ID` / `ABSTRACT_EXPLORER_CHAIN_ID` / `FRAXTAL_EXPLORER_CHAIN_ID` / `TAIKO_EXPLORER_CHAIN_ID` / `OPBNB_EXPLORER_CHAIN_ID` / `MOONBEAM_EXPLORER_CHAIN_ID` / `APECHAIN_EXPLORER_CHAIN_ID` / `XDC_EXPLORER_CHAIN_ID`
 
 Optional server-only Etherscan API V2 chain ID parameters. Defaults:
 
@@ -722,13 +759,21 @@ Optional server-only Etherscan API V2 chain ID parameters. Defaults:
 1329
 9745
 2741
+252
+167000
+204
+1284
+33139
+50
 ```
 
 Historical log requests should include `chainid=143` for Monad,
 `chainid=747474` for Katana, `chainid=1329` for Sei, `chainid=9745` for
-Plasma, and `chainid=2741` for Abstract.
+Plasma, `chainid=2741` for Abstract, `chainid=252` for Fraxtal,
+`chainid=167000` for Taiko, `chainid=204` for opBNB, `chainid=1284` for
+Moonbeam, `chainid=33139` for ApeChain, and `chainid=50` for XDC.
 
-### `MONAD_EXPLORER_API_KEY` / `KATANA_EXPLORER_API_KEY` / `SEI_EXPLORER_API_KEY` / `PLASMA_EXPLORER_API_KEY` / `ABSTRACT_EXPLORER_API_KEY`
+### `MONAD_EXPLORER_API_KEY` / `KATANA_EXPLORER_API_KEY` / `SEI_EXPLORER_API_KEY` / `PLASMA_EXPLORER_API_KEY` / `ABSTRACT_EXPLORER_API_KEY` / `FRAXTAL_EXPLORER_API_KEY` / `TAIKO_EXPLORER_API_KEY` / `OPBNB_EXPLORER_API_KEY` / `MOONBEAM_EXPLORER_API_KEY` / `APECHAIN_EXPLORER_API_KEY` / `XDC_EXPLORER_API_KEY`
 
 Optional chain-specific server-only API keys. If unset, each chain uses
 `ETHERSCAN_API_KEY` as the shared server-side Etherscan API V2 key. Do not
@@ -1093,13 +1138,15 @@ Explorer APIs and public RPC endpoints can rate-limit, cap responses, or fail.
 The app should surface incomplete discovery or validation instead of displaying
 a false "clear" state. For production BSC, Base, Polygon, Sonic, Avalanche,
 Mantle, Linea, Blast, Berachain, Celo, Gnosis, Unichain, World Chain, Monad,
-Katana, Sei, Plasma, and Abstract discovery, use Etherscan API V2 keys
+Katana, Sei, Plasma, Abstract, Fraxtal, Taiko, opBNB, Moonbeam, ApeChain, and
+XDC discovery, use Etherscan API V2 keys
 server-side and account plans that support BNB Smart Chain, Base Mainnet,
 Polygon Mainnet, Sonic Mainnet, Avalanche C-Chain, Mantle Mainnet, Linea
 Mainnet, Blast Mainnet, Berachain Mainnet, Celo, Gnosis, Unichain Mainnet,
-World Mainnet, Monad, Katana, Sei, Plasma, and Abstract logs. One shared
-server-side `ETHERSCAN_API_KEY` can cover the new five chains when the account
-has access; per-chain `*_EXPLORER_API_KEY` values are optional overrides.
+World Mainnet, Monad, Katana, Sei, Plasma, Abstract, Fraxtal, Taiko, opBNB,
+Moonbeam, ApeChain, and XDC logs. One shared server-side `ETHERSCAN_API_KEY`
+can cover these Etherscan API V2 chains when the account has access; per-chain
+`*_EXPLORER_API_KEY` values are optional overrides.
 For Robinhood Chain, configure a reliable browser-safe RPC when possible and
 optionally override the Robinhood Blockscout API URL server-side. Robinhood
 Chain scan failures should surface as incomplete/config/upstream states, not as

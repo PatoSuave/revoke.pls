@@ -4,25 +4,31 @@ import { useId } from "react";
 
 import {
   ABSTRACT_CHAIN_ID,
+  APECHAIN_CHAIN_ID,
   AVALANCHE_CHAIN_ID,
   BERACHAIN_CHAIN_ID,
   BLAST_CHAIN_ID,
   BASE_CHAIN_ID,
   BSC_CHAIN_ID,
   CELO_CHAIN_ID,
+  FRAXTAL_CHAIN_ID,
   GNOSIS_CHAIN_ID,
   KATANA_CHAIN_ID,
   LINEA_CHAIN_ID,
   MANTLE_CHAIN_ID,
   MONAD_CHAIN_ID,
+  MOONBEAM_CHAIN_ID,
+  OPBNB_CHAIN_ID,
   PLASMA_CHAIN_ID,
   POLYGON_CHAIN_ID,
   PULSECHAIN_CHAIN_ID,
   ROBINHOOD_CHAIN_ID,
   SEI_CHAIN_ID,
   SONIC_CHAIN_ID,
+  TAIKO_CHAIN_ID,
   UNICHAIN_CHAIN_ID,
   WORLDCHAIN_CHAIN_ID,
+  XDC_CHAIN_ID,
 } from "@/lib/chains";
 import { ARBITRUM_ONE_CLIENT_CHAIN_ID } from "@/lib/arbitrum-approval-client";
 import { ETHEREUM_MAINNET_CLIENT_CHAIN_ID } from "@/lib/ethereum-approval-client";
@@ -62,6 +68,12 @@ const CHAIN_LOGO_LABELS: Readonly<Record<number, string>> = {
   [SEI_CHAIN_ID]: "Sei",
   [PLASMA_CHAIN_ID]: "Plasma",
   [ABSTRACT_CHAIN_ID]: "Abstract",
+  [FRAXTAL_CHAIN_ID]: "Fraxtal",
+  [TAIKO_CHAIN_ID]: "Taiko Mainnet",
+  [OPBNB_CHAIN_ID]: "opBNB",
+  [MOONBEAM_CHAIN_ID]: "Moonbeam",
+  [APECHAIN_CHAIN_ID]: "ApeChain",
+  [XDC_CHAIN_ID]: "XDC Network",
 };
 
 export function chainLogoLabel(chainId: number): string {
@@ -158,6 +170,18 @@ function renderChainMark(chainId: number, muted: boolean) {
       return <PlasmaMark muted={muted} />;
     case ABSTRACT_CHAIN_ID:
       return <AbstractMark muted={muted} />;
+    case FRAXTAL_CHAIN_ID:
+      return <FraxtalMark muted={muted} />;
+    case TAIKO_CHAIN_ID:
+      return <TaikoMark muted={muted} />;
+    case OPBNB_CHAIN_ID:
+      return <OpBnbMark muted={muted} />;
+    case MOONBEAM_CHAIN_ID:
+      return <MoonbeamMark muted={muted} />;
+    case APECHAIN_CHAIN_ID:
+      return <ApeChainMark muted={muted} />;
+    case XDC_CHAIN_ID:
+      return <XdcMark muted={muted} />;
     default:
       return <DefaultMark muted={muted} />;
   }
@@ -625,13 +649,136 @@ function AbstractMark({ muted }: { muted: boolean }) {
         width="40"
         height="40"
         rx="8"
-        fill={muted ? "currentColor" : "#FFFFFF"}
-        stroke={muted ? "currentColor" : "#111827"}
+        fill={muted ? "currentColor" : "#111827"}
+        stroke={muted ? "currentColor" : "#F8FAFC"}
         strokeWidth="3"
       />
       <path
         d="M15 34 24 12l9 22h-6l-2-5h-8l-2 5h-6Zm5-10h8l-4-10-4 10Z"
-        fill={muted ? "#0B0A14" : "#111827"}
+        fill={muted ? "#0B0A14" : "#F8FAFC"}
+      />
+    </>
+  );
+}
+
+function FraxtalMark({ muted }: { muted: boolean }) {
+  return (
+    <>
+      <circle cx="24" cy="24" r="21" fill={muted ? "currentColor" : "#071513"} />
+      <path
+        d="M13 13h22v6H20v5h12v6H20v8h-7V13Z"
+        fill={muted ? "#0B0A14" : "#00E5A8"}
+      />
+      <path
+        d="M29 37 37 25h-6l-8 12h6Zm-6-24h6l8 12h-6l-8-12Z"
+        fill={muted ? "#0B0A14" : "#E8FF7A"}
+      />
+    </>
+  );
+}
+
+function TaikoMark({ muted }: { muted: boolean }) {
+  return (
+    <>
+      <circle cx="24" cy="24" r="21" fill={muted ? "currentColor" : "#101828"} />
+      <circle
+        cx="24"
+        cy="24"
+        r="14"
+        fill="none"
+        stroke={muted ? "#0B0A14" : "#FF5A8A"}
+        strokeWidth="5"
+      />
+      <path
+        d="M24 11v26M13 24h22"
+        stroke={muted ? "#0B0A14" : "#FFFFFF"}
+        strokeLinecap="round"
+        strokeWidth="4"
+      />
+    </>
+  );
+}
+
+function OpBnbMark({ muted }: { muted: boolean }) {
+  return (
+    <>
+      <circle cx="24" cy="24" r="21" fill={muted ? "currentColor" : "#F0B90B"} />
+      <text
+        x="24"
+        y="21"
+        textAnchor="middle"
+        fontSize="10"
+        fontWeight="800"
+        fill={muted ? "#0B0A14" : "#111318"}
+      >
+        op
+      </text>
+      <text
+        x="24"
+        y="33"
+        textAnchor="middle"
+        fontSize="10"
+        fontWeight="800"
+        fill={muted ? "#0B0A14" : "#111318"}
+      >
+        BNB
+      </text>
+    </>
+  );
+}
+
+function MoonbeamMark({ muted }: { muted: boolean }) {
+  return (
+    <>
+      <circle cx="24" cy="24" r="21" fill={muted ? "currentColor" : "#111827"} />
+      <circle cx="20" cy="22" r="11" fill={muted ? "#0B0A14" : "#53CBC8"} />
+      <circle cx="27" cy="18" r="9" fill={muted ? "currentColor" : "#111827"} />
+      <path
+        d="M14 33h21"
+        stroke={muted ? "#0B0A14" : "#FACC15"}
+        strokeLinecap="round"
+        strokeWidth="5"
+      />
+    </>
+  );
+}
+
+function ApeChainMark({ muted }: { muted: boolean }) {
+  return (
+    <>
+      <circle cx="24" cy="24" r="21" fill={muted ? "currentColor" : "#2D6BFF"} />
+      <path
+        d="M24 9 39 17v14L24 39 9 31V17L24 9Z"
+        fill={muted ? "#0B0A14" : "#0B1020"}
+        opacity="0.92"
+      />
+      <text
+        x="24"
+        y="29"
+        textAnchor="middle"
+        fontSize="12"
+        fontWeight="800"
+        fill={muted ? "currentColor" : "#FFFFFF"}
+      >
+        APE
+      </text>
+    </>
+  );
+}
+
+function XdcMark({ muted }: { muted: boolean }) {
+  return (
+    <>
+      <circle cx="24" cy="24" r="21" fill={muted ? "currentColor" : "#0B2430"} />
+      <path
+        d="M13 14h7l4 6 4-6h7l-8 10 8 10h-7l-4-6-4 6h-7l8-10-8-10Z"
+        fill={muted ? "#0B0A14" : "#31D6FF"}
+      />
+      <path
+        d="M14 39h20"
+        stroke={muted ? "#0B0A14" : "#FFFFFF"}
+        strokeLinecap="round"
+        strokeWidth="3"
       />
     </>
   );

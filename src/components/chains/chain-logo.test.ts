@@ -3,19 +3,25 @@ import { describe, expect, it } from "vitest";
 
 import {
   ABSTRACT_CHAIN_ID,
+  APECHAIN_CHAIN_ID,
   BERACHAIN_CHAIN_ID,
   BLAST_CHAIN_ID,
   CELO_CHAIN_ID,
+  FRAXTAL_CHAIN_ID,
   GNOSIS_CHAIN_ID,
   KATANA_CHAIN_ID,
   PULSECHAIN_CHAIN_ID,
   LINEA_CHAIN_ID,
   MONAD_CHAIN_ID,
+  MOONBEAM_CHAIN_ID,
+  OPBNB_CHAIN_ID,
   PLASMA_CHAIN_ID,
   ROBINHOOD_CHAIN_ID,
   SEI_CHAIN_ID,
+  TAIKO_CHAIN_ID,
   UNICHAIN_CHAIN_ID,
   WORLDCHAIN_CHAIN_ID,
+  XDC_CHAIN_ID,
 } from "@/lib/chains";
 
 const SOURCE = readFileSync(new URL("./chain-logo.tsx", import.meta.url), "utf8");
@@ -48,6 +54,12 @@ describe("ChainLogo source", () => {
     expect(SOURCE).toContain(`[SEI_CHAIN_ID]: "Sei"`);
     expect(SOURCE).toContain(`[PLASMA_CHAIN_ID]: "Plasma"`);
     expect(SOURCE).toContain(`[ABSTRACT_CHAIN_ID]: "Abstract"`);
+    expect(SOURCE).toContain(`[FRAXTAL_CHAIN_ID]: "Fraxtal"`);
+    expect(SOURCE).toContain(`[TAIKO_CHAIN_ID]: "Taiko Mainnet"`);
+    expect(SOURCE).toContain(`[OPBNB_CHAIN_ID]: "opBNB"`);
+    expect(SOURCE).toContain(`[MOONBEAM_CHAIN_ID]: "Moonbeam"`);
+    expect(SOURCE).toContain(`[APECHAIN_CHAIN_ID]: "ApeChain"`);
+    expect(SOURCE).toContain(`[XDC_CHAIN_ID]: "XDC Network"`);
   });
 
   it("routes newer generic chains away from the default mark", () => {
@@ -64,6 +76,12 @@ describe("ChainLogo source", () => {
     expect(SEI_CHAIN_ID).toBe(1329);
     expect(PLASMA_CHAIN_ID).toBe(9745);
     expect(ABSTRACT_CHAIN_ID).toBe(2741);
+    expect(FRAXTAL_CHAIN_ID).toBe(252);
+    expect(TAIKO_CHAIN_ID).toBe(167000);
+    expect(OPBNB_CHAIN_ID).toBe(204);
+    expect(MOONBEAM_CHAIN_ID).toBe(1284);
+    expect(APECHAIN_CHAIN_ID).toBe(33139);
+    expect(XDC_CHAIN_ID).toBe(50);
 
     expect(SOURCE).toContain("case LINEA_CHAIN_ID:");
     expect(SOURCE).toContain("return <LineaMark muted={muted} />");
@@ -91,6 +109,18 @@ describe("ChainLogo source", () => {
     expect(SOURCE).toContain("return <PlasmaMark muted={muted} />");
     expect(SOURCE).toContain("case ABSTRACT_CHAIN_ID:");
     expect(SOURCE).toContain("return <AbstractMark muted={muted} />");
+    expect(SOURCE).toContain("case FRAXTAL_CHAIN_ID:");
+    expect(SOURCE).toContain("return <FraxtalMark muted={muted} />");
+    expect(SOURCE).toContain("case TAIKO_CHAIN_ID:");
+    expect(SOURCE).toContain("return <TaikoMark muted={muted} />");
+    expect(SOURCE).toContain("case OPBNB_CHAIN_ID:");
+    expect(SOURCE).toContain("return <OpBnbMark muted={muted} />");
+    expect(SOURCE).toContain("case MOONBEAM_CHAIN_ID:");
+    expect(SOURCE).toContain("return <MoonbeamMark muted={muted} />");
+    expect(SOURCE).toContain("case APECHAIN_CHAIN_ID:");
+    expect(SOURCE).toContain("return <ApeChainMark muted={muted} />");
+    expect(SOURCE).toContain("case XDC_CHAIN_ID:");
+    expect(SOURCE).toContain("return <XdcMark muted={muted} />");
   });
 
   it("keeps branded full-color marks for new generic chains", () => {
@@ -122,6 +152,19 @@ describe("ChainLogo source", () => {
     expect(SOURCE).toContain("#22C55E");
     expect(SOURCE).toContain("function AbstractMark");
     expect(SOURCE).toContain("#111827");
+    expect(SOURCE).toContain("#F8FAFC");
+    expect(SOURCE).toContain("function FraxtalMark");
+    expect(SOURCE).toContain("#00E5A8");
+    expect(SOURCE).toContain("function TaikoMark");
+    expect(SOURCE).toContain("#FF5A8A");
+    expect(SOURCE).toContain("function OpBnbMark");
+    expect(SOURCE).toContain("#F0B90B");
+    expect(SOURCE).toContain("function MoonbeamMark");
+    expect(SOURCE).toContain("#53CBC8");
+    expect(SOURCE).toContain("function ApeChainMark");
+    expect(SOURCE).toContain("#2D6BFF");
+    expect(SOURCE).toContain("function XdcMark");
+    expect(SOURCE).toContain("#31D6FF");
     expect(SOURCE).not.toContain('d="M15 13h13');
     expect(existsSync(ROBINHOOD_MARK_ASSET)).toBe(true);
   });

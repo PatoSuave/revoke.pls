@@ -24,6 +24,12 @@ const LIVE_CHAIN_DISPLAY_ORDER = [
   "Sei",
   "Plasma",
   "Abstract",
+  "Fraxtal",
+  "Taiko Mainnet",
+  "opBNB",
+  "Moonbeam",
+  "ApeChain",
+  "XDC Network",
   "Ethereum Mainnet",
   "Arbitrum One",
   "Optimism",
@@ -38,6 +44,8 @@ const COMPACT_CHAIN_NAMES: Record<string, string> = {
   "Arbitrum One": "Arbitrum",
   "World Chain": "World",
   "Robinhood Chain": "Robinhood",
+  "Taiko Mainnet": "Taiko",
+  "XDC Network": "XDC",
 };
 
 function formatList(items: readonly string[]) {

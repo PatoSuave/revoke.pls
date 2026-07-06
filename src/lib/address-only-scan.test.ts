@@ -9,25 +9,31 @@ import {
 import { ARBITRUM_ONE_CLIENT_CHAIN_ID } from "@/lib/arbitrum-approval-client";
 import {
   ABSTRACT_CHAIN_ID,
+  APECHAIN_CHAIN_ID,
   AVALANCHE_CHAIN_ID,
   BASE_CHAIN_ID,
   BERACHAIN_CHAIN_ID,
   BLAST_CHAIN_ID,
   BSC_CHAIN_ID,
   CELO_CHAIN_ID,
+  FRAXTAL_CHAIN_ID,
   GNOSIS_CHAIN_ID,
   KATANA_CHAIN_ID,
   LINEA_CHAIN_ID,
   MANTLE_CHAIN_ID,
   MONAD_CHAIN_ID,
+  MOONBEAM_CHAIN_ID,
+  OPBNB_CHAIN_ID,
   PLASMA_CHAIN_ID,
   POLYGON_CHAIN_ID,
   PULSECHAIN_CHAIN_ID,
   ROBINHOOD_CHAIN_ID,
   SEI_CHAIN_ID,
   SONIC_CHAIN_ID,
+  TAIKO_CHAIN_ID,
   UNICHAIN_CHAIN_ID,
   WORLDCHAIN_CHAIN_ID,
+  XDC_CHAIN_ID,
 } from "@/lib/chains";
 import { ETHEREUM_MAINNET_CLIENT_CHAIN_ID } from "@/lib/ethereum-approval-client";
 import { HYPEREVM_CLIENT_CHAIN_ID } from "@/lib/hyperevm-approval-client";
@@ -115,6 +121,12 @@ describe("address-only scan selection", () => {
       SEI_CHAIN_ID,
       PLASMA_CHAIN_ID,
       ABSTRACT_CHAIN_ID,
+      FRAXTAL_CHAIN_ID,
+      TAIKO_CHAIN_ID,
+      OPBNB_CHAIN_ID,
+      MOONBEAM_CHAIN_ID,
+      APECHAIN_CHAIN_ID,
+      XDC_CHAIN_ID,
     ]);
     expect(ADDRESS_ONLY_SCAN_ALL_CONCURRENCY).toBe(1);
     expect(

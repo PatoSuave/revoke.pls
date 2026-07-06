@@ -31,7 +31,7 @@ function jsonRpcFetcher(result: string): typeof fetch {
 
 describe("EIP-7702 account-code server diagnostic", () => {
   it("recognizes all capability chains as bounded account-code check targets", () => {
-    expect(CHAIN_CAPABILITY_CHAIN_IDS).toHaveLength(24);
+    expect(CHAIN_CAPABILITY_CHAIN_IDS).toHaveLength(30);
     for (const chainId of CHAIN_CAPABILITY_CHAIN_IDS) {
       expect(isEip7702DiagnosticChainId(chainId)).toBe(true);
     }

@@ -8,6 +8,7 @@ import {
 } from "@/lib/chain-capabilities";
 import {
   ABSTRACT_CHAIN_ID,
+  APECHAIN_CHAIN_ID,
   AVALANCHE_CHAIN_ID,
   BASE_CHAIN_ID,
   BERACHAIN_CHAIN_ID,
@@ -16,19 +17,24 @@ import {
   BSC_OSAKA_MAX_TRANSACTION_GAS,
   CELO_CHAIN_ID,
   EIP_7825_MAX_TRANSACTION_GAS,
+  FRAXTAL_CHAIN_ID,
   GNOSIS_CHAIN_ID,
   KATANA_CHAIN_ID,
   LINEA_CHAIN_ID,
   MANTLE_CHAIN_ID,
   MONAD_CHAIN_ID,
+  MOONBEAM_CHAIN_ID,
+  OPBNB_CHAIN_ID,
   PLASMA_CHAIN_ID,
   POLYGON_CHAIN_ID,
   PULSECHAIN_CHAIN_ID,
   ROBINHOOD_CHAIN_ID,
   SEI_CHAIN_ID,
   SONIC_CHAIN_ID,
+  TAIKO_CHAIN_ID,
   UNICHAIN_CHAIN_ID,
   WORLDCHAIN_CHAIN_ID,
+  XDC_CHAIN_ID,
 } from "@/lib/chains";
 import { ARBITRUM_ONE_CLIENT_CHAIN_ID } from "@/lib/arbitrum-approval-client";
 import { ETHEREUM_MAINNET_CLIENT_CHAIN_ID } from "@/lib/ethereum-approval-client";
@@ -64,6 +70,12 @@ describe("chain capability metadata", () => {
         SEI_CHAIN_ID,
         PLASMA_CHAIN_ID,
         ABSTRACT_CHAIN_ID,
+        FRAXTAL_CHAIN_ID,
+        TAIKO_CHAIN_ID,
+        OPBNB_CHAIN_ID,
+        MOONBEAM_CHAIN_ID,
+        APECHAIN_CHAIN_ID,
+        XDC_CHAIN_ID,
         PULSECHAIN_CHAIN_ID,
         BASE_CHAIN_ID,
         HYPEREVM_CLIENT_CHAIN_ID,
@@ -107,6 +119,12 @@ describe("chain capability metadata", () => {
     expect(CHAIN_CAPABILITIES[SEI_CHAIN_ID].batchRevokeEnabled).toBe(true);
     expect(CHAIN_CAPABILITIES[PLASMA_CHAIN_ID].batchRevokeEnabled).toBe(true);
     expect(CHAIN_CAPABILITIES[ABSTRACT_CHAIN_ID].batchRevokeEnabled).toBe(true);
+    expect(CHAIN_CAPABILITIES[FRAXTAL_CHAIN_ID].batchRevokeEnabled).toBe(true);
+    expect(CHAIN_CAPABILITIES[TAIKO_CHAIN_ID].batchRevokeEnabled).toBe(true);
+    expect(CHAIN_CAPABILITIES[OPBNB_CHAIN_ID].batchRevokeEnabled).toBe(true);
+    expect(CHAIN_CAPABILITIES[MOONBEAM_CHAIN_ID].batchRevokeEnabled).toBe(true);
+    expect(CHAIN_CAPABILITIES[APECHAIN_CHAIN_ID].batchRevokeEnabled).toBe(true);
+    expect(CHAIN_CAPABILITIES[XDC_CHAIN_ID].batchRevokeEnabled).toBe(true);
   });
 
   it("records EIP-7702 support without overclaiming unknown chains", () => {
@@ -160,6 +178,18 @@ describe("chain capability metadata", () => {
     expect(CHAIN_CAPABILITIES[ABSTRACT_CHAIN_ID].supportsEip7702).toBe(
       "unknown",
     );
+    expect(CHAIN_CAPABILITIES[FRAXTAL_CHAIN_ID].supportsEip7702).toBe(
+      "unknown",
+    );
+    expect(CHAIN_CAPABILITIES[TAIKO_CHAIN_ID].supportsEip7702).toBe("unknown");
+    expect(CHAIN_CAPABILITIES[OPBNB_CHAIN_ID].supportsEip7702).toBe("unknown");
+    expect(CHAIN_CAPABILITIES[MOONBEAM_CHAIN_ID].supportsEip7702).toBe(
+      "unknown",
+    );
+    expect(CHAIN_CAPABILITIES[APECHAIN_CHAIN_ID].supportsEip7702).toBe(
+      "unknown",
+    );
+    expect(CHAIN_CAPABILITIES[XDC_CHAIN_ID].supportsEip7702).toBe("unknown");
   });
 
   it("records confirmed gas caps as chain metadata", () => {
@@ -194,6 +224,12 @@ describe("chain capability metadata", () => {
     expect(CHAIN_CAPABILITIES[SEI_CHAIN_ID].perTxGasCap).toBeUndefined();
     expect(CHAIN_CAPABILITIES[PLASMA_CHAIN_ID].perTxGasCap).toBeUndefined();
     expect(CHAIN_CAPABILITIES[ABSTRACT_CHAIN_ID].perTxGasCap).toBeUndefined();
+    expect(CHAIN_CAPABILITIES[FRAXTAL_CHAIN_ID].perTxGasCap).toBeUndefined();
+    expect(CHAIN_CAPABILITIES[TAIKO_CHAIN_ID].perTxGasCap).toBeUndefined();
+    expect(CHAIN_CAPABILITIES[OPBNB_CHAIN_ID].perTxGasCap).toBeUndefined();
+    expect(CHAIN_CAPABILITIES[MOONBEAM_CHAIN_ID].perTxGasCap).toBeUndefined();
+    expect(CHAIN_CAPABILITIES[APECHAIN_CHAIN_ID].perTxGasCap).toBeUndefined();
+    expect(CHAIN_CAPABILITIES[XDC_CHAIN_ID].perTxGasCap).toBeUndefined();
   });
 
   it("records planned gas caps without treating them as active caps", () => {
@@ -220,6 +256,9 @@ describe("chain capability metadata", () => {
     expect(CHAIN_CAPABILITIES[WORLDCHAIN_CHAIN_ID].mayUsePaymasters).toBe(true);
     expect(CHAIN_CAPABILITIES[WORLDCHAIN_CHAIN_ID].gasLimit).toBe(80_000_000n);
     expect(CHAIN_CAPABILITIES[WORLDCHAIN_CHAIN_ID].gasTarget).toBe(40_000_000n);
+    expect(CHAIN_CAPABILITIES[TAIKO_CHAIN_ID].websocketSupport).toBe("yes");
+    expect(CHAIN_CAPABILITIES[MOONBEAM_CHAIN_ID].websocketSupport).toBe("yes");
+    expect(CHAIN_CAPABILITIES[APECHAIN_CHAIN_ID].websocketSupport).toBe("yes");
   });
 
   it("identifies preconfirmation-aware chains for receipt copy", () => {
@@ -241,6 +280,10 @@ describe("chain capability metadata", () => {
       ROBINHOOD_CHAIN_ID,
       KATANA_CHAIN_ID,
       ABSTRACT_CHAIN_ID,
+      FRAXTAL_CHAIN_ID,
+      TAIKO_CHAIN_ID,
+      OPBNB_CHAIN_ID,
+      APECHAIN_CHAIN_ID,
     ]) {
       expect(CHAIN_CAPABILITIES[chainId].confirmationStrategy).toBe(
         "rollup-safe-finalized-aware",

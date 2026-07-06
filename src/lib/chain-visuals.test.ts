@@ -22,4 +22,12 @@ describe("chain visuals", () => {
   it("falls back safely for unknown chains", () => {
     expect(getChainVisual("Unknown")).toBe(DEFAULT_CHAIN_VISUAL);
   });
+
+  it("keeps Abstract readable on dark surfaces", () => {
+    expect(getChainVisual("Abstract")).toMatchObject({
+      accent: "#F8FAFC",
+      accentReadable: "#F8FAFC",
+      accentBorder: "rgba(255, 255, 255, 0.55)",
+    });
+  });
 });

@@ -2,16 +2,22 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { getAddress } from "viem";
 
 import {
+  APECHAIN_CHAIN_ID,
   AVALANCHE_CHAIN_ID,
   BASE_CHAIN_ID,
   BERACHAIN_CHAIN_ID,
   BLAST_CHAIN_ID,
   BSC_CHAIN_ID,
+  FRAXTAL_CHAIN_ID,
   LINEA_CHAIN_ID,
   MANTLE_CHAIN_ID,
+  MOONBEAM_CHAIN_ID,
+  OPBNB_CHAIN_ID,
   POLYGON_CHAIN_ID,
   PULSECHAIN_CHAIN_ID,
   SONIC_CHAIN_ID,
+  TAIKO_CHAIN_ID,
+  XDC_CHAIN_ID,
 } from "@/lib/chains";
 import {
   TOKEN_LOGO_API_RATE_LIMIT,
@@ -265,6 +271,12 @@ describe("token logo API route", () => {
     [LINEA_CHAIN_ID, "linea", WETH],
     [BLAST_CHAIN_ID, "blast", WETH],
     [BERACHAIN_CHAIN_ID, "berachain", BERA_TOKEN],
+    [FRAXTAL_CHAIN_ID, "fraxtal", WETH],
+    [TAIKO_CHAIN_ID, "taiko", WETH],
+    [OPBNB_CHAIN_ID, "opbnb", WBNB],
+    [MOONBEAM_CHAIN_ID, "moonbeam", WETH],
+    [APECHAIN_CHAIN_ID, "apechain", WETH],
+    [XDC_CHAIN_ID, "xdc", WETH],
     [ARBITRUM_TOKEN_LOGO_CHAIN_ID, "arbitrum", WETH],
     [OPTIMISM_TOKEN_LOGO_CHAIN_ID, "optimism", WETH],
     [HYPEREVM_TOKEN_LOGO_CHAIN_ID, "hyperevm", WETH],

@@ -7,26 +7,32 @@ import {
 } from "@/lib/arbitrum-approval-client";
 import {
   abstract,
+  apechain,
   avalanche,
   base,
   berachain,
   blast,
   bsc,
   celo,
+  fraxtal,
   gnosis,
   katana,
   linea,
   mantle,
   monad,
+  moonbeam,
+  opbnb,
   plasma,
   polygon,
   pulsechain,
   robinhood,
   sei,
   sonic,
+  taiko,
   supportedChains,
   unichain,
   worldchain,
+  xdc,
 } from "@/lib/chains";
 import {
   ETHEREUM_MAINNET_PUBLIC_RPC_URL,
@@ -65,6 +71,12 @@ import {
  *  - Sei (1329)
  *  - Plasma (9745)
  *  - Abstract (2741)
+ *  - Fraxtal (252)
+ *  - Taiko Mainnet (167000)
+ *  - opBNB (204)
+ *  - Moonbeam (1284)
+ *  - ApeChain (33139)
+ *  - XDC Network (50)
  *
  * Ethereum Mainnet (1) is registered as a wallet-only chain for the
  * Ethereum scanner/revoke flow. It is intentionally not part of the active
@@ -99,7 +111,7 @@ export const hasWalletConnect: boolean = Boolean(walletConnectProjectId);
 const WALLETCONNECT_METADATA = {
   name: "Pulse Revoke",
   description:
-    "Review token approvals on PulseChain, BSC, Base, Polygon, Sonic, Avalanche, Mantle, Linea, Blast, Berachain, Celo, Gnosis, Unichain, World Chain, Robinhood, Monad, Katana, Sei, Plasma, Abstract, Ethereum, Arbitrum, Optimism, and HyperEVM.",
+    "Review token approvals on PulseChain, BSC, Base, Polygon, Sonic, Avalanche, Mantle, Linea, Blast, Berachain, Celo, Gnosis, Unichain, World Chain, Robinhood, Monad, Katana, Sei, Plasma, Abstract, Fraxtal, Taiko, opBNB, Moonbeam, ApeChain, XDC, Ethereum, Arbitrum, Optimism, and HyperEVM.",
   url: "https://pulserevoke.com",
   icons: ["https://pulserevoke.com/icon.png"],
 };
@@ -163,6 +175,16 @@ export const wagmiConfig = createConfig({
     [abstract.id]: http(
       process.env.NEXT_PUBLIC_ABSTRACT_RPC_URL ?? undefined,
     ),
+    [fraxtal.id]: http(process.env.NEXT_PUBLIC_FRAXTAL_RPC_URL ?? undefined),
+    [taiko.id]: http(process.env.NEXT_PUBLIC_TAIKO_RPC_URL ?? undefined),
+    [opbnb.id]: http(process.env.NEXT_PUBLIC_OPBNB_RPC_URL ?? undefined),
+    [moonbeam.id]: http(
+      process.env.NEXT_PUBLIC_MOONBEAM_RPC_URL ?? undefined,
+    ),
+    [apechain.id]: http(
+      process.env.NEXT_PUBLIC_APECHAIN_RPC_URL ?? undefined,
+    ),
+    [xdc.id]: http(process.env.NEXT_PUBLIC_XDC_RPC_URL ?? undefined),
     [ethereumMainnetWalletChain.id]: http(
       process.env.NEXT_PUBLIC_MAINNET_RPC_URL ??
         process.env.NEXT_PUBLIC_ETHEREUM_RPC_URL ??

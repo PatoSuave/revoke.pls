@@ -5,6 +5,9 @@ import {
   ABSTRACT_CHAIN_ID,
   ABSTRACT_EXPLORER_API_DEFAULT,
   ABSTRACT_EXPLORER_CHAIN_ID_DEFAULT,
+  APECHAIN_CHAIN_ID,
+  APECHAIN_EXPLORER_API_DEFAULT,
+  APECHAIN_EXPLORER_CHAIN_ID_DEFAULT,
   AVALANCHE_CHAIN_ID,
   AVALANCHE_EXPLORER_API_DEFAULT,
   AVALANCHE_EXPLORER_CHAIN_ID_DEFAULT,
@@ -27,6 +30,9 @@ import {
   CELO_EXPLORER_API_DEFAULT,
   CELO_EXPLORER_CHAIN_ID_DEFAULT,
   EIP_7825_MAX_TRANSACTION_GAS,
+  FRAXTAL_CHAIN_ID,
+  FRAXTAL_EXPLORER_API_DEFAULT,
+  FRAXTAL_EXPLORER_CHAIN_ID_DEFAULT,
   GNOSIS_CHAIN_ID,
   GNOSIS_EXPLORER_API_DEFAULT,
   GNOSIS_EXPLORER_CHAIN_ID_DEFAULT,
@@ -42,6 +48,12 @@ import {
   MONAD_CHAIN_ID,
   MONAD_EXPLORER_API_DEFAULT,
   MONAD_EXPLORER_CHAIN_ID_DEFAULT,
+  MOONBEAM_CHAIN_ID,
+  MOONBEAM_EXPLORER_API_DEFAULT,
+  MOONBEAM_EXPLORER_CHAIN_ID_DEFAULT,
+  OPBNB_CHAIN_ID,
+  OPBNB_EXPLORER_API_DEFAULT,
+  OPBNB_EXPLORER_CHAIN_ID_DEFAULT,
   PLASMA_CHAIN_ID,
   PLASMA_EXPLORER_API_DEFAULT,
   PLASMA_EXPLORER_CHAIN_ID_DEFAULT,
@@ -57,19 +69,27 @@ import {
   SONIC_CHAIN_ID,
   SONIC_EXPLORER_API_DEFAULT,
   SONIC_EXPLORER_CHAIN_ID_DEFAULT,
+  TAIKO_CHAIN_ID,
+  TAIKO_EXPLORER_API_DEFAULT,
+  TAIKO_EXPLORER_CHAIN_ID_DEFAULT,
   UNICHAIN_CHAIN_ID,
   UNICHAIN_EXPLORER_API_DEFAULT,
   UNICHAIN_EXPLORER_CHAIN_ID_DEFAULT,
   WORLDCHAIN_CHAIN_ID,
   WORLDCHAIN_EXPLORER_API_DEFAULT,
   WORLDCHAIN_EXPLORER_CHAIN_ID_DEFAULT,
+  XDC_CHAIN_ID,
+  XDC_EXPLORER_API_DEFAULT,
+  XDC_EXPLORER_CHAIN_ID_DEFAULT,
   abstract,
+  apechain,
   avalanche,
   berachain,
   blast,
   base,
   bsc,
   celo,
+  fraxtal,
   getChainConfig,
   getSupportedChainShortNames,
   gnosis,
@@ -78,15 +98,19 @@ import {
   linea,
   mantle,
   monad,
+  moonbeam,
+  opbnb,
   plasma,
   polygon,
   robinhood,
   sei,
   sonic,
+  taiko,
   supportedChainConfigList,
   supportedChains,
   unichain,
   worldchain,
+  xdc,
 } from "./chains";
 import { explorerAddressUrl, explorerTokenUrl, explorerTxUrl } from "./explorer";
 import { ARBITRUM_ONE_CLIENT_CHAIN_ID } from "./arbitrum-approval-client";
@@ -135,6 +159,12 @@ describe("supported chain config", () => {
       SEI_CHAIN_ID,
       PLASMA_CHAIN_ID,
       ABSTRACT_CHAIN_ID,
+      FRAXTAL_CHAIN_ID,
+      TAIKO_CHAIN_ID,
+      OPBNB_CHAIN_ID,
+      MOONBEAM_CHAIN_ID,
+      APECHAIN_CHAIN_ID,
+      XDC_CHAIN_ID,
     ]);
     expect(supportedChainConfigList.map((chain) => chain.chainId)).toEqual([
       PULSECHAIN_CHAIN_ID,
@@ -157,6 +187,12 @@ describe("supported chain config", () => {
       SEI_CHAIN_ID,
       PLASMA_CHAIN_ID,
       ABSTRACT_CHAIN_ID,
+      FRAXTAL_CHAIN_ID,
+      TAIKO_CHAIN_ID,
+      OPBNB_CHAIN_ID,
+      MOONBEAM_CHAIN_ID,
+      APECHAIN_CHAIN_ID,
+      XDC_CHAIN_ID,
     ]);
     expect(supportedChainConfigList.map((chain) => chain.shortName)).toEqual([
       "PulseChain",
@@ -179,9 +215,15 @@ describe("supported chain config", () => {
       "Sei",
       "Plasma",
       "Abstract",
+      "Fraxtal",
+      "Taiko",
+      "opBNB",
+      "Moonbeam",
+      "ApeChain",
+      "XDC",
     ]);
     expect(getSupportedChainShortNames()).toBe(
-      "PulseChain, BSC, Base, Polygon, Sonic, Avalanche, Mantle, Linea, Blast, Berachain, Celo, Gnosis, Unichain, World, Robinhood, Monad, Katana, Sei, Plasma, or Abstract",
+      "PulseChain, BSC, Base, Polygon, Sonic, Avalanche, Mantle, Linea, Blast, Berachain, Celo, Gnosis, Unichain, World, Robinhood, Monad, Katana, Sei, Plasma, Abstract, Fraxtal, Taiko, opBNB, Moonbeam, ApeChain, or XDC",
     );
     expect(isSupportedChainId(1)).toBe(false);
     expect(isSupportedChainId(ARBITRUM_ONE_CLIENT_CHAIN_ID)).toBe(false);
@@ -577,6 +619,80 @@ describe("supported chain config", () => {
         apiKeyEnvVars: ["ABSTRACT_EXPLORER_API_KEY", "ETHERSCAN_API_KEY"],
         chain: abstract,
       },
+      {
+        chainId: FRAXTAL_CHAIN_ID,
+        displayName: "Fraxtal",
+        nativeSymbol: "FRAX",
+        explorerName: "Fraxscan",
+        explorerBaseUrl: "https://fraxscan.com",
+        rpcUrl: "https://rpc.frax.com",
+        apiUrl: FRAXTAL_EXPLORER_API_DEFAULT,
+        apiChainId: FRAXTAL_EXPLORER_CHAIN_ID_DEFAULT,
+        apiKeyEnvVars: ["FRAXTAL_EXPLORER_API_KEY", "ETHERSCAN_API_KEY"],
+        chain: fraxtal,
+      },
+      {
+        chainId: TAIKO_CHAIN_ID,
+        displayName: "Taiko Mainnet",
+        shortName: "Taiko",
+        nativeSymbol: "ETH",
+        explorerName: "TaikoScan",
+        explorerBaseUrl: "https://taikoscan.io",
+        rpcUrl: "https://rpc.mainnet.taiko.xyz",
+        apiUrl: TAIKO_EXPLORER_API_DEFAULT,
+        apiChainId: TAIKO_EXPLORER_CHAIN_ID_DEFAULT,
+        apiKeyEnvVars: ["TAIKO_EXPLORER_API_KEY", "ETHERSCAN_API_KEY"],
+        chain: taiko,
+      },
+      {
+        chainId: OPBNB_CHAIN_ID,
+        displayName: "opBNB",
+        nativeSymbol: "BNB",
+        explorerName: "opBNB BscScan",
+        explorerBaseUrl: "https://opbnb.bscscan.com",
+        rpcUrl: "https://opbnb-mainnet-rpc.bnbchain.org",
+        apiUrl: OPBNB_EXPLORER_API_DEFAULT,
+        apiChainId: OPBNB_EXPLORER_CHAIN_ID_DEFAULT,
+        apiKeyEnvVars: ["OPBNB_EXPLORER_API_KEY", "ETHERSCAN_API_KEY"],
+        chain: opbnb,
+      },
+      {
+        chainId: MOONBEAM_CHAIN_ID,
+        displayName: "Moonbeam",
+        nativeSymbol: "GLMR",
+        explorerName: "Moonscan",
+        explorerBaseUrl: "https://moonbeam.moonscan.io",
+        rpcUrl: "https://rpc.api.moonbeam.network",
+        apiUrl: MOONBEAM_EXPLORER_API_DEFAULT,
+        apiChainId: MOONBEAM_EXPLORER_CHAIN_ID_DEFAULT,
+        apiKeyEnvVars: ["MOONBEAM_EXPLORER_API_KEY", "ETHERSCAN_API_KEY"],
+        chain: moonbeam,
+      },
+      {
+        chainId: APECHAIN_CHAIN_ID,
+        displayName: "ApeChain",
+        nativeSymbol: "APE",
+        explorerName: "ApeScan",
+        explorerBaseUrl: "https://apescan.io",
+        rpcUrl: "https://rpc.apechain.com/http",
+        apiUrl: APECHAIN_EXPLORER_API_DEFAULT,
+        apiChainId: APECHAIN_EXPLORER_CHAIN_ID_DEFAULT,
+        apiKeyEnvVars: ["APECHAIN_EXPLORER_API_KEY", "ETHERSCAN_API_KEY"],
+        chain: apechain,
+      },
+      {
+        chainId: XDC_CHAIN_ID,
+        displayName: "XDC Network",
+        shortName: "XDC",
+        nativeSymbol: "XDC",
+        explorerName: "XDCScan",
+        explorerBaseUrl: "https://xdcscan.com",
+        rpcUrl: "https://rpc.xdcrpc.com",
+        apiUrl: XDC_EXPLORER_API_DEFAULT,
+        apiChainId: XDC_EXPLORER_CHAIN_ID_DEFAULT,
+        apiKeyEnvVars: ["XDC_EXPLORER_API_KEY", "ETHERSCAN_API_KEY"],
+        chain: xdc,
+      },
     ] as const;
 
     for (const item of cases) {
@@ -587,9 +703,10 @@ describe("supported chain config", () => {
       expect(config?.shortName).toBe("shortName" in item ? item.shortName : item.displayName);
       expect(config?.nativeSymbol).toBe(item.nativeSymbol);
       expect(config?.standardLabels).toMatchObject({
-        fungible: "ERC-20",
-        nft: "ERC-721",
-        multiToken: "ERC-1155",
+        fungible: item.chainId === OPBNB_CHAIN_ID ? "BEP-20" : "ERC-20",
+        nft: item.chainId === OPBNB_CHAIN_ID ? "BEP-721" : "ERC-721",
+        multiToken:
+          item.chainId === OPBNB_CHAIN_ID ? "BEP-1155" : "ERC-1155",
       });
       expect(config?.discovery.apiProviderKind).toBe("etherscan-v2");
       expect(config?.discovery.apiProviderName).toBe("Etherscan API V2");
@@ -1112,6 +1229,12 @@ describe("supported chain config", () => {
     expect(copy).toContain("Sei");
     expect(copy).toContain("Plasma");
     expect(copy).toContain("Abstract");
+    expect(copy).toContain("Fraxtal");
+    expect(copy).toContain("Taiko");
+    expect(copy).toContain("opBNB");
+    expect(copy).toContain("Moonbeam");
+    expect(copy).toContain("ApeChain");
+    expect(copy).toContain("XDC");
     expect(copy).toContain("Ethereum");
     expect(copy).toContain("Arbitrum");
     expect(isSupportedChainId(1)).toBe(false);
@@ -1277,6 +1400,12 @@ describe("supported chain config", () => {
       sei: process.env.NEXT_PUBLIC_SEI_EXPLORER_CHAIN_ID,
       plasma: process.env.NEXT_PUBLIC_PLASMA_EXPLORER_CHAIN_ID,
       abstract: process.env.NEXT_PUBLIC_ABSTRACT_EXPLORER_CHAIN_ID,
+      fraxtal: process.env.NEXT_PUBLIC_FRAXTAL_EXPLORER_CHAIN_ID,
+      taiko: process.env.NEXT_PUBLIC_TAIKO_EXPLORER_CHAIN_ID,
+      opbnb: process.env.NEXT_PUBLIC_OPBNB_EXPLORER_CHAIN_ID,
+      moonbeam: process.env.NEXT_PUBLIC_MOONBEAM_EXPLORER_CHAIN_ID,
+      apechain: process.env.NEXT_PUBLIC_APECHAIN_EXPLORER_CHAIN_ID,
+      xdc: process.env.NEXT_PUBLIC_XDC_EXPLORER_CHAIN_ID,
     };
     delete process.env.NEXT_PUBLIC_LINEA_EXPLORER_CHAIN_ID;
     delete process.env.NEXT_PUBLIC_BLAST_EXPLORER_CHAIN_ID;
@@ -1290,6 +1419,12 @@ describe("supported chain config", () => {
     delete process.env.NEXT_PUBLIC_SEI_EXPLORER_CHAIN_ID;
     delete process.env.NEXT_PUBLIC_PLASMA_EXPLORER_CHAIN_ID;
     delete process.env.NEXT_PUBLIC_ABSTRACT_EXPLORER_CHAIN_ID;
+    delete process.env.NEXT_PUBLIC_FRAXTAL_EXPLORER_CHAIN_ID;
+    delete process.env.NEXT_PUBLIC_TAIKO_EXPLORER_CHAIN_ID;
+    delete process.env.NEXT_PUBLIC_OPBNB_EXPLORER_CHAIN_ID;
+    delete process.env.NEXT_PUBLIC_MOONBEAM_EXPLORER_CHAIN_ID;
+    delete process.env.NEXT_PUBLIC_APECHAIN_EXPLORER_CHAIN_ID;
+    delete process.env.NEXT_PUBLIC_XDC_EXPLORER_CHAIN_ID;
     vi.resetModules();
 
     try {
@@ -1307,6 +1442,12 @@ describe("supported chain config", () => {
         [chains.SEI_CHAIN_ID, "1329"],
         [chains.PLASMA_CHAIN_ID, "9745"],
         [chains.ABSTRACT_CHAIN_ID, "2741"],
+        [chains.FRAXTAL_CHAIN_ID, "252"],
+        [chains.TAIKO_CHAIN_ID, "167000"],
+        [chains.OPBNB_CHAIN_ID, "204"],
+        [chains.MOONBEAM_CHAIN_ID, "1284"],
+        [chains.APECHAIN_CHAIN_ID, "33139"],
+        [chains.XDC_CHAIN_ID, "50"],
       ] as const;
 
       for (const [chainId, expected] of cases) {
@@ -1357,6 +1498,27 @@ describe("supported chain config", () => {
       if (originals.abstract !== undefined) {
         process.env.NEXT_PUBLIC_ABSTRACT_EXPLORER_CHAIN_ID =
           originals.abstract;
+      }
+      if (originals.fraxtal !== undefined) {
+        process.env.NEXT_PUBLIC_FRAXTAL_EXPLORER_CHAIN_ID =
+          originals.fraxtal;
+      }
+      if (originals.taiko !== undefined) {
+        process.env.NEXT_PUBLIC_TAIKO_EXPLORER_CHAIN_ID = originals.taiko;
+      }
+      if (originals.opbnb !== undefined) {
+        process.env.NEXT_PUBLIC_OPBNB_EXPLORER_CHAIN_ID = originals.opbnb;
+      }
+      if (originals.moonbeam !== undefined) {
+        process.env.NEXT_PUBLIC_MOONBEAM_EXPLORER_CHAIN_ID =
+          originals.moonbeam;
+      }
+      if (originals.apechain !== undefined) {
+        process.env.NEXT_PUBLIC_APECHAIN_EXPLORER_CHAIN_ID =
+          originals.apechain;
+      }
+      if (originals.xdc !== undefined) {
+        process.env.NEXT_PUBLIC_XDC_EXPLORER_CHAIN_ID = originals.xdc;
       }
       vi.resetModules();
     }
