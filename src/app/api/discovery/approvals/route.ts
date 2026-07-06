@@ -34,7 +34,7 @@ export async function GET(request: Request) {
   const chainId = Number(url.searchParams.get("chainId"));
   if (!Number.isInteger(chainId) || !isServerDiscoveryChainId(chainId)) {
     return badRequest(
-      "Server discovery currently supports chainId=369, 56, 8453, 137, 146, 43114, 5000, 59144, 81457, 80094, 42220, 100, 130, 480, 4663, 143, 747474, 1329, 9745, and 2741.",
+      "Server discovery currently supports chainId=369, 56, 8453, 137, 146, 43114, 5000, 59144, 81457, 80094, 42220, 100, 130, 480, 4663, 143, 747474, 1329, 9745, 2741, 252, 167000, 204, 1284, 33139, and 50.",
     );
   }
 

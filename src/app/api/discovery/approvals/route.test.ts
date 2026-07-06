@@ -2,12 +2,18 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import {
   ABSTRACT_CHAIN_ID,
+  APECHAIN_CHAIN_ID,
+  FRAXTAL_CHAIN_ID,
   KATANA_CHAIN_ID,
   MONAD_CHAIN_ID,
+  MOONBEAM_CHAIN_ID,
+  OPBNB_CHAIN_ID,
   PLASMA_CHAIN_ID,
   POLYGON_CHAIN_ID,
   PULSECHAIN_CHAIN_ID,
   SEI_CHAIN_ID,
+  TAIKO_CHAIN_ID,
+  XDC_CHAIN_ID,
 } from "@/lib/chains";
 import { resetServerApprovalApiRateLimitForTests } from "@/lib/server-approval-api-controls";
 import { GET } from "./route";
@@ -23,7 +29,8 @@ vi.mock("@/lib/server-approval-discovery", () => ({
   isServerDiscoveryChainId: (chainId: number) =>
     [
       369, 56, 8453, 137, 146, 43114, 5000, 59144, 81457, 80094, 42220, 100,
-      130, 480, 4663, 143, 747474, 1329, 9745, 2741,
+      130, 480, 4663, 143, 747474, 1329, 9745, 2741, 252, 167000, 204, 1284,
+      33139, 50,
     ].includes(chainId),
   normalizeServerDiscoveryOwner: (value: string | null) =>
     value && /^0x[a-fA-F0-9]{40}$/.test(value) ? value : null,
@@ -132,6 +139,12 @@ describe("shared server approval discovery route hardening", () => {
     SEI_CHAIN_ID,
     PLASMA_CHAIN_ID,
     ABSTRACT_CHAIN_ID,
+    FRAXTAL_CHAIN_ID,
+    TAIKO_CHAIN_ID,
+    OPBNB_CHAIN_ID,
+    MOONBEAM_CHAIN_ID,
+    APECHAIN_CHAIN_ID,
+    XDC_CHAIN_ID,
   ] as const)("accepts new Etherscan V2 chainId=%s", async (chainId) => {
     discoverServerErc20Approvals.mockImplementation(async () =>
       completeErc20Response(chainId),
