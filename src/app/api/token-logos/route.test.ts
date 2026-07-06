@@ -60,7 +60,7 @@ describe("token logo API route", () => {
     expect(fetch).not.toHaveBeenCalled();
   });
 
-  it("returns an empty cached result when no token addresses are provided", async () => {
+  it("returns an empty no-store result when no token addresses are provided", async () => {
     const fetch = vi.fn();
     vi.stubGlobal("fetch", fetch);
 
@@ -72,7 +72,9 @@ describe("token logo API route", () => {
     const body = await response.json();
 
     expect(response.status).toBe(200);
-    expect(response.headers.get("Cache-Control")).toContain("s-maxage=21600");
+    expect(response.headers.get("Cache-Control")).toContain("no-store");
+    expect(response.headers.get("CDN-Cache-Control")).toBe("no-store");
+    expect(response.headers.get("Vercel-CDN-Cache-Control")).toBe("no-store");
     expect(body.status).toBe("empty");
     expect(body.logos).toEqual({});
     expect(fetch).not.toHaveBeenCalled();
@@ -111,6 +113,9 @@ describe("token logo API route", () => {
     const body = await response.json();
 
     expect(response.status).toBe(200);
+    expect(response.headers.get("Cache-Control")).toContain("no-store");
+    expect(response.headers.get("CDN-Cache-Control")).toBe("no-store");
+    expect(response.headers.get("Vercel-CDN-Cache-Control")).toBe("no-store");
     expect(body.status).toBe("complete");
     expect(body.requested).toBe(2);
     expect(body.logos[tokenLogoAddressKey(WPLS)]).toMatchObject({
@@ -203,6 +208,9 @@ describe("token logo API route", () => {
     const body = await response.json();
 
     expect(response.status).toBe(200);
+    expect(response.headers.get("Cache-Control")).toContain("no-store");
+    expect(response.headers.get("CDN-Cache-Control")).toBe("no-store");
+    expect(response.headers.get("Vercel-CDN-Cache-Control")).toBe("no-store");
     expect(body.source).toBe("9mm-tokenlist");
     expect(body.sources).toEqual(["9mm-tokenlist"]);
     expect(body.logos[tokenLogoAddressKey(WETH)]).toMatchObject({

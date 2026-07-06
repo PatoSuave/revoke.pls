@@ -79,7 +79,7 @@ export async function GET(request: Request) {
         truncated: false,
         logos: {},
       },
-      { headers: tokenLogoCacheHeaders() },
+      { headers: tokenLogoNoStoreHeaders() },
     );
   }
 
@@ -173,7 +173,7 @@ export async function GET(request: Request) {
       truncated: rawAddresses.length > TOKEN_LOGO_MAX_ADDRESSES,
       logos,
     },
-    { headers: tokenLogoCacheHeaders() },
+    { headers: tokenLogoNoStoreHeaders() },
   );
 }
 
@@ -228,7 +228,7 @@ async function upstreamFailureWithFallback({
       truncated: rawAddressCount > TOKEN_LOGO_MAX_ADDRESSES,
       logos: fallbackLogos,
     },
-    { headers: tokenLogoCacheHeaders() },
+    { headers: tokenLogoNoStoreHeaders() },
   );
 }
 
@@ -287,15 +287,6 @@ function logoSources(logos: TokenLogoMap, primary: string): string[] {
         .filter((source) => source !== primary),
     ),
   ];
-}
-
-function tokenLogoCacheHeaders(): HeadersInit {
-  return {
-    "Cache-Control": "public, s-maxage=21600, stale-while-revalidate=86400",
-    "CDN-Cache-Control": "public, s-maxage=21600",
-    "Vercel-CDN-Cache-Control":
-      "public, s-maxage=21600, stale-while-revalidate=86400",
-  };
 }
 
 function tokenLogoNoStoreHeaders(headers: HeadersInit = {}): HeadersInit {
