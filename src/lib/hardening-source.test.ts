@@ -269,6 +269,8 @@ describe("hardening source invariants", () => {
     expect(liveScript).toContain("/api/token-logos");
     expect(liveScript).toContain("/api/gas?chainId=369");
     expect(liveScript).toContain("assertNoApiKeyShapedLiteral");
+    expect(liveScript).toContain("BSC_EXPLORER_API_KEY");
+    expect(liveScript).toContain("BASE_EXPLORER_API_KEY");
     expect(liveScript).toContain("LINEA_EXPLORER_API_KEY");
     expect(liveScript).toContain("BLAST_EXPLORER_API_KEY");
     expect(liveScript).toContain("BERACHAIN_EXPLORER_API_KEY");
@@ -276,6 +278,14 @@ describe("hardening source invariants", () => {
     expect(liveScript).toContain("GNOSIS_EXPLORER_API_KEY");
     expect(liveScript).toContain("UNICHAIN_EXPLORER_API_KEY");
     expect(liveScript).toContain("WORLDCHAIN_EXPLORER_API_KEY");
+    expect(liveScript).toContain("MONAD_EXPLORER_API_KEY");
+    expect(liveScript).toContain("KATANA_EXPLORER_API_KEY");
+    expect(liveScript).toContain("SEI_EXPLORER_API_KEY");
+    expect(liveScript).toContain("PLASMA_EXPLORER_API_KEY");
+    expect(liveScript).toContain("ABSTRACT_EXPLORER_API_KEY");
+    expect(liveScript).toContain("OPTIMISM_EXPLORER_API_KEY");
+    expect(liveScript).toContain("HYPEREVM_EXPLORER_API_KEY");
+    expect(liveScript).toContain("HYPEREVM_ETHERSCAN_API_KEY");
     expect(liveScript).toContain("_vercel_share");
     expect(envScript).toContain("NEXT_PUBLIC_BSC_EXPLORER_API_KEY");
     expect(envScript).toContain("NEXT_PUBLIC_BSCSCAN_API_KEY");
@@ -289,6 +299,11 @@ describe("hardening source invariants", () => {
     expect(envScript).toContain("NEXT_PUBLIC_GNOSIS_EXPLORER_API_KEY");
     expect(envScript).toContain("NEXT_PUBLIC_UNICHAIN_EXPLORER_API_KEY");
     expect(envScript).toContain("NEXT_PUBLIC_WORLDCHAIN_EXPLORER_API_KEY");
+    expect(envScript).toContain("NEXT_PUBLIC_MONAD_EXPLORER_API_KEY");
+    expect(envScript).toContain("NEXT_PUBLIC_KATANA_EXPLORER_API_KEY");
+    expect(envScript).toContain("NEXT_PUBLIC_SEI_EXPLORER_API_KEY");
+    expect(envScript).toContain("NEXT_PUBLIC_PLASMA_EXPLORER_API_KEY");
+    expect(envScript).toContain("NEXT_PUBLIC_ABSTRACT_EXPLORER_API_KEY");
     expect(envScript).toContain("NEXT_PUBLIC_ETHERSCAN_API_KEY");
     expect(envScript).toContain("allow-desktop-public-keys");
     expect(`${hostedHardening}\n${auditGuide}`).toContain("Vercel Firewall");

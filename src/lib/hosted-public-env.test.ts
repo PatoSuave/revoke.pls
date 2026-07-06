@@ -49,4 +49,21 @@ describe("hosted public env guard", () => {
     expect(result.status).toBe(0);
     expect(result.stdout).toContain("Hosted web public env guard passed.");
   });
+
+  it("rejects browser-visible explorer keys for shared-key Etherscan chains", () => {
+    const result = runGuard({
+      NEXT_PUBLIC_MONAD_EXPLORER_API_KEY: "public-monad-key-123",
+      NEXT_PUBLIC_KATANA_EXPLORER_API_KEY: "public-katana-key-123",
+      NEXT_PUBLIC_SEI_EXPLORER_API_KEY: "public-sei-key-123",
+      NEXT_PUBLIC_PLASMA_EXPLORER_API_KEY: "public-plasma-key-123",
+      NEXT_PUBLIC_ABSTRACT_EXPLORER_API_KEY: "public-abstract-key-123",
+    });
+
+    expect(result.status).toBe(1);
+    expect(result.stderr).toContain("NEXT_PUBLIC_MONAD_EXPLORER_API_KEY");
+    expect(result.stderr).toContain("NEXT_PUBLIC_KATANA_EXPLORER_API_KEY");
+    expect(result.stderr).toContain("NEXT_PUBLIC_SEI_EXPLORER_API_KEY");
+    expect(result.stderr).toContain("NEXT_PUBLIC_PLASMA_EXPLORER_API_KEY");
+    expect(result.stderr).toContain("NEXT_PUBLIC_ABSTRACT_EXPLORER_API_KEY");
+  });
 });

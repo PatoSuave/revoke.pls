@@ -62,6 +62,8 @@ describe("Wallet Lifeboat spender risk route", () => {
     expect(response.status).toBe(400);
     expectNoStore(response);
     expect(body.status).toBe("bad-request");
+    expect(body.errors.join(" ")).toContain("Provide valid spender addresses");
+    expect(body.errors.join(" ")).not.toContain("nope");
     expect(discoverSpenderContractRisk).not.toHaveBeenCalled();
   });
 

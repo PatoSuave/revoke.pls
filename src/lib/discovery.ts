@@ -505,6 +505,7 @@ async function fetchDiscovery(
 
   try {
     return await fetch(url, {
+      cache: "no-store",
       signal: controller.signal,
       headers: { accept: "application/json" },
     });

@@ -973,7 +973,8 @@ describe("createBlockscoutDiscoverySource", () => {
   });
 
   it("builds Base ERC-20 log requests with Etherscan V2 and chainid=8453", async () => {
-    const fetch = vi.fn(async (input: RequestInfo | URL) => {
+    const fetch = vi.fn(async (...args: [RequestInfo | URL, RequestInit?]) => {
+      const [input] = args;
       void input;
       return jsonResponse({ status: "1", message: "OK", result: [] });
     });
@@ -1003,6 +1004,7 @@ describe("createBlockscoutDiscoverySource", () => {
     expect(url.searchParams.get("topic0")).toBe(ERC20_APPROVAL_TOPIC0);
     expect(url.searchParams.get("topic1")).toBe(pad(OWNER));
     expect(url.searchParams.get("apikey")).toBe("base-key");
+    expect(fetch.mock.calls[0]?.[1]).toMatchObject({ cache: "no-store" });
   });
 
   it("builds Base NFT log requests with Etherscan V2 chainid=8453", async () => {

@@ -51,7 +51,7 @@ export async function GET(request: Request) {
 
   const spenders = parseSpenders(url);
   if (spenders.invalid.length > 0) {
-    return badRequest(`Invalid spender address: ${spenders.invalid[0]}`);
+    return badRequest("Provide valid spender addresses in ?spender=0x...");
   }
   if (spenders.addresses.length > MAX_SPENDER_COUNT) {
     return badRequest(
