@@ -8,6 +8,7 @@ import {
   ARBITRUM_ONE_SHORT_NAME,
 } from "@/lib/arbitrum-approval-client";
 import {
+  ABSTRACT_CHAIN_ID,
   AVALANCHE_CHAIN_ID,
   BASE_CHAIN_ID,
   BERACHAIN_CHAIN_ID,
@@ -15,11 +16,15 @@ import {
   BSC_CHAIN_ID,
   CELO_CHAIN_ID,
   GNOSIS_CHAIN_ID,
+  KATANA_CHAIN_ID,
   LINEA_CHAIN_ID,
   MANTLE_CHAIN_ID,
+  MONAD_CHAIN_ID,
+  PLASMA_CHAIN_ID,
   POLYGON_CHAIN_ID,
   PULSECHAIN_CHAIN_ID,
   ROBINHOOD_CHAIN_ID,
+  SEI_CHAIN_ID,
   SONIC_CHAIN_ID,
   UNICHAIN_CHAIN_ID,
   WORLDCHAIN_CHAIN_ID,
@@ -63,6 +68,11 @@ export type GasTrackerChainId =
   | typeof UNICHAIN_CHAIN_ID
   | typeof WORLDCHAIN_CHAIN_ID
   | typeof ROBINHOOD_CHAIN_ID
+  | typeof MONAD_CHAIN_ID
+  | typeof KATANA_CHAIN_ID
+  | typeof SEI_CHAIN_ID
+  | typeof PLASMA_CHAIN_ID
+  | typeof ABSTRACT_CHAIN_ID
   | typeof ETHEREUM_MAINNET_CLIENT_CHAIN_ID
   | typeof ARBITRUM_ONE_CLIENT_CHAIN_ID
   | typeof OPTIMISM_CLIENT_CHAIN_ID
@@ -101,6 +111,11 @@ const UNICHAIN_RPC_DEFAULT = "https://mainnet.unichain.org";
 const WORLDCHAIN_RPC_DEFAULT =
   "https://worldchain-mainnet.g.alchemy.com/public";
 const ROBINHOOD_RPC_DEFAULT = "https://rpc.mainnet.chain.robinhood.com";
+const MONAD_RPC_DEFAULT = "https://rpc.monad.xyz";
+const KATANA_RPC_DEFAULT = "https://rpc.katana.network";
+const SEI_RPC_DEFAULT = "https://evm-rpc.sei-apis.com";
+const PLASMA_RPC_DEFAULT = "https://rpc.plasma.to";
+const ABSTRACT_RPC_DEFAULT = "https://api.mainnet.abs.xyz";
 
 const ethereumGasChain = defineGasChain({
   id: ETHEREUM_MAINNET_CLIENT_CHAIN_ID,
@@ -295,6 +310,66 @@ const robinhoodGasChain = defineGasChain({
   },
   rpcUrl: process.env.NEXT_PUBLIC_ROBINHOOD_RPC_URL ?? ROBINHOOD_RPC_DEFAULT,
   explorerUrl: "https://robinhoodchain.blockscout.com",
+});
+
+const monadGasChain = defineGasChain({
+  id: MONAD_CHAIN_ID,
+  name: "Monad",
+  nativeCurrency: {
+    name: "Monad",
+    symbol: "MON",
+    decimals: 18,
+  },
+  rpcUrl: process.env.NEXT_PUBLIC_MONAD_RPC_URL ?? MONAD_RPC_DEFAULT,
+  explorerUrl: "https://monadscan.com",
+});
+
+const katanaGasChain = defineGasChain({
+  id: KATANA_CHAIN_ID,
+  name: "Katana",
+  nativeCurrency: {
+    name: "Ether",
+    symbol: "ETH",
+    decimals: 18,
+  },
+  rpcUrl: process.env.NEXT_PUBLIC_KATANA_RPC_URL ?? KATANA_RPC_DEFAULT,
+  explorerUrl: "https://katanascan.com",
+});
+
+const seiGasChain = defineGasChain({
+  id: SEI_CHAIN_ID,
+  name: "Sei",
+  nativeCurrency: {
+    name: "Sei",
+    symbol: "SEI",
+    decimals: 18,
+  },
+  rpcUrl: process.env.NEXT_PUBLIC_SEI_RPC_URL ?? SEI_RPC_DEFAULT,
+  explorerUrl: "https://seiscan.io",
+});
+
+const plasmaGasChain = defineGasChain({
+  id: PLASMA_CHAIN_ID,
+  name: "Plasma",
+  nativeCurrency: {
+    name: "Plasma",
+    symbol: "XPL",
+    decimals: 18,
+  },
+  rpcUrl: process.env.NEXT_PUBLIC_PLASMA_RPC_URL ?? PLASMA_RPC_DEFAULT,
+  explorerUrl: "https://plasmascan.to",
+});
+
+const abstractGasChain = defineGasChain({
+  id: ABSTRACT_CHAIN_ID,
+  name: "Abstract",
+  nativeCurrency: {
+    name: "Ether",
+    symbol: "ETH",
+    decimals: 18,
+  },
+  rpcUrl: process.env.NEXT_PUBLIC_ABSTRACT_RPC_URL ?? ABSTRACT_RPC_DEFAULT,
+  explorerUrl: "https://abscan.org",
 });
 
 const arbitrumGasChain = defineGasChain({
@@ -562,6 +637,80 @@ export const GAS_TRACKER_CHAINS = [
     coingeckoId: "ethereum",
     estimateNote:
       "Robinhood Chain wallet estimates may include L1 data fees beyond this gas-price estimate.",
+  },
+  {
+    chainId: MONAD_CHAIN_ID,
+    chainName: "Monad",
+    shortName: "Monad",
+    nativeCurrency: "MON",
+    nativeCurrencyName: "Monad",
+    viemChain: monadGasChain,
+    defaultRpcUrl: MONAD_RPC_DEFAULT,
+    publicRpcUrl: monadGasChain.rpcUrls.default.http[0],
+    serverRpcEnvNames: ["MONAD_RPC_URL", "MONAD_MAINNET_RPC_URL"],
+    publicRpcEnvNames: ["NEXT_PUBLIC_MONAD_RPC_URL"],
+    statusThresholds: { elevatedGwei: 2, highGwei: 10 },
+    coingeckoId: "monad",
+  },
+  {
+    chainId: KATANA_CHAIN_ID,
+    chainName: "Katana",
+    shortName: "Katana",
+    nativeCurrency: "ETH",
+    nativeCurrencyName: "Ether",
+    viemChain: katanaGasChain,
+    defaultRpcUrl: KATANA_RPC_DEFAULT,
+    publicRpcUrl: katanaGasChain.rpcUrls.default.http[0],
+    serverRpcEnvNames: ["KATANA_RPC_URL", "KATANA_MAINNET_RPC_URL"],
+    publicRpcEnvNames: ["NEXT_PUBLIC_KATANA_RPC_URL"],
+    statusThresholds: { elevatedGwei: 0.1, highGwei: 1 },
+    coingeckoId: "ethereum",
+    estimateNote:
+      "Katana wallet estimates may include L1 data fees beyond this gas-price estimate.",
+  },
+  {
+    chainId: SEI_CHAIN_ID,
+    chainName: "Sei",
+    shortName: "Sei",
+    nativeCurrency: "SEI",
+    nativeCurrencyName: "Sei",
+    viemChain: seiGasChain,
+    defaultRpcUrl: SEI_RPC_DEFAULT,
+    publicRpcUrl: seiGasChain.rpcUrls.default.http[0],
+    serverRpcEnvNames: ["SEI_RPC_URL", "SEI_MAINNET_RPC_URL"],
+    publicRpcEnvNames: ["NEXT_PUBLIC_SEI_RPC_URL"],
+    statusThresholds: { elevatedGwei: 2, highGwei: 10 },
+    coingeckoId: "sei",
+  },
+  {
+    chainId: PLASMA_CHAIN_ID,
+    chainName: "Plasma",
+    shortName: "Plasma",
+    nativeCurrency: "XPL",
+    nativeCurrencyName: "Plasma",
+    viemChain: plasmaGasChain,
+    defaultRpcUrl: PLASMA_RPC_DEFAULT,
+    publicRpcUrl: plasmaGasChain.rpcUrls.default.http[0],
+    serverRpcEnvNames: ["PLASMA_RPC_URL", "PLASMA_MAINNET_RPC_URL"],
+    publicRpcEnvNames: ["NEXT_PUBLIC_PLASMA_RPC_URL"],
+    statusThresholds: { elevatedGwei: 1, highGwei: 5 },
+    coingeckoId: "plasma",
+  },
+  {
+    chainId: ABSTRACT_CHAIN_ID,
+    chainName: "Abstract",
+    shortName: "Abstract",
+    nativeCurrency: "ETH",
+    nativeCurrencyName: "Ether",
+    viemChain: abstractGasChain,
+    defaultRpcUrl: ABSTRACT_RPC_DEFAULT,
+    publicRpcUrl: abstractGasChain.rpcUrls.default.http[0],
+    serverRpcEnvNames: ["ABSTRACT_RPC_URL", "ABSTRACT_MAINNET_RPC_URL"],
+    publicRpcEnvNames: ["NEXT_PUBLIC_ABSTRACT_RPC_URL"],
+    statusThresholds: { elevatedGwei: 0.1, highGwei: 1 },
+    coingeckoId: "ethereum",
+    estimateNote:
+      "Abstract wallet estimates may include L1 data fees beyond this gas-price estimate.",
   },
   {
     chainId: ETHEREUM_MAINNET_CLIENT_CHAIN_ID,

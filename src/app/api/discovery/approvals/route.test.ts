@@ -1,6 +1,14 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { POLYGON_CHAIN_ID, PULSECHAIN_CHAIN_ID } from "@/lib/chains";
+import {
+  ABSTRACT_CHAIN_ID,
+  KATANA_CHAIN_ID,
+  MONAD_CHAIN_ID,
+  PLASMA_CHAIN_ID,
+  POLYGON_CHAIN_ID,
+  PULSECHAIN_CHAIN_ID,
+  SEI_CHAIN_ID,
+} from "@/lib/chains";
 import { resetServerApprovalApiRateLimitForTests } from "@/lib/server-approval-api-controls";
 import { GET } from "./route";
 
@@ -15,7 +23,7 @@ vi.mock("@/lib/server-approval-discovery", () => ({
   isServerDiscoveryChainId: (chainId: number) =>
     [
       369, 56, 8453, 137, 146, 43114, 5000, 59144, 81457, 80094, 42220, 100,
-      130, 480, 4663,
+      130, 480, 4663, 143, 747474, 1329, 9745, 2741,
     ].includes(chainId),
   normalizeServerDiscoveryOwner: (value: string | null) =>
     value && /^0x[a-fA-F0-9]{40}$/.test(value) ? value : null,
@@ -116,6 +124,33 @@ describe("shared server approval discovery route hardening", () => {
     expectNoStore(response);
     expect(body.status).toBe("bad-request");
     expect(discoverServerErc20Approvals).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    MONAD_CHAIN_ID,
+    KATANA_CHAIN_ID,
+    SEI_CHAIN_ID,
+    PLASMA_CHAIN_ID,
+    ABSTRACT_CHAIN_ID,
+  ] as const)("accepts new Etherscan V2 chainId=%s", async (chainId) => {
+    discoverServerErc20Approvals.mockImplementation(async () =>
+      completeErc20Response(chainId),
+    );
+
+    const response = await GET(
+      new Request(
+        `https://pulserevoke.test/api/discovery/approvals?chainId=${chainId}&scope=erc20&owner=${OWNER}`,
+        { headers: { "x-forwarded-for": `203.0.113.${chainId % 200}` } },
+      ),
+    );
+    const body = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(body.chainId).toBe(chainId);
+    expect(discoverServerErc20Approvals).toHaveBeenCalledWith(
+      expect.objectContaining({ chainId, owner: OWNER }),
+    );
+    discoverServerErc20Approvals.mockClear();
   });
 
   it("rejects caller-controlled discovery ranges before rate limiting", async () => {

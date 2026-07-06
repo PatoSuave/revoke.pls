@@ -7,6 +7,7 @@ import {
   getChainCapability,
 } from "@/lib/chain-capabilities";
 import {
+  ABSTRACT_CHAIN_ID,
   AVALANCHE_CHAIN_ID,
   BASE_CHAIN_ID,
   BERACHAIN_CHAIN_ID,
@@ -16,11 +17,15 @@ import {
   CELO_CHAIN_ID,
   EIP_7825_MAX_TRANSACTION_GAS,
   GNOSIS_CHAIN_ID,
+  KATANA_CHAIN_ID,
   LINEA_CHAIN_ID,
   MANTLE_CHAIN_ID,
+  MONAD_CHAIN_ID,
+  PLASMA_CHAIN_ID,
   POLYGON_CHAIN_ID,
   PULSECHAIN_CHAIN_ID,
   ROBINHOOD_CHAIN_ID,
+  SEI_CHAIN_ID,
   SONIC_CHAIN_ID,
   UNICHAIN_CHAIN_ID,
   WORLDCHAIN_CHAIN_ID,
@@ -54,6 +59,11 @@ describe("chain capability metadata", () => {
         UNICHAIN_CHAIN_ID,
         WORLDCHAIN_CHAIN_ID,
         ROBINHOOD_CHAIN_ID,
+        MONAD_CHAIN_ID,
+        KATANA_CHAIN_ID,
+        SEI_CHAIN_ID,
+        PLASMA_CHAIN_ID,
+        ABSTRACT_CHAIN_ID,
         PULSECHAIN_CHAIN_ID,
         BASE_CHAIN_ID,
         HYPEREVM_CLIENT_CHAIN_ID,
@@ -92,6 +102,11 @@ describe("chain capability metadata", () => {
     expect(CHAIN_CAPABILITIES[ROBINHOOD_CHAIN_ID].batchRevokeEnabled).toBe(
       true,
     );
+    expect(CHAIN_CAPABILITIES[MONAD_CHAIN_ID].batchRevokeEnabled).toBe(true);
+    expect(CHAIN_CAPABILITIES[KATANA_CHAIN_ID].batchRevokeEnabled).toBe(true);
+    expect(CHAIN_CAPABILITIES[SEI_CHAIN_ID].batchRevokeEnabled).toBe(true);
+    expect(CHAIN_CAPABILITIES[PLASMA_CHAIN_ID].batchRevokeEnabled).toBe(true);
+    expect(CHAIN_CAPABILITIES[ABSTRACT_CHAIN_ID].batchRevokeEnabled).toBe(true);
   });
 
   it("records EIP-7702 support without overclaiming unknown chains", () => {
@@ -134,6 +149,17 @@ describe("chain capability metadata", () => {
     expect(CHAIN_CAPABILITIES[ROBINHOOD_CHAIN_ID].supportsEip7702).toBe(
       "unknown",
     );
+    expect(CHAIN_CAPABILITIES[MONAD_CHAIN_ID].supportsEip7702).toBe("unknown");
+    expect(CHAIN_CAPABILITIES[KATANA_CHAIN_ID].supportsEip7702).toBe(
+      "unknown",
+    );
+    expect(CHAIN_CAPABILITIES[SEI_CHAIN_ID].supportsEip7702).toBe("unknown");
+    expect(CHAIN_CAPABILITIES[PLASMA_CHAIN_ID].supportsEip7702).toBe(
+      "unknown",
+    );
+    expect(CHAIN_CAPABILITIES[ABSTRACT_CHAIN_ID].supportsEip7702).toBe(
+      "unknown",
+    );
   });
 
   it("records confirmed gas caps as chain metadata", () => {
@@ -163,6 +189,11 @@ describe("chain capability metadata", () => {
     expect(
       CHAIN_CAPABILITIES[ROBINHOOD_CHAIN_ID].perTxGasCap,
     ).toBeUndefined();
+    expect(CHAIN_CAPABILITIES[MONAD_CHAIN_ID].perTxGasCap).toBeUndefined();
+    expect(CHAIN_CAPABILITIES[KATANA_CHAIN_ID].perTxGasCap).toBeUndefined();
+    expect(CHAIN_CAPABILITIES[SEI_CHAIN_ID].perTxGasCap).toBeUndefined();
+    expect(CHAIN_CAPABILITIES[PLASMA_CHAIN_ID].perTxGasCap).toBeUndefined();
+    expect(CHAIN_CAPABILITIES[ABSTRACT_CHAIN_ID].perTxGasCap).toBeUndefined();
   });
 
   it("records planned gas caps without treating them as active caps", () => {
@@ -208,6 +239,8 @@ describe("chain capability metadata", () => {
       BLAST_CHAIN_ID,
       WORLDCHAIN_CHAIN_ID,
       ROBINHOOD_CHAIN_ID,
+      KATANA_CHAIN_ID,
+      ABSTRACT_CHAIN_ID,
     ]) {
       expect(CHAIN_CAPABILITIES[chainId].confirmationStrategy).toBe(
         "rollup-safe-finalized-aware",

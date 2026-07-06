@@ -327,8 +327,9 @@ HyperEVM secret exposure.
       `ERC-20/NFT verified rows only` / `Live` and does not claim HyperEVM
       batch revoke is live.
 - [ ] Supported-chain matrix lists Linea, Blast, Berachain, Celo, Gnosis,
-      Unichain, World Chain, and Robinhood Chain as full generic scan + revoke
-      chains with no safety-guarantee language.
+      Unichain, World Chain, Robinhood Chain, Monad, Katana, Sei, Plasma, and
+      Abstract as full generic scan + revoke chains with no safety-guarantee
+      language.
 - [ ] The app never requests a seed phrase, private key, mnemonic, or raw
       signing secret.
 - [ ] No spender or protocol is described as safe, unsafe, endorsed, or trusted

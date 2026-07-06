@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  ABSTRACT_CHAIN_ID,
   AVALANCHE_CHAIN_ID,
   BASE_CHAIN_ID,
   BERACHAIN_CHAIN_ID,
@@ -8,11 +9,15 @@ import {
   BSC_CHAIN_ID,
   CELO_CHAIN_ID,
   GNOSIS_CHAIN_ID,
+  KATANA_CHAIN_ID,
   LINEA_CHAIN_ID,
   MANTLE_CHAIN_ID,
+  MONAD_CHAIN_ID,
+  PLASMA_CHAIN_ID,
   POLYGON_CHAIN_ID,
   PULSECHAIN_CHAIN_ID,
   ROBINHOOD_CHAIN_ID,
+  SEI_CHAIN_ID,
   SONIC_CHAIN_ID,
   UNICHAIN_CHAIN_ID,
   WORLDCHAIN_CHAIN_ID,
@@ -130,6 +135,31 @@ describe("active chain resolution", () => {
       walletChainId: ROBINHOOD_CHAIN_ID,
       wagmiChainId: PULSECHAIN_CHAIN_ID,
     });
+    const monadResult = resolveActiveChain({
+      isConnected: true,
+      walletChainId: MONAD_CHAIN_ID,
+      wagmiChainId: PULSECHAIN_CHAIN_ID,
+    });
+    const katanaResult = resolveActiveChain({
+      isConnected: true,
+      walletChainId: KATANA_CHAIN_ID,
+      wagmiChainId: PULSECHAIN_CHAIN_ID,
+    });
+    const seiResult = resolveActiveChain({
+      isConnected: true,
+      walletChainId: SEI_CHAIN_ID,
+      wagmiChainId: PULSECHAIN_CHAIN_ID,
+    });
+    const plasmaResult = resolveActiveChain({
+      isConnected: true,
+      walletChainId: PLASMA_CHAIN_ID,
+      wagmiChainId: PULSECHAIN_CHAIN_ID,
+    });
+    const abstractResult = resolveActiveChain({
+      isConnected: true,
+      walletChainId: ABSTRACT_CHAIN_ID,
+      wagmiChainId: PULSECHAIN_CHAIN_ID,
+    });
 
     expect(sonicResult.status).toBe("supported");
     expect(sonicResult.activeChainId).toBe(SONIC_CHAIN_ID);
@@ -168,6 +198,21 @@ describe("active chain resolution", () => {
     expect(robinhoodResult.activeChainConfig?.displayName).toBe(
       "Robinhood Chain",
     );
+    expect(monadResult.status).toBe("supported");
+    expect(monadResult.activeChainId).toBe(MONAD_CHAIN_ID);
+    expect(monadResult.activeChainConfig?.displayName).toBe("Monad");
+    expect(katanaResult.status).toBe("supported");
+    expect(katanaResult.activeChainId).toBe(KATANA_CHAIN_ID);
+    expect(katanaResult.activeChainConfig?.displayName).toBe("Katana");
+    expect(seiResult.status).toBe("supported");
+    expect(seiResult.activeChainId).toBe(SEI_CHAIN_ID);
+    expect(seiResult.activeChainConfig?.displayName).toBe("Sei");
+    expect(plasmaResult.status).toBe("supported");
+    expect(plasmaResult.activeChainId).toBe(PLASMA_CHAIN_ID);
+    expect(plasmaResult.activeChainConfig?.displayName).toBe("Plasma");
+    expect(abstractResult.status).toBe("supported");
+    expect(abstractResult.activeChainId).toBe(ABSTRACT_CHAIN_ID);
+    expect(abstractResult.activeChainConfig?.displayName).toBe("Abstract");
   });
 
   it("does not default to PulseChain when disconnected", () => {
@@ -198,7 +243,7 @@ describe("active chain resolution", () => {
 
   it("uses all generic supported chains in supported-network copy", () => {
     expect(getSupportedChainShortNames()).toBe(
-      "PulseChain, BSC, Base, Polygon, Sonic, Avalanche, Mantle, Linea, Blast, Berachain, Celo, Gnosis, Unichain, World, or Robinhood",
+      "PulseChain, BSC, Base, Polygon, Sonic, Avalanche, Mantle, Linea, Blast, Berachain, Celo, Gnosis, Unichain, World, Robinhood, Monad, Katana, Sei, Plasma, or Abstract",
     );
   });
 

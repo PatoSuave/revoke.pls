@@ -96,6 +96,17 @@ const CHAIN_CARD_COPY: Record<string, string> = {
     "Shared scanner with Uniscan discovery, live checks, and revokes through your wallet.",
   "World Chain":
     "Shared scanner with Worldscan discovery, live checks, and revokes through your wallet.",
+  "Robinhood Chain":
+    "Shared scanner with Robinhood Blockscout discovery, live checks, and revokes through your wallet.",
+  Monad:
+    "Shared scanner with Monadscan discovery, live checks, and revokes through your wallet.",
+  Katana:
+    "Shared scanner with Katanascan discovery, live checks, and revokes through your wallet.",
+  Sei: "Shared scanner with Seiscan discovery, live checks, and revokes through your wallet.",
+  Plasma:
+    "Shared scanner with PlasmaScan discovery, live checks, and revokes through your wallet.",
+  Abstract:
+    "Shared scanner with Abscan discovery, live checks, and revokes through your wallet.",
   "Ethereum Mainnet":
     "Hosted approval discovery with revokes through your wallet after row verification.",
   "Arbitrum One":

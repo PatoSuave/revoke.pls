@@ -3,6 +3,7 @@
 import { useId } from "react";
 
 import {
+  ABSTRACT_CHAIN_ID,
   AVALANCHE_CHAIN_ID,
   BERACHAIN_CHAIN_ID,
   BLAST_CHAIN_ID,
@@ -10,11 +11,15 @@ import {
   BSC_CHAIN_ID,
   CELO_CHAIN_ID,
   GNOSIS_CHAIN_ID,
+  KATANA_CHAIN_ID,
   LINEA_CHAIN_ID,
   MANTLE_CHAIN_ID,
+  MONAD_CHAIN_ID,
+  PLASMA_CHAIN_ID,
   POLYGON_CHAIN_ID,
   PULSECHAIN_CHAIN_ID,
   ROBINHOOD_CHAIN_ID,
+  SEI_CHAIN_ID,
   SONIC_CHAIN_ID,
   UNICHAIN_CHAIN_ID,
   WORLDCHAIN_CHAIN_ID,
@@ -52,6 +57,11 @@ const CHAIN_LOGO_LABELS: Readonly<Record<number, string>> = {
   [UNICHAIN_CHAIN_ID]: "Unichain",
   [WORLDCHAIN_CHAIN_ID]: "World Chain",
   [ROBINHOOD_CHAIN_ID]: "Robinhood Chain",
+  [MONAD_CHAIN_ID]: "Monad",
+  [KATANA_CHAIN_ID]: "Katana",
+  [SEI_CHAIN_ID]: "Sei",
+  [PLASMA_CHAIN_ID]: "Plasma",
+  [ABSTRACT_CHAIN_ID]: "Abstract",
 };
 
 export function chainLogoLabel(chainId: number): string {
@@ -138,6 +148,16 @@ function renderChainMark(chainId: number, muted: boolean) {
       return <WorldChainMark muted={muted} />;
     case ROBINHOOD_CHAIN_ID:
       return <RobinhoodMark muted={muted} />;
+    case MONAD_CHAIN_ID:
+      return <MonadMark muted={muted} />;
+    case KATANA_CHAIN_ID:
+      return <KatanaMark muted={muted} />;
+    case SEI_CHAIN_ID:
+      return <SeiMark muted={muted} />;
+    case PLASMA_CHAIN_ID:
+      return <PlasmaMark muted={muted} />;
+    case ABSTRACT_CHAIN_ID:
+      return <AbstractMark muted={muted} />;
     default:
       return <DefaultMark muted={muted} />;
   }
@@ -519,6 +539,100 @@ function RobinhoodMark({ muted }: { muted: boolean }) {
         strokeWidth="1"
       />
       {mark}
+    </>
+  );
+}
+
+function MonadMark({ muted }: { muted: boolean }) {
+  return (
+    <>
+      <circle cx="24" cy="24" r="21" fill={muted ? "currentColor" : "#7C3AED"} />
+      <path
+        d="M12 34V14h6l6 8 6-8h6v20h-6V24l-5 7h-4l-5-7v10h-6Z"
+        fill={muted ? "#0B0A14" : "#FFFFFF"}
+      />
+      <path
+        d="M15 10h18"
+        stroke={muted ? "#0B0A14" : "#C4B5FD"}
+        strokeLinecap="round"
+        strokeWidth="3"
+      />
+    </>
+  );
+}
+
+function KatanaMark({ muted }: { muted: boolean }) {
+  return (
+    <>
+      <circle cx="24" cy="24" r="21" fill={muted ? "currentColor" : "#111827"} />
+      <path
+        d="M13 34 35 12"
+        stroke={muted ? "#0B0A14" : "#F97316"}
+        strokeLinecap="round"
+        strokeWidth="5"
+      />
+      <path
+        d="M18 35h18M31 12l5 5"
+        stroke={muted ? "#0B0A14" : "#FFFFFF"}
+        strokeLinecap="round"
+        strokeWidth="4"
+      />
+    </>
+  );
+}
+
+function SeiMark({ muted }: { muted: boolean }) {
+  return (
+    <>
+      <circle cx="24" cy="24" r="21" fill={muted ? "currentColor" : "#E11D48"} />
+      <path
+        d="M13 18c5-4 17-4 22 0M13 25c5 4 17 4 22 0M13 32c5-4 17-4 22 0"
+        fill="none"
+        stroke={muted ? "#0B0A14" : "#FFFFFF"}
+        strokeLinecap="round"
+        strokeWidth="4"
+      />
+    </>
+  );
+}
+
+function PlasmaMark({ muted }: { muted: boolean }) {
+  return (
+    <>
+      <circle cx="24" cy="24" r="21" fill={muted ? "currentColor" : "#050505"} />
+      <path
+        d="M24 9c8 0 15 7 15 15S32 39 24 39 9 32 9 24 16 9 24 9Z"
+        fill="none"
+        stroke={muted ? "#0B0A14" : "#22C55E"}
+        strokeWidth="5"
+      />
+      <path
+        d="M18 24h12M24 18v12"
+        stroke={muted ? "#0B0A14" : "#FFFFFF"}
+        strokeLinecap="round"
+        strokeWidth="4"
+      />
+    </>
+  );
+}
+
+function AbstractMark({ muted }: { muted: boolean }) {
+  return (
+    <>
+      <rect
+        x="4"
+        y="4"
+        width="40"
+        height="40"
+        rx="8"
+        fill={muted ? "currentColor" : "#FFFFFF"}
+        stroke={muted ? "currentColor" : "#111827"}
+        strokeWidth="3"
+      />
+      <path
+        d="M15 34 24 12l9 22h-6l-2-5h-8l-2 5h-6Zm5-10h8l-4-10-4 10Z"
+        fill={muted ? "#0B0A14" : "#111827"}
+      />
     </>
   );
 }

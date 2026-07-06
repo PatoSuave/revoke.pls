@@ -1,6 +1,7 @@
 import type { Address } from "viem";
 
 import {
+  ABSTRACT_CHAIN_ID,
   AVALANCHE_CHAIN_ID,
   BASE_CHAIN_ID,
   BERACHAIN_CHAIN_ID,
@@ -8,11 +9,15 @@ import {
   BSC_CHAIN_ID,
   CELO_CHAIN_ID,
   GNOSIS_CHAIN_ID,
+  KATANA_CHAIN_ID,
   LINEA_CHAIN_ID,
   MANTLE_CHAIN_ID,
+  MONAD_CHAIN_ID,
+  PLASMA_CHAIN_ID,
   POLYGON_CHAIN_ID,
   PULSECHAIN_CHAIN_ID,
   ROBINHOOD_CHAIN_ID,
+  SEI_CHAIN_ID,
   SONIC_CHAIN_ID,
   UNICHAIN_CHAIN_ID,
   WORLDCHAIN_CHAIN_ID,
@@ -133,7 +138,12 @@ export type ServerApprovalDiscoveryChainId =
   | typeof GNOSIS_CHAIN_ID
   | typeof UNICHAIN_CHAIN_ID
   | typeof WORLDCHAIN_CHAIN_ID
-  | typeof ROBINHOOD_CHAIN_ID;
+  | typeof ROBINHOOD_CHAIN_ID
+  | typeof MONAD_CHAIN_ID
+  | typeof KATANA_CHAIN_ID
+  | typeof SEI_CHAIN_ID
+  | typeof PLASMA_CHAIN_ID
+  | typeof ABSTRACT_CHAIN_ID;
 
 export function usesServerApprovalDiscovery(
   chainId: number | undefined,
@@ -154,7 +164,12 @@ export function usesServerApprovalDiscovery(
     chainId === GNOSIS_CHAIN_ID ||
     chainId === UNICHAIN_CHAIN_ID ||
     chainId === WORLDCHAIN_CHAIN_ID ||
-    chainId === ROBINHOOD_CHAIN_ID
+    chainId === ROBINHOOD_CHAIN_ID ||
+    chainId === MONAD_CHAIN_ID ||
+    chainId === KATANA_CHAIN_ID ||
+    chainId === SEI_CHAIN_ID ||
+    chainId === PLASMA_CHAIN_ID ||
+    chainId === ABSTRACT_CHAIN_ID
   );
 }
 

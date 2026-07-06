@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  ABSTRACT_CHAIN_ID,
   AVALANCHE_CHAIN_ID,
   BASE_CHAIN_ID,
   BERACHAIN_CHAIN_ID,
@@ -8,11 +9,15 @@ import {
   BSC_CHAIN_ID,
   CELO_CHAIN_ID,
   GNOSIS_CHAIN_ID,
+  KATANA_CHAIN_ID,
   LINEA_CHAIN_ID,
   MANTLE_CHAIN_ID,
+  MONAD_CHAIN_ID,
+  PLASMA_CHAIN_ID,
   POLYGON_CHAIN_ID,
   PULSECHAIN_CHAIN_ID,
   ROBINHOOD_CHAIN_ID,
+  SEI_CHAIN_ID,
   SONIC_CHAIN_ID,
   UNICHAIN_CHAIN_ID,
   WORLDCHAIN_CHAIN_ID,
@@ -42,6 +47,11 @@ describe("wagmi wallet chains", () => {
       UNICHAIN_CHAIN_ID,
       WORLDCHAIN_CHAIN_ID,
       ROBINHOOD_CHAIN_ID,
+      MONAD_CHAIN_ID,
+      KATANA_CHAIN_ID,
+      SEI_CHAIN_ID,
+      PLASMA_CHAIN_ID,
+      ABSTRACT_CHAIN_ID,
     ]);
 
     expect(walletChains.map((chain) => chain.id)).toEqual([
@@ -60,6 +70,11 @@ describe("wagmi wallet chains", () => {
       UNICHAIN_CHAIN_ID,
       WORLDCHAIN_CHAIN_ID,
       ROBINHOOD_CHAIN_ID,
+      MONAD_CHAIN_ID,
+      KATANA_CHAIN_ID,
+      SEI_CHAIN_ID,
+      PLASMA_CHAIN_ID,
+      ABSTRACT_CHAIN_ID,
       ETHEREUM_MAINNET_CLIENT_CHAIN_ID,
       ARBITRUM_ONE_CLIENT_CHAIN_ID,
       OPTIMISM_CLIENT_CHAIN_ID,

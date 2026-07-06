@@ -98,10 +98,10 @@ export const siteConfig = {
   tagline: "Scan, review, revoke.",
   /** Single-sentence meta description (used for SEO + OG). */
   description:
-    "Pulse Revoke helps users review and revoke token and NFT approvals on PulseChain, BSC, Base, Polygon, Sonic Mainnet, Avalanche C-Chain, Mantle, Linea, Blast, Berachain, Celo, Gnosis, Unichain, World Chain, Robinhood Chain, Ethereum Mainnet, Arbitrum One, Optimism, and HyperEVM. Arbitrum, Optimism, and HyperEVM revoke support is limited to verified ERC-20 and NFT rows.",
+    "Pulse Revoke helps users review and revoke token and NFT approvals on PulseChain, BSC, Base, Polygon, Sonic Mainnet, Avalanche C-Chain, Mantle, Linea, Blast, Berachain, Celo, Gnosis, Unichain, World Chain, Robinhood Chain, Monad, Katana, Sei, Plasma, Abstract, Ethereum Mainnet, Arbitrum One, Optimism, and HyperEVM. Arbitrum, Optimism, and HyperEVM revoke support is limited to verified ERC-20 and NFT rows.",
   /** Longer paragraph for hero copy and social previews. */
   longDescription:
-    "Review token allowances and NFT operator approvals on PulseChain, BSC, Base, Polygon, Sonic Mainnet, Avalanche, Mantle, Linea, Blast, Berachain, Celo, Gnosis, Unichain, World Chain, Robinhood Chain, Ethereum Mainnet, Arbitrum One, Optimism, or HyperEVM. Clear approvals you no longer trust with wallet-signed revoke transactions.",
+    "Review token allowances and NFT operator approvals on PulseChain, BSC, Base, Polygon, Sonic Mainnet, Avalanche, Mantle, Linea, Blast, Berachain, Celo, Gnosis, Unichain, World Chain, Robinhood Chain, Monad, Katana, Sei, Plasma, Abstract, Ethereum Mainnet, Arbitrum One, Optimism, or HyperEVM. Clear approvals you no longer trust with wallet-signed revoke transactions.",
   /** Canonical public URL. Override at build time with NEXT_PUBLIC_SITE_URL. */
   url: resolvedUrl,
   /** Keywords for search engines. Keep conservative and factual. */
@@ -124,6 +124,11 @@ export const siteConfig = {
     "Unichain",
     "World Chain",
     "Robinhood Chain",
+    "Monad",
+    "Katana",
+    "Sei",
+    "Plasma",
+    "Abstract",
     "Arbitrum",
     "Optimism",
     "HyperEVM",
@@ -142,6 +147,11 @@ export const siteConfig = {
     "Unichain approvals",
     "World Chain approvals",
     "Robinhood Chain approvals",
+    "Monad approvals",
+    "Katana approvals",
+    "Sei approvals",
+    "Plasma approvals",
+    "Abstract approvals",
     "Arbitrum approvals",
     "HyperEVM approvals",
     "Pulse Revoke",
@@ -176,6 +186,11 @@ export const siteConfig = {
     uniscan: "https://uniscan.xyz",
     worldscan: "https://worldscan.org",
     robinhoodscan: "https://robinhoodchain.blockscout.com",
+    monadscan: "https://monadscan.com",
+    katanascan: "https://katanascan.com",
+    seiscan: "https://seiscan.io",
+    plasmascan: "https://plasmascan.to",
+    abscan: "https://abscan.org",
     hyperevmscan: "https://hyperevmscan.io",
     pulsex: "https://pulsex.com",
     walletConnect: "https://cloud.reown.com",
@@ -184,7 +199,7 @@ export const siteConfig = {
   },
   /** Short attribution line shown in the footer. */
   attribution:
-    "Built for users on PulseChain, BSC, Base, Polygon, Sonic, Avalanche, Mantle, Linea, Blast, Berachain, Celo, Gnosis, Unichain, World Chain, Robinhood Chain, Ethereum, Arbitrum, Optimism, and HyperEVM.",
+    "Built for users on PulseChain, BSC, Base, Polygon, Sonic, Avalanche, Mantle, Linea, Blast, Berachain, Celo, Gnosis, Unichain, World Chain, Robinhood Chain, Monad, Katana, Sei, Plasma, Abstract, Ethereum, Arbitrum, Optimism, and HyperEVM.",
   /** Brand accent colors used by the OG image and icon renderers. */
   brandColors: {
     background: "#07070b",

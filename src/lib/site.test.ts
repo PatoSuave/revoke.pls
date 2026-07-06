@@ -78,8 +78,18 @@ describe("siteConfig nav", () => {
     expect(copy).toContain("Linea");
     expect(copy).toContain("Blast");
     expect(copy).toContain("Berachain");
+    expect(copy).toContain("Monad");
+    expect(copy).toContain("Katana");
+    expect(copy).toContain("Sei");
+    expect(copy).toContain("Plasma");
+    expect(copy).toContain("Abstract");
     expect(siteConfig.links.lineascan).toBe("https://lineascan.build");
     expect(siteConfig.links.blastscan).toBe("https://blastscan.io");
     expect(siteConfig.links.berascan).toBe("https://berascan.com");
+    expect(siteConfig.links.monadscan).toBe("https://monadscan.com");
+    expect(siteConfig.links.katanascan).toBe("https://katanascan.com");
+    expect(siteConfig.links.seiscan).toBe("https://seiscan.io");
+    expect(siteConfig.links.plasmascan).toBe("https://plasmascan.to");
+    expect(siteConfig.links.abscan).toBe("https://abscan.org");
   });
 });

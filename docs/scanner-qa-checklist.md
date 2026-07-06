@@ -2,9 +2,9 @@
 
 Use this checklist to verify that Pulse Revoke reads approval state correctly on
 PulseChain, BSC, Base, Polygon, Sonic Mainnet, Avalanche, Mantle, Linea, Blast,
-Berachain, Celo, Gnosis, Unichain, World Chain, Robinhood Chain, Ethereum,
-Arbitrum One verified-row revoke, Optimism verified-row revoke, and HyperEVM
-verified-row revoke.
+Berachain, Celo, Gnosis, Unichain, World Chain, Robinhood Chain, Monad, Katana,
+Sei, Plasma, Abstract, Ethereum, Arbitrum One verified-row revoke, Optimism
+verified-row revoke, and HyperEVM verified-row revoke.
 Keep all testing low-risk and manual.
 
 ## Safety Setup
@@ -460,9 +460,8 @@ For per-token approvals:
 - Connect to an unsupported chain.
 - Confirm the app lists PulseChain, BSC, Base, Polygon, Sonic Mainnet,
   Avalanche, Mantle, Linea, Blast, Berachain, Celo, Gnosis, Unichain, World
-  Chain, Robinhood Chain, Ethereum, Arbitrum, Optimism, and HyperEVM with the
-  correct
-  scan/revoke statuses.
+  Chain, Robinhood Chain, Monad, Katana, Sei, Plasma, Abstract, Ethereum,
+  Arbitrum, Optimism, and HyperEVM with the correct scan/revoke statuses.
 - Confirm no scan starts.
 - Confirm no revoke action is available.
 - Confirm stale approvals from a previous chain are not shown as current.
@@ -476,6 +475,7 @@ For per-token approvals:
 - Failed live reads show verification incomplete, not clear.
 - Etherscan API V2 rate limits, the BscScan V1 deprecation error, or a missing
   BSC/Base/Polygon/Sonic/Avalanche/Mantle/Linea/Blast/Berachain/Celo/Gnosis/
-  Unichain/World Chain API key show an actionable error.
+  Unichain/World Chain/Monad/Katana/Sei/Plasma/Abstract API key show an
+  actionable error.
 - Robinhood Blockscout caps, rate limits, or upstream failures show an
   incomplete/error state, not a clear wallet state.

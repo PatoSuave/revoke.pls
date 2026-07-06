@@ -2,6 +2,9 @@ import { describe, expect, it, vi } from "vitest";
 
 import { parseDiscoveryResults, type ReadResult } from "./approvals";
 import {
+  ABSTRACT_CHAIN_ID,
+  ABSTRACT_EXPLORER_API_DEFAULT,
+  ABSTRACT_EXPLORER_CHAIN_ID_DEFAULT,
   AVALANCHE_CHAIN_ID,
   AVALANCHE_EXPLORER_API_DEFAULT,
   AVALANCHE_EXPLORER_CHAIN_ID_DEFAULT,
@@ -27,18 +30,30 @@ import {
   GNOSIS_CHAIN_ID,
   GNOSIS_EXPLORER_API_DEFAULT,
   GNOSIS_EXPLORER_CHAIN_ID_DEFAULT,
+  KATANA_CHAIN_ID,
+  KATANA_EXPLORER_API_DEFAULT,
+  KATANA_EXPLORER_CHAIN_ID_DEFAULT,
   LINEA_CHAIN_ID,
   LINEA_EXPLORER_API_DEFAULT,
   LINEA_EXPLORER_CHAIN_ID_DEFAULT,
   MANTLE_CHAIN_ID,
   MANTLE_EXPLORER_API_DEFAULT,
   MANTLE_EXPLORER_CHAIN_ID_DEFAULT,
+  MONAD_CHAIN_ID,
+  MONAD_EXPLORER_API_DEFAULT,
+  MONAD_EXPLORER_CHAIN_ID_DEFAULT,
+  PLASMA_CHAIN_ID,
+  PLASMA_EXPLORER_API_DEFAULT,
+  PLASMA_EXPLORER_CHAIN_ID_DEFAULT,
   POLYGON_CHAIN_ID,
   POLYGON_EXPLORER_API_DEFAULT,
   POLYGON_EXPLORER_CHAIN_ID_DEFAULT,
   PULSECHAIN_CHAIN_ID,
   ROBINHOOD_CHAIN_ID,
   ROBINHOOD_EXPLORER_API_DEFAULT,
+  SEI_CHAIN_ID,
+  SEI_EXPLORER_API_DEFAULT,
+  SEI_EXPLORER_CHAIN_ID_DEFAULT,
   SONIC_CHAIN_ID,
   SONIC_EXPLORER_API_DEFAULT,
   SONIC_EXPLORER_CHAIN_ID_DEFAULT,
@@ -48,6 +63,7 @@ import {
   WORLDCHAIN_CHAIN_ID,
   WORLDCHAIN_EXPLORER_API_DEFAULT,
   WORLDCHAIN_EXPLORER_CHAIN_ID_DEFAULT,
+  abstract,
   avalanche,
   berachain,
   blast,
@@ -58,10 +74,14 @@ import {
   getSupportedChainShortNames,
   gnosis,
   isSupportedChainId,
+  katana,
   linea,
   mantle,
+  monad,
+  plasma,
   polygon,
   robinhood,
+  sei,
   sonic,
   supportedChainConfigList,
   supportedChains,
@@ -110,6 +130,11 @@ describe("supported chain config", () => {
       UNICHAIN_CHAIN_ID,
       WORLDCHAIN_CHAIN_ID,
       ROBINHOOD_CHAIN_ID,
+      MONAD_CHAIN_ID,
+      KATANA_CHAIN_ID,
+      SEI_CHAIN_ID,
+      PLASMA_CHAIN_ID,
+      ABSTRACT_CHAIN_ID,
     ]);
     expect(supportedChainConfigList.map((chain) => chain.chainId)).toEqual([
       PULSECHAIN_CHAIN_ID,
@@ -127,6 +152,11 @@ describe("supported chain config", () => {
       UNICHAIN_CHAIN_ID,
       WORLDCHAIN_CHAIN_ID,
       ROBINHOOD_CHAIN_ID,
+      MONAD_CHAIN_ID,
+      KATANA_CHAIN_ID,
+      SEI_CHAIN_ID,
+      PLASMA_CHAIN_ID,
+      ABSTRACT_CHAIN_ID,
     ]);
     expect(supportedChainConfigList.map((chain) => chain.shortName)).toEqual([
       "PulseChain",
@@ -144,9 +174,14 @@ describe("supported chain config", () => {
       "Unichain",
       "World",
       "Robinhood",
+      "Monad",
+      "Katana",
+      "Sei",
+      "Plasma",
+      "Abstract",
     ]);
     expect(getSupportedChainShortNames()).toBe(
-      "PulseChain, BSC, Base, Polygon, Sonic, Avalanche, Mantle, Linea, Blast, Berachain, Celo, Gnosis, Unichain, World, or Robinhood",
+      "PulseChain, BSC, Base, Polygon, Sonic, Avalanche, Mantle, Linea, Blast, Berachain, Celo, Gnosis, Unichain, World, Robinhood, Monad, Katana, Sei, Plasma, or Abstract",
     );
     expect(isSupportedChainId(1)).toBe(false);
     expect(isSupportedChainId(ARBITRUM_ONE_CLIENT_CHAIN_ID)).toBe(false);
@@ -482,6 +517,66 @@ describe("supported chain config", () => {
         apiKeyEnvVars: ["WORLDCHAIN_EXPLORER_API_KEY", "ETHERSCAN_API_KEY"],
         chain: worldchain,
       },
+      {
+        chainId: MONAD_CHAIN_ID,
+        displayName: "Monad",
+        nativeSymbol: "MON",
+        explorerName: "Monadscan",
+        explorerBaseUrl: "https://monadscan.com",
+        rpcUrl: "https://rpc.monad.xyz",
+        apiUrl: MONAD_EXPLORER_API_DEFAULT,
+        apiChainId: MONAD_EXPLORER_CHAIN_ID_DEFAULT,
+        apiKeyEnvVars: ["MONAD_EXPLORER_API_KEY", "ETHERSCAN_API_KEY"],
+        chain: monad,
+      },
+      {
+        chainId: KATANA_CHAIN_ID,
+        displayName: "Katana",
+        nativeSymbol: "ETH",
+        explorerName: "Katanascan",
+        explorerBaseUrl: "https://katanascan.com",
+        rpcUrl: "https://rpc.katana.network",
+        apiUrl: KATANA_EXPLORER_API_DEFAULT,
+        apiChainId: KATANA_EXPLORER_CHAIN_ID_DEFAULT,
+        apiKeyEnvVars: ["KATANA_EXPLORER_API_KEY", "ETHERSCAN_API_KEY"],
+        chain: katana,
+      },
+      {
+        chainId: SEI_CHAIN_ID,
+        displayName: "Sei",
+        nativeSymbol: "SEI",
+        explorerName: "Seiscan",
+        explorerBaseUrl: "https://seiscan.io",
+        rpcUrl: "https://evm-rpc.sei-apis.com",
+        apiUrl: SEI_EXPLORER_API_DEFAULT,
+        apiChainId: SEI_EXPLORER_CHAIN_ID_DEFAULT,
+        apiKeyEnvVars: ["SEI_EXPLORER_API_KEY", "ETHERSCAN_API_KEY"],
+        chain: sei,
+      },
+      {
+        chainId: PLASMA_CHAIN_ID,
+        displayName: "Plasma",
+        nativeSymbol: "XPL",
+        explorerName: "PlasmaScan",
+        explorerBaseUrl: "https://plasmascan.to",
+        rpcUrl: "https://rpc.plasma.to",
+        apiUrl: PLASMA_EXPLORER_API_DEFAULT,
+        apiChainId: PLASMA_EXPLORER_CHAIN_ID_DEFAULT,
+        apiKeyEnvVars: ["PLASMA_EXPLORER_API_KEY", "ETHERSCAN_API_KEY"],
+        chain: plasma,
+      },
+      {
+        chainId: ABSTRACT_CHAIN_ID,
+        displayName: "Abstract",
+        nativeSymbol: "ETH",
+        explorerName: "Abscan",
+        explorerBaseUrl: "https://abscan.org",
+        rpcUrl: "https://api.mainnet.abs.xyz",
+        apiUrl: ABSTRACT_EXPLORER_API_DEFAULT,
+        apiChainId: ABSTRACT_EXPLORER_CHAIN_ID_DEFAULT,
+        apiKeyEnvVars: ["ABSTRACT_EXPLORER_API_KEY", "ETHERSCAN_API_KEY"],
+        chain: abstract,
+      },
     ] as const;
 
     for (const item of cases) {
@@ -697,6 +792,51 @@ describe("supported chain config", () => {
     expect(explorerTxUrl(ROBINHOOD_CHAIN_ID, "0xabc")).toBe(
       "https://robinhoodchain.blockscout.com/tx/0xabc",
     );
+    expect(explorerAddressUrl(MONAD_CHAIN_ID, SPENDER)).toBe(
+      `https://monadscan.com/address/${SPENDER}`,
+    );
+    expect(explorerTokenUrl(MONAD_CHAIN_ID, TOKEN)).toBe(
+      `https://monadscan.com/token/${TOKEN}`,
+    );
+    expect(explorerTxUrl(MONAD_CHAIN_ID, "0xabc")).toBe(
+      "https://monadscan.com/tx/0xabc",
+    );
+    expect(explorerAddressUrl(KATANA_CHAIN_ID, SPENDER)).toBe(
+      `https://katanascan.com/address/${SPENDER}`,
+    );
+    expect(explorerTokenUrl(KATANA_CHAIN_ID, TOKEN)).toBe(
+      `https://katanascan.com/token/${TOKEN}`,
+    );
+    expect(explorerTxUrl(KATANA_CHAIN_ID, "0xabc")).toBe(
+      "https://katanascan.com/tx/0xabc",
+    );
+    expect(explorerAddressUrl(SEI_CHAIN_ID, SPENDER)).toBe(
+      `https://seiscan.io/address/${SPENDER}`,
+    );
+    expect(explorerTokenUrl(SEI_CHAIN_ID, TOKEN)).toBe(
+      `https://seiscan.io/token/${TOKEN}`,
+    );
+    expect(explorerTxUrl(SEI_CHAIN_ID, "0xabc")).toBe(
+      "https://seiscan.io/tx/0xabc",
+    );
+    expect(explorerAddressUrl(PLASMA_CHAIN_ID, SPENDER)).toBe(
+      `https://plasmascan.to/address/${SPENDER}`,
+    );
+    expect(explorerTokenUrl(PLASMA_CHAIN_ID, TOKEN)).toBe(
+      `https://plasmascan.to/token/${TOKEN}`,
+    );
+    expect(explorerTxUrl(PLASMA_CHAIN_ID, "0xabc")).toBe(
+      "https://plasmascan.to/tx/0xabc",
+    );
+    expect(explorerAddressUrl(ABSTRACT_CHAIN_ID, SPENDER)).toBe(
+      `https://abscan.org/address/${SPENDER}`,
+    );
+    expect(explorerTokenUrl(ABSTRACT_CHAIN_ID, TOKEN)).toBe(
+      `https://abscan.org/token/${TOKEN}`,
+    );
+    expect(explorerTxUrl(ABSTRACT_CHAIN_ID, "0xabc")).toBe(
+      "https://abscan.org/tx/0xabc",
+    );
   });
 
   it("builds Etherscan links for wallet-only Ethereum revokes without activating Ethereum", () => {
@@ -783,6 +923,11 @@ describe("supported chain config", () => {
       UNICHAIN_CHAIN_ID,
       WORLDCHAIN_CHAIN_ID,
       ROBINHOOD_CHAIN_ID,
+      MONAD_CHAIN_ID,
+      KATANA_CHAIN_ID,
+      SEI_CHAIN_ID,
+      PLASMA_CHAIN_ID,
+      ABSTRACT_CHAIN_ID,
     ]) {
       expect(getSpenderEntry(chainId, PULSEX_ROUTER)).toBeUndefined();
       expect(getTokensForChain(chainId)).toEqual([]);
@@ -878,6 +1023,11 @@ describe("supported chain config", () => {
       UNICHAIN_CHAIN_ID,
       WORLDCHAIN_CHAIN_ID,
       ROBINHOOD_CHAIN_ID,
+      MONAD_CHAIN_ID,
+      KATANA_CHAIN_ID,
+      SEI_CHAIN_ID,
+      PLASMA_CHAIN_ID,
+      ABSTRACT_CHAIN_ID,
     ]) {
       const request = {
         ...buildRevokeCall({
@@ -957,6 +1107,11 @@ describe("supported chain config", () => {
     expect(copy).toContain("Gnosis");
     expect(copy).toContain("Unichain");
     expect(copy).toContain("World");
+    expect(copy).toContain("Monad");
+    expect(copy).toContain("Katana");
+    expect(copy).toContain("Sei");
+    expect(copy).toContain("Plasma");
+    expect(copy).toContain("Abstract");
     expect(copy).toContain("Ethereum");
     expect(copy).toContain("Arbitrum");
     expect(isSupportedChainId(1)).toBe(false);
@@ -1117,6 +1272,11 @@ describe("supported chain config", () => {
       gnosis: process.env.NEXT_PUBLIC_GNOSIS_EXPLORER_CHAIN_ID,
       unichain: process.env.NEXT_PUBLIC_UNICHAIN_EXPLORER_CHAIN_ID,
       worldchain: process.env.NEXT_PUBLIC_WORLDCHAIN_EXPLORER_CHAIN_ID,
+      monad: process.env.NEXT_PUBLIC_MONAD_EXPLORER_CHAIN_ID,
+      katana: process.env.NEXT_PUBLIC_KATANA_EXPLORER_CHAIN_ID,
+      sei: process.env.NEXT_PUBLIC_SEI_EXPLORER_CHAIN_ID,
+      plasma: process.env.NEXT_PUBLIC_PLASMA_EXPLORER_CHAIN_ID,
+      abstract: process.env.NEXT_PUBLIC_ABSTRACT_EXPLORER_CHAIN_ID,
     };
     delete process.env.NEXT_PUBLIC_LINEA_EXPLORER_CHAIN_ID;
     delete process.env.NEXT_PUBLIC_BLAST_EXPLORER_CHAIN_ID;
@@ -1125,6 +1285,11 @@ describe("supported chain config", () => {
     delete process.env.NEXT_PUBLIC_GNOSIS_EXPLORER_CHAIN_ID;
     delete process.env.NEXT_PUBLIC_UNICHAIN_EXPLORER_CHAIN_ID;
     delete process.env.NEXT_PUBLIC_WORLDCHAIN_EXPLORER_CHAIN_ID;
+    delete process.env.NEXT_PUBLIC_MONAD_EXPLORER_CHAIN_ID;
+    delete process.env.NEXT_PUBLIC_KATANA_EXPLORER_CHAIN_ID;
+    delete process.env.NEXT_PUBLIC_SEI_EXPLORER_CHAIN_ID;
+    delete process.env.NEXT_PUBLIC_PLASMA_EXPLORER_CHAIN_ID;
+    delete process.env.NEXT_PUBLIC_ABSTRACT_EXPLORER_CHAIN_ID;
     vi.resetModules();
 
     try {
@@ -1137,6 +1302,11 @@ describe("supported chain config", () => {
         [chains.GNOSIS_CHAIN_ID, "100"],
         [chains.UNICHAIN_CHAIN_ID, "130"],
         [chains.WORLDCHAIN_CHAIN_ID, "480"],
+        [chains.MONAD_CHAIN_ID, "143"],
+        [chains.KATANA_CHAIN_ID, "747474"],
+        [chains.SEI_CHAIN_ID, "1329"],
+        [chains.PLASMA_CHAIN_ID, "9745"],
+        [chains.ABSTRACT_CHAIN_ID, "2741"],
       ] as const;
 
       for (const [chainId, expected] of cases) {
@@ -1171,6 +1341,22 @@ describe("supported chain config", () => {
       if (originals.worldchain !== undefined) {
         process.env.NEXT_PUBLIC_WORLDCHAIN_EXPLORER_CHAIN_ID =
           originals.worldchain;
+      }
+      if (originals.monad !== undefined) {
+        process.env.NEXT_PUBLIC_MONAD_EXPLORER_CHAIN_ID = originals.monad;
+      }
+      if (originals.katana !== undefined) {
+        process.env.NEXT_PUBLIC_KATANA_EXPLORER_CHAIN_ID = originals.katana;
+      }
+      if (originals.sei !== undefined) {
+        process.env.NEXT_PUBLIC_SEI_EXPLORER_CHAIN_ID = originals.sei;
+      }
+      if (originals.plasma !== undefined) {
+        process.env.NEXT_PUBLIC_PLASMA_EXPLORER_CHAIN_ID = originals.plasma;
+      }
+      if (originals.abstract !== undefined) {
+        process.env.NEXT_PUBLIC_ABSTRACT_EXPLORER_CHAIN_ID =
+          originals.abstract;
       }
       vi.resetModules();
     }

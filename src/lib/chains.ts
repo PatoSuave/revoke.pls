@@ -1,4 +1,5 @@
 import { defineChain, type Chain, type Address } from "viem";
+import { abstract as viemAbstract } from "viem/chains";
 
 /**
  * Shared scanner chain registry.
@@ -24,6 +25,11 @@ export const GNOSIS_CHAIN_ID = 100;
 export const UNICHAIN_CHAIN_ID = 130;
 export const WORLDCHAIN_CHAIN_ID = 480;
 export const ROBINHOOD_CHAIN_ID = 4663;
+export const MONAD_CHAIN_ID = 143;
+export const KATANA_CHAIN_ID = 747474;
+export const SEI_CHAIN_ID = 1329;
+export const PLASMA_CHAIN_ID = 9745;
+export const ABSTRACT_CHAIN_ID = 2741;
 export type SupportedChainId =
   | typeof PULSECHAIN_CHAIN_ID
   | typeof BSC_CHAIN_ID
@@ -39,7 +45,12 @@ export type SupportedChainId =
   | typeof GNOSIS_CHAIN_ID
   | typeof UNICHAIN_CHAIN_ID
   | typeof WORLDCHAIN_CHAIN_ID
-  | typeof ROBINHOOD_CHAIN_ID;
+  | typeof ROBINHOOD_CHAIN_ID
+  | typeof MONAD_CHAIN_ID
+  | typeof KATANA_CHAIN_ID
+  | typeof SEI_CHAIN_ID
+  | typeof PLASMA_CHAIN_ID
+  | typeof ABSTRACT_CHAIN_ID;
 
 const PULSECHAIN_RPC_DEFAULT = "https://rpc.pulsechain.com";
 const BSC_RPC_DEFAULT = "https://bsc-dataseed.bnbchain.org";
@@ -57,6 +68,11 @@ const UNICHAIN_RPC_DEFAULT = "https://mainnet.unichain.org";
 const WORLDCHAIN_RPC_DEFAULT =
   "https://worldchain-mainnet.g.alchemy.com/public";
 const ROBINHOOD_RPC_DEFAULT = "https://rpc.mainnet.chain.robinhood.com";
+const MONAD_RPC_DEFAULT = "https://rpc.monad.xyz";
+const KATANA_RPC_DEFAULT = "https://rpc.katana.network";
+const SEI_RPC_DEFAULT = "https://evm-rpc.sei-apis.com";
+const PLASMA_RPC_DEFAULT = "https://rpc.plasma.to";
+const ABSTRACT_RPC_DEFAULT = "https://api.mainnet.abs.xyz";
 
 const PULSECHAIN_EXPLORER_BASE_URL = "https://scan.pulsechain.com";
 const BSC_EXPLORER_BASE_URL = "https://bscscan.com";
@@ -73,6 +89,11 @@ const GNOSIS_EXPLORER_BASE_URL = "https://gnosisscan.io";
 const UNICHAIN_EXPLORER_BASE_URL = "https://uniscan.xyz";
 const WORLDCHAIN_EXPLORER_BASE_URL = "https://worldscan.org";
 const ROBINHOOD_EXPLORER_BASE_URL = "https://robinhoodchain.blockscout.com";
+const MONAD_EXPLORER_BASE_URL = "https://monadscan.com";
+const KATANA_EXPLORER_BASE_URL = "https://katanascan.com";
+const SEI_EXPLORER_BASE_URL = "https://seiscan.io";
+const PLASMA_EXPLORER_BASE_URL = "https://plasmascan.to";
+const ABSTRACT_EXPLORER_BASE_URL = "https://abscan.org";
 
 export const PULSECHAIN_EXPLORER_API_DEFAULT =
   "https://api.scan.pulsechain.com/api";
@@ -97,6 +118,12 @@ export const WORLDCHAIN_EXPLORER_API_DEFAULT =
   "https://api.etherscan.io/v2/api";
 export const ROBINHOOD_EXPLORER_API_DEFAULT =
   "https://robinhoodchain.blockscout.com/api";
+export const MONAD_EXPLORER_API_DEFAULT = "https://api.etherscan.io/v2/api";
+export const KATANA_EXPLORER_API_DEFAULT = "https://api.etherscan.io/v2/api";
+export const SEI_EXPLORER_API_DEFAULT = "https://api.etherscan.io/v2/api";
+export const PLASMA_EXPLORER_API_DEFAULT = "https://api.etherscan.io/v2/api";
+export const ABSTRACT_EXPLORER_API_DEFAULT =
+  "https://api.etherscan.io/v2/api";
 export const BSC_DEPRECATED_V1_EXPLORER_API_URL =
   "https://api.bscscan.com/api";
 export const BASE_DEPRECATED_V1_EXPLORER_API_URL =
@@ -121,6 +148,12 @@ export const UNICHAIN_EXPLORER_CHAIN_ID_DEFAULT =
   UNICHAIN_CHAIN_ID.toString();
 export const WORLDCHAIN_EXPLORER_CHAIN_ID_DEFAULT =
   WORLDCHAIN_CHAIN_ID.toString();
+export const MONAD_EXPLORER_CHAIN_ID_DEFAULT = MONAD_CHAIN_ID.toString();
+export const KATANA_EXPLORER_CHAIN_ID_DEFAULT = KATANA_CHAIN_ID.toString();
+export const SEI_EXPLORER_CHAIN_ID_DEFAULT = SEI_CHAIN_ID.toString();
+export const PLASMA_EXPLORER_CHAIN_ID_DEFAULT = PLASMA_CHAIN_ID.toString();
+export const ABSTRACT_EXPLORER_CHAIN_ID_DEFAULT =
+  ABSTRACT_CHAIN_ID.toString();
 export const EIP_7825_MAX_TRANSACTION_GAS = 16_777_216n;
 export const BSC_OSAKA_MAX_TRANSACTION_GAS = EIP_7825_MAX_TRANSACTION_GAS;
 export const BSC_HIGH_GAS_WARNING_THRESHOLD =
@@ -141,7 +174,12 @@ export type SupportedChainKey =
   | "gnosis"
   | "unichain"
   | "worldchain"
-  | "robinhood";
+  | "robinhood"
+  | "monad"
+  | "katana"
+  | "sei"
+  | "plasma"
+  | "abstract";
 
 function cleanEnv(value: string | undefined): string | undefined {
   const trimmed = value?.trim();
@@ -163,6 +201,11 @@ function cleanApiKey(value: string | undefined): string | undefined {
   if (cleaned === "PASTE_YOUR_GNOSIS_EXPLORER_KEY_HERE") return undefined;
   if (cleaned === "PASTE_YOUR_UNICHAIN_EXPLORER_KEY_HERE") return undefined;
   if (cleaned === "PASTE_YOUR_WORLDCHAIN_EXPLORER_KEY_HERE") return undefined;
+  if (cleaned === "PASTE_YOUR_MONAD_EXPLORER_KEY_HERE") return undefined;
+  if (cleaned === "PASTE_YOUR_KATANA_EXPLORER_KEY_HERE") return undefined;
+  if (cleaned === "PASTE_YOUR_SEI_EXPLORER_KEY_HERE") return undefined;
+  if (cleaned === "PASTE_YOUR_PLASMA_EXPLORER_KEY_HERE") return undefined;
+  if (cleaned === "PASTE_YOUR_ABSTRACT_EXPLORER_KEY_HERE") return undefined;
   if (cleaned === "PASTE_YOUR_ETHERSCAN_V2_KEY_HERE") return undefined;
   if (cleaned === "your_bscscan_key") return undefined;
   if (cleaned === "your_polygonscan_key") return undefined;
@@ -176,6 +219,11 @@ function cleanApiKey(value: string | undefined): string | undefined {
   if (cleaned === "your_gnosis_explorer_key") return undefined;
   if (cleaned === "your_unichain_explorer_key") return undefined;
   if (cleaned === "your_worldchain_explorer_key") return undefined;
+  if (cleaned === "your_monad_explorer_key") return undefined;
+  if (cleaned === "your_katana_explorer_key") return undefined;
+  if (cleaned === "your_sei_explorer_key") return undefined;
+  if (cleaned === "your_plasma_explorer_key") return undefined;
+  if (cleaned === "your_abstract_explorer_key") return undefined;
   if (cleaned === "YOUR_ETHERSCAN_V2_KEY") return undefined;
   return cleaned;
 }
@@ -222,6 +270,11 @@ const gnosisRpcEnv = cleanEnv(process.env.NEXT_PUBLIC_GNOSIS_RPC_URL);
 const unichainRpcEnv = cleanEnv(process.env.NEXT_PUBLIC_UNICHAIN_RPC_URL);
 const worldchainRpcEnv = cleanEnv(process.env.NEXT_PUBLIC_WORLDCHAIN_RPC_URL);
 const robinhoodRpcEnv = cleanEnv(process.env.NEXT_PUBLIC_ROBINHOOD_RPC_URL);
+const monadRpcEnv = cleanEnv(process.env.NEXT_PUBLIC_MONAD_RPC_URL);
+const katanaRpcEnv = cleanEnv(process.env.NEXT_PUBLIC_KATANA_RPC_URL);
+const seiRpcEnv = cleanEnv(process.env.NEXT_PUBLIC_SEI_RPC_URL);
+const plasmaRpcEnv = cleanEnv(process.env.NEXT_PUBLIC_PLASMA_RPC_URL);
+const abstractRpcEnv = cleanEnv(process.env.NEXT_PUBLIC_ABSTRACT_RPC_URL);
 const pulsechainExplorerApiEnv = cleanEnv(
   process.env.NEXT_PUBLIC_PULSECHAIN_EXPLORER_API,
 );
@@ -267,6 +320,21 @@ const worldchainExplorerApiEnv = cleanEnv(
 const robinhoodExplorerApiEnv = cleanEnv(
   process.env.NEXT_PUBLIC_ROBINHOOD_EXPLORER_API_URL,
 );
+const monadExplorerApiEnv = cleanEnv(
+  process.env.NEXT_PUBLIC_MONAD_EXPLORER_API_URL,
+);
+const katanaExplorerApiEnv = cleanEnv(
+  process.env.NEXT_PUBLIC_KATANA_EXPLORER_API_URL,
+);
+const seiExplorerApiEnv = cleanEnv(
+  process.env.NEXT_PUBLIC_SEI_EXPLORER_API_URL,
+);
+const plasmaExplorerApiEnv = cleanEnv(
+  process.env.NEXT_PUBLIC_PLASMA_EXPLORER_API_URL,
+);
+const abstractExplorerApiEnv = cleanEnv(
+  process.env.NEXT_PUBLIC_ABSTRACT_EXPLORER_API_URL,
+);
 const bscExplorerChainIdEnv = cleanEnv(
   process.env.NEXT_PUBLIC_BSC_EXPLORER_CHAIN_ID,
 );
@@ -305,6 +373,21 @@ const unichainExplorerChainIdEnv = cleanEnv(
 );
 const worldchainExplorerChainIdEnv = cleanEnv(
   process.env.NEXT_PUBLIC_WORLDCHAIN_EXPLORER_CHAIN_ID,
+);
+const monadExplorerChainIdEnv = cleanEnv(
+  process.env.NEXT_PUBLIC_MONAD_EXPLORER_CHAIN_ID,
+);
+const katanaExplorerChainIdEnv = cleanEnv(
+  process.env.NEXT_PUBLIC_KATANA_EXPLORER_CHAIN_ID,
+);
+const seiExplorerChainIdEnv = cleanEnv(
+  process.env.NEXT_PUBLIC_SEI_EXPLORER_CHAIN_ID,
+);
+const plasmaExplorerChainIdEnv = cleanEnv(
+  process.env.NEXT_PUBLIC_PLASMA_EXPLORER_CHAIN_ID,
+);
+const abstractExplorerChainIdEnv = cleanEnv(
+  process.env.NEXT_PUBLIC_ABSTRACT_EXPLORER_CHAIN_ID,
 );
 const bscPreferredApiKeyEnv = cleanApiKey(
   process.env.NEXT_PUBLIC_BSC_EXPLORER_API_KEY,
@@ -382,6 +465,26 @@ const worldchainExplorerChainId =
   worldchainExplorerChainIdEnv === WORLDCHAIN_EXPLORER_CHAIN_ID_DEFAULT
     ? worldchainExplorerChainIdEnv
     : WORLDCHAIN_EXPLORER_CHAIN_ID_DEFAULT;
+const monadExplorerChainId =
+  monadExplorerChainIdEnv === MONAD_EXPLORER_CHAIN_ID_DEFAULT
+    ? monadExplorerChainIdEnv
+    : MONAD_EXPLORER_CHAIN_ID_DEFAULT;
+const katanaExplorerChainId =
+  katanaExplorerChainIdEnv === KATANA_EXPLORER_CHAIN_ID_DEFAULT
+    ? katanaExplorerChainIdEnv
+    : KATANA_EXPLORER_CHAIN_ID_DEFAULT;
+const seiExplorerChainId =
+  seiExplorerChainIdEnv === SEI_EXPLORER_CHAIN_ID_DEFAULT
+    ? seiExplorerChainIdEnv
+    : SEI_EXPLORER_CHAIN_ID_DEFAULT;
+const plasmaExplorerChainId =
+  plasmaExplorerChainIdEnv === PLASMA_EXPLORER_CHAIN_ID_DEFAULT
+    ? plasmaExplorerChainIdEnv
+    : PLASMA_EXPLORER_CHAIN_ID_DEFAULT;
+const abstractExplorerChainId =
+  abstractExplorerChainIdEnv === ABSTRACT_EXPLORER_CHAIN_ID_DEFAULT
+    ? abstractExplorerChainIdEnv
+    : ABSTRACT_EXPLORER_CHAIN_ID_DEFAULT;
 const bscExplorerApiKeyEnv = bscPreferredApiKeyEnv ?? bscScanApiKeyEnv;
 const bscDiscoveryWarnings = [
   bscDeprecatedV1ApiConfigured
@@ -471,6 +574,36 @@ const worldchainDiscoveryWarnings = [
   worldchainExplorerChainIdEnv &&
   worldchainExplorerChainIdEnv !== WORLDCHAIN_EXPLORER_CHAIN_ID_DEFAULT
     ? `NEXT_PUBLIC_WORLDCHAIN_EXPLORER_CHAIN_ID must be ${WORLDCHAIN_EXPLORER_CHAIN_ID_DEFAULT} for World Chain. The app is using chainid=${WORLDCHAIN_EXPLORER_CHAIN_ID_DEFAULT}.`
+    : null,
+].filter((warning): warning is string => Boolean(warning));
+const monadDiscoveryWarnings = [
+  monadExplorerChainIdEnv &&
+  monadExplorerChainIdEnv !== MONAD_EXPLORER_CHAIN_ID_DEFAULT
+    ? `NEXT_PUBLIC_MONAD_EXPLORER_CHAIN_ID must be ${MONAD_EXPLORER_CHAIN_ID_DEFAULT} for Monad. The app is using chainid=${MONAD_EXPLORER_CHAIN_ID_DEFAULT}.`
+    : null,
+].filter((warning): warning is string => Boolean(warning));
+const katanaDiscoveryWarnings = [
+  katanaExplorerChainIdEnv &&
+  katanaExplorerChainIdEnv !== KATANA_EXPLORER_CHAIN_ID_DEFAULT
+    ? `NEXT_PUBLIC_KATANA_EXPLORER_CHAIN_ID must be ${KATANA_EXPLORER_CHAIN_ID_DEFAULT} for Katana. The app is using chainid=${KATANA_EXPLORER_CHAIN_ID_DEFAULT}.`
+    : null,
+].filter((warning): warning is string => Boolean(warning));
+const seiDiscoveryWarnings = [
+  seiExplorerChainIdEnv &&
+  seiExplorerChainIdEnv !== SEI_EXPLORER_CHAIN_ID_DEFAULT
+    ? `NEXT_PUBLIC_SEI_EXPLORER_CHAIN_ID must be ${SEI_EXPLORER_CHAIN_ID_DEFAULT} for Sei. The app is using chainid=${SEI_EXPLORER_CHAIN_ID_DEFAULT}.`
+    : null,
+].filter((warning): warning is string => Boolean(warning));
+const plasmaDiscoveryWarnings = [
+  plasmaExplorerChainIdEnv &&
+  plasmaExplorerChainIdEnv !== PLASMA_EXPLORER_CHAIN_ID_DEFAULT
+    ? `NEXT_PUBLIC_PLASMA_EXPLORER_CHAIN_ID must be ${PLASMA_EXPLORER_CHAIN_ID_DEFAULT} for Plasma. The app is using chainid=${PLASMA_EXPLORER_CHAIN_ID_DEFAULT}.`
+    : null,
+].filter((warning): warning is string => Boolean(warning));
+const abstractDiscoveryWarnings = [
+  abstractExplorerChainIdEnv &&
+  abstractExplorerChainIdEnv !== ABSTRACT_EXPLORER_CHAIN_ID_DEFAULT
+    ? `NEXT_PUBLIC_ABSTRACT_EXPLORER_CHAIN_ID must be ${ABSTRACT_EXPLORER_CHAIN_ID_DEFAULT} for Abstract. The app is using chainid=${ABSTRACT_EXPLORER_CHAIN_ID_DEFAULT}.`
     : null,
 ].filter((warning): warning is string => Boolean(warning));
 
@@ -879,6 +1012,135 @@ export const robinhood = defineChain({
   testnet: false,
 });
 
+export const monad = defineChain({
+  id: MONAD_CHAIN_ID,
+  name: "Monad",
+  nativeCurrency: {
+    name: "Monad",
+    symbol: "MON",
+    decimals: 18,
+  },
+  rpcUrls: {
+    default: {
+      http: [monadRpcEnv ?? MONAD_RPC_DEFAULT],
+    },
+  },
+  blockExplorers: {
+    default: {
+      name: "Monadscan",
+      url: MONAD_EXPLORER_BASE_URL,
+    },
+  },
+  contracts: {
+    multicall3: {
+      address: "0xcA11bde05977b3631167028862bE2a173976CA11",
+      blockCreated: 9_248_132,
+    },
+  },
+  testnet: false,
+});
+
+export const katana = defineChain({
+  id: KATANA_CHAIN_ID,
+  name: "Katana",
+  nativeCurrency: {
+    name: "Ether",
+    symbol: "ETH",
+    decimals: 18,
+  },
+  rpcUrls: {
+    default: {
+      http: [katanaRpcEnv ?? KATANA_RPC_DEFAULT],
+    },
+  },
+  blockExplorers: {
+    default: {
+      name: "Katanascan",
+      url: KATANA_EXPLORER_BASE_URL,
+    },
+  },
+  contracts: {
+    multicall3: {
+      address: "0xcA11bde05977b3631167028862bE2a173976CA11",
+      blockCreated: 0,
+    },
+  },
+  testnet: false,
+});
+
+export const sei = defineChain({
+  id: SEI_CHAIN_ID,
+  name: "Sei",
+  nativeCurrency: {
+    name: "Sei",
+    symbol: "SEI",
+    decimals: 18,
+  },
+  rpcUrls: {
+    default: {
+      http: [seiRpcEnv ?? SEI_RPC_DEFAULT],
+      webSocket: ["wss://evm-ws.sei-apis.com"],
+    },
+  },
+  blockExplorers: {
+    default: {
+      name: "Seiscan",
+      url: SEI_EXPLORER_BASE_URL,
+    },
+  },
+  contracts: {
+    multicall3: {
+      address: "0xcA11bde05977b3631167028862bE2a173976CA11",
+    },
+  },
+  testnet: false,
+});
+
+export const plasma = defineChain({
+  id: PLASMA_CHAIN_ID,
+  name: "Plasma",
+  nativeCurrency: {
+    name: "Plasma",
+    symbol: "XPL",
+    decimals: 18,
+  },
+  rpcUrls: {
+    default: {
+      http: [plasmaRpcEnv ?? PLASMA_RPC_DEFAULT],
+    },
+  },
+  blockExplorers: {
+    default: {
+      name: "PlasmaScan",
+      url: PLASMA_EXPLORER_BASE_URL,
+    },
+  },
+  contracts: {
+    multicall3: {
+      address: "0xcA11bde05977b3631167028862bE2a173976CA11",
+      blockCreated: 0,
+    },
+  },
+  testnet: false,
+});
+
+export const abstract = defineChain({
+  ...viemAbstract,
+  rpcUrls: {
+    default: {
+      http: [abstractRpcEnv ?? ABSTRACT_RPC_DEFAULT],
+      ...(abstractRpcEnv ? {} : { webSocket: ["wss://api.mainnet.abs.xyz/ws"] }),
+    },
+  },
+  blockExplorers: {
+    default: {
+      name: "Abscan",
+      url: ABSTRACT_EXPLORER_BASE_URL,
+    },
+    native: viemAbstract.blockExplorers.native,
+  },
+});
+
 export interface DiscoverySourceConfig {
   /** Short machine-friendly identifier surfaced in dev/debug views. */
   id: string;
@@ -1130,6 +1392,31 @@ const robinhoodRpc = buildRpcConfig(
   "NEXT_PUBLIC_ROBINHOOD_RPC_URL",
   ROBINHOOD_RPC_DEFAULT,
   robinhoodRpcEnv,
+);
+const monadRpc = buildRpcConfig(
+  "NEXT_PUBLIC_MONAD_RPC_URL",
+  MONAD_RPC_DEFAULT,
+  monadRpcEnv,
+);
+const katanaRpc = buildRpcConfig(
+  "NEXT_PUBLIC_KATANA_RPC_URL",
+  KATANA_RPC_DEFAULT,
+  katanaRpcEnv,
+);
+const seiRpc = buildRpcConfig(
+  "NEXT_PUBLIC_SEI_RPC_URL",
+  SEI_RPC_DEFAULT,
+  seiRpcEnv,
+);
+const plasmaRpc = buildRpcConfig(
+  "NEXT_PUBLIC_PLASMA_RPC_URL",
+  PLASMA_RPC_DEFAULT,
+  plasmaRpcEnv,
+);
+const abstractRpc = buildRpcConfig(
+  "NEXT_PUBLIC_ABSTRACT_RPC_URL",
+  ABSTRACT_RPC_DEFAULT,
+  abstractRpcEnv,
 );
 
 const pulsechainDiscovery = buildDiscoveryConfig({
@@ -1478,6 +1765,126 @@ const robinhoodDiscovery = buildDiscoveryConfig({
   apiUrlEnv: robinhoodExplorerApiEnv,
   limitations:
     "Robinhood Blockscout log discovery is windowed and may report truncation when explorer caps are reached.",
+});
+
+const monadDiscovery = buildDiscoveryConfig({
+  id: "etherscan-v2-monad",
+  name: "Etherscan API V2 (Monad logs)",
+  apiProviderKind: "etherscan-v2",
+  apiProviderName: "Etherscan API V2",
+  url: MONAD_EXPLORER_BASE_URL,
+  apiUrlEnvVar: "NEXT_PUBLIC_MONAD_EXPLORER_API_URL",
+  apiUrlDefault: MONAD_EXPLORER_API_DEFAULT,
+  apiChainId: monadExplorerChainId,
+  apiChainIdEnvVar: "NEXT_PUBLIC_MONAD_EXPLORER_CHAIN_ID",
+  apiKeyEnvVar: "MONAD_EXPLORER_API_KEY / ETHERSCAN_API_KEY",
+  apiKeyEnvVars: ["MONAD_EXPLORER_API_KEY", "ETHERSCAN_API_KEY"],
+  apiUrlEnv: monadExplorerApiEnv,
+  requiresApiKey: true,
+  queryParams: {
+    chainid: monadExplorerChainId,
+  },
+  limitations:
+    "Etherscan API V2 can rate-limit, cap responses, or require smaller block windows for Monad logs.",
+  missingApiKeyMessage:
+    "Monad historical discovery uses Etherscan API V2. Hosted web deployments should use MONAD_EXPLORER_API_KEY or ETHERSCAN_API_KEY server-side; do not expose explorer keys through NEXT_PUBLIC variables.",
+  warnings: monadDiscoveryWarnings,
+});
+
+const katanaDiscovery = buildDiscoveryConfig({
+  id: "etherscan-v2-katana",
+  name: "Etherscan API V2 (Katana logs)",
+  apiProviderKind: "etherscan-v2",
+  apiProviderName: "Etherscan API V2",
+  url: KATANA_EXPLORER_BASE_URL,
+  apiUrlEnvVar: "NEXT_PUBLIC_KATANA_EXPLORER_API_URL",
+  apiUrlDefault: KATANA_EXPLORER_API_DEFAULT,
+  apiChainId: katanaExplorerChainId,
+  apiChainIdEnvVar: "NEXT_PUBLIC_KATANA_EXPLORER_CHAIN_ID",
+  apiKeyEnvVar: "KATANA_EXPLORER_API_KEY / ETHERSCAN_API_KEY",
+  apiKeyEnvVars: ["KATANA_EXPLORER_API_KEY", "ETHERSCAN_API_KEY"],
+  apiUrlEnv: katanaExplorerApiEnv,
+  requiresApiKey: true,
+  queryParams: {
+    chainid: katanaExplorerChainId,
+  },
+  limitations:
+    "Etherscan API V2 can rate-limit, cap responses, or require smaller block windows for Katana logs.",
+  missingApiKeyMessage:
+    "Katana historical discovery uses Etherscan API V2. Hosted web deployments should use KATANA_EXPLORER_API_KEY or ETHERSCAN_API_KEY server-side; do not expose explorer keys through NEXT_PUBLIC variables.",
+  warnings: katanaDiscoveryWarnings,
+});
+
+const seiDiscovery = buildDiscoveryConfig({
+  id: "etherscan-v2-sei",
+  name: "Etherscan API V2 (Sei logs)",
+  apiProviderKind: "etherscan-v2",
+  apiProviderName: "Etherscan API V2",
+  url: SEI_EXPLORER_BASE_URL,
+  apiUrlEnvVar: "NEXT_PUBLIC_SEI_EXPLORER_API_URL",
+  apiUrlDefault: SEI_EXPLORER_API_DEFAULT,
+  apiChainId: seiExplorerChainId,
+  apiChainIdEnvVar: "NEXT_PUBLIC_SEI_EXPLORER_CHAIN_ID",
+  apiKeyEnvVar: "SEI_EXPLORER_API_KEY / ETHERSCAN_API_KEY",
+  apiKeyEnvVars: ["SEI_EXPLORER_API_KEY", "ETHERSCAN_API_KEY"],
+  apiUrlEnv: seiExplorerApiEnv,
+  requiresApiKey: true,
+  queryParams: {
+    chainid: seiExplorerChainId,
+  },
+  limitations:
+    "Etherscan API V2 can rate-limit, cap responses, or require smaller block windows for Sei logs.",
+  missingApiKeyMessage:
+    "Sei historical discovery uses Etherscan API V2. Hosted web deployments should use SEI_EXPLORER_API_KEY or ETHERSCAN_API_KEY server-side; do not expose explorer keys through NEXT_PUBLIC variables.",
+  warnings: seiDiscoveryWarnings,
+});
+
+const plasmaDiscovery = buildDiscoveryConfig({
+  id: "etherscan-v2-plasma",
+  name: "Etherscan API V2 (Plasma logs)",
+  apiProviderKind: "etherscan-v2",
+  apiProviderName: "Etherscan API V2",
+  url: PLASMA_EXPLORER_BASE_URL,
+  apiUrlEnvVar: "NEXT_PUBLIC_PLASMA_EXPLORER_API_URL",
+  apiUrlDefault: PLASMA_EXPLORER_API_DEFAULT,
+  apiChainId: plasmaExplorerChainId,
+  apiChainIdEnvVar: "NEXT_PUBLIC_PLASMA_EXPLORER_CHAIN_ID",
+  apiKeyEnvVar: "PLASMA_EXPLORER_API_KEY / ETHERSCAN_API_KEY",
+  apiKeyEnvVars: ["PLASMA_EXPLORER_API_KEY", "ETHERSCAN_API_KEY"],
+  apiUrlEnv: plasmaExplorerApiEnv,
+  requiresApiKey: true,
+  queryParams: {
+    chainid: plasmaExplorerChainId,
+  },
+  limitations:
+    "Etherscan API V2 can rate-limit, cap responses, or require smaller block windows for Plasma logs.",
+  missingApiKeyMessage:
+    "Plasma historical discovery uses Etherscan API V2. Hosted web deployments should use PLASMA_EXPLORER_API_KEY or ETHERSCAN_API_KEY server-side; do not expose explorer keys through NEXT_PUBLIC variables.",
+  warnings: plasmaDiscoveryWarnings,
+});
+
+const abstractDiscovery = buildDiscoveryConfig({
+  id: "etherscan-v2-abstract",
+  name: "Etherscan API V2 (Abstract logs)",
+  apiProviderKind: "etherscan-v2",
+  apiProviderName: "Etherscan API V2",
+  url: ABSTRACT_EXPLORER_BASE_URL,
+  apiUrlEnvVar: "NEXT_PUBLIC_ABSTRACT_EXPLORER_API_URL",
+  apiUrlDefault: ABSTRACT_EXPLORER_API_DEFAULT,
+  apiChainId: abstractExplorerChainId,
+  apiChainIdEnvVar: "NEXT_PUBLIC_ABSTRACT_EXPLORER_CHAIN_ID",
+  apiKeyEnvVar: "ABSTRACT_EXPLORER_API_KEY / ETHERSCAN_API_KEY",
+  apiKeyEnvVars: ["ABSTRACT_EXPLORER_API_KEY", "ETHERSCAN_API_KEY"],
+  apiUrlEnv: abstractExplorerApiEnv,
+  requiresApiKey: true,
+  queryParams: {
+    chainid: abstractExplorerChainId,
+  },
+  limitations:
+    "Etherscan API V2 can rate-limit, cap responses, or require smaller block windows for Abstract logs.",
+  missingApiKeyMessage:
+    "Abstract historical discovery uses Etherscan API V2. Hosted web deployments should use ABSTRACT_EXPLORER_API_KEY or ETHERSCAN_API_KEY server-side; do not expose explorer keys through NEXT_PUBLIC variables.",
+  warnings: abstractDiscoveryWarnings,
 });
 
 export const supportedChainConfigs = {
@@ -2009,6 +2416,181 @@ export const supportedChainConfigs = {
       nftOperator: "ERC-721/ERC-1155",
     },
   },
+  [MONAD_CHAIN_ID]: {
+    key: "monad",
+    chain: monad,
+    chainId: MONAD_CHAIN_ID,
+    displayName: "Monad",
+    shortName: "Monad",
+    nativeSymbol: "MON",
+    rpc: monadRpc,
+    explorer: {
+      name: "Monadscan",
+      baseUrl: MONAD_EXPLORER_BASE_URL,
+      apiUrl: monadDiscovery.apiUrl,
+      apiUrlEnvVar: monadDiscovery.apiUrlEnvVar,
+      apiKeyEnvVar: monadDiscovery.apiKeyEnvVar,
+      urls: explorerUrls(MONAD_EXPLORER_BASE_URL),
+    },
+    discovery: monadDiscovery,
+    discoverySettings: {
+      sourceKind: "explorer-logs",
+      providerName: "Etherscan API V2",
+      approvalEventTopicMode: "topic0-topic1-owner",
+      defaultFromBlock: "0",
+      defaultToBlock: "latest",
+      pageSize: 1000,
+      historicalRpcLogs: "disabled",
+      capWarning:
+        "Etherscan API V2 may rate-limit, cap pages, or require smaller windows for Monad logs; incomplete discovery is surfaced to the user.",
+    },
+    standardLabels: {
+      fungible: "ERC-20",
+      nft: "ERC-721",
+      multiToken: "ERC-1155",
+      nftOperator: "ERC-721/ERC-1155",
+    },
+  },
+  [KATANA_CHAIN_ID]: {
+    key: "katana",
+    chain: katana,
+    chainId: KATANA_CHAIN_ID,
+    displayName: "Katana",
+    shortName: "Katana",
+    nativeSymbol: "ETH",
+    rpc: katanaRpc,
+    explorer: {
+      name: "Katanascan",
+      baseUrl: KATANA_EXPLORER_BASE_URL,
+      apiUrl: katanaDiscovery.apiUrl,
+      apiUrlEnvVar: katanaDiscovery.apiUrlEnvVar,
+      apiKeyEnvVar: katanaDiscovery.apiKeyEnvVar,
+      urls: explorerUrls(KATANA_EXPLORER_BASE_URL),
+    },
+    discovery: katanaDiscovery,
+    discoverySettings: {
+      sourceKind: "explorer-logs",
+      providerName: "Etherscan API V2",
+      approvalEventTopicMode: "topic0-topic1-owner",
+      defaultFromBlock: "0",
+      defaultToBlock: "latest",
+      pageSize: 1000,
+      historicalRpcLogs: "disabled",
+      capWarning:
+        "Etherscan API V2 may rate-limit, cap pages, or require smaller windows for Katana logs; incomplete discovery is surfaced to the user.",
+    },
+    standardLabels: {
+      fungible: "ERC-20",
+      nft: "ERC-721",
+      multiToken: "ERC-1155",
+      nftOperator: "ERC-721/ERC-1155",
+    },
+  },
+  [SEI_CHAIN_ID]: {
+    key: "sei",
+    chain: sei,
+    chainId: SEI_CHAIN_ID,
+    displayName: "Sei",
+    shortName: "Sei",
+    nativeSymbol: "SEI",
+    rpc: seiRpc,
+    explorer: {
+      name: "Seiscan",
+      baseUrl: SEI_EXPLORER_BASE_URL,
+      apiUrl: seiDiscovery.apiUrl,
+      apiUrlEnvVar: seiDiscovery.apiUrlEnvVar,
+      apiKeyEnvVar: seiDiscovery.apiKeyEnvVar,
+      urls: explorerUrls(SEI_EXPLORER_BASE_URL),
+    },
+    discovery: seiDiscovery,
+    discoverySettings: {
+      sourceKind: "explorer-logs",
+      providerName: "Etherscan API V2",
+      approvalEventTopicMode: "topic0-topic1-owner",
+      defaultFromBlock: "0",
+      defaultToBlock: "latest",
+      pageSize: 1000,
+      historicalRpcLogs: "disabled",
+      capWarning:
+        "Etherscan API V2 may rate-limit, cap pages, or require smaller windows for Sei logs; incomplete discovery is surfaced to the user.",
+    },
+    standardLabels: {
+      fungible: "ERC-20",
+      nft: "ERC-721",
+      multiToken: "ERC-1155",
+      nftOperator: "ERC-721/ERC-1155",
+    },
+  },
+  [PLASMA_CHAIN_ID]: {
+    key: "plasma",
+    chain: plasma,
+    chainId: PLASMA_CHAIN_ID,
+    displayName: "Plasma",
+    shortName: "Plasma",
+    nativeSymbol: "XPL",
+    rpc: plasmaRpc,
+    explorer: {
+      name: "PlasmaScan",
+      baseUrl: PLASMA_EXPLORER_BASE_URL,
+      apiUrl: plasmaDiscovery.apiUrl,
+      apiUrlEnvVar: plasmaDiscovery.apiUrlEnvVar,
+      apiKeyEnvVar: plasmaDiscovery.apiKeyEnvVar,
+      urls: explorerUrls(PLASMA_EXPLORER_BASE_URL),
+    },
+    discovery: plasmaDiscovery,
+    discoverySettings: {
+      sourceKind: "explorer-logs",
+      providerName: "Etherscan API V2",
+      approvalEventTopicMode: "topic0-topic1-owner",
+      defaultFromBlock: "0",
+      defaultToBlock: "latest",
+      pageSize: 1000,
+      historicalRpcLogs: "disabled",
+      capWarning:
+        "Etherscan API V2 may rate-limit, cap pages, or require smaller windows for Plasma logs; incomplete discovery is surfaced to the user.",
+    },
+    standardLabels: {
+      fungible: "ERC-20",
+      nft: "ERC-721",
+      multiToken: "ERC-1155",
+      nftOperator: "ERC-721/ERC-1155",
+    },
+  },
+  [ABSTRACT_CHAIN_ID]: {
+    key: "abstract",
+    chain: abstract,
+    chainId: ABSTRACT_CHAIN_ID,
+    displayName: "Abstract",
+    shortName: "Abstract",
+    nativeSymbol: "ETH",
+    rpc: abstractRpc,
+    explorer: {
+      name: "Abscan",
+      baseUrl: ABSTRACT_EXPLORER_BASE_URL,
+      apiUrl: abstractDiscovery.apiUrl,
+      apiUrlEnvVar: abstractDiscovery.apiUrlEnvVar,
+      apiKeyEnvVar: abstractDiscovery.apiKeyEnvVar,
+      urls: explorerUrls(ABSTRACT_EXPLORER_BASE_URL),
+    },
+    discovery: abstractDiscovery,
+    discoverySettings: {
+      sourceKind: "explorer-logs",
+      providerName: "Etherscan API V2",
+      approvalEventTopicMode: "topic0-topic1-owner",
+      defaultFromBlock: "0",
+      defaultToBlock: "latest",
+      pageSize: 1000,
+      historicalRpcLogs: "disabled",
+      capWarning:
+        "Etherscan API V2 may rate-limit, cap pages, or require smaller windows for Abstract logs; incomplete discovery is surfaced to the user.",
+    },
+    standardLabels: {
+      fungible: "ERC-20",
+      nft: "ERC-721",
+      multiToken: "ERC-1155",
+      nftOperator: "ERC-721/ERC-1155",
+    },
+  },
 } as const satisfies Record<number, SupportedChainConfig>;
 
 export const supportedChains = [
@@ -2027,6 +2609,11 @@ export const supportedChains = [
   unichain,
   worldchain,
   robinhood,
+  monad,
+  katana,
+  sei,
+  plasma,
+  abstract,
 ] as const;
 
 export function isSupportedChainId(
@@ -2060,6 +2647,11 @@ export const supportedChainConfigList = [
   supportedChainConfigs[UNICHAIN_CHAIN_ID],
   supportedChainConfigs[WORLDCHAIN_CHAIN_ID],
   supportedChainConfigs[ROBINHOOD_CHAIN_ID],
+  supportedChainConfigs[MONAD_CHAIN_ID],
+  supportedChainConfigs[KATANA_CHAIN_ID],
+  supportedChainConfigs[SEI_CHAIN_ID],
+  supportedChainConfigs[PLASMA_CHAIN_ID],
+  supportedChainConfigs[ABSTRACT_CHAIN_ID],
 ] as const;
 
 function joinNames(names: readonly string[]): string {

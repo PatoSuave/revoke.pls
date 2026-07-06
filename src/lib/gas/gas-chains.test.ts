@@ -9,7 +9,7 @@ describe("gas tracker chain registry", () => {
   it("supports the app's EVM gas tracker chains", () => {
     expect(GAS_TRACKER_CHAINS.map((chain) => chain.chainId)).toEqual([
       369, 56, 8453, 137, 146, 43114, 5000, 59144, 81457, 80094, 42220, 100,
-      130, 480, 4663, 1, 42161, 10, 999,
+      130, 480, 4663, 143, 747474, 1329, 9745, 2741, 1, 42161, 10, 999,
     ]);
   });
 
@@ -50,6 +50,11 @@ describe("gas tracker chain registry", () => {
       [130, "ethereum"],
       [480, "ethereum"],
       [4663, "ethereum"],
+      [143, "monad"],
+      [747474, "ethereum"],
+      [1329, "sei"],
+      [9745, "plasma"],
+      [2741, "ethereum"],
       [1, "ethereum"],
       [42161, "ethereum"],
       [10, "ethereum"],

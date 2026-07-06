@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import { ARBITRUM_ONE_CLIENT_CHAIN_ID } from "@/lib/arbitrum-approval-client";
 import {
+  ABSTRACT_CHAIN_ID,
   AVALANCHE_CHAIN_ID,
   BASE_CHAIN_ID,
   BERACHAIN_CHAIN_ID,
@@ -9,11 +10,15 @@ import {
   BSC_CHAIN_ID,
   CELO_CHAIN_ID,
   GNOSIS_CHAIN_ID,
+  KATANA_CHAIN_ID,
   LINEA_CHAIN_ID,
   MANTLE_CHAIN_ID,
+  MONAD_CHAIN_ID,
+  PLASMA_CHAIN_ID,
   POLYGON_CHAIN_ID,
   PULSECHAIN_CHAIN_ID,
   ROBINHOOD_CHAIN_ID,
+  SEI_CHAIN_ID,
   SONIC_CHAIN_ID,
   UNICHAIN_CHAIN_ID,
   WORLDCHAIN_CHAIN_ID,
@@ -76,6 +81,11 @@ describe("wallet header network status", () => {
         UNICHAIN_CHAIN_ID,
         WORLDCHAIN_CHAIN_ID,
         ROBINHOOD_CHAIN_ID,
+        MONAD_CHAIN_ID,
+        KATANA_CHAIN_ID,
+        SEI_CHAIN_ID,
+        PLASMA_CHAIN_ID,
+        ABSTRACT_CHAIN_ID,
         ETHEREUM_MAINNET_CLIENT_CHAIN_ID,
         ARBITRUM_ONE_CLIENT_CHAIN_ID,
         OPTIMISM_CLIENT_CHAIN_ID,
@@ -148,6 +158,11 @@ describe("wallet header network status", () => {
         UNICHAIN_CHAIN_ID,
         WORLDCHAIN_CHAIN_ID,
         ROBINHOOD_CHAIN_ID,
+        MONAD_CHAIN_ID,
+        KATANA_CHAIN_ID,
+        SEI_CHAIN_ID,
+        PLASMA_CHAIN_ID,
+        ABSTRACT_CHAIN_ID,
       ].map((chainId) =>
         resolveHeaderNetworkStatus({
           walletChainId: chainId,
@@ -170,6 +185,11 @@ describe("wallet header network status", () => {
       expect.objectContaining({ kind: "supported", label: "Unichain" }),
       expect.objectContaining({ kind: "supported", label: "World Chain" }),
       expect.objectContaining({ kind: "supported", label: "Robinhood Chain" }),
+      expect.objectContaining({ kind: "supported", label: "Monad" }),
+      expect.objectContaining({ kind: "supported", label: "Katana" }),
+      expect.objectContaining({ kind: "supported", label: "Sei" }),
+      expect.objectContaining({ kind: "supported", label: "Plasma" }),
+      expect.objectContaining({ kind: "supported", label: "Abstract" }),
     ]);
   });
 
@@ -190,6 +210,11 @@ describe("wallet header network status", () => {
       UNICHAIN_CHAIN_ID,
       WORLDCHAIN_CHAIN_ID,
       ROBINHOOD_CHAIN_ID,
+      MONAD_CHAIN_ID,
+      KATANA_CHAIN_ID,
+      SEI_CHAIN_ID,
+      PLASMA_CHAIN_ID,
+      ABSTRACT_CHAIN_ID,
     ]);
     expect(supportedChainConfigList.map((chain) => chain.chainId)).not.toContain(
       ARBITRUM_ONE_CLIENT_CHAIN_ID,

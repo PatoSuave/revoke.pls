@@ -151,6 +151,41 @@ describe("security content", () => {
     expect(rowsByChain.get("Robinhood Chain")?.note).toContain(
       "Gas is paid in ETH",
     );
+    expect(rowsByChain.get("Monad")).toMatchObject({
+      chainId: "143",
+      scan: "Yes",
+      revoke: "Yes",
+      status: "Live",
+    });
+    expect(rowsByChain.get("Monad")?.note).toContain("Gas is paid in MON");
+    expect(rowsByChain.get("Katana")).toMatchObject({
+      chainId: "747474",
+      scan: "Yes",
+      revoke: "Yes",
+      status: "Live",
+    });
+    expect(rowsByChain.get("Katana")?.note).toContain("Gas is paid in ETH");
+    expect(rowsByChain.get("Sei")).toMatchObject({
+      chainId: "1329",
+      scan: "Yes",
+      revoke: "Yes",
+      status: "Live",
+    });
+    expect(rowsByChain.get("Sei")?.note).toContain("Gas is paid in SEI");
+    expect(rowsByChain.get("Plasma")).toMatchObject({
+      chainId: "9745",
+      scan: "Yes",
+      revoke: "Yes",
+      status: "Live",
+    });
+    expect(rowsByChain.get("Plasma")?.note).toContain("Gas is paid in XPL");
+    expect(rowsByChain.get("Abstract")).toMatchObject({
+      chainId: "2741",
+      scan: "Yes",
+      revoke: "Yes",
+      status: "Live",
+    });
+    expect(rowsByChain.get("Abstract")?.note).toContain("Gas is paid in ETH");
     expect(rowsByChain.get("Solana")).toMatchObject({
       scan: "No",
       revoke: "No",

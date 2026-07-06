@@ -2,13 +2,18 @@ import { existsSync, readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 
 import {
+  ABSTRACT_CHAIN_ID,
   BERACHAIN_CHAIN_ID,
   BLAST_CHAIN_ID,
   CELO_CHAIN_ID,
   GNOSIS_CHAIN_ID,
+  KATANA_CHAIN_ID,
   PULSECHAIN_CHAIN_ID,
   LINEA_CHAIN_ID,
+  MONAD_CHAIN_ID,
+  PLASMA_CHAIN_ID,
   ROBINHOOD_CHAIN_ID,
+  SEI_CHAIN_ID,
   UNICHAIN_CHAIN_ID,
   WORLDCHAIN_CHAIN_ID,
 } from "@/lib/chains";
@@ -38,6 +43,11 @@ describe("ChainLogo source", () => {
     expect(SOURCE).toContain(`[UNICHAIN_CHAIN_ID]: "Unichain"`);
     expect(SOURCE).toContain(`[WORLDCHAIN_CHAIN_ID]: "World Chain"`);
     expect(SOURCE).toContain(`[ROBINHOOD_CHAIN_ID]: "Robinhood Chain"`);
+    expect(SOURCE).toContain(`[MONAD_CHAIN_ID]: "Monad"`);
+    expect(SOURCE).toContain(`[KATANA_CHAIN_ID]: "Katana"`);
+    expect(SOURCE).toContain(`[SEI_CHAIN_ID]: "Sei"`);
+    expect(SOURCE).toContain(`[PLASMA_CHAIN_ID]: "Plasma"`);
+    expect(SOURCE).toContain(`[ABSTRACT_CHAIN_ID]: "Abstract"`);
   });
 
   it("routes newer generic chains away from the default mark", () => {
@@ -49,6 +59,11 @@ describe("ChainLogo source", () => {
     expect(UNICHAIN_CHAIN_ID).toBe(130);
     expect(WORLDCHAIN_CHAIN_ID).toBe(480);
     expect(ROBINHOOD_CHAIN_ID).toBe(4663);
+    expect(MONAD_CHAIN_ID).toBe(143);
+    expect(KATANA_CHAIN_ID).toBe(747474);
+    expect(SEI_CHAIN_ID).toBe(1329);
+    expect(PLASMA_CHAIN_ID).toBe(9745);
+    expect(ABSTRACT_CHAIN_ID).toBe(2741);
 
     expect(SOURCE).toContain("case LINEA_CHAIN_ID:");
     expect(SOURCE).toContain("return <LineaMark muted={muted} />");
@@ -66,6 +81,16 @@ describe("ChainLogo source", () => {
     expect(SOURCE).toContain("return <WorldChainMark muted={muted} />");
     expect(SOURCE).toContain("case ROBINHOOD_CHAIN_ID:");
     expect(SOURCE).toContain("return <RobinhoodMark muted={muted} />");
+    expect(SOURCE).toContain("case MONAD_CHAIN_ID:");
+    expect(SOURCE).toContain("return <MonadMark muted={muted} />");
+    expect(SOURCE).toContain("case KATANA_CHAIN_ID:");
+    expect(SOURCE).toContain("return <KatanaMark muted={muted} />");
+    expect(SOURCE).toContain("case SEI_CHAIN_ID:");
+    expect(SOURCE).toContain("return <SeiMark muted={muted} />");
+    expect(SOURCE).toContain("case PLASMA_CHAIN_ID:");
+    expect(SOURCE).toContain("return <PlasmaMark muted={muted} />");
+    expect(SOURCE).toContain("case ABSTRACT_CHAIN_ID:");
+    expect(SOURCE).toContain("return <AbstractMark muted={muted} />");
   });
 
   it("keeps branded full-color marks for new generic chains", () => {
@@ -87,6 +112,16 @@ describe("ChainLogo source", () => {
     expect(SOURCE).toContain("ROBINHOOD_CHAIN_MARK_PATH");
     expect(SOURCE).toContain("/protocol-logos/robinhood-chain-mark.png");
     expect(SOURCE).toContain("#050505");
+    expect(SOURCE).toContain("function MonadMark");
+    expect(SOURCE).toContain("#7C3AED");
+    expect(SOURCE).toContain("function KatanaMark");
+    expect(SOURCE).toContain("#F97316");
+    expect(SOURCE).toContain("function SeiMark");
+    expect(SOURCE).toContain("#E11D48");
+    expect(SOURCE).toContain("function PlasmaMark");
+    expect(SOURCE).toContain("#22C55E");
+    expect(SOURCE).toContain("function AbstractMark");
+    expect(SOURCE).toContain("#111827");
     expect(SOURCE).not.toContain('d="M15 13h13');
     expect(existsSync(ROBINHOOD_MARK_ASSET)).toBe(true);
   });

@@ -9,7 +9,7 @@
 
 ## Active Chains
 
-Nineteen live product chains are surfaced across the app:
+Twenty-four live product chains are surfaced across the app:
 
 - PulseChain, chain ID `369`, native gas token `PLS`, explorer `PulseScan`
 - BSC / BNB Smart Chain, chain ID `56`, native gas token `BNB`, explorer
@@ -29,6 +29,11 @@ Nineteen live product chains are surfaced across the app:
 - World Chain, chain ID `480`, native gas token `ETH`, explorer `Worldscan`
 - Robinhood Chain, chain ID `4663`, native gas token `ETH`, explorer
   `Robinhood Blockscout`
+- Monad, chain ID `143`, native gas token `MON`, explorer `Monadscan`
+- Katana, chain ID `747474`, native gas token `ETH`, explorer `Katanascan`
+- Sei, chain ID `1329`, native gas token `SEI`, explorer `Seiscan`
+- Plasma, chain ID `9745`, native gas token `XPL`, explorer `Plasmascan`
+- Abstract, chain ID `2741`, native gas token `ETH`, explorer `Abscan`
 - Ethereum Mainnet, chain ID `1`, native gas token `ETH`, explorer `Etherscan`
 - Arbitrum One, chain ID `42161`, native gas token `ETH`, explorer `Arbiscan`
 - Optimism / OP Mainnet, chain ID `10`, native gas token `ETH`, explorer
@@ -37,9 +42,9 @@ Nineteen live product chains are surfaced across the app:
   verified ERC-20/NFT row revoke
 
 PulseChain, BSC, Base, Polygon, Sonic, Avalanche, Mantle, Linea, Blast,
-Berachain, Celo, Gnosis, Unichain, World Chain, and Robinhood Chain use the
-generic scanner registry in `src/lib/chains.ts`, including the shared scan,
-revoke, and batch lane.
+Berachain, Celo, Gnosis, Unichain, World Chain, Robinhood Chain, Monad, Katana,
+Sei, Plasma, and Abstract use the generic scanner registry in
+`src/lib/chains.ts`, including the shared scan, revoke, and batch lane.
 
 Ethereum Mainnet is wallet-enabled for the Ethereum read-only discovery and
 wallet-side revoke lane. It is surfaced as a live product chain, but it is not
@@ -67,9 +72,9 @@ revoke. HyperEVM gas is paid in HYPE.
 
 - `src/lib/wagmi.ts` registers PulseChain, BSC, Base, Polygon, Sonic,
   Avalanche C-Chain, Mantle, Linea, Blast, Berachain, Celo, Gnosis, Unichain,
-  World Chain, Robinhood Chain, Ethereum Mainnet, Arbitrum One, OP Mainnet, and
-  HyperEVM with wagmi. Ethereum, Arbitrum, Optimism, and HyperEVM use separate
-  scanner lanes.
+  World Chain, Robinhood Chain, Monad, Katana, Sei, Plasma, Abstract, Ethereum
+  Mainnet, Arbitrum One, OP Mainnet, and HyperEVM with wagmi. Ethereum,
+  Arbitrum, Optimism, and HyperEVM use separate scanner lanes.
 - PulseChain RPC defaults to `https://rpc.pulsechain.com`.
   Hosted PulseChain discovery can use server-only `PULSECHAIN_DISCOVERY_RPC_URL`
   as a Dwellir/managed-RPC fallback when PulseScan discovery fails, then
@@ -90,6 +95,12 @@ revoke. HyperEVM gas is paid in HYPE.
 - Unichain RPC defaults to `https://mainnet.unichain.org`.
 - World Chain RPC defaults to `https://worldchain-mainnet.g.alchemy.com/public`.
 - Robinhood Chain RPC defaults to `https://rpc.mainnet.chain.robinhood.com`.
+- Monad RPC defaults to `https://rpc.monad.xyz`.
+- Katana RPC defaults to `https://rpc.katana.network`.
+- Sei RPC defaults to `https://evm-rpc.sei-apis.com`.
+- Plasma RPC defaults to `https://rpc.plasma.to`.
+- Abstract RPC defaults to `https://api.mainnet.abs.xyz`; its chain object keeps
+  viem's Abstract/ZKsync-style chain configuration.
 - Ethereum wallet RPC defaults to `https://ethereum-rpc.publicnode.com` unless
   overridden for the wallet client.
 - Arbitrum wallet chain recognition uses `https://arb1.arbitrum.io/rpc`.
@@ -102,8 +113,9 @@ revoke. HyperEVM gas is paid in HYPE.
   Production HyperEVM approval discovery uses server-only RPC/API settings
   through `/api/hyperevm/approvals`.
 - PulseChain, BSC, Base, Polygon, Sonic, Avalanche, Mantle, Linea, Blast,
-  Berachain, Celo, Gnosis, Unichain, World Chain, Robinhood Chain, and Ethereum
-  wallet RPCs can be overridden with browser-visible public env vars.
+  Berachain, Celo, Gnosis, Unichain, World Chain, Robinhood Chain, Monad,
+  Katana, Sei, Plasma, Abstract, and Ethereum wallet RPCs can be overridden
+  with browser-visible public env vars.
   Server-side discovery RPCs use unprefixed server-only env vars.
 - Live reads and writes always include the approval record's `chainId`.
 - When connected, the wallet account `chainId` is the active scanner source of
@@ -198,6 +210,17 @@ Etherscan API V2, does not require an explorer API key, and does not send a
 `chainid` query parameter. Public Robinhood RPC `eth_getLogs` is not used for
 historical approval discovery. Robinhood Blockscout remains the user-facing
 explorer for address, token, and transaction links.
+
+Monad, Katana, Sei, Plasma, and Abstract hosted web discovery use the same
+server route and Etherscan API V2 logs path with `chainid=143`,
+`chainid=747474`, `chainid=1329`, `chainid=9745`, and `chainid=2741`. Hosted
+deployments can use one shared server-side `ETHERSCAN_API_KEY`; per-chain
+`MONAD_EXPLORER_API_KEY`, `KATANA_EXPLORER_API_KEY`, `SEI_EXPLORER_API_KEY`,
+`PLASMA_EXPLORER_API_KEY`, and `ABSTRACT_EXPLORER_API_KEY` values are optional
+overrides. Public RPC `eth_getLogs` is not used for historical approval
+discovery, and explorer API keys must not be exposed through `NEXT_PUBLIC_*`.
+Monadscan, Katanascan, Seiscan, Plasmascan, and Abscan remain the user-facing
+explorers for address, token, and transaction links.
 
 Ethereum historical discovery is exposed through `/api/ethereum/approvals` so
 the Etherscan key stays server-only. The route is read-only, uses bounded
@@ -331,6 +354,36 @@ row-level revoke stays limited to verified ERC-20 and NFT rows.
   `ROBINHOOD_EXPLORER_API_URL`
 - Robinhood Chain server RPC env vars for gas:
   `ROBINHOOD_RPC_URL` / `ROBINHOOD_MAINNET_RPC_URL`
+- Monad server discovery API default:
+  `https://api.etherscan.io/v2/api`
+- Monad server discovery API chain id:
+  `MONAD_EXPLORER_CHAIN_ID=143`
+- Monad server API key env vars:
+  `MONAD_EXPLORER_API_KEY` / `ETHERSCAN_API_KEY`
+- Katana server discovery API default:
+  `https://api.etherscan.io/v2/api`
+- Katana server discovery API chain id:
+  `KATANA_EXPLORER_CHAIN_ID=747474`
+- Katana server API key env vars:
+  `KATANA_EXPLORER_API_KEY` / `ETHERSCAN_API_KEY`
+- Sei server discovery API default:
+  `https://api.etherscan.io/v2/api`
+- Sei server discovery API chain id:
+  `SEI_EXPLORER_CHAIN_ID=1329`
+- Sei server API key env vars:
+  `SEI_EXPLORER_API_KEY` / `ETHERSCAN_API_KEY`
+- Plasma server discovery API default:
+  `https://api.etherscan.io/v2/api`
+- Plasma server discovery API chain id:
+  `PLASMA_EXPLORER_CHAIN_ID=9745`
+- Plasma server API key env vars:
+  `PLASMA_EXPLORER_API_KEY` / `ETHERSCAN_API_KEY`
+- Abstract server discovery API default:
+  `https://api.etherscan.io/v2/api`
+- Abstract server discovery API chain id:
+  `ABSTRACT_EXPLORER_CHAIN_ID=2741`
+- Abstract server API key env vars:
+  `ABSTRACT_EXPLORER_API_KEY` / `ETHERSCAN_API_KEY`
 - Ethereum server RPC env vars:
   `MAINNET_RPC_URL` / `ETHEREUM_RPC_URL`
 - Ethereum server API key env var:
@@ -436,12 +489,14 @@ User-facing Berachain copy uses:
 - `ERC-1155` for multi-token NFT / semi-fungible approvals
 - `BERA` for gas
 
-User-facing Celo, Gnosis, Unichain, World Chain, and Robinhood Chain copy uses:
+User-facing Celo, Gnosis, Unichain, World Chain, Robinhood Chain, Monad,
+Katana, Sei, Plasma, and Abstract copy uses:
 
 - `ERC-20` for fungible token approvals
 - `ERC-721` for NFT approvals
 - `ERC-1155` for multi-token NFT / semi-fungible approvals
-- `CELO`, `XDAI`, or `ETH` for gas, matching the selected chain
+- `CELO`, `XDAI`, `MON`, `SEI`, `XPL`, or `ETH` for gas, matching the selected
+  chain
 
 User-facing Arbitrum copy uses:
 
@@ -487,8 +542,9 @@ Fungible token revoke:
 4. Wallet signs and submits on the approval's `chainId`.
 5. UI links the transaction to PulseScan, BscScan, BaseScan, PolygonScan,
    SonicScan, SnowScan, Mantle Explorer, LineaScan, Blastscan, Berascan,
-   CeloScan, Gnosisscan, Uniscan, Worldscan, Robinhood Blockscout, Etherscan,
-   Arbiscan, Optimistic Etherscan, or Hyperevmscan and rescans after success.
+   CeloScan, Gnosisscan, Uniscan, Worldscan, Robinhood Blockscout, Monadscan,
+   Katanascan, Seiscan, Plasmascan, Abscan, Etherscan, Arbiscan, Optimistic
+   Etherscan, or Hyperevmscan and rescans after success.
 
 Permit2 delegated allowance revoke:
 

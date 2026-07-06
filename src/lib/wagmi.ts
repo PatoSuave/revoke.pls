@@ -6,6 +6,7 @@ import {
   arbitrumOneWalletChain,
 } from "@/lib/arbitrum-approval-client";
 import {
+  abstract,
   avalanche,
   base,
   berachain,
@@ -13,11 +14,15 @@ import {
   bsc,
   celo,
   gnosis,
+  katana,
   linea,
   mantle,
+  monad,
+  plasma,
   polygon,
   pulsechain,
   robinhood,
+  sei,
   sonic,
   supportedChains,
   unichain,
@@ -55,6 +60,11 @@ import {
  *  - Unichain mainnet (130)
  *  - World Chain (480)
  *  - Robinhood Chain (4663)
+ *  - Monad (143)
+ *  - Katana (747474)
+ *  - Sei (1329)
+ *  - Plasma (9745)
+ *  - Abstract (2741)
  *
  * Ethereum Mainnet (1) is registered as a wallet-only chain for the
  * Ethereum scanner/revoke flow. It is intentionally not part of the active
@@ -89,7 +99,7 @@ export const hasWalletConnect: boolean = Boolean(walletConnectProjectId);
 const WALLETCONNECT_METADATA = {
   name: "Pulse Revoke",
   description:
-    "Review token approvals on PulseChain, BSC, Base, Polygon, Sonic, Avalanche, Mantle, Linea, Blast, Berachain, Celo, Gnosis, Unichain, World Chain, Robinhood, Ethereum, Arbitrum, Optimism, and HyperEVM.",
+    "Review token approvals on PulseChain, BSC, Base, Polygon, Sonic, Avalanche, Mantle, Linea, Blast, Berachain, Celo, Gnosis, Unichain, World Chain, Robinhood, Monad, Katana, Sei, Plasma, Abstract, Ethereum, Arbitrum, Optimism, and HyperEVM.",
   url: "https://pulserevoke.com",
   icons: ["https://pulserevoke.com/icon.png"],
 };
@@ -145,6 +155,13 @@ export const wagmiConfig = createConfig({
     ),
     [robinhood.id]: http(
       process.env.NEXT_PUBLIC_ROBINHOOD_RPC_URL ?? undefined,
+    ),
+    [monad.id]: http(process.env.NEXT_PUBLIC_MONAD_RPC_URL ?? undefined),
+    [katana.id]: http(process.env.NEXT_PUBLIC_KATANA_RPC_URL ?? undefined),
+    [sei.id]: http(process.env.NEXT_PUBLIC_SEI_RPC_URL ?? undefined),
+    [plasma.id]: http(process.env.NEXT_PUBLIC_PLASMA_RPC_URL ?? undefined),
+    [abstract.id]: http(
+      process.env.NEXT_PUBLIC_ABSTRACT_RPC_URL ?? undefined,
     ),
     [ethereumMainnetWalletChain.id]: http(
       process.env.NEXT_PUBLIC_MAINNET_RPC_URL ??

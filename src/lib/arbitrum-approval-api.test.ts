@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { getAddress, type Address } from "viem";
 
 import {
+  ABSTRACT_CHAIN_ID,
   AVALANCHE_CHAIN_ID,
   BASE_CHAIN_ID,
   BERACHAIN_CHAIN_ID,
@@ -9,11 +10,15 @@ import {
   BSC_CHAIN_ID,
   CELO_CHAIN_ID,
   GNOSIS_CHAIN_ID,
+  KATANA_CHAIN_ID,
   LINEA_CHAIN_ID,
   MANTLE_CHAIN_ID,
+  MONAD_CHAIN_ID,
+  PLASMA_CHAIN_ID,
   POLYGON_CHAIN_ID,
   PULSECHAIN_CHAIN_ID,
   ROBINHOOD_CHAIN_ID,
+  SEI_CHAIN_ID,
   SONIC_CHAIN_ID,
   UNICHAIN_CHAIN_ID,
   WORLDCHAIN_CHAIN_ID,
@@ -235,6 +240,11 @@ describe("Arbitrum approval API foundation", () => {
       UNICHAIN_CHAIN_ID,
       WORLDCHAIN_CHAIN_ID,
       ROBINHOOD_CHAIN_ID,
+      MONAD_CHAIN_ID,
+      KATANA_CHAIN_ID,
+      SEI_CHAIN_ID,
+      PLASMA_CHAIN_ID,
+      ABSTRACT_CHAIN_ID,
     ]);
   });
 

@@ -3,8 +3,8 @@
 Pulse Revoke is public code for reviewing and clearing wallet approvals on
 PulseChain, BSC / BNB Smart Chain, Base, Polygon, Sonic Mainnet, Avalanche
 C-Chain, Mantle, Linea, Blast, Berachain, Celo, Gnosis, Unichain, World Chain,
-Robinhood Chain, Ethereum Mainnet, Arbitrum One, Optimism / OP Mainnet, and
-HyperEVM.
+Robinhood Chain, Monad, Katana, Sei, Plasma, Abstract, Ethereum Mainnet,
+Arbitrum One, Optimism / OP Mainnet, and HyperEVM.
 
 ## What The App Does
 
@@ -15,13 +15,14 @@ HyperEVM.
 - Shows active approvals only
 - Adds chain-scoped registry labels where known
 - Looks up PulseChain, BSC, Base, Polygon, Sonic, Avalanche, Mantle, Linea,
-  Blast, Berachain, Celo, Gnosis, Unichain, World Chain, and Robinhood Chain
-  token logos by token contract address for display only
+  Blast, Berachain, Celo, Gnosis, Unichain, World Chain, Robinhood Chain,
+  Monad, Katana, Sei, Plasma, and Abstract token logos by token contract address
+  for display only
 - Prepares standard approval-clearing transactions when the user chooses to
   revoke
 - Scans BSC, Base, Polygon, Sonic, Avalanche, Mantle, Linea, Blast, Berachain,
-  Celo, Gnosis, Unichain, World Chain, and Robinhood Chain through a
-  server-side read-only API in hosted web builds
+  Celo, Gnosis, Unichain, World Chain, Robinhood Chain, Monad, Katana, Sei,
+  Plasma, and Abstract through a server-side read-only API in hosted web builds
 - Scans Arbitrum One through a server-side read-only API and enables only
   live-verified ERC-20 and NFT row revoke
 - Scans Optimism / OP Mainnet through a server-side API and enables only
@@ -51,7 +52,8 @@ HyperEVM.
 - Open token and spender links on PulseScan, BscScan, BaseScan, PolygonScan,
   SonicScan, SnowScan, Mantle Explorer, LineaScan, Blastscan, Berascan,
   CeloScan, Gnosisscan, Uniscan, Worldscan, Robinhood Blockscout, Etherscan,
-  Arbiscan, Optimistic Etherscan, or Hyperevmscan.
+  Monadscan, Katanascan, Seiscan, Plasmascan, Abscan, Arbiscan, Optimistic
+  Etherscan, or Hyperevmscan.
 - Check that revoke wallet prompts match the intended approval-clearing call.
 - Confirm BSC transactions use BNB gas and BscScan links.
 - Confirm PulseChain transactions use PLS gas and PulseScan links.
@@ -69,6 +71,11 @@ HyperEVM.
 - Confirm World Chain transactions use ETH gas and Worldscan links.
 - Confirm Robinhood Chain transactions use ETH gas and Robinhood Blockscout
   links.
+- Confirm Monad transactions use MON gas and Monadscan links.
+- Confirm Katana transactions use ETH gas and Katanascan links.
+- Confirm Sei transactions use SEI gas and Seiscan links.
+- Confirm Plasma transactions use XPL gas and Plasmascan links.
+- Confirm Abstract transactions use ETH gas and Abscan links.
 - Use `/app?debug=1` for diagnostic information about discovery source,
   chain ID, API configuration presence, and incomplete scan reasons.
 
@@ -77,9 +84,9 @@ HyperEVM.
 Approval discovery starts from historical events. Public RPC providers can be
 unreliable or impractical for large historical `eth_getLogs` scans, especially
 on BSC, Base, Polygon, Sonic, Avalanche, Mantle, Linea, Blast, Berachain, Celo,
-Gnosis, Unichain, World Chain, and Robinhood Chain. Pulse Revoke uses explorer
-log APIs for historical discovery and then uses live RPC reads to validate
-current state.
+Gnosis, Unichain, World Chain, Robinhood Chain, Monad, Katana, Sei, Plasma, and
+Abstract. Pulse Revoke uses explorer log APIs for historical discovery and then
+uses live RPC reads to validate current state.
 
 For BSC, hosted web historical discovery uses a server-side route backed by
 Etherscan API V2 with `chainid=56`. BscScan is still used for public explorer
@@ -102,11 +109,17 @@ Blastscan, Berascan, CeloScan, Gnosisscan, Uniscan, and Worldscan remain the
 public explorer links. Robinhood Chain hosted web historical discovery uses the
 same server-side route backed by Robinhood Blockscout logs, without an
 Etherscan API V2 key or `chainid` parameter; Robinhood Blockscout remains the
-public explorer link. Ethereum, Arbitrum, Optimism, and HyperEVM discovery use
-server-side read-only API routes so managed RPC URLs and explorer API keys do
-not need to be exposed to the browser. Arbitrum requests use `chainid=42161`
-and Arbiscan links. Optimism requests use `chainid=10` and Optimistic Etherscan
-links. HyperEVM requests use `chainid=999` and Hyperevmscan links.
+public explorer link. Monad, Katana, Sei, Plasma, and Abstract hosted web
+historical discovery use the same server-side route backed by Etherscan API V2
+with `chainid=143`, `chainid=747474`, `chainid=1329`, `chainid=9745`, and
+`chainid=2741`; one shared server-side `ETHERSCAN_API_KEY` can cover all five
+when the account has access, and per-chain keys are only optional overrides.
+Monadscan, Katanascan, Seiscan, Plasmascan, and Abscan remain public explorer
+links. Ethereum, Arbitrum, Optimism, and HyperEVM discovery use server-side
+read-only API routes so managed RPC URLs and explorer API keys do not need to
+be exposed to the browser. Arbitrum requests use `chainid=42161` and Arbiscan
+links. Optimism requests use `chainid=10` and Optimistic Etherscan links.
+HyperEVM requests use `chainid=999` and Hyperevmscan links.
 
 ## Why Live Validation Matters
 
@@ -131,9 +144,9 @@ not automatically mean safe.
 ## Token Logos
 
 PulseChain, BSC, Base, Polygon, Sonic, Avalanche, Mantle, Linea, Blast,
-Berachain, Celo, Gnosis, Unichain, World Chain, and Robinhood Chain token logos
-are optional display metadata resolved through the server-side
-`/api/token-logos` route. The
+Berachain, Celo, Gnosis, Unichain, World Chain, Robinhood Chain, Monad, Katana,
+Sei, Plasma, and Abstract token logos are optional display metadata resolved
+through the server-side `/api/token-logos` route. The
 resolver sends token contract addresses only, not wallet owner addresses,
 spender addresses, allowance amounts, or revoke state.
 

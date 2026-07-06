@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { getAddress } from "viem";
 
 import {
+  ABSTRACT_CHAIN_ID,
   AVALANCHE_CHAIN_ID,
   BASE_CHAIN_ID,
   BERACHAIN_CHAIN_ID,
@@ -9,11 +10,15 @@ import {
   BSC_CHAIN_ID,
   CELO_CHAIN_ID,
   GNOSIS_CHAIN_ID,
+  KATANA_CHAIN_ID,
   LINEA_CHAIN_ID,
   MANTLE_CHAIN_ID,
+  MONAD_CHAIN_ID,
+  PLASMA_CHAIN_ID,
   POLYGON_CHAIN_ID,
   PULSECHAIN_CHAIN_ID,
   ROBINHOOD_CHAIN_ID,
+  SEI_CHAIN_ID,
   SONIC_CHAIN_ID,
   UNICHAIN_CHAIN_ID,
   WORLDCHAIN_CHAIN_ID,
@@ -97,6 +102,22 @@ describe("token logo helpers", () => {
     expect(isTokenLogoSupportedChain(ROBINHOOD_CHAIN_ID)).toBe(true);
     expect(getDexScreenerChainSlugForTokenLogos(ROBINHOOD_CHAIN_ID)).toBe(
       "robinhood",
+    );
+    expect(isTokenLogoSupportedChain(MONAD_CHAIN_ID)).toBe(true);
+    expect(getDexScreenerChainSlugForTokenLogos(MONAD_CHAIN_ID)).toBe("monad");
+    expect(isTokenLogoSupportedChain(KATANA_CHAIN_ID)).toBe(true);
+    expect(getDexScreenerChainSlugForTokenLogos(KATANA_CHAIN_ID)).toBe(
+      "katana",
+    );
+    expect(isTokenLogoSupportedChain(SEI_CHAIN_ID)).toBe(true);
+    expect(getDexScreenerChainSlugForTokenLogos(SEI_CHAIN_ID)).toBe("sei");
+    expect(isTokenLogoSupportedChain(PLASMA_CHAIN_ID)).toBe(true);
+    expect(getDexScreenerChainSlugForTokenLogos(PLASMA_CHAIN_ID)).toBe(
+      "plasma",
+    );
+    expect(isTokenLogoSupportedChain(ABSTRACT_CHAIN_ID)).toBe(true);
+    expect(getDexScreenerChainSlugForTokenLogos(ABSTRACT_CHAIN_ID)).toBe(
+      "abstract",
     );
     expect(isTokenLogoSupportedChain(ARBITRUM_TOKEN_LOGO_CHAIN_ID)).toBe(true);
     expect(getDexScreenerChainSlugForTokenLogos(ARBITRUM_TOKEN_LOGO_CHAIN_ID)).toBe(
