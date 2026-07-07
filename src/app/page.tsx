@@ -68,67 +68,6 @@ const HERO_TRUST_ITEMS = [
   "Scan first, connect only when ready",
 ] as const;
 
-const CHAIN_CARD_COPY: Record<string, string> = {
-  PulseChain:
-    "Primary Pulse Revoke lane for PRC-20, ERC-721, and ERC-1155 approvals.",
-  "BNB Smart Chain":
-    "Shared scanner with BSC gas guardrails and revokes through your wallet.",
-  Base: "Shared scanner with Base explorer discovery and revokes through your wallet.",
-  Polygon:
-    "Shared scanner with PolygonScan discovery, live checks, and revokes through your wallet.",
-  "Sonic Mainnet":
-    "Shared scanner with SonicScan discovery, live checks, and revokes through your wallet.",
-  "Avalanche C-Chain":
-    "Shared scanner with SnowScan discovery, live checks, and revokes through your wallet.",
-  Mantle:
-    "Shared scanner with Mantle explorer links, live checks, and revokes through your wallet.",
-  Linea:
-    "Shared scanner with LineaScan discovery, live checks, and revokes through your wallet.",
-  Blast:
-    "Shared scanner with Blastscan discovery, live checks, and revokes through your wallet.",
-  Berachain:
-    "Shared scanner with Berascan discovery, live checks, and revokes through your wallet.",
-  Celo:
-    "Shared scanner with CeloScan discovery, live checks, and revokes through your wallet.",
-  Gnosis:
-    "Shared scanner with Gnosisscan discovery, live checks, and revokes through your wallet.",
-  Unichain:
-    "Shared scanner with Uniscan discovery, live checks, and revokes through your wallet.",
-  "World Chain":
-    "Shared scanner with Worldscan discovery, live checks, and revokes through your wallet.",
-  "Robinhood Chain":
-    "Shared scanner with Robinhood Blockscout discovery, live checks, and revokes through your wallet.",
-  Monad:
-    "Shared scanner with Monadscan discovery, live checks, and revokes through your wallet.",
-  Katana:
-    "Shared scanner with Katanascan discovery, live checks, and revokes through your wallet.",
-  Sei: "Shared scanner with Seiscan discovery, live checks, and revokes through your wallet.",
-  Plasma:
-    "Shared scanner with PlasmaScan discovery, live checks, and revokes through your wallet.",
-  Abstract:
-    "Shared scanner with Abscan discovery, live checks, and revokes through your wallet.",
-  Fraxtal:
-    "Shared scanner with Fraxscan discovery, live checks, and revokes through your wallet.",
-  "Taiko Mainnet":
-    "Shared scanner with TaikoScan discovery, live checks, and revokes through your wallet.",
-  opBNB:
-    "Shared scanner with opBNB BscScan discovery, live checks, and revokes through your wallet.",
-  Moonbeam:
-    "Shared scanner with Moonscan discovery, live checks, and revokes through your wallet.",
-  ApeChain:
-    "Shared scanner with ApeScan discovery, live checks, and revokes through your wallet.",
-  "XDC Network":
-    "Shared scanner with XDCScan discovery, live checks, and revokes through your wallet.",
-  "Ethereum Mainnet":
-    "Hosted approval discovery with revokes through your wallet after row verification.",
-  "Arbitrum One":
-    "Hosted approval discovery with verified ERC-20 and NFT revokes per row.",
-  Optimism:
-    "Hosted approval discovery for OP Mainnet with verified revokes per row.",
-  HyperEVM:
-    "Hosted approval discovery with verified ERC-20 and NFT revokes per row on chain ID 999.",
-};
-
 const SCANNER_PANEL_POINTS = [
   {
     title: "Address review",
@@ -418,7 +357,7 @@ function SupportedChainsSection() {
                   {group.label}
                 </h3>
               </div>
-              <div className="mt-3 grid gap-2 lg:grid-cols-2">
+              <div className="mt-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
                 {group.rows.map((row) => (
                   <ChainCard key={row.chain} row={row} />
                 ))}
@@ -454,47 +393,43 @@ function ChainCard({ row }: { row: (typeof LIVE_SUPPORTED_CHAIN_ROWS)[number] })
       data-hover-video-card={hoverMediaSrc ? "" : undefined}
       tabIndex={hoverMediaSrc ? 0 : undefined}
       aria-label={hoverMediaSrc ? `${row.chain} live EVM network card` : undefined}
-      className="group relative overflow-hidden rounded-xl border border-[color:var(--accent-border)] bg-[linear-gradient(135deg,var(--accent-soft),var(--chain-card-bg))] p-3 transition duration-200 hover:-translate-y-0.5 hover:shadow-glow sm:p-4"
+      className="group relative overflow-hidden rounded-lg border border-[color:var(--accent-border)] bg-[linear-gradient(135deg,var(--accent-soft),var(--chain-card-bg))] p-2.5 transition duration-200 hover:-translate-y-0.5 hover:shadow-glow"
     >
       {hoverMediaSrc ? <HoverVideoLayer src={hoverMediaSrc} /> : null}
       <div
-        className="pointer-events-none absolute -right-4 -top-4 text-[color:var(--accent-color)] opacity-[0.07] transition group-hover:opacity-[0.12]"
+        className="pointer-events-none absolute -right-3 -top-3 text-[color:var(--accent-color)] opacity-[0.06] transition group-hover:opacity-[0.10]"
         aria-hidden
       >
-        <ChainLogo chainId={chainId} className="h-20 w-20" tone="muted" />
+        <ChainLogo chainId={chainId} className="h-14 w-14" tone="muted" />
       </div>
 
-      <div className="relative z-10 flex min-w-0 items-start gap-3">
-        <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-[color:var(--accent-border)] bg-pulse-bg/50 shadow-[0_0_22px_var(--accent-soft)]">
-          <ChainLogo chainId={chainId} className="h-6 w-6" />
+      <div className="relative z-10 flex min-w-0 items-start gap-2.5">
+        <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-[color:var(--accent-border)] bg-pulse-bg/50 shadow-[0_0_16px_var(--accent-soft)]">
+          <ChainLogo chainId={chainId} className="h-5 w-5" />
         </span>
         <div className="min-w-0 flex-1">
           <div className="flex min-w-0 flex-wrap items-start justify-between gap-2">
             <div className="min-w-0">
-              <h3 className="brand-accent-text text-base font-semibold">
+              <h3 className="brand-accent-text truncate text-sm font-semibold">
                 {row.chain}
               </h3>
-              <p className="mt-1 font-mono text-xs text-pulse-muted">
+              <p className="mt-0.5 font-mono text-[10px] text-pulse-muted">
                 <span className="brand-accent-text">Chain ID</span>{" "}
                 {row.chainId}
               </p>
             </div>
             {isPrimary ? (
-              <span className="brand-accent-text shrink-0 rounded-full border border-[color:var(--accent-border)] bg-[color:var(--accent-soft)] px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wide">
+              <span className="brand-accent-text shrink-0 rounded-full border border-[color:var(--accent-border)] bg-[color:var(--accent-soft)] px-2 py-0.5 text-[9px] font-semibold uppercase tracking-wide">
                 Primary
               </span>
             ) : null}
           </div>
 
-          <p className="mt-3 text-xs leading-5 text-pulse-muted sm:text-sm sm:leading-6">
-            {CHAIN_CARD_COPY[row.chain] ?? row.note}
-          </p>
-
-          <div className="mt-3 flex flex-wrap gap-2">
-            <span className="rounded-full border border-pulse-green/30 bg-pulse-green/10 px-2.5 py-1 text-[11px] font-semibold text-pulse-green">
+          <div className="mt-2 flex flex-wrap gap-1.5">
+            <span className="rounded-full border border-pulse-green/30 bg-pulse-green/10 px-2 py-0.5 text-[10px] font-semibold text-pulse-green">
               Scan live
             </span>
-            <span className="brand-accent-text rounded-full border border-[color:var(--accent-border)] bg-pulse-bg/55 px-2.5 py-1 text-[11px] font-semibold">
+            <span className="brand-accent-text rounded-full border border-[color:var(--accent-border)] bg-pulse-bg/55 px-2 py-0.5 text-[10px] font-semibold">
               {supportLabel}
             </span>
           </div>
