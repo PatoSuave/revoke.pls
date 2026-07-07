@@ -43,9 +43,10 @@ export default function AppPage() {
         <ScannerAppBackdrop />
         <div className="relative z-10">
           <AppWorkspaceIntro />
-          <AntiPhishingBanner />
           <ApprovalScanner />
+          <AppSupportedChains />
           <PulseChainGasTracker />
+          <AntiPhishingBanner />
           <PulseChainResourceLinks compact />
         </div>
       </main>
@@ -67,34 +68,40 @@ function ScannerAppBackdrop() {
 function AppWorkspaceIntro() {
   return (
     <section className="border-b border-pulse-border/45 bg-transparent">
-      <div className="mx-auto max-w-6xl px-4 py-8 sm:px-6 sm:py-10">
-        <div className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
-          <div className="max-w-3xl">
-            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-pulse-cyan">
-              Approval scanner
-            </p>
-            <h1 className="mt-2 max-w-3xl text-3xl font-bold tracking-tight text-pulse-text sm:text-4xl">
-              Review approvals before you revoke
-            </h1>
-            <p className="mt-3 max-w-2xl text-sm leading-6 text-pulse-muted sm:text-base">
-              Paste a wallet address to review approvals without connecting.
-              Connect only the matching wallet when you are ready to revoke a
-              verified active row.
-            </p>
-            <p className="mt-2 max-w-2xl text-sm leading-6 text-pulse-muted sm:text-base">
-              {HYPEREVM_LIVE_NETWORK_NOTE}
-            </p>
-          </div>
+      <div className="mx-auto max-w-6xl px-4 py-6 sm:px-6 sm:py-8">
+        <div className="max-w-3xl">
+          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-pulse-cyan">
+            Approval scanner
+          </p>
+          <h1 className="mt-2 max-w-3xl text-3xl font-bold tracking-tight text-pulse-text sm:text-4xl">
+            Review approvals before you revoke
+          </h1>
+          <p className="mt-3 max-w-2xl text-sm leading-6 text-pulse-muted sm:text-base">
+            Paste a wallet address to review approvals without connecting.
+            Connect only the matching wallet when you are ready to revoke a
+            verified active row.
+          </p>
+          <p className="mt-2 max-w-2xl text-sm leading-6 text-pulse-muted sm:text-base">
+            {HYPEREVM_LIVE_NETWORK_NOTE}
+          </p>
+        </div>
+      </div>
+    </section>
+  );
+}
 
-          <div className="flex min-w-0 flex-col gap-2 text-[11px] text-pulse-muted lg:items-end">
-            <p className="font-semibold uppercase tracking-[0.16em] text-pulse-muted/80">
-              Live supported chains
-            </p>
-            <div className="flex max-w-full flex-wrap gap-1.5 lg:justify-end">
-              {LIVE_SUPPORTED_CHAIN_ROWS.map((row) => (
-                <LiveSupportedChainPill key={row.chain} row={row} />
-              ))}
-            </div>
+function AppSupportedChains() {
+  return (
+    <section className="border-b border-pulse-border/45 bg-transparent py-5 sm:py-6">
+      <div className="mx-auto max-w-6xl px-4 sm:px-6">
+        <div className="rounded-2xl border border-pulse-border/70 bg-pulse-panel/35 p-3 shadow-[inset_0_1px_0_rgb(255_255_255/0.03)] sm:p-4">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-pulse-muted/80">
+            Live supported chains
+          </p>
+          <div className="mt-3 flex max-h-32 max-w-full flex-wrap gap-1.5 overflow-y-auto pr-1">
+            {LIVE_SUPPORTED_CHAIN_ROWS.map((row) => (
+              <LiveSupportedChainPill key={row.chain} row={row} />
+            ))}
           </div>
         </div>
       </div>

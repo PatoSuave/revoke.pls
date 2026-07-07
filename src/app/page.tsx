@@ -210,8 +210,8 @@ export default function LauncherPage() {
       <SiteHeader />
       <main>
         <Hero />
-        <SupportedChainsSection />
         <HowItWorks />
+        <SupportedChainsSection />
         <TrustStrip />
         <AntiPhishingBanner />
         <PulseChainResourceLinks />
@@ -389,16 +389,43 @@ function ScannerPathPanel() {
 }
 
 function SupportedChainsSection() {
+  const chainGroups = [
+    "Scan + revoke",
+    "Verified row revoke",
+    "ERC-20/NFT verified rows only",
+  ].map((label) => ({
+    label,
+    rows: LIVE_SUPPORTED_CHAIN_ROWS.filter(
+      (row) => formatRevokeSupport(row) === label,
+    ),
+  }));
+
   return (
     <section id="chains" className="border-b border-pulse-border/60 py-14 sm:py-20">
       <SectionHeader
         eyebrow="Supported chains"
         title={`${LIVE_SUPPORTED_CHAIN_COUNT} live EVM networks`}
       />
-      <div className="mx-auto mt-9 grid max-w-6xl gap-3 px-4 sm:grid-cols-2 sm:px-6 lg:grid-cols-4">
-        {LIVE_SUPPORTED_CHAIN_ROWS.map((row) => (
-          <ChainCard key={row.chain} row={row} />
-        ))}
+      <div className="mx-auto mt-9 max-w-6xl space-y-6 px-4 sm:px-6">
+        {chainGroups.map((group) =>
+          group.rows.length > 0 ? (
+            <div
+              key={group.label}
+              className="rounded-2xl border border-pulse-border/70 bg-pulse-panel/35 p-3 shadow-[inset_0_1px_0_rgb(255_255_255/0.03)] sm:p-4"
+            >
+              <div className="flex flex-wrap items-center justify-between gap-2 border-b border-pulse-border/60 pb-3">
+                <h3 className="text-sm font-semibold text-pulse-text">
+                  {group.label}
+                </h3>
+              </div>
+              <div className="mt-3 grid gap-2 lg:grid-cols-2">
+                {group.rows.map((row) => (
+                  <ChainCard key={row.chain} row={row} />
+                ))}
+              </div>
+            </div>
+          ) : null,
+        )}
       </div>
     </section>
   );
@@ -427,49 +454,51 @@ function ChainCard({ row }: { row: (typeof LIVE_SUPPORTED_CHAIN_ROWS)[number] })
       data-hover-video-card={hoverMediaSrc ? "" : undefined}
       tabIndex={hoverMediaSrc ? 0 : undefined}
       aria-label={hoverMediaSrc ? `${row.chain} live EVM network card` : undefined}
-      className="group relative flex min-h-52 flex-col overflow-hidden rounded-2xl border border-[color:var(--accent-border)] bg-[linear-gradient(135deg,var(--accent-soft),var(--chain-card-bg))] p-5 transition duration-200 hover:-translate-y-0.5 hover:shadow-glow"
+      className="group relative overflow-hidden rounded-xl border border-[color:var(--accent-border)] bg-[linear-gradient(135deg,var(--accent-soft),var(--chain-card-bg))] p-3 transition duration-200 hover:-translate-y-0.5 hover:shadow-glow sm:p-4"
     >
       {hoverMediaSrc ? <HoverVideoLayer src={hoverMediaSrc} /> : null}
       <div
-        className="pointer-events-none absolute -right-6 -top-5 text-[color:var(--accent-color)] opacity-[0.10] transition group-hover:opacity-[0.16]"
+        className="pointer-events-none absolute -right-4 -top-4 text-[color:var(--accent-color)] opacity-[0.07] transition group-hover:opacity-[0.12]"
         aria-hidden
       >
-        <ChainLogo chainId={chainId} className="h-28 w-28" tone="muted" />
+        <ChainLogo chainId={chainId} className="h-20 w-20" tone="muted" />
       </div>
 
-      <div className="relative z-10 flex items-start justify-between gap-3">
-        <div className="flex min-w-0 items-start gap-3">
-          <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-[color:var(--accent-border)] bg-pulse-bg/50 shadow-[0_0_22px_var(--accent-soft)]">
-            <ChainLogo chainId={chainId} className="h-7 w-7" />
-          </span>
-          <div className="min-w-0">
-            <h3 className="brand-accent-text text-base font-semibold">
-              {row.chain}
-            </h3>
-            <p className="mt-1 font-mono text-xs text-pulse-muted">
-              <span className="brand-accent-text">Chain ID</span>{" "}
-              {row.chainId}
-            </p>
+      <div className="relative z-10 flex min-w-0 items-start gap-3">
+        <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-[color:var(--accent-border)] bg-pulse-bg/50 shadow-[0_0_22px_var(--accent-soft)]">
+          <ChainLogo chainId={chainId} className="h-6 w-6" />
+        </span>
+        <div className="min-w-0 flex-1">
+          <div className="flex min-w-0 flex-wrap items-start justify-between gap-2">
+            <div className="min-w-0">
+              <h3 className="brand-accent-text text-base font-semibold">
+                {row.chain}
+              </h3>
+              <p className="mt-1 font-mono text-xs text-pulse-muted">
+                <span className="brand-accent-text">Chain ID</span>{" "}
+                {row.chainId}
+              </p>
+            </div>
+            {isPrimary ? (
+              <span className="brand-accent-text shrink-0 rounded-full border border-[color:var(--accent-border)] bg-[color:var(--accent-soft)] px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wide">
+                Primary
+              </span>
+            ) : null}
+          </div>
+
+          <p className="mt-3 text-xs leading-5 text-pulse-muted sm:text-sm sm:leading-6">
+            {CHAIN_CARD_COPY[row.chain] ?? row.note}
+          </p>
+
+          <div className="mt-3 flex flex-wrap gap-2">
+            <span className="rounded-full border border-pulse-green/30 bg-pulse-green/10 px-2.5 py-1 text-[11px] font-semibold text-pulse-green">
+              Scan live
+            </span>
+            <span className="brand-accent-text rounded-full border border-[color:var(--accent-border)] bg-pulse-bg/55 px-2.5 py-1 text-[11px] font-semibold">
+              {supportLabel}
+            </span>
           </div>
         </div>
-        {isPrimary ? (
-          <span className="brand-accent-text shrink-0 rounded-full border border-[color:var(--accent-border)] bg-[color:var(--accent-soft)] px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wide">
-            Primary
-          </span>
-        ) : null}
-      </div>
-
-      <p className="relative z-10 mt-4 flex-1 text-sm leading-6 text-pulse-muted">
-        {CHAIN_CARD_COPY[row.chain] ?? row.note}
-      </p>
-
-      <div className="relative z-10 mt-5 flex flex-wrap gap-2">
-        <span className="rounded-full border border-pulse-green/30 bg-pulse-green/10 px-2.5 py-1 text-[11px] font-semibold text-pulse-green">
-          Scan live
-        </span>
-        <span className="brand-accent-text rounded-full border border-[color:var(--accent-border)] bg-pulse-bg/55 px-2.5 py-1 text-[11px] font-semibold">
-          {supportLabel}
-        </span>
       </div>
     </article>
   );

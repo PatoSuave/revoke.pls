@@ -170,51 +170,42 @@ export function ApprovalScanner() {
   return (
     <section
       id="scanner"
-      className="relative py-7 sm:py-10"
+      className="relative py-5 sm:py-7"
     >
       <div className="mx-auto max-w-6xl px-4 sm:px-6">
-        <div className="max-w-3xl">
-          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-pulse-cyan">
-            Scanner
-          </p>
-          <h2 className="mt-2 text-2xl font-bold tracking-tight text-pulse-text sm:text-3xl">
-            Scan first. Revoke only when ready.
-          </h2>
-          <p className="mt-2 text-sm leading-6 text-pulse-muted">
-            Paste a wallet address for approval review without connecting, or connect the
-            matching wallet when you are ready to act on verified approvals.
-          </p>
-        </div>
-
-        <div className="scanner-panel-shell relative mt-5 overflow-hidden rounded-2xl border border-pulse-border/80">
+        <div className="scanner-panel-shell relative overflow-hidden rounded-2xl border border-pulse-border/80">
           <div
             className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-pulse-cyan/70 to-transparent"
             aria-hidden
           />
           <div className="p-4 sm:p-6 lg:p-8">
-            <ScannerWorkflowStrip />
-            <AddressScanPanel
-              inputAddress={scanInputAddress}
-              activeAddress={activeAddressOnlyAddress}
-              scanTarget={scanTarget}
-              inputError={scanInputError}
-              onInputChange={onScanInputChange}
-              onScan={onScanAddress}
-              onClear={onClearAddressScan}
-            />
-            <ScannerBody
-              accountStatus={accountStatus}
-              address={address}
-              walletChainId={walletChainId}
-              wagmiChainId={wagmiChainId}
-              activeChainId={activeChain.activeChainId}
-              isConnected={isConnected}
-              chainConfig={activeChain.activeChainConfig}
-              onSupportedChain={activeChain.status === "supported"}
-              walletMatchesActiveChain={activeChain.walletMatchesActiveChain}
-              scanTarget={scanTarget}
-              debugMode={debugMode}
-            />
+            <div className="grid gap-4 lg:grid-cols-[minmax(0,1.25fr)_minmax(260px,0.75fr)] lg:items-start">
+              <AddressScanPanel
+                inputAddress={scanInputAddress}
+                activeAddress={activeAddressOnlyAddress}
+                scanTarget={scanTarget}
+                inputError={scanInputError}
+                onInputChange={onScanInputChange}
+                onScan={onScanAddress}
+                onClear={onClearAddressScan}
+              />
+              <ScannerIntroPanel />
+            </div>
+            <div className="mt-5">
+              <ScannerBody
+                accountStatus={accountStatus}
+                address={address}
+                walletChainId={walletChainId}
+                wagmiChainId={wagmiChainId}
+                activeChainId={activeChain.activeChainId}
+                isConnected={isConnected}
+                chainConfig={activeChain.activeChainConfig}
+                onSupportedChain={activeChain.status === "supported"}
+                walletMatchesActiveChain={activeChain.walletMatchesActiveChain}
+                scanTarget={scanTarget}
+                debugMode={debugMode}
+              />
+            </div>
           </div>
         </div>
       </div>
@@ -280,7 +271,7 @@ function AddressScanPanel({
   });
 
   return (
-    <div className="mb-6 rounded-2xl border border-pulse-border/75 bg-pulse-bg/40 p-4 shadow-[inset_0_1px_0_rgb(255_255_255/0.035)]">
+    <div className="rounded-2xl border border-pulse-border/75 bg-pulse-bg/40 p-4 shadow-[inset_0_1px_0_rgb(255_255_255/0.035)]">
       <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
         <div className="min-w-0">
           <p className="text-xs font-semibold uppercase tracking-[0.18em] text-pulse-cyan">
@@ -358,9 +349,27 @@ function AddressScanPanel({
   );
 }
 
+function ScannerIntroPanel() {
+  return (
+    <div className="rounded-2xl border border-pulse-border/70 bg-pulse-bg/30 p-4 shadow-[inset_0_1px_0_rgb(255_255_255/0.03)]">
+      <p className="text-xs font-semibold uppercase tracking-[0.18em] text-pulse-cyan">
+        Scanner
+      </p>
+      <h2 className="mt-2 text-2xl font-bold tracking-tight text-pulse-text sm:text-3xl">
+        Scan first. Revoke only when ready.
+      </h2>
+      <p className="mt-2 text-sm leading-6 text-pulse-muted">
+        Paste a wallet address for approval review without connecting, or connect the
+        matching wallet when you are ready to act on verified approvals.
+      </p>
+      <ScannerWorkflowStrip />
+    </div>
+  );
+}
+
 function ScannerWorkflowStrip() {
   return (
-    <div className="mb-4 grid gap-2 text-xs text-pulse-muted sm:grid-cols-3">
+    <div className="mt-4 grid gap-2 text-xs text-pulse-muted">
       <ScannerWorkflowStep
         label="1"
         title="Scan"
