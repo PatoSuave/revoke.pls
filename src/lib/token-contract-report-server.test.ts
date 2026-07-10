@@ -131,6 +131,7 @@ describe("token contract report server", () => {
   });
 
   it("falls back to Blockscout v2 source and creation metadata when legacy PulseScan endpoints fail", async () => {
+    let tokenAddressLookupCalls = 0;
     const reader = {
       getBytecode: vi.fn(async () => "0x1234" as `0x${string}`),
       readContract: vi.fn(async (call: { functionName: string }) => {
@@ -176,6 +177,10 @@ describe("token contract report server", () => {
             hash: IMPLEMENTATION,
             implementation_address: null,
           });
+        }
+        tokenAddressLookupCalls += 1;
+        if (tokenAddressLookupCalls === 1) {
+          return Response.json({}, { status: 500 });
         }
         return Response.json({
           creation_tx_hash: CREATION_TX,
@@ -227,6 +232,7 @@ describe("token contract report server", () => {
     });
     expect(report.warnings.join(" ")).not.toContain("HTTP 500");
     expect(report.warnings.join(" ")).not.toContain("HTTP 400");
+    expect(tokenAddressLookupCalls).toBe(2);
     const requestedUrls = fetcher.mock.calls.map(([input]) =>
       requestUrl(input).toString(),
     );

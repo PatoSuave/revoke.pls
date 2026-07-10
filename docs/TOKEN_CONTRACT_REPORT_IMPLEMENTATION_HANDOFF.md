@@ -408,6 +408,8 @@ It includes:
 - Verified-ABI function count and bounded control-surface categories.
 - One bounded proxy-implementation source/ABI lookup, with proxy and
   implementation verification states kept separate.
+- PulseScan Blockscout v2 address metadata is shared across creation/proxy
+  checks and retried once for transient HTTP 429/5xx responses.
 - A deterministic evidence-coverage percentage kept separate from token
   classification confidence and risk severity.
 

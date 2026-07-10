@@ -347,6 +347,11 @@ interface BlockscoutAddressResponse {
   implementation_address?: unknown;
 }
 
+interface BlockscoutAddressLookup {
+  body: BlockscoutAddressResponse | null;
+  warning: string | null;
+}
+
 interface BlockscoutTransactionResponse {
   block?: unknown;
   block_number?: unknown;
@@ -448,18 +453,29 @@ export async function buildTokenContractReport({
     errors.push(bytecodeProbe.error);
   }
 
+  const blockscoutAddressLookup =
+    chain.apiKind === "blockscout-compatible"
+      ? fetchBlockscoutAddressLookup({
+          contractAddress: normalizedAddress,
+          chain,
+          fetcher,
+          signal,
+        })
+      : null;
   const [source, creation] = await Promise.all([
     fetchSourceMetadata({
       contractAddress: normalizedAddress,
       chain,
       fetcher,
       signal,
+      blockscoutAddressLookup,
     }),
     fetchCreationMetadata({
       contractAddress: normalizedAddress,
       chain,
       fetcher,
       signal,
+      blockscoutAddressLookup,
     }),
   ]);
   warnings.push(...source.warnings, ...creation.warnings);
@@ -675,7 +691,7 @@ export async function buildTokenContractReport({
     signals,
     ai: emptyAi(includeAi ? "unavailable" : "skipped"),
     warnings: [
-      ...warnings,
+      ...new Set(warnings),
       "This report is read-only contract context. It is not a formal audit, financial advice, legal advice, or proof that a token is safe.",
     ],
     errors,
@@ -1092,11 +1108,13 @@ async function fetchSourceMetadata({
   chain,
   fetcher,
   signal,
+  blockscoutAddressLookup,
 }: {
   contractAddress: Address;
   chain: ResolvedTokenReportChain;
   fetcher: typeof fetch;
   signal?: AbortSignal;
+  blockscoutAddressLookup?: Promise<BlockscoutAddressLookup> | null;
 }): Promise<SourceMetadata> {
   if (
     chain.apiKind === "etherscan-v2" &&
@@ -1131,6 +1149,7 @@ async function fetchSourceMetadata({
           chain,
           fetcher,
           signal,
+          blockscoutAddressLookup,
         });
       }
       return {
@@ -1151,6 +1170,7 @@ async function fetchSourceMetadata({
           chain,
           fetcher,
           signal,
+          blockscoutAddressLookup,
         });
       }
       return {
@@ -1196,6 +1216,7 @@ async function fetchSourceMetadata({
         chain,
         fetcher,
         signal,
+        blockscoutAddressLookup,
       });
     }
     return {
@@ -1229,11 +1250,13 @@ async function fetchBlockscoutSourceMetadata({
   chain,
   fetcher,
   signal,
+  blockscoutAddressLookup,
 }: {
   contractAddress: Address;
   chain: ResolvedTokenReportChain;
   fetcher: typeof fetch;
   signal?: AbortSignal;
+  blockscoutAddressLookup?: Promise<BlockscoutAddressLookup> | null;
 }): Promise<SourceMetadata> {
   try {
     const response = await withTimeout(
@@ -1274,6 +1297,7 @@ async function fetchBlockscoutSourceMetadata({
       chain,
       fetcher,
       signal,
+      blockscoutAddressLookup,
     });
     const hasVerifiedMetadata =
       body.is_verified === true ||
@@ -1325,7 +1349,7 @@ async function fetchBlockscoutSourceMetadata({
   }
 }
 
-async function fetchBlockscoutProxyMetadata({
+async function fetchBlockscoutAddressLookup({
   contractAddress,
   chain,
   fetcher,
@@ -1335,66 +1359,101 @@ async function fetchBlockscoutProxyMetadata({
   chain: ResolvedTokenReportChain;
   fetcher: typeof fetch;
   signal?: AbortSignal;
+}): Promise<BlockscoutAddressLookup> {
+  let warning: string | null = null;
+  for (let attempt = 0; attempt < 2; attempt += 1) {
+    try {
+      const response = await withTimeout(
+        fetcher(buildBlockscoutV2Url(chain, ["addresses", contractAddress]), {
+          method: "GET",
+          cache: "no-store",
+          headers: { accept: "application/json" },
+          signal,
+        }),
+        TOKEN_REPORT_CREATION_TIMEOUT_MS,
+        `${chain.name} Blockscout v2 address lookup timed out`,
+      );
+      if (response.ok) {
+        const body = (await response.json()) as unknown;
+        if (body && typeof body === "object" && !Array.isArray(body)) {
+          return {
+            body: body as BlockscoutAddressResponse,
+            warning: null,
+          };
+        }
+        warning = `${chain.name} Blockscout v2 explorer returned an unrecognized address response.`;
+      } else {
+        warning = `${chain.name} Blockscout v2 explorer returned HTTP ${response.status} for address metadata lookup.`;
+        const retryable = response.status === 429 || response.status >= 500;
+        if (!retryable) break;
+      }
+    } catch (error) {
+      warning = `${chain.name} Blockscout v2 address metadata could not be read: ${redactSensitiveErrorText(
+        error instanceof Error ? error.message : String(error),
+      )}`;
+    }
+
+    if (attempt === 0 && !signal?.aborted) {
+      await new Promise((resolve) => setTimeout(resolve, 150));
+    }
+  }
+  return { body: null, warning };
+}
+
+async function fetchBlockscoutProxyMetadata({
+  contractAddress,
+  chain,
+  fetcher,
+  signal,
+  blockscoutAddressLookup,
+}: {
+  contractAddress: Address;
+  chain: ResolvedTokenReportChain;
+  fetcher: typeof fetch;
+  signal?: AbortSignal;
+  blockscoutAddressLookup?: Promise<BlockscoutAddressLookup> | null;
 }): Promise<{
   isProxy: boolean | null;
   implementationAddress: Address | null;
   warnings: string[];
 }> {
-  try {
-    const response = await withTimeout(
-      fetcher(buildBlockscoutV2Url(chain, ["addresses", contractAddress]), {
-        method: "GET",
-        cache: "no-store",
-        headers: { accept: "application/json" },
-        signal,
-      }),
-      TOKEN_REPORT_SOURCE_TIMEOUT_MS,
-      `${chain.name} Blockscout v2 proxy lookup timed out`,
-    );
-    if (!response.ok) {
-      return {
-        isProxy: null,
-        implementationAddress: null,
-        warnings: [
-          `${chain.name} Blockscout v2 explorer returned HTTP ${response.status} for proxy lookup.`,
-        ],
-      };
-    }
-
-    const body = (await response.json()) as BlockscoutAddressResponse;
-    const responseAddress = normalizedAddressFromUnknown(body.hash);
-    if (responseAddress && responseAddress !== contractAddress) {
-      return {
-        isProxy: null,
-        implementationAddress: null,
-        warnings: [
-          `${chain.name} Blockscout v2 explorer returned proxy metadata for a different address.`,
-        ],
-      };
-    }
-    const implementationAddress = normalizedBlockscoutAddressFromUnknown(
-      body.implementation_address,
-    );
-    const hasImplementationField = Object.prototype.hasOwnProperty.call(
-      body,
-      "implementation_address",
-    );
+  const lookup = await (blockscoutAddressLookup ??
+    fetchBlockscoutAddressLookup({
+      contractAddress,
+      chain,
+      fetcher,
+      signal,
+    }));
+  if (!lookup.body) {
     return {
-      isProxy: implementationAddress ? true : hasImplementationField ? false : null,
-      implementationAddress,
-      warnings: [],
+      isProxy: null,
+      implementationAddress: null,
+      warnings: lookup.warning ? [lookup.warning] : [],
     };
-  } catch (error) {
+  }
+
+  const responseAddress = normalizedAddressFromUnknown(lookup.body.hash);
+  if (responseAddress && responseAddress !== contractAddress) {
     return {
       isProxy: null,
       implementationAddress: null,
       warnings: [
-        `${chain.name} Blockscout v2 proxy metadata could not be read: ${redactSensitiveErrorText(
-          error instanceof Error ? error.message : String(error),
-        )}`,
+        `${chain.name} Blockscout v2 explorer returned proxy metadata for a different address.`,
       ],
     };
   }
+  const implementationAddress = normalizedBlockscoutAddressFromUnknown(
+    lookup.body.implementation_address,
+  );
+  const hasImplementationField = Object.prototype.hasOwnProperty.call(
+    lookup.body,
+    "implementation_address",
+  );
+  return {
+    isProxy: implementationAddress ? true : hasImplementationField ? false : null,
+    implementationAddress,
+    warnings: [],
+  };
 }
 
 async function fetchCreationMetadata({
@@ -1402,11 +1461,13 @@ async function fetchCreationMetadata({
   chain,
   fetcher,
   signal,
+  blockscoutAddressLookup,
 }: {
   contractAddress: Address;
   chain: ResolvedTokenReportChain;
   fetcher: typeof fetch;
   signal?: AbortSignal;
+  blockscoutAddressLookup?: Promise<BlockscoutAddressLookup> | null;
 }): Promise<CreationMetadata> {
   if (
     chain.apiKind === "etherscan-v2" &&
@@ -1441,6 +1502,7 @@ async function fetchCreationMetadata({
           chain,
           fetcher,
           signal,
+          blockscoutAddressLookup,
         });
       }
       return {
@@ -1470,6 +1532,7 @@ async function fetchCreationMetadata({
           chain,
           fetcher,
           signal,
+          blockscoutAddressLookup,
         });
       }
       return {
@@ -1494,6 +1557,7 @@ async function fetchCreationMetadata({
           chain,
           fetcher,
           signal,
+          blockscoutAddressLookup,
         });
       }
       return {
@@ -1522,6 +1586,7 @@ async function fetchCreationMetadata({
         chain,
         fetcher,
         signal,
+        blockscoutAddressLookup,
       });
     }
     return {
@@ -1555,33 +1620,30 @@ async function fetchBlockscoutCreationMetadata({
   chain,
   fetcher,
   signal,
+  blockscoutAddressLookup,
 }: {
   contractAddress: Address;
   chain: ResolvedTokenReportChain;
   fetcher: typeof fetch;
   signal?: AbortSignal;
+  blockscoutAddressLookup?: Promise<BlockscoutAddressLookup> | null;
 }): Promise<CreationMetadata> {
   try {
-    const response = await withTimeout(
-      fetcher(buildBlockscoutV2Url(chain, ["addresses", contractAddress]), {
-        method: "GET",
-        cache: "no-store",
-        headers: { accept: "application/json" },
+    const lookup = await (blockscoutAddressLookup ??
+      fetchBlockscoutAddressLookup({
+        contractAddress,
+        chain,
+        fetcher,
         signal,
-      }),
-      TOKEN_REPORT_CREATION_TIMEOUT_MS,
-      `${chain.name} Blockscout v2 contract-creation lookup timed out`,
-    );
-    if (!response.ok) {
+      }));
+    if (!lookup.body) {
       return {
         ...emptyCreationMetadata(),
-        warnings: [
-          `${chain.name} Blockscout v2 explorer returned HTTP ${response.status} for contract-creation lookup.`,
-        ],
+        warnings: lookup.warning ? [lookup.warning] : [],
       };
     }
 
-    const body = (await response.json()) as BlockscoutAddressResponse;
+    const body = lookup.body;
     const responseAddress = normalizedAddressFromUnknown(body.hash);
     if (responseAddress && responseAddress !== contractAddress) {
       return {
