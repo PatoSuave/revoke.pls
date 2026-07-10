@@ -28,6 +28,65 @@ export type TokenContractAiStatus =
   | "unavailable"
   | "skipped";
 
+export type TokenContractAiFailureReason =
+  | "not-configured"
+  | "request-aborted"
+  | "timeout"
+  | "authentication"
+  | "insufficient-balance"
+  | "rate-limited"
+  | "provider-error"
+  | "empty-output"
+  | "truncated-output"
+  | "invalid-output";
+
+export interface TokenContractAiFinding {
+  severity: "critical" | "high" | "medium" | "low" | "info";
+  heading: string;
+  evidence: string[];
+  description: string;
+  practicalEffect: string;
+}
+
+export interface TokenContractAiNarrative {
+  title: string;
+  overallVerdict:
+    | "critical risk"
+    | "high risk"
+    | "medium risk"
+    | "low observed risk"
+    | "unknown risk";
+  confidence: number;
+  confidenceReason: string;
+  mainRisks: string[];
+  detailedFindings: TokenContractAiFinding[];
+  whatNotSeen: string[];
+  selectorWatchlist: string[];
+  whatToCheckOnChain: string[];
+  bottomLine: string;
+}
+
+export interface TokenContractControlSurface {
+  mint: string[];
+  admin: string[];
+  fees: string[];
+  transferRestrictions: string[];
+  liquidity: string[];
+}
+
+export type TokenContractCriticalCheckStatus =
+  | "confirmed"
+  | "needs_review"
+  | "not_collected"
+  | "not_detected"
+  | "unknown";
+
+export interface TokenContractCriticalCheck {
+  question: string;
+  status: TokenContractCriticalCheckStatus;
+  evidence: string;
+}
+
 export type Erc6909DetectionStatus =
   | "detected"
   | "not_detected"
@@ -65,6 +124,17 @@ export interface TokenContractReportResponse {
       contractName: string | null;
       isProxy: boolean | null;
       implementationAddress: Address | null;
+      compilerVersion: string | null;
+      abiFunctionCount: number | null;
+      controlSurface: TokenContractControlSurface;
+      implementation: {
+        address: Address;
+        verified: "verified" | "unverified" | "unknown";
+        contractName: string | null;
+        compilerVersion: string | null;
+        abiFunctionCount: number | null;
+        controlSurface: TokenContractControlSurface;
+      } | null;
     };
     creation: {
       transactionHash: `0x${string}` | null;
@@ -76,6 +146,22 @@ export interface TokenContractReportResponse {
       lookupStatus: "found" | "unavailable";
     };
   } | null;
+  controls: {
+    ownerAddress: Address | null;
+    ownershipStatus: "found" | "renounced" | "conflicting" | "unavailable";
+    ownerMethod: "owner" | "getOwner" | null;
+    ownerCandidates: {
+      owner: Address | null;
+      getOwner: Address | null;
+    };
+  };
+  audit: {
+    coveragePercent: number;
+    classificationConfidence: number;
+    riskScore: number;
+    overallSeverity: "critical" | "high" | "medium" | "low" | "unknown";
+    criticalChecks: TokenContractCriticalCheck[];
+  };
   standards: {
     erc20Like: boolean;
     erc721: boolean;
@@ -97,10 +183,72 @@ export interface TokenContractReportResponse {
     status: TokenContractAiStatus;
     model: string | null;
     markdown: string | null;
+    narrative: TokenContractAiNarrative | null;
+    reason: TokenContractAiFailureReason | null;
+    finishReason: string | null;
   };
   warnings: string[];
   errors: string[];
   missingConfig: string[];
+}
+
+export function createEmptyTokenContractReportResponse({
+  status,
+  errors,
+}: {
+  status: TokenContractReportStatus;
+  errors: string[];
+}): TokenContractReportResponse {
+  return {
+    ok: false,
+    status,
+    chain: null,
+    contract: null,
+    controls: {
+      ownerAddress: null,
+      ownershipStatus: "unavailable",
+      ownerMethod: null,
+      ownerCandidates: {
+        owner: null,
+        getOwner: null,
+      },
+    },
+    audit: {
+      coveragePercent: 0,
+      classificationConfidence: 0,
+      riskScore: 0,
+      overallSeverity: "unknown",
+      criticalChecks: [],
+    },
+    standards: {
+      erc20Like: false,
+      erc721: false,
+      erc1155: false,
+      erc4626: false,
+      erc6909: "not_detected",
+      hybrid: false,
+    },
+    token: {
+      name: null,
+      symbol: null,
+      decimals: null,
+      totalSupply: null,
+      vaultAssetAddress: null,
+      totalAssets: null,
+    },
+    signals: [],
+    ai: {
+      status: "skipped",
+      model: null,
+      markdown: null,
+      narrative: null,
+      reason: null,
+      finishReason: null,
+    },
+    warnings: [],
+    errors,
+    missingConfig: [],
+  };
 }
 
 export const TOKEN_CONTRACT_REPORT_CHAIN_OPTIONS =

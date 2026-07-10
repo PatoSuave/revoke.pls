@@ -11,7 +11,10 @@ import {
   buildTokenContractReport,
   type BuildTokenContractReportOptions,
 } from "@/lib/token-contract-report-server";
-import type { TokenContractReportResponse } from "@/lib/token-contract-report";
+import {
+  createEmptyTokenContractReportResponse,
+  type TokenContractReportResponse,
+} from "@/lib/token-contract-report";
 
 const TOKEN_CONTRACT_REPORT_MAX_BODY_BYTES = 8_192;
 
@@ -46,15 +49,12 @@ export async function handleTokenContractReportPost(
   if (!rateLimit.allowed) {
     return NextResponse.json(
       {
-        ok: false,
-        status: "upstream-failure",
-        chain: null,
-        contract: null,
-        warnings: [],
-        errors: [
+        ...createEmptyTokenContractReportResponse({
+          status: "upstream-failure",
+          errors: [
           "Token contract report rate limit exceeded. Try again shortly.",
-        ],
-        missingConfig: [],
+          ],
+        }),
         rateLimited: true,
       },
       {
@@ -84,17 +84,14 @@ export async function handleTokenContractReportPost(
   } catch (error) {
     return NextResponse.json(
       {
-        ok: false,
-        status: "upstream-failure",
-        chain: null,
-        contract: null,
-        warnings: [],
-        errors: [
-          `Token contract report failed: ${redactSensitiveErrorText(
-            error instanceof Error ? error.message : String(error),
-          )}`,
-        ],
-        missingConfig: [],
+        ...createEmptyTokenContractReportResponse({
+          status: "upstream-failure",
+          errors: [
+            `Token contract report failed: ${redactSensitiveErrorText(
+              error instanceof Error ? error.message : String(error),
+            )}`,
+          ],
+        }),
       },
       {
         status: 502,
@@ -129,15 +126,10 @@ async function readRequestBody(
 
 function badRequest(message: string) {
   return NextResponse.json(
-    {
-      ok: false,
+    createEmptyTokenContractReportResponse({
       status: "bad-request",
-      chain: null,
-      contract: null,
-      warnings: [],
       errors: [message],
-      missingConfig: [],
-    },
+    }),
     { status: 400, headers: approvalApiNoStoreHeaders({}) },
   );
 }

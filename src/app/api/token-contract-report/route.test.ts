@@ -30,6 +30,10 @@ describe("token contract report API route", () => {
     expect(response.status).toBe(400);
     expect(response.headers.get("Cache-Control")).toContain("no-store");
     expect(body.status).toBe("bad-request");
+    expect(body.token).toBeTruthy();
+    expect(body.controls).toBeTruthy();
+    expect(body.signals).toEqual([]);
+    expect(body.ai.status).toBe("skipped");
     expect(called).toBe(false);
   });
 
@@ -51,6 +55,16 @@ describe("token contract report API route", () => {
           contractName: "Token",
           isProxy: false,
           implementationAddress: null,
+          compilerVersion: "v0.8.24",
+          abiFunctionCount: 6,
+          controlSurface: {
+            mint: [],
+            admin: [],
+            fees: [],
+            transferRestrictions: [],
+            liquidity: [],
+          },
+          implementation: null,
         },
         creation: {
           transactionHash: null,
@@ -79,7 +93,27 @@ describe("token contract report API route", () => {
         totalAssets: null,
       },
       signals: [],
-      ai: { status: "unavailable", model: null, markdown: null },
+      ai: {
+        status: "unavailable",
+        model: null,
+        markdown: null,
+        narrative: null,
+        reason: "not-configured",
+        finishReason: null,
+      },
+      controls: {
+        ownerAddress: null,
+        ownershipStatus: "unavailable",
+        ownerMethod: null,
+        ownerCandidates: { owner: null, getOwner: null },
+      },
+      audit: {
+        coveragePercent: 25,
+        classificationConfidence: 70,
+        riskScore: 10,
+        overallSeverity: "unknown",
+        criticalChecks: [],
+      },
       warnings: [],
       errors: [],
       missingConfig: [],
@@ -116,6 +150,19 @@ describe("token contract report API route", () => {
         status: "complete",
         chain: null,
         contract: null,
+        controls: {
+          ownerAddress: null,
+          ownershipStatus: "unavailable",
+          ownerMethod: null,
+          ownerCandidates: { owner: null, getOwner: null },
+        },
+        audit: {
+          coveragePercent: 0,
+          classificationConfidence: 0,
+          riskScore: 0,
+          overallSeverity: "unknown",
+          criticalChecks: [],
+        },
         standards: {
           erc20Like: false,
           erc721: false,
@@ -133,7 +180,14 @@ describe("token contract report API route", () => {
           totalAssets: null,
         },
         signals: [],
-        ai: { status: "skipped", model: null, markdown: null },
+        ai: {
+          status: "skipped",
+          model: null,
+          markdown: null,
+          narrative: null,
+          reason: null,
+          finishReason: null,
+        },
         warnings: [],
         errors: [],
         missingConfig: [],
@@ -158,5 +212,10 @@ describe("token contract report API route", () => {
     expect(calls).toBe(10);
     expect(lastResponse?.status).toBe(429);
     expect(lastResponse?.headers.get("Retry-After")).toBeTruthy();
+    const body = await lastResponse?.json();
+    expect(body?.token).toBeTruthy();
+    expect(body?.controls).toBeTruthy();
+    expect(body?.signals).toEqual([]);
+    expect(body?.ai.status).toBe("skipped");
   });
 });
