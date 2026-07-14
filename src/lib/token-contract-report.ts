@@ -209,6 +209,21 @@ export interface TokenContractHistoryCall {
   afterOwnershipZero: boolean | null;
 }
 
+export interface TokenContractEvidenceRange {
+  scope: "transactions" | "transfer-events" | "ownership-events";
+  provider: "explorer" | "blockscout-v2" | "rpc";
+  fromBlock: number | null;
+  toBlock: number | null;
+  resultCount: number;
+}
+
+export interface TokenContractEvidenceCoverage {
+  complete: boolean;
+  truncated: boolean;
+  coveredRanges: TokenContractEvidenceRange[];
+  gaps: string[];
+}
+
 export interface TokenContractSimulationAttempt {
   id: string;
   label: string;
@@ -230,6 +245,18 @@ export interface TokenContractSimulationAttempt {
   detail: string;
   returnData?: `0x${string}` | null;
   evidenceState?: "confirmed-signature" | "review-clue";
+  kind?: "direct-transfer" | "control" | "getter" | "router-buy" | "router-sell";
+  routerVersion?: "v1" | "v2" | null;
+  routerAddress?: Address | null;
+  pairAddress?: Address | null;
+  stage?:
+    | "prerequisite"
+    | "router-validation"
+    | "allowance"
+    | "swap-call"
+    | null;
+  prerequisites?: string[];
+  assumptions?: string[];
 }
 
 export interface TokenContractAiUsage {
@@ -333,6 +360,12 @@ export interface TokenContractReportResponse {
     hasBytecode: boolean;
     source: {
       verified: "verified" | "unverified" | "unknown";
+      verificationProvider:
+        | "explorer"
+        | "sourcify"
+        | "explorer+sourcify"
+        | null;
+      verificationMatch: "exact-match" | "match" | null;
       contractName: string | null;
       isProxy: boolean | null;
       implementationAddress: Address | null;
@@ -342,6 +375,12 @@ export interface TokenContractReportResponse {
       implementation: {
         address: Address;
         verified: "verified" | "unverified" | "unknown";
+        verificationProvider:
+          | "explorer"
+          | "sourcify"
+          | "explorer+sourcify"
+          | null;
+        verificationMatch: "exact-match" | "match" | null;
         contractName: string | null;
         compilerVersion: string | null;
         abiFunctionCount: number | null;
@@ -450,6 +489,7 @@ export interface TokenContractReportResponse {
     decodedCalls: TokenContractHistoryCall[];
     ownershipTransfers: TokenContractOwnershipTransfer[];
     postOwnershipZeroActivity: boolean | null;
+    coverage: TokenContractEvidenceCoverage;
     limitations: string[];
   };
   simulation: {
@@ -573,6 +613,12 @@ export function createEmptyTokenContractReportResponse({
       decodedCalls: [],
       ownershipTransfers: [],
       postOwnershipZeroActivity: null,
+      coverage: {
+        complete: false,
+        truncated: false,
+        coveredRanges: [],
+        gaps: [],
+      },
       limitations: [],
     },
     simulation: {

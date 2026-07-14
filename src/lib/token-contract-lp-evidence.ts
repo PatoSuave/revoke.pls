@@ -13,6 +13,9 @@ const ZERO_ADDRESS = "0x0000000000000000000000000000000000000000";
 
 export const TOKEN_LP_EVIDENCE_LOG_LIMIT = 200;
 export const TOKEN_LP_EVIDENCE_TRANSACTION_LIMIT = 50;
+export const TOKEN_LP_CUSTODY_HOLDER_LIMIT = 20;
+
+const DEAD_ADDRESS = "0x000000000000000000000000000000000000dEaD";
 
 const PAIR_ABI = parseAbi([
   "function token0() view returns (address)",
@@ -20,6 +23,7 @@ const PAIR_ABI = parseAbi([
   "function factory() view returns (address)",
   "function getReserves() view returns (uint112 reserve0, uint112 reserve1, uint32 blockTimestampLast)",
   "function totalSupply() view returns (uint256)",
+  "function balanceOf(address account) view returns (uint256)",
 ]);
 
 const EVENT_TOPIC_VARIANTS = {
@@ -58,7 +62,8 @@ export type TokenLpPairReadFunction =
   | "token1"
   | "factory"
   | "getReserves"
-  | "totalSupply";
+  | "totalSupply"
+  | "balanceOf";
 
 export type TokenLpEventName = keyof typeof EVENT_TOPIC_VARIANTS;
 
@@ -92,6 +97,7 @@ export interface TokenLpEvidenceDependencies {
     address: Address;
     abi: Abi;
     functionName: TokenLpPairReadFunction;
+    args?: readonly unknown[];
     blockNumber: bigint;
     signal?: AbortSignal;
   }): Promise<unknown>;
@@ -104,6 +110,57 @@ export interface TokenLpEvidenceDependencies {
     limit: number;
     signal?: AbortSignal;
   }): Promise<TokenLpEvidenceLogPage>;
+  getHolderCandidates?(args: {
+    address: Address;
+    limit: number;
+    signal?: AbortSignal;
+  }): Promise<TokenLpHolderCandidatePage>;
+  getBytecode?(args: {
+    address: Address;
+    blockNumber: bigint;
+    signal?: AbortSignal;
+  }): Promise<Hex | undefined>;
+}
+
+export interface TokenLpHolderCandidate {
+  address: Address;
+  source: "explorer" | "transfer-event" | "controller";
+  label?: string | null;
+  classification?: "known-locker" | "protocol" | null;
+}
+
+export interface TokenLpHolderCandidatePage {
+  holders: readonly TokenLpHolderCandidate[];
+  complete: boolean;
+  limitation?: string | null;
+}
+
+export interface TokenLpCustodyPosition {
+  address: Address;
+  balance: string;
+  shareBps: number | null;
+  classification:
+    | "burned"
+    | "controller"
+    | "known-locker"
+    | "protocol"
+    | "contract"
+    | "wallet"
+    | "unknown";
+  label: string | null;
+  sources: Array<"explorer" | "transfer-event" | "controller">;
+  hasBytecode: boolean | null;
+}
+
+export interface TokenLpCustodySummary {
+  positions: TokenLpCustodyPosition[];
+  sampledBalance: string;
+  sampledSupplyBps: number | null;
+  burnedBps: number | null;
+  controllerBps: number | null;
+  knownLockedBps: number | null;
+  complete: boolean;
+  limitations: string[];
 }
 
 export interface TokenLpPairSnapshot {
@@ -169,6 +226,7 @@ export interface TokenLpEvidenceResult {
   mintTransactions: TokenLpMintTransaction[];
   removalTransactions: TokenLpRemovalTransaction[];
   deployerActivity: TokenLpDeployerActivity;
+  custody: TokenLpCustodySummary;
   limitations: string[];
 }
 
@@ -176,6 +234,7 @@ export async function collectTokenLpEvidence({
   tokenAddress,
   pairAddress,
   deployerAddress,
+  controllerAddresses = [],
   capturedBlock,
   fromBlock = 0,
   historyLowerBoundKnown = true,
@@ -185,6 +244,7 @@ export async function collectTokenLpEvidence({
   tokenAddress: Address;
   pairAddress: Address;
   deployerAddress: Address | null;
+  controllerAddresses?: readonly Address[];
   capturedBlock: bigint | number;
   fromBlock?: bigint | number;
   historyLowerBoundKnown?: boolean;
@@ -508,6 +568,20 @@ export async function collectTokenLpEvidence({
     observedConsumedBps,
   };
 
+  const custody = await collectCurrentLpCustody({
+    pairAddress,
+    capturedBlock: normalizedCapturedBlock,
+    totalSupply,
+    transferEvents,
+    controllerAddresses: [
+      ...(normalizedDeployer ? [normalizedDeployer] : []),
+      ...controllerAddresses,
+    ],
+    dependencies,
+    signal,
+  });
+  limitations.push(...custody.limitations);
+
   const successfulReads = readSettled.filter(
     (result) => result.status === "fulfilled",
   ).length;
@@ -515,7 +589,10 @@ export async function collectTokenLpEvidence({
     (count, variants) => count + variants.length,
     0,
   );
-  const hasEvidence = successfulReads > 0 || successfulEventVariants > 0;
+  const hasEvidence =
+    successfulReads > 0 ||
+    successfulEventVariants > 0 ||
+    custody.positions.length > 0;
   const complete =
     historyLowerBoundKnown &&
     successfulReads === readNames.length &&
@@ -527,7 +604,8 @@ export async function collectTokenLpEvidence({
     successfulEventVariants === totalEventVariants &&
     failedEventVariants === 0 &&
     eventNames.every((eventName) => !eventCoverage[eventName].truncated) &&
-    requestedTokenPosition !== null;
+    requestedTokenPosition !== null &&
+    custody.complete;
 
   return {
     status: !hasEvidence ? "unavailable" : complete ? "complete" : "partial",
@@ -536,6 +614,290 @@ export async function collectTokenLpEvidence({
     mintTransactions,
     removalTransactions,
     deployerActivity,
+    custody,
+    limitations: Array.from(new Set(limitations)),
+  };
+}
+
+async function collectCurrentLpCustody({
+  pairAddress,
+  capturedBlock,
+  totalSupply,
+  transferEvents,
+  controllerAddresses,
+  dependencies,
+  signal,
+}: {
+  pairAddress: Address;
+  capturedBlock: bigint;
+  totalSupply: bigint | null;
+  transferEvents: readonly TransferEvent[];
+  controllerAddresses: readonly Address[];
+  dependencies: TokenLpEvidenceDependencies;
+  signal?: AbortSignal;
+}): Promise<TokenLpCustodySummary> {
+  const limitations: string[] = [];
+  const candidates = new Map<
+    string,
+    {
+      address: Address;
+      sources: Set<TokenLpHolderCandidate["source"]>;
+      label: string | null;
+      classification: TokenLpHolderCandidate["classification"];
+      observedBalance: bigint;
+    }
+  >();
+  const addCandidate = (
+    candidate: TokenLpHolderCandidate,
+    observedDelta = 0n,
+  ) => {
+    const normalized = normalizedAddress(candidate.address);
+    if (!normalized) return;
+    const key = normalized.toLowerCase();
+    const current = candidates.get(key) ?? {
+      address: normalized,
+      sources: new Set<TokenLpHolderCandidate["source"]>(),
+      label: null,
+      classification: null,
+      observedBalance: 0n,
+    };
+    current.sources.add(candidate.source);
+    current.label ??= candidate.label ?? null;
+    current.classification ??= candidate.classification ?? null;
+    current.observedBalance += observedDelta;
+    candidates.set(key, current);
+  };
+
+  const normalizedControllers = Array.from(
+    new Map(
+      controllerAddresses
+        .map(normalizedAddress)
+        .filter((address): address is Address => address !== null)
+        .map((address) => [address.toLowerCase(), address]),
+    ).values(),
+  );
+  for (const address of normalizedControllers) {
+    addCandidate({ address, source: "controller" });
+  }
+
+  for (const event of transferEvents) {
+    addCandidate(
+      { address: event.from, source: "transfer-event" },
+      -event.amount,
+    );
+    addCandidate(
+      { address: event.to, source: "transfer-event" },
+      event.amount,
+    );
+  }
+
+  let explorerComplete = false;
+  if (dependencies.getHolderCandidates) {
+    try {
+      const page = await dependencies.getHolderCandidates({
+        address: pairAddress,
+        limit: TOKEN_LP_CUSTODY_HOLDER_LIMIT,
+        signal,
+      });
+      explorerComplete = page.complete;
+      for (const holder of page.holders.slice(0, TOKEN_LP_CUSTODY_HOLDER_LIMIT)) {
+        addCandidate(holder);
+      }
+      if (page.limitation) limitations.push(safeText(page.limitation));
+      if (page.holders.length > TOKEN_LP_CUSTODY_HOLDER_LIMIT) {
+        limitations.push(
+          `LP holder candidates were bounded to ${TOKEN_LP_CUSTODY_HOLDER_LIMIT} addresses.`,
+        );
+      }
+    } catch (error) {
+      limitations.push(`LP holder lookup unavailable: ${safeError(error)}`);
+    }
+  }
+
+  const rankedCandidates = Array.from(candidates.values()).sort(
+    (left, right) => {
+      const leftPriority = left.sources.has("controller")
+        ? 0
+        : isBurnLikeLpAddress(left.address)
+          ? 1
+          : left.sources.has("explorer")
+            ? 2
+            : 3;
+      const rightPriority = right.sources.has("controller")
+        ? 0
+        : isBurnLikeLpAddress(right.address)
+          ? 1
+          : right.sources.has("explorer")
+            ? 2
+            : 3;
+      return (
+        leftPriority - rightPriority ||
+        Number(
+          (right.observedBalance > left.observedBalance
+            ? 1n
+            : right.observedBalance < left.observedBalance
+              ? -1n
+              : 0n),
+        )
+      );
+    },
+  );
+  if (rankedCandidates.length > TOKEN_LP_CUSTODY_HOLDER_LIMIT) {
+    limitations.push(
+      `Current LP custody reads were bounded to ${TOKEN_LP_CUSTODY_HOLDER_LIMIT} holder candidates.`,
+    );
+  }
+  const retainedCandidates = rankedCandidates.slice(
+    0,
+    TOKEN_LP_CUSTODY_HOLDER_LIMIT,
+  );
+  let balanceReadFailures = 0;
+  const balances = (
+    await Promise.all(
+      retainedCandidates.map(async (candidate) => {
+        try {
+          const value = await dependencies.readContract({
+            address: pairAddress,
+            abi: PAIR_ABI,
+            functionName: "balanceOf",
+            args: [candidate.address],
+            blockNumber: capturedBlock,
+            signal,
+          });
+          const balance = unsignedInteger(value);
+          if (balance === null) throw new Error("non-integer balance");
+          return { candidate, balance };
+        } catch (error) {
+          balanceReadFailures += 1;
+          limitations.push(
+            `LP balanceOf(${candidate.address}) unavailable: ${safeError(error)}`,
+          );
+          return null;
+        }
+      }),
+    )
+  ).filter(
+    (
+      value,
+    ): value is {
+      candidate: (typeof retainedCandidates)[number];
+      balance: bigint;
+    } => value !== null && value.balance > 0n,
+  );
+
+  const bytecode = new Map<string, boolean | null>();
+  if (dependencies.getBytecode) {
+    await Promise.all(
+      balances.slice(0, TOKEN_LP_CUSTODY_HOLDER_LIMIT).map(async ({ candidate }) => {
+        if (
+          isBurnLikeLpAddress(candidate.address) ||
+          candidate.sources.has("controller") ||
+          candidate.classification
+        ) {
+          return;
+        }
+        try {
+          const code = await dependencies.getBytecode!({
+            address: candidate.address,
+            blockNumber: capturedBlock,
+            signal,
+          });
+          bytecode.set(
+            candidate.address.toLowerCase(),
+            Boolean(code && code !== "0x"),
+          );
+        } catch {
+          bytecode.set(candidate.address.toLowerCase(), null);
+        }
+      }),
+    );
+  }
+
+  const controllerSet = new Set(
+    normalizedControllers.map((address) => address.toLowerCase()),
+  );
+  const positions: TokenLpCustodyPosition[] = balances
+    .map(({ candidate, balance }) => {
+      const hasBytecode = bytecode.get(candidate.address.toLowerCase()) ?? null;
+      const classification: TokenLpCustodyPosition["classification"] =
+        isBurnLikeLpAddress(candidate.address)
+          ? "burned"
+          : controllerSet.has(candidate.address.toLowerCase())
+            ? "controller"
+            : candidate.classification === "known-locker"
+              ? "known-locker"
+              : candidate.classification === "protocol"
+                ? "protocol"
+                : hasBytecode === true
+                  ? "contract"
+                  : hasBytecode === false
+                    ? "wallet"
+                    : "unknown";
+      return {
+        address: candidate.address,
+        balance: balance.toString(),
+        shareBps: supplyShareBps(balance, totalSupply),
+        classification,
+        label: candidate.label,
+        sources: Array.from(candidate.sources),
+        hasBytecode,
+      };
+    })
+    .sort((left, right) => {
+      const leftBalance = BigInt(left.balance);
+      const rightBalance = BigInt(right.balance);
+      return leftBalance === rightBalance ? 0 : leftBalance > rightBalance ? -1 : 1;
+    });
+  const sampledBalance = positions.reduce(
+    (sum, position) => sum + BigInt(position.balance),
+    0n,
+  );
+  const sumClass = (classification: TokenLpCustodyPosition["classification"]) =>
+    positions
+      .filter((position) => position.classification === classification)
+      .reduce((sum, position) => sum + BigInt(position.balance), 0n);
+  const sampledSupplyBps = supplyShareBps(sampledBalance, totalSupply);
+  const burnedBps = supplyShareBps(sumClass("burned"), totalSupply);
+  const controllerBps = supplyShareBps(sumClass("controller"), totalSupply);
+  const knownLockedBps = supplyShareBps(sumClass("known-locker"), totalSupply);
+  const transferCandidatesComplete =
+    transferEvents.length > 0 &&
+    rankedCandidates.length <= TOKEN_LP_CUSTODY_HOLDER_LIMIT;
+  const complete =
+    totalSupply !== null &&
+    totalSupply > 0n &&
+    balanceReadFailures === 0 &&
+    sampledSupplyBps !== null &&
+    sampledSupplyBps >= 9_500 &&
+    (explorerComplete || transferCandidatesComplete);
+
+  if (positions.length === 0) {
+    limitations.push("No positive current LP holder balance was confirmed.");
+  }
+  if (sampledSupplyBps !== null && sampledSupplyBps < 9_500) {
+    limitations.push(
+      `Current LP custody sampling accounts for ${(sampledSupplyBps / 100).toFixed(2)}% of LP totalSupply; unsampled custody remains unresolved.`,
+    );
+  }
+  if (!explorerComplete && !transferCandidatesComplete) {
+    limitations.push(
+      "LP holder discovery was incomplete, so current custody cannot be treated as exhaustive.",
+    );
+  }
+  if (positions.some((position) => position.classification === "contract")) {
+    limitations.push(
+      "An unidentified contract holding LP is classified as contract custody, not as locked liquidity.",
+    );
+  }
+
+  return {
+    positions,
+    sampledBalance: sampledBalance.toString(),
+    sampledSupplyBps,
+    burnedBps,
+    controllerBps,
+    knownLockedBps,
+    complete,
     limitations: Array.from(new Set(limitations)),
   };
 }
@@ -823,6 +1185,23 @@ function unsignedInteger(value: unknown): bigint | null {
   } catch {
     return null;
   }
+}
+
+function supplyShareBps(
+  balance: bigint,
+  totalSupply: bigint | null,
+): number | null {
+  if (totalSupply === null || totalSupply <= 0n || balance < 0n) return null;
+  const bounded = balance > totalSupply ? totalSupply : balance;
+  return Number((bounded * 10_000n) / totalSupply);
+}
+
+function isBurnLikeLpAddress(address: Address): boolean {
+  const normalized = address.toLowerCase();
+  return (
+    normalized === ZERO_ADDRESS.toLowerCase() ||
+    normalized === DEAD_ADDRESS.toLowerCase()
+  );
 }
 
 function word(data: Hex, index: number): bigint | null {

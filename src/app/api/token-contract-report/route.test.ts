@@ -57,8 +57,10 @@ describe("token contract report API route", () => {
         address: TOKEN,
         explorerUrl: `https://scan.pulsechain.com/token/${TOKEN}`,
         hasBytecode: true,
-        source: {
-          verified: "verified",
+      source: {
+        verified: "verified",
+        verificationProvider: "explorer",
+        verificationMatch: null,
           contractName: "Token",
           isProxy: false,
           implementationAddress: null,

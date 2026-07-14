@@ -1,0 +1,185 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://revoke.pls/schemas/token-contract-bytecode-template-registry.schema.json",
+  "title": "Reviewed token contract bytecode template registry",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["$schema", "schemaVersion", "entries"],
+  "properties": {
+    "$schema": {
+      "type": "string",
+      "const": "./token-contract-bytecode-template-registry.schema.json"
+    },
+    "schemaVersion": {
+      "type": "integer",
+      "const": 1
+    },
+    "entries": {
+      "type": "array",
+      "maxItems": 500,
+      "items": { "$ref": "#/$defs/entry" }
+    }
+  },
+  "$defs": {
+    "entry": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "label",
+        "source",
+        "review",
+        "compiler",
+        "assessment",
+        "runtime"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^[a-z0-9][a-z0-9._-]{0,79}$"
+        },
+        "label": { "type": "string", "minLength": 1, "maxLength": 120 },
+        "source": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "repositoryUrl",
+            "commit",
+            "sourcePath",
+            "artifactPath"
+          ],
+          "properties": {
+            "repositoryUrl": {
+              "type": "string",
+              "format": "uri",
+              "pattern": "^https://"
+            },
+            "commit": {
+              "type": "string",
+              "pattern": "^[0-9a-f]{40}$"
+            },
+            "sourcePath": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 300
+            },
+            "artifactPath": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 300
+            }
+          }
+        },
+        "review": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["reviewedAt", "reviewedBy", "summary"],
+          "properties": {
+            "reviewedAt": {
+              "type": "string",
+              "format": "date",
+              "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+            },
+            "reviewedBy": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 120
+            },
+            "summary": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 600
+            }
+          }
+        },
+        "compiler": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["version"],
+          "properties": {
+            "version": {
+              "type": ["string", "null"],
+              "minLength": 1,
+              "maxLength": 120
+            }
+          }
+        },
+        "assessment": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["classification", "severity", "capabilities"],
+          "properties": {
+            "classification": {
+              "type": "string",
+              "enum": ["normal", "risky", "neutral"]
+            },
+            "severity": {
+              "type": "string",
+              "enum": ["info", "low", "medium", "high", "critical"]
+            },
+            "capabilities": {
+              "type": "array",
+              "maxItems": 20,
+              "uniqueItems": true,
+              "items": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 160,
+                "pattern": "\\S"
+              }
+            }
+          },
+          "allOf": [
+            {
+              "if": {
+                "properties": {
+                  "classification": { "const": "risky" }
+                },
+                "required": ["classification"]
+              },
+              "then": {
+                "properties": {
+                  "severity": {
+                    "enum": ["low", "medium", "high", "critical"]
+                  },
+                  "capabilities": { "minItems": 1 }
+                }
+              },
+              "else": {
+                "properties": {
+                  "severity": { "const": "info" }
+                }
+              }
+            }
+          ]
+        },
+        "runtime": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "byteLength",
+            "hash",
+            "hashWithoutMetadata",
+            "metadataDetected"
+          ],
+          "properties": {
+            "byteLength": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 524288
+            },
+            "hash": {
+              "type": "string",
+              "pattern": "^0x[0-9a-f]{64}$"
+            },
+            "hashWithoutMetadata": {
+              "type": "string",
+              "pattern": "^0x[0-9a-f]{64}$"
+            },
+            "metadataDetected": { "type": "boolean" }
+          }
+        }
+      }
+    }
+  }
+}

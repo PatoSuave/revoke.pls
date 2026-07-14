@@ -454,6 +454,15 @@ describe("token contract report server", () => {
         confidence: "exact",
       });
     }
+    expect(
+      report.audit.criticalChecks.find(
+        (check) =>
+          check.question === "Does bytecode match a known risky template?",
+      ),
+    ).toMatchObject({
+      status: "unknown",
+      disposition: "unresolved",
+    });
   });
 
   it("keeps the deterministic POSVE verdict when DeepSeek attempts a downgrade and discards invalid source citations", async () => {
@@ -744,6 +753,179 @@ describe("token contract report server", () => {
     );
   });
 
+  it("falls back to bounded Sourcify v2 multi-file source, ABI, and proxy implementation metadata", async () => {
+    const reader = {
+      getBytecode: vi.fn(async () => "0x1234" as `0x${string}`),
+      readContract: vi.fn(async (call: { functionName: string }) => {
+        if (call.functionName === "name") return "Sourcify Token";
+        if (call.functionName === "symbol") return "SRC";
+        if (call.functionName === "decimals") return 18;
+        if (call.functionName === "totalSupply") return 1_000n;
+        if (call.functionName === "supportsInterface") return false;
+        throw new Error("unsupported read");
+      }),
+    };
+    const fetcher = vi.fn(async (input: RequestInfo | URL) => {
+      const url = requestUrl(input);
+      const path = url.pathname.toLowerCase();
+      if (requestAction(input) === "getsourcecode") {
+        return Response.json({}, { status: 500 });
+      }
+      if (requestAction(input) === "getcontractcreation") {
+        return creationResponse();
+      }
+      if (path.includes("/api/v2/smart-contracts/")) {
+        return Response.json({}, { status: 404 });
+      }
+      if (path.includes("/api/v2/addresses/")) {
+        return Response.json({ hash: TOKEN });
+      }
+      if (path.includes("/server/v2/contract/369/")) {
+        const isImplementation = path.endsWith(
+          IMPLEMENTATION.toLowerCase(),
+        );
+        return Response.json({
+          match: "exact_match",
+          creationMatch: "exact_match",
+          runtimeMatch: "exact_match",
+          abi: [
+            {
+              type: "function",
+              name: isImplementation ? "setTaxFee" : "mint",
+              inputs: [],
+              outputs: [],
+              stateMutability: "nonpayable",
+            },
+          ],
+          sources: isImplementation
+            ? {
+                "contracts/Implementation.sol": {
+                  content:
+                    "pragma solidity ^0.8.20; contract Implementation { function setTaxFee() external {} }",
+                },
+              }
+            : {
+                "contracts/Token.sol": {
+                  content:
+                    "pragma solidity ^0.8.20; import './Shared.sol'; contract Token { function mint() external {} }",
+                },
+                "contracts/Shared.sol": {
+                  content:
+                    "pragma solidity ^0.8.20; library Shared { function value() internal pure returns (uint256) { return 1; } }",
+                },
+              },
+          compilation: {
+            compilerVersion: "0.8.20+commit.a1b79de6",
+            name: isImplementation ? "Implementation" : "Token",
+          },
+          proxyResolution: isImplementation
+            ? { isProxy: false, implementations: [] }
+            : {
+                isProxy: true,
+                implementations: [{ address: IMPLEMENTATION }],
+              },
+          creationBytecode: { onchainBytecode: "0x6000" },
+        });
+      }
+      throw new Error(`Unexpected URL ${url.toString()}`);
+    });
+
+    const report = await buildTokenContractReport({
+      chainId: PULSECHAIN_CHAIN_ID,
+      contractAddress: TOKEN,
+      includeAi: false,
+      env: { NODE_ENV: "test" } as NodeJS.ProcessEnv,
+      fetcher: fetcher as unknown as typeof fetch,
+      reader,
+    });
+
+    expect(report.contract?.source).toMatchObject({
+      verified: "verified",
+      verificationProvider: "sourcify",
+      verificationMatch: "exact-match",
+      contractName: "Token",
+      compilerVersion: "0.8.20+commit.a1b79de6",
+      abiFunctionCount: 1,
+      isProxy: true,
+      implementationAddress: IMPLEMENTATION,
+      implementation: {
+        address: IMPLEMENTATION,
+        verified: "verified",
+        verificationProvider: "sourcify",
+        verificationMatch: "exact-match",
+        contractName: "Implementation",
+      },
+    });
+    expect(report.contract?.source.controlSurface.mint).toContain("mint");
+    expect(report.contract?.source.controlSurface.fees).toContain("setTaxFee");
+    expect(report.modules.source.summary).toContain(
+      "Sourcify verified source and ABI metadata",
+    );
+    expect(report.signals.find((signal) => signal.id === "source-status")?.evidence)
+      .toContain("Sourcify source metadata is verified");
+    expect(fetcher.mock.calls.some(([input]) =>
+      requestUrl(input).searchParams.get("fields")?.includes("sources"),
+    )).toBe(true);
+  });
+
+  it("labels a Sourcify functional match separately from an exact metadata match", async () => {
+    const reader = {
+      getBytecode: vi.fn(async () => "0x1234" as `0x${string}`),
+      readContract: vi.fn(async (call: { functionName: string }) => {
+        if (call.functionName === "name") return "Matched Token";
+        if (call.functionName === "symbol") return "MAT";
+        if (call.functionName === "decimals") return 18;
+        if (call.functionName === "totalSupply") return 1_000n;
+        if (call.functionName === "supportsInterface") return false;
+        throw new Error("unsupported read");
+      }),
+    };
+    const fetcher = vi.fn(async (input: RequestInfo | URL) => {
+      const url = requestUrl(input);
+      const path = url.pathname.toLowerCase();
+      if (requestAction(input) === "getsourcecode") {
+        return Response.json({}, { status: 500 });
+      }
+      if (requestAction(input) === "getcontractcreation") return creationResponse();
+      if (path.includes("/api/v2/smart-contracts/")) {
+        return Response.json({}, { status: 404 });
+      }
+      if (path.includes("/api/v2/addresses/")) {
+        return Response.json({ hash: TOKEN });
+      }
+      if (path.includes("/server/v2/contract/369/")) {
+        return Response.json({
+          match: "match",
+          runtimeMatch: "match",
+          abi: [],
+          sources: {
+            "Token.sol": { content: "contract Token {}" },
+          },
+          compilation: { compilerVersion: "0.8.20", name: "Token" },
+          proxyResolution: { isProxy: false, implementations: [] },
+        });
+      }
+      throw new Error(`Unexpected URL ${url.toString()}`);
+    });
+
+    const report = await buildTokenContractReport({
+      chainId: PULSECHAIN_CHAIN_ID,
+      contractAddress: TOKEN,
+      includeAi: false,
+      env: { NODE_ENV: "test" } as NodeJS.ProcessEnv,
+      fetcher: fetcher as unknown as typeof fetch,
+      reader,
+    });
+
+    expect(report.contract?.source.verificationProvider).toBe("sourcify");
+    expect(report.contract?.source.verificationMatch).toBe("match");
+    expect(report.signals.find((signal) => signal.id === "source-status")?.evidence)
+      .toContain("functional bytecode match rather than an exact metadata match");
+    expect(report.warnings.join(" ")).toContain(
+      "functional match rather than an exact metadata match",
+    );
+  });
+
   it("classifies a bytecode-only Blockscout v2 response as unverified and accepts the documented creation hash alias", async () => {
     const reader = {
       getBytecode: vi.fn(async () => "0x1234" as `0x${string}`),
@@ -1004,7 +1186,7 @@ describe("token contract report server", () => {
     );
     expect(report.ai.narrative?.detailedFindings[0]?.severity).toBe("info");
     expect(report.ai.narrative?.detailedFindings[0]?.heading).toBe(
-      "Explorer source status",
+      "Verified source status",
     );
     expect(report.ai.narrative?.detailedFindings[0]?.description).not.toMatch(
       /fee|block every sale/i,
@@ -1543,7 +1725,7 @@ describe("token contract report server", () => {
       report.audit.criticalChecks.find(
         (check) => check.question === "Is LP locked or removable?",
       ),
-    ).toMatchObject({ status: "needs_review" });
+    ).toMatchObject({ status: "confirmed" });
   });
 
   it("excludes the DEX pair when selecting a distinct ordinary holder", async () => {
@@ -1731,7 +1913,6 @@ describe("token contract report server", () => {
     for (const question of [
       "Can owner set fees very high?",
       "Can owner block the LP pair?",
-      "Is LP locked or removable?",
       "Does the contract have a removeLiquidity wrapper?",
     ]) {
       expect(
@@ -1739,6 +1920,11 @@ describe("token contract report server", () => {
           ?.status,
       ).toBe("not_collected");
     }
+    expect(
+      report.audit.criticalChecks.find(
+        (check) => check.question === "Is LP locked or removable?",
+      )?.status,
+    ).toBe("needs_review");
   });
 
   it("prioritizes actionable selector probes ahead of getter-like clues", async () => {

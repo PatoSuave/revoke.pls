@@ -1,6 +1,7 @@
 import { getAddress, isAddress, type Address } from "viem";
 
 import type {
+  TokenContractEvidenceCoverage,
   TokenContractHistoryCall,
   TokenContractLiquidityPair,
   TokenContractOwnershipTransfer,
@@ -33,6 +34,7 @@ export interface TokenContractHistoryResult {
   inspectedTransactions: number;
   decodedCalls: TokenContractHistoryCall[];
   postOwnershipZeroActivity: boolean | null;
+  coverage: TokenContractEvidenceCoverage;
   limitations: string[];
   module: TokenContractReportModule;
 }
@@ -55,6 +57,7 @@ export interface TokenContractEventResult {
   initialMintRecipients: Address[];
   initialMintTransactionHash: `0x${string}` | null;
   initialMintBlockNumber: number | null;
+  coverage: TokenContractEvidenceCoverage;
   limitations: string[];
 }
 
@@ -78,7 +81,12 @@ export type TokenContractRpcLogFetcher = (args: {
   contractAddress: Address;
   topic0: `0x${string}`;
   creationBlockNumber: number | null;
-}) => Promise<TokenContractRpcLog[]>;
+}) => Promise<TokenContractRpcLog[] | TokenContractRpcLogResult>;
+
+export interface TokenContractRpcLogResult {
+  logs: TokenContractRpcLog[];
+  coverage: TokenContractEvidenceCoverage;
+}
 
 interface ExplorerTransaction {
   hash: `0x${string}`;
@@ -87,6 +95,17 @@ interface ExplorerTransaction {
   from: Address | null;
   input: `0x${string}` | null;
   success: boolean | null;
+  isContractCreation: boolean;
+}
+
+interface ExplorerLogPage {
+  logs: ExplorerLog[];
+  truncated: boolean;
+}
+
+interface EventTopicLookup {
+  logs: ExplorerLog[];
+  coverage: TokenContractEvidenceCoverage;
 }
 
 export async function fetchTokenContractHistory({
@@ -117,10 +136,36 @@ export async function fetchTokenContractHistory({
       throw new Error(`explorer returned HTTP ${response.status}`);
     }
     const body = (await response.json()) as unknown;
-    const transactions = parseExplorerTransactions(body, chain.apiKind).slice(
-      0,
-      HISTORY_LIMIT,
-    );
+    const parsedTransactions = parseExplorerTransactions(body, chain.apiKind);
+    const truncated =
+      hasNextPage(body) || parsedTransactions.length >= HISTORY_LIMIT;
+    const transactions = parsedTransactions
+      .filter((transaction) => !transaction.isContractCreation)
+      .slice(0, HISTORY_LIMIT);
+    const blocks = transactions
+      .map((transaction) => transaction.blockNumber)
+      .filter((block): block is number => block !== null);
+    const coverage: TokenContractEvidenceCoverage = {
+      complete: !truncated,
+      truncated,
+      coveredRanges: [
+        {
+          scope: "transactions",
+          provider:
+            chain.apiKind === "blockscout-compatible"
+              ? "blockscout-v2"
+              : "explorer",
+          fromBlock: blocks.length > 0 ? Math.min(...blocks) : null,
+          toBlock: blocks.length > 0 ? Math.max(...blocks) : null,
+          resultCount: transactions.length,
+        },
+      ],
+      gaps: truncated
+        ? [
+            `Transaction history was limited to the ${HISTORY_LIMIT} most recent inbound contract transactions; older calls remain outside this result.`,
+          ]
+        : [],
+    };
     const selectorMap = new Map(
       selectors.map((selector) => [selector.selector, selector.signature]),
     );
@@ -174,7 +219,7 @@ export async function fetchTokenContractHistory({
                 ),
               ),
           );
-    if (transactions.length === HISTORY_LIMIT) {
+    if (truncated) {
       limitations.push(
         `Only the ${HISTORY_LIMIT} most recent contract transactions were inspected.`,
       );
@@ -184,6 +229,7 @@ export async function fetchTokenContractHistory({
       inspectedTransactions: transactions.length,
       decodedCalls,
       postOwnershipZeroActivity,
+      coverage,
       limitations,
       module: {
         id: "history",
@@ -200,6 +246,12 @@ export async function fetchTokenContractHistory({
       inspectedTransactions: 0,
       decodedCalls: [],
       postOwnershipZeroActivity: null,
+      coverage: {
+        complete: false,
+        truncated: false,
+        coveredRanges: [],
+        gaps: [`${chain.name} transaction history could not be inspected.`],
+      },
       limitations: [message],
       module: {
         id: "history",
@@ -341,7 +393,7 @@ export async function fetchTokenContractEvents({
   rpcLogFetcher?: TokenContractRpcLogFetcher;
 }): Promise<TokenContractEventResult> {
   const limitations: string[] = [];
-  let blockscoutLogs: Promise<ExplorerLog[]> | null = null;
+  let blockscoutLogs: Promise<ExplorerLogPage> | null = null;
   const fetchBlockscoutLogs = () => {
     blockscoutLogs ??= (async () => {
       const response = await fetchWithTimeout(
@@ -354,12 +406,24 @@ export async function fetchTokenContractEvents({
         `${chain.name} Blockscout v2 event lookup timed out`,
       );
       if (!response.ok) throw new Error(`Blockscout v2 returned HTTP ${response.status}`);
-      return parseExplorerLogs((await response.json()) as unknown);
+      return parseExplorerLogPage((await response.json()) as unknown);
     })();
     return blockscoutLogs;
   };
+  const topicInputs = [
+    {
+      topic: TRANSFER_TOPIC,
+      scope: "transfer-events" as const,
+      label: "Transfer",
+    },
+    {
+      topic: OWNERSHIP_TRANSFERRED_TOPIC,
+      scope: "ownership-events" as const,
+      label: "Ownership",
+    },
+  ];
   const results = await Promise.allSettled(
-    [TRANSFER_TOPIC, OWNERSHIP_TRANSFERRED_TOPIC].map(async (topic) => {
+    topicInputs.map(async ({ topic, scope, label }): Promise<EventTopicLookup> => {
       let primaryError: unknown = null;
       try {
         const response = await fetchWithTimeout(
@@ -375,23 +439,41 @@ export async function fetchTokenContractEvents({
           `${chain.name} event lookup timed out`,
         );
         if (!response.ok) throw new Error(`explorer returned HTTP ${response.status}`);
-        return parseExplorerLogs((await response.json()) as unknown);
+        const page = parseExplorerLogPage((await response.json()) as unknown);
+        return {
+          logs: page.logs,
+          coverage: eventCoverage({
+            scope,
+            provider: "explorer",
+            creationBlockNumber: creationBlockNumber ?? null,
+            logs: page.logs,
+            truncated: page.truncated,
+          }),
+        };
       } catch (error) {
         primaryError = error;
       }
 
       const fallbackLogs: ExplorerLog[] = [];
+      const fallbackCoverage: TokenContractEvidenceCoverage[] = [];
+      let fallbackSucceeded = false;
       if (chain.apiKind === "blockscout-compatible") {
         try {
-          const fallback = (await fetchBlockscoutLogs()).filter(
+          const page = await fetchBlockscoutLogs();
+          const fallback = page.logs.filter(
             (log) => log.topics[0]?.toLowerCase() === topic.toLowerCase(),
           );
-          if (fallback.length > 0) {
-            limitations.push(
-              `${topic === TRANSFER_TOPIC ? "Transfer" : "Ownership"} events used the Blockscout v2 address-log fallback after the legacy explorer request failed.`,
-            );
-            fallbackLogs.push(...fallback);
-          }
+          fallbackSucceeded = true;
+          fallbackLogs.push(...fallback);
+          fallbackCoverage.push(
+            eventCoverage({
+              scope,
+              provider: "blockscout-v2",
+              creationBlockNumber: creationBlockNumber ?? null,
+              logs: fallback,
+              truncated: page.truncated,
+            }),
+          );
         } catch (error) {
           primaryError = new Error(
             `${safeError(primaryError)}; Blockscout v2 fallback: ${safeError(error)}`,
@@ -401,40 +483,51 @@ export async function fetchTokenContractEvents({
 
       if (rpcLogFetcher) {
         try {
-          const fallback = await rpcLogFetcher({
+          const fetched = await rpcLogFetcher({
             contractAddress,
             topic0: topic as `0x${string}`,
             creationBlockNumber: creationBlockNumber ?? null,
           });
-          if (fallback.length > 0) {
-            limitations.push(
-              `${topic === TRANSFER_TOPIC ? "Transfer" : "Ownership"} events used a bounded RPC eth_getLogs fallback after explorer lookups were incomplete.`,
-            );
-            fallbackLogs.push(...fallback);
-          }
+          const fallback = normalizeRpcLogResult(
+            fetched,
+            scope,
+            creationBlockNumber ?? null,
+          );
+          fallbackSucceeded = true;
+          fallbackLogs.push(...fallback.logs);
+          fallbackCoverage.push(fallback.coverage);
         } catch (error) {
           primaryError = new Error(
             `${safeError(primaryError)}; RPC fallback: ${safeError(error)}`,
           );
         }
       }
-      if (fallbackLogs.length > 0) {
-        return Array.from(
+      if (fallbackSucceeded) {
+        return {
+          logs: Array.from(
           new Map(
             fallbackLogs.map((log) => [
               `${log.transactionHash}:${log.logIndex ?? -1}`,
               log,
             ]),
           ).values(),
-        ).slice(0, EVENT_LIMIT);
+          ).slice(0, EVENT_LIMIT),
+          coverage: mergeEquivalentCoverage(fallbackCoverage),
+        };
       }
-      throw primaryError ?? new Error("event lookup returned no usable result");
+      throw primaryError ?? new Error(`${label} event lookup returned no usable result`);
     }),
   );
-  const transferLogs =
-    results[0]?.status === "fulfilled" ? results[0].value : [];
-  const ownershipLogs =
-    results[1]?.status === "fulfilled" ? results[1].value : [];
+  const transferResult =
+    results[0]?.status === "fulfilled"
+      ? results[0].value
+      : unavailableEventCoverage("transfer-events", "Transfer-event lookup failed.");
+  const ownershipResult =
+    results[1]?.status === "fulfilled"
+      ? results[1].value
+      : unavailableEventCoverage("ownership-events", "Ownership-event lookup failed.");
+  const transferLogs = transferResult.logs;
+  const ownershipLogs = ownershipResult.logs;
   if (results[0]?.status === "rejected") {
     limitations.push(
       `Transfer-event lookup unavailable: ${safeError(results[0].reason)}`,
@@ -445,6 +538,22 @@ export async function fetchTokenContractEvents({
       `Ownership-event lookup unavailable: ${safeError(results[1].reason)}`,
     );
   }
+  const coverage: TokenContractEvidenceCoverage = {
+    complete:
+      transferResult.coverage.complete && ownershipResult.coverage.complete,
+    truncated:
+      transferResult.coverage.truncated || ownershipResult.coverage.truncated,
+    coveredRanges: [
+      ...transferResult.coverage.coveredRanges,
+      ...ownershipResult.coverage.coveredRanges,
+    ],
+    gaps: Array.from(
+      new Set([
+        ...transferResult.coverage.gaps,
+        ...ownershipResult.coverage.gaps,
+      ]),
+    ),
+  };
 
   const transfers = transferLogs
     .map((log) => ({
@@ -500,12 +609,12 @@ export async function fetchTokenContractEvents({
       (right.blockNumber ?? Number.MAX_SAFE_INTEGER),
     );
 
-  if (transferLogs.length === EVENT_LIMIT) {
+  if (transferResult.coverage.truncated) {
     limitations.push(
       `Only ${EVENT_LIMIT} Transfer events near deployment were inspected.`,
     );
   }
-  if (ownershipLogs.length === EVENT_LIMIT) {
+  if (ownershipResult.coverage.truncated) {
     limitations.push(
       `Only ${EVENT_LIMIT} ownership events were inspected.`,
     );
@@ -524,6 +633,7 @@ export async function fetchTokenContractEvents({
     ),
     initialMintTransactionHash: initialMint?.log.transactionHash ?? null,
     initialMintBlockNumber: initialMint?.log.blockNumber ?? null,
+    coverage,
     limitations,
   };
 }
@@ -566,12 +676,20 @@ function logsUrl(
   return url.toString();
 }
 
-function parseExplorerLogs(body: unknown): ExplorerLog[] {
-  if (!body || typeof body !== "object" || Array.isArray(body)) return [];
+function parseExplorerLogPage(body: unknown): ExplorerLogPage {
+  if (!body || typeof body !== "object" || Array.isArray(body)) {
+    throw new Error("explorer returned an unrecognized event response");
+  }
   const record = body as Record<string, unknown>;
-  const rows = Array.isArray(record.result) ? record.result : record.items;
-  if (!Array.isArray(rows)) return [];
-  return rows
+  const rows = Array.isArray(record.result)
+    ? record.result
+    : Array.isArray(record.items)
+      ? record.items
+      : typeof record.result === "string" && /no (records|transactions|logs)/i.test(record.result)
+        ? []
+        : null;
+  if (!rows) throw new Error("explorer returned an unrecognized event response");
+  const logs = rows
     .map((value): ExplorerLog | null => {
       if (!value || typeof value !== "object" || Array.isArray(value)) return null;
       const row = value as Record<string, unknown>;
@@ -593,6 +711,97 @@ function parseExplorerLogs(body: unknown): ExplorerLog[] {
     })
     .filter((log): log is ExplorerLog => log !== null)
     .slice(0, EVENT_LIMIT);
+  return {
+    logs,
+    truncated: hasNextPage(body) || rows.length >= EVENT_LIMIT,
+  };
+}
+
+function eventCoverage({
+  scope,
+  provider,
+  creationBlockNumber,
+  logs,
+  truncated,
+}: {
+  scope: "transfer-events" | "ownership-events";
+  provider: "explorer" | "blockscout-v2" | "rpc";
+  creationBlockNumber: number | null;
+  logs: Array<{ blockNumber: number | null }>;
+  truncated: boolean;
+}): TokenContractEvidenceCoverage {
+  const blocks = logs
+    .map((log) => log.blockNumber)
+    .filter((block): block is number => block !== null);
+  return {
+    complete: !truncated,
+    truncated,
+    coveredRanges: [
+      {
+        scope,
+        provider,
+        fromBlock:
+          creationBlockNumber ?? (blocks.length > 0 ? Math.min(...blocks) : null),
+        toBlock: null,
+        resultCount: logs.length,
+      },
+    ],
+    gaps: truncated
+      ? [
+          `${scope === "transfer-events" ? "Transfer" : "Ownership"} event results reached the ${EVENT_LIMIT}-event boundary; additional events may be outside this result.`,
+        ]
+      : [],
+  };
+}
+
+function normalizeRpcLogResult(
+  value: TokenContractRpcLog[] | TokenContractRpcLogResult,
+  scope: "transfer-events" | "ownership-events",
+  creationBlockNumber: number | null,
+): TokenContractRpcLogResult {
+  if (!Array.isArray(value)) return value;
+  return {
+    logs: value,
+    coverage: eventCoverage({
+      scope,
+      provider: "rpc",
+      creationBlockNumber,
+      logs: value,
+      truncated: value.length >= EVENT_LIMIT,
+    }),
+  };
+}
+
+function mergeEquivalentCoverage(
+  coverages: TokenContractEvidenceCoverage[],
+): TokenContractEvidenceCoverage {
+  const complete = coverages.some((coverage) => coverage.complete);
+  return {
+    complete,
+    truncated:
+      !complete && coverages.some((coverage) => coverage.truncated),
+    coveredRanges: coverages.flatMap((coverage) => coverage.coveredRanges),
+    gaps: complete
+      ? []
+      : Array.from(
+          new Set(coverages.flatMap((coverage) => coverage.gaps)),
+        ),
+  };
+}
+
+function unavailableEventCoverage(
+  scope: "transfer-events" | "ownership-events",
+  gap: string,
+): EventTopicLookup {
+  return {
+    logs: [],
+    coverage: {
+      complete: false,
+      truncated: false,
+      coveredRanges: [],
+      gaps: [`${scope === "transfer-events" ? "Transfer" : "Ownership"}: ${gap}`],
+    },
+  };
 }
 
 function indexedAddress(topic: `0x${string}` | undefined): Address | null {
@@ -647,6 +856,11 @@ function normalizeTransaction(value: unknown): ExplorerTransaction | null {
   const hash = txHash(row.hash ?? row.transaction_hash);
   if (!hash) return null;
   const input = hexInput(row.raw_input ?? row.input);
+  const hasToField = Object.prototype.hasOwnProperty.call(row, "to");
+  const to = nestedAddress(row.to);
+  const createdContract = nestedAddress(
+    row.created_contract ?? row.contractAddress ?? row.contract_address,
+  );
   return {
     hash,
     blockNumber: integer(row.block_number ?? row.blockNumber ?? row.block),
@@ -654,7 +868,14 @@ function normalizeTransaction(value: unknown): ExplorerTransaction | null {
     from: nestedAddress(row.from),
     input,
     success: successValue(row),
+    isContractCreation: Boolean(createdContract) || (hasToField && !to),
   };
+}
+
+function hasNextPage(body: unknown): boolean {
+  if (!body || typeof body !== "object" || Array.isArray(body)) return false;
+  const next = (body as Record<string, unknown>).next_page_params;
+  return Boolean(next && typeof next === "object" && !Array.isArray(next));
 }
 
 function successValue(row: Record<string, unknown>): boolean | null {

@@ -98,6 +98,7 @@ import {
   type TokenContractHistoryResult,
   type TokenContractLiveEvidenceChain,
   type TokenContractRpcLog,
+  type TokenContractRpcLogResult,
 } from "@/lib/token-contract-live-evidence";
 import { getDexScreenerChainSlugForTokenLogos } from "@/lib/token-logos";
 import {
@@ -116,15 +117,26 @@ import {
   type ResolveRuntimeSelectorsResult,
 } from "@/lib/token-contract-deep-evidence";
 import {
+  matchReviewedBytecodeTemplate,
+  type BytecodeTemplateMatchResult,
+} from "@/lib/token-contract-bytecode-templates";
+import {
   collectTokenLpEvidence,
   type TokenLpEvidenceLog,
   type TokenLpEvidenceLogPage,
   type TokenLpEvidenceResult,
   type TokenLpEventName,
 } from "@/lib/token-contract-lp-evidence";
+import {
+  tokenContractDexDeploymentForFactory,
+  tokenContractDexDeploymentsForChain,
+} from "@/lib/token-contract-dex-registry";
+import { runTokenContractRouterSimulations } from "@/lib/token-contract-router-simulation";
 
 const TOKEN_REPORT_READ_TIMEOUT_MS = 8_000;
 const TOKEN_REPORT_SOURCE_TIMEOUT_MS = 8_000;
+const TOKEN_REPORT_SOURCE_RESPONSE_MAX_BYTES = 1_048_576;
+const SOURCIFY_V2_BASE_URL = "https://sourcify.dev/server/v2";
 const TOKEN_REPORT_CREATION_TIMEOUT_MS = 8_000;
 const TOKEN_REPORT_DEEPSEEK_TIMEOUT_MS = 60_000;
 const TOKEN_REPORT_DEFAULT_DEEPSEEK_BASE_URL = "https://api.deepseek.com";
@@ -136,21 +148,14 @@ const TOKEN_REPORT_DEEPSEEK_REPAIR_TIMEOUT_MS = 60_000;
 const TOKEN_REPORT_BYTECODE_MAX_BYTES = 512 * 1_024;
 const TOKEN_REPORT_SCANNER_VERSION = "token-contract-report-v2";
 const TOKEN_REPORT_DEEP_AUDIT_PROMPT_VERSION = "source-cited-evidence-v4";
-const PULSEX_WPLS_ADDRESS = getAddress(
-  "0xA1077a294dDE1B09bB078844df40758a5D0f9a27",
+const PULSEX_DEPLOYMENTS = tokenContractDexDeploymentsForChain(
+  PULSECHAIN_CHAIN_ID,
 );
-// PulseX mainnet factory constants from the official PulseX application bundle:
-// https://gitlab.com/pulsechaincom/pulsex-server
-const PULSEX_FACTORIES = [
-  {
-    version: "v1",
-    address: getAddress("0x1715a3E4A142d8b698131108995174F37aEBA10D"),
-  },
-  {
-    version: "v2",
-    address: getAddress("0x29eA7545DEf87022BAdc76323F373EA1e707C523"),
-  },
-] as const;
+const PULSEX_WPLS_ADDRESS: Address = PULSEX_DEPLOYMENTS[0]!.wrappedNative;
+const PULSEX_FACTORIES = PULSEX_DEPLOYMENTS.map((deployment) => ({
+  version: deployment.version,
+  address: deployment.factory,
+}));
 
 const erc165Abi = parseAbi([
   "function supportsInterface(bytes4 interfaceId) view returns (bool)",
@@ -337,7 +342,10 @@ const SELECTOR_WATCHLIST = {
 type ExplorerApiKind = "etherscan-v2" | "blockscout-compatible";
 
 interface TokenContractReportReadClient {
-  getBytecode(args: { address: Address }): Promise<`0x${string}` | undefined>;
+  getBytecode(args: {
+    address: Address;
+    blockNumber?: bigint;
+  }): Promise<`0x${string}` | undefined>;
   readContract(args: {
     address: Address;
     abi: Abi;
@@ -346,10 +354,15 @@ interface TokenContractReportReadClient {
     blockNumber?: bigint;
   }): Promise<unknown>;
   getBlockNumber?(): Promise<bigint>;
+  getBalance?(args: {
+    address: Address;
+    blockNumber?: bigint;
+  }): Promise<bigint>;
   call?(args: {
     account?: Address;
     to: Address;
     data: Hex;
+    value?: bigint;
     blockNumber?: bigint;
   }): Promise<unknown>;
   getStorageAt?(args: {
@@ -387,6 +400,12 @@ interface ResolvedTokenReportChain {
 
 interface SourceMetadata {
   verified: "verified" | "unverified" | "unknown";
+  verificationProvider:
+    | "explorer"
+    | "sourcify"
+    | "explorer+sourcify"
+    | null;
+  verificationMatch: "exact-match" | "match" | null;
   contractName: string | null;
   isProxy: boolean | null;
   implementationAddress: Address | null;
@@ -471,6 +490,18 @@ interface BlockscoutTransactionResponse {
   block?: unknown;
   block_number?: unknown;
   timestamp?: unknown;
+}
+
+interface SourcifyContractResponse {
+  match?: unknown;
+  creationMatch?: unknown;
+  runtimeMatch?: unknown;
+  abi?: unknown;
+  sources?: unknown;
+  compilation?: unknown;
+  metadata?: unknown;
+  creationBytecode?: unknown;
+  proxyResolution?: unknown;
 }
 
 interface ProbeResult<T> {
@@ -654,6 +685,8 @@ export async function buildTokenContractReport({
     hasBytecode,
     source: {
       verified: source.verified,
+      verificationProvider: source.verificationProvider,
+      verificationMatch: source.verificationMatch,
       contractName: source.contractName,
       isProxy: source.isProxy,
       implementationAddress: source.implementationAddress,
@@ -665,6 +698,8 @@ export async function buildTokenContractReport({
           ? {
               address: source.implementationAddress,
               verified: implementationSource.verified,
+              verificationProvider: implementationSource.verificationProvider,
+              verificationMatch: implementationSource.verificationMatch,
               contractName: implementationSource.contractName,
               compilerVersion: implementationSource.compilerVersion,
               abiFunctionCount: implementationSource.abiFunctionCount,
@@ -885,6 +920,7 @@ export async function buildTokenContractReport({
   const selectorResolution = await resolveRuntimeSelectors({
     runtimeBytecode: executableRuntimeBytecode,
     abi: analysisSource.abi,
+    signal,
     maxFourByteLookups: deepModulesEnabled ? 12 : 0,
     ...(deepModulesEnabled
       ? {
@@ -900,6 +936,11 @@ export async function buildTokenContractReport({
   });
   baseReport.selectors = selectorResolutionToV2(selectorResolution);
   baseReport.findings.push(...bytecodeEvidenceFindings(selectorResolution));
+  const templateMatch = runtimeBytecode
+    ? matchReviewedBytecodeTemplate(runtimeBytecode)
+    : null;
+  const templateFinding = bytecodeTemplateFinding(templateMatch);
+  if (templateFinding) baseReport.findings.push(templateFinding);
   if (baseReport.bytecode.creation.available) {
     baseReport.findings.push({
       id: "bytecode.creation.fingerprint",
@@ -963,7 +1004,7 @@ export async function buildTokenContractReport({
     evidenceCount: sourceAnalysis?.findings.length ?? 0,
     summary:
       analysisSource.verified === "verified"
-        ? "Explorer-verified source and ABI metadata were collected."
+        ? `${sourceVerificationProviderLabel(analysisSource)} verified source and ABI metadata were collected.`
         : "Verified source was not available; bytecode evidence remains in use.",
     warnings: [
       ...analysisSource.warnings,
@@ -983,8 +1024,9 @@ export async function buildTokenContractReport({
       baseReport.selectors.length +
       selectorResolution.bytecode.sensitiveOpcodes.length +
       proxyStorage.setCount +
+      (templateMatch?.status === "matched" ? 1 : 0) +
       (baseReport.bytecode.creation.available ? 1 : 0),
-    summary: `Analyzed ${selectorResolution.bytecode.analyzedByteLength} runtime bytes and ${baseReport.bytecode.creation.byteLength} creation bytes, ${baseReport.selectors.length} selectors, and ${selectorResolution.bytecode.sensitiveOpcodes.length} sensitive opcode categories.`,
+    summary: `Analyzed ${selectorResolution.bytecode.analyzedByteLength} runtime bytes and ${baseReport.bytecode.creation.byteLength} creation bytes, ${selectorResolution.bytecode.controlFlow.blocks.length} bounded basic blocks, ${selectorResolution.bytecode.controlFlow.dispatcherSelectors.length} validated dispatcher selectors, and ${selectorResolution.bytecode.sensitiveOpcodes.length} sensitive opcode categories.`,
     warnings: [
       ...selectorResolution.warnings,
       ...(proxyStorage.warning ? [proxyStorage.warning] : []),
@@ -1044,11 +1086,23 @@ export async function buildTokenContractReport({
       history,
       events.ownershipTransfers,
     );
+    const historyCoverage = {
+      complete: history.coverage.complete && events.coverage.complete,
+      truncated: history.coverage.truncated || events.coverage.truncated,
+      coveredRanges: [
+        ...history.coverage.coveredRanges,
+        ...events.coverage.coveredRanges,
+      ],
+      gaps: Array.from(
+        new Set([...history.coverage.gaps, ...events.coverage.gaps]),
+      ),
+    };
     baseReport.history = {
       inspectedTransactions: history.inspectedTransactions,
       decodedCalls: historyWithOwnership.decodedCalls,
       ownershipTransfers: events.ownershipTransfers,
       postOwnershipZeroActivity: historyWithOwnership.postOwnershipZeroActivity,
+      coverage: historyCoverage,
       limitations: [...history.limitations, ...events.limitations],
     };
     baseReport.liquidity = {
@@ -1060,9 +1114,10 @@ export async function buildTokenContractReport({
       ...history.module,
       status:
         history.module.status === "unavailable" &&
-        events.ownershipTransfers.length === 0
+        events.coverage.coveredRanges.length === 0
           ? "unavailable"
-          : events.limitations.length > 0 ||
+          : !historyCoverage.complete ||
+              events.limitations.length > 0 ||
               history.module.status !== "complete"
             ? "partial"
             : "complete",
@@ -1173,6 +1228,12 @@ export async function buildTokenContractReport({
       holderLimitations: holders.limitations,
       controlFunctions: selectorResolution.abi.functions,
       candidateSelectors: baseReport.selectors,
+      maxAttempts:
+        chain.chainId === PULSECHAIN_CHAIN_ID &&
+        readClient.call &&
+        readClient.getBalance
+          ? 8
+          : 12,
     });
     if (baseReport.liquidity.pairs.length > 1 && simulationPair) {
       const limitation = `LP state/history was inspected for up to three retained pairs, but bounded transfer simulations used one selected pair (${simulationPair}) chosen by indexed liquidity and version preference.`;
@@ -1209,9 +1270,12 @@ export async function buildTokenContractReport({
       client: readClient,
       tokenAddress: normalizedAddress,
       deployerAddress: creation.deployerAddress,
+      controllerAddresses: baseReport.controls.effectiveControllerAddresses,
       capturedBlock: simulation.summary.blockNumber,
       creationBlock: creation.blockNumber,
       pairs: baseReport.liquidity.pairs,
+      liveChain,
+      fetcher,
       signal,
     });
     baseReport.liquidity.pairEvidence = pairEvidence.results;
@@ -1289,6 +1353,88 @@ export async function buildTokenContractReport({
         summary: `${baseReport.modules.liquidity.summary} Inspected bounded pair state and LP mint/burn history for ${pairEvidence.results.length} of ${baseReport.liquidity.pairs.length} discovered pair${baseReport.liquidity.pairs.length === 1 ? "" : "s"}.`,
         warnings: baseReport.liquidity.limitations,
       };
+    }
+    if (
+      simulation.summary.blockNumber !== null &&
+      readClient.call &&
+      readClient.getBalance
+    ) {
+      const routerSimulation = await runTokenContractRouterSimulations({
+        chainId: chain.chainId,
+        tokenAddress: normalizedAddress,
+        holder: simulationHolderEvidence?.address ?? null,
+        holderBalance: simulationHolderEvidence?.balance ?? null,
+        capturedBlock: BigInt(simulation.summary.blockNumber),
+        pairs: baseReport.liquidity.pairs.map((pair) => ({
+          pair,
+          factory:
+            pairEvidence.results.find(
+              (item) =>
+                item.snapshot.pairAddress.toLowerCase() ===
+                pair.pairAddress.toLowerCase(),
+            )?.snapshot.factory ?? null,
+        })),
+        dependencies: {
+          getBytecode: (args) =>
+            withTimeout(
+              readClient.getBytecode({
+                address: args.address,
+                blockNumber: args.blockNumber,
+              }),
+              TOKEN_REPORT_READ_TIMEOUT_MS,
+              "Router bytecode validation timed out",
+            ),
+          readContract: (args) =>
+            withTimeout(
+              readClient.readContract(args),
+              TOKEN_REPORT_READ_TIMEOUT_MS,
+              `${args.functionName}() router prerequisite timed out`,
+            ),
+          getBalance: (args) =>
+            withTimeout(
+              readClient.getBalance!({
+                address: args.address,
+                blockNumber: args.blockNumber,
+              }),
+              TOKEN_REPORT_READ_TIMEOUT_MS,
+              "Router caller balance lookup timed out",
+            ),
+          call: (args) =>
+            withTimeout(
+              readClient.call!(args),
+              TOKEN_REPORT_READ_TIMEOUT_MS,
+              "Router-level read-only swap simulation timed out",
+            ),
+        },
+      });
+      baseReport.simulation.attempts = [
+        ...baseReport.simulation.attempts,
+        ...routerSimulation.attempts,
+      ].slice(0, 12);
+      baseReport.simulation.limitations = Array.from(
+        new Set([
+          ...baseReport.simulation.limitations,
+          ...routerSimulation.limitations,
+        ]),
+      );
+      baseReport.modules.simulation = {
+        ...baseReport.modules.simulation,
+        status:
+          routerSimulation.attempts.length > 0
+            ? "partial"
+            : baseReport.modules.simulation.status,
+        evidenceCount: baseReport.simulation.attempts.length,
+        summary:
+          routerSimulation.attempts.length > 0
+            ? `${baseReport.modules.simulation.summary} Added ${routerSimulation.attempts.length} validated PulseX V1/V2 router prerequisite or swap-path probe${routerSimulation.attempts.length === 1 ? "" : "s"}.`
+            : baseReport.modules.simulation.summary,
+        warnings: baseReport.simulation.limitations,
+      };
+    } else if (baseReport.liquidity.pairs.length > 0) {
+      const limitation =
+        "Router-level swap probes were unavailable because the configured RPC reader did not expose a captured block, eth_call, or native-balance reads.";
+      baseReport.simulation.limitations.push(limitation);
+      baseReport.modules.simulation.warnings.push(limitation);
     }
     baseReport.findings.push(
       ...liquidityEvidenceFindings(baseReport, pairEvidence.results),
@@ -1778,6 +1924,46 @@ async function fetchSourceMetadata({
   signal?: AbortSignal;
   blockscoutAddressLookup?: Promise<BlockscoutAddressLookup> | null;
 }): Promise<SourceMetadata> {
+  const explorer = await fetchExplorerSourceMetadata({
+    contractAddress,
+    chain,
+    fetcher,
+    signal,
+    blockscoutAddressLookup,
+  });
+  if (hasCompleteVerifiedSource(explorer) || signal?.aborted) return explorer;
+
+  const sourcify = await fetchSourcifySourceMetadata({
+    contractAddress,
+    chain,
+    fetcher,
+    signal,
+  });
+  if (sourcify.verified !== "verified") {
+    return {
+      ...explorer,
+      warnings: Array.from(
+        new Set([...explorer.warnings, ...sourcify.warnings]),
+      ),
+    };
+  }
+  if (explorer.verified !== "verified") return sourcify;
+  return mergeExplorerAndSourcifySource(explorer, sourcify);
+}
+
+async function fetchExplorerSourceMetadata({
+  contractAddress,
+  chain,
+  fetcher,
+  signal,
+  blockscoutAddressLookup,
+}: {
+  contractAddress: Address;
+  chain: ResolvedTokenReportChain;
+  fetcher: typeof fetch;
+  signal?: AbortSignal;
+  blockscoutAddressLookup?: Promise<BlockscoutAddressLookup> | null;
+}): Promise<SourceMetadata> {
   if (
     chain.apiKind === "etherscan-v2" &&
     chain.apiKeyRequired &&
@@ -1858,6 +2044,8 @@ async function fetchSourceMetadata({
 
     return {
       verified,
+      verificationProvider: "explorer",
+      verificationMatch: null,
       contractName: cleanEnv(row.ContractName)?.slice(0, 80) ?? null,
       isProxy:
         cleanEnv(row.Proxy) === "1"
@@ -1897,6 +2085,211 @@ async function fetchSourceMetadata({
       ],
     };
   }
+}
+
+function hasCompleteVerifiedSource(source: SourceMetadata): boolean {
+  return (
+    source.verified === "verified" &&
+    source.sourceFiles.length > 0 &&
+    source.abiFunctionCount !== null
+  );
+}
+
+function mergeExplorerAndSourcifySource(
+  explorer: SourceMetadata,
+  sourcify: SourceMetadata,
+): SourceMetadata {
+  const useSourcifyAbi = explorer.abiFunctionCount === null;
+  const useSourcifySources = explorer.sourceFiles.length === 0;
+  return {
+    ...explorer,
+    verificationProvider: "explorer+sourcify",
+    verificationMatch: sourcify.verificationMatch,
+    contractName: explorer.contractName ?? sourcify.contractName,
+    isProxy: explorer.isProxy ?? sourcify.isProxy,
+    implementationAddress:
+      explorer.implementationAddress ?? sourcify.implementationAddress,
+    abiFunctionNames: useSourcifyAbi
+      ? sourcify.abiFunctionNames
+      : explorer.abiFunctionNames,
+    abi: useSourcifyAbi ? sourcify.abi : explorer.abi,
+    abiFunctionCount: useSourcifyAbi
+      ? sourcify.abiFunctionCount
+      : explorer.abiFunctionCount,
+    compilerVersion: explorer.compilerVersion ?? sourcify.compilerVersion,
+    creationBytecode: explorer.creationBytecode ?? sourcify.creationBytecode,
+    sourceFiles: useSourcifySources
+      ? sourcify.sourceFiles
+      : explorer.sourceFiles,
+    controlSurface: useSourcifyAbi
+      ? sourcify.controlSurface
+      : explorer.controlSurface,
+    warnings: Array.from(
+      new Set([...explorer.warnings, ...sourcify.warnings]),
+    ),
+  };
+}
+
+async function fetchSourcifySourceMetadata({
+  contractAddress,
+  chain,
+  fetcher,
+  signal,
+}: {
+  contractAddress: Address;
+  chain: ResolvedTokenReportChain;
+  fetcher: typeof fetch;
+  signal?: AbortSignal;
+}): Promise<SourceMetadata> {
+  const url = new URL(
+    `${SOURCIFY_V2_BASE_URL}/contract/${chain.chainId}/${contractAddress.toLowerCase()}`,
+  );
+  url.searchParams.set(
+    "fields",
+    "sources,abi,compilation,proxyResolution,creationBytecode",
+  );
+  try {
+    const response = await withTimeout(
+      fetcher(url, {
+        method: "GET",
+        cache: "no-store",
+        headers: { accept: "application/json" },
+        signal,
+      }),
+      TOKEN_REPORT_SOURCE_TIMEOUT_MS,
+      `${chain.name} Sourcify v2 source lookup timed out`,
+    );
+    if (response.status === 404) return emptySourceMetadata();
+    if (!response.ok) {
+      return {
+        ...emptySourceMetadata(),
+        warnings: [
+          `${chain.name} Sourcify v2 returned HTTP ${response.status} for verified-source lookup.`,
+        ],
+      };
+    }
+
+    const text = await withTimeout(
+      readBoundedResponseText(response, TOKEN_REPORT_SOURCE_RESPONSE_MAX_BYTES),
+      TOKEN_REPORT_SOURCE_TIMEOUT_MS,
+      `${chain.name} Sourcify v2 source response timed out`,
+    );
+    const body = JSON.parse(text) as SourcifyContractResponse;
+    const verificationMatch = sourcifyVerificationMatch(body);
+    if (!verificationMatch) return emptySourceMetadata();
+
+    const abiSummary = summarizeAbi(
+      Array.isArray(body.abi) ? JSON.stringify(body.abi) : undefined,
+    );
+    const sourceFiles = normalizeSourcifySourceFiles(body.sources);
+    const compilation = objectRecord(body.compilation);
+    const proxyResolution = objectRecord(body.proxyResolution);
+    const implementations = Array.isArray(proxyResolution?.implementations)
+      ? proxyResolution.implementations
+          .map((value) => objectRecord(value))
+          .filter((value): value is Record<string, unknown> => value !== null)
+      : [];
+    const implementationAddresses = Array.from(
+      new Set(
+        implementations
+          .map((value) => normalizedAddressFromUnknown(value.address))
+          .filter((value): value is Address => value !== null),
+      ),
+    );
+    const creationBytecode = objectRecord(body.creationBytecode);
+    const warnings: string[] = [];
+    if (verificationMatch === "match") {
+      warnings.push(
+        "Sourcify reports a verified functional match rather than an exact metadata match; behavior matches, while source paths, comments, names, or metadata may differ.",
+      );
+    }
+    if (implementationAddresses.length > 1) {
+      warnings.push(
+        `Sourcify identified ${implementationAddresses.length} proxy implementations; this report does not select one as the sole effective implementation.`,
+      );
+    }
+
+    return {
+      verified: "verified",
+      verificationProvider: "sourcify",
+      verificationMatch,
+      contractName: sourcifyContractName(body, compilation),
+      isProxy:
+        typeof proxyResolution?.isProxy === "boolean"
+          ? proxyResolution.isProxy
+          : implementationAddresses.length > 0
+            ? true
+            : null,
+      implementationAddress:
+        implementationAddresses.length === 1 ? implementationAddresses[0] : null,
+      abiFunctionNames: abiSummary.functionNames,
+      abi: abiSummary.abi,
+      abiFunctionCount: abiSummary.functionCount,
+      compilerVersion:
+        valueAsShortString(compilation?.compilerVersion)?.slice(0, 120) ?? null,
+      creationBytecode: boundedBytecode(creationBytecode?.onchainBytecode),
+      sourceFiles,
+      controlSurface: abiSummary.controlSurface,
+      warnings,
+    };
+  } catch (error) {
+    return {
+      ...emptySourceMetadata(),
+      warnings: [
+        `${chain.name} Sourcify v2 source metadata could not be read: ${redactSensitiveErrorText(
+          error instanceof Error ? error.message : String(error),
+        )}`,
+      ],
+    };
+  }
+}
+
+function sourcifyVerificationMatch(
+  body: SourcifyContractResponse,
+): SourceMetadata["verificationMatch"] {
+  const primary = valueAsShortString(body.match)?.toLowerCase();
+  if (primary === "exact_match") return "exact-match";
+  if (primary === "match") return "match";
+  const values = [body.runtimeMatch, body.creationMatch]
+    .map((value) => valueAsShortString(value)?.toLowerCase())
+    .filter((value): value is string => Boolean(value));
+  if (values.includes("exact_match")) return "exact-match";
+  return values.includes("match") ? "match" : null;
+}
+
+function normalizeSourcifySourceFiles(value: unknown): SoliditySourceFile[] {
+  const sources = objectRecord(value);
+  if (!sources) return [];
+  return normalizeSoliditySourceFiles(
+    Object.entries(sources).flatMap(([name, source]) => {
+      if (typeof source === "string") return [{ name, content: source }];
+      const record = objectRecord(source);
+      return typeof record?.content === "string"
+        ? [{ name, content: record.content }]
+        : [];
+    }),
+  );
+}
+
+function sourcifyContractName(
+  body: SourcifyContractResponse,
+  compilation: Record<string, unknown> | null,
+): string | null {
+  const compilationName = valueAsShortString(compilation?.name);
+  if (compilationName) return compilationName.slice(0, 80);
+  const metadata = objectRecord(body.metadata);
+  const settings = objectRecord(metadata?.settings);
+  const target = objectRecord(settings?.compilationTarget);
+  const targetName = target
+    ? Object.values(target).find((value) => typeof value === "string")
+    : null;
+  return typeof targetName === "string" ? targetName.slice(0, 80) : null;
+}
+
+function objectRecord(value: unknown): Record<string, unknown> | null {
+  return value && typeof value === "object" && !Array.isArray(value)
+    ? (value as Record<string, unknown>)
+    : null;
 }
 
 function buildSourceCodeUrl(
@@ -2105,6 +2498,8 @@ async function fetchBlockscoutSourceMetadata({
 
     return {
       verified,
+      verificationProvider: verified === "unknown" ? null : "explorer",
+      verificationMatch: null,
       contractName:
         typeof body.name === "string"
           ? (cleanEnv(body.name)?.slice(0, 80) ?? null)
@@ -3112,7 +3507,11 @@ function deepAuditFeatureReport(
             ? false
             : null,
       status: report.contract?.source.verified ?? "unknown",
-      provider: report.chain?.explorerName ?? null,
+      provider:
+        report.contract?.source.verificationProvider ??
+        report.chain?.explorerName ??
+        null,
+      verificationMatch: report.contract?.source.verificationMatch ?? null,
       contractName: report.contract?.source.contractName ?? null,
       compilerVersion: report.contract?.source.compilerVersion ?? null,
       abiFunctionCount: report.contract?.source.abiFunctionCount ?? null,
@@ -3707,6 +4106,12 @@ function bytecodeEvidenceFindings(
         : opcode.name === "ORIGIN" || opcode.name === "CALLCODE"
           ? "medium"
           : "low";
+    const reachablePaths = resolution.bytecode.controlFlow.selectorPaths.filter(
+      (path) =>
+        path.sensitiveOpcodes.some(
+          (pathOpcode) => pathOpcode.opcode === opcode.opcode,
+        ),
+    );
     findings.push({
       id: `bytecode.opcode.${opcode.name.toLowerCase()}`,
       category: opcode.name === "DELEGATECALL" ? "proxy" : "bytecode",
@@ -3714,9 +4119,11 @@ function bytecodeEvidenceFindings(
       severity,
       state: "review-clue",
       confidence: 55,
-      summary: `Runtime disassembly found ${opcode.count} ${opcode.name} opcode occurrence${opcode.count === 1 ? "" : "s"}.`,
+      summary: `Runtime disassembly found ${opcode.count} ${opcode.name} opcode occurrence${opcode.count === 1 ? "" : "s"}.${reachablePaths.length > 0 ? ` The opcode is statically reachable from ${reachablePaths.length} validated dispatcher path${reachablePaths.length === 1 ? "" : "s"}.` : " No callable dispatcher path was statically associated with it."}`,
       practicalEffect:
-        "Opcode presence identifies a behavior surface but does not prove reachability, authorization, or malicious intent.",
+        reachablePaths.length > 0
+          ? "Static reachability identifies a callable behavior surface but does not prove authorization, practical effect, or malicious intent. Dynamic jumps can leave additional paths unresolved."
+          : "Opcode presence identifies a behavior surface but does not prove reachability, authorization, or malicious intent.",
       recommendation:
         "Correlate the opcode with verified source, dispatcher slices, storage, and read-only simulations.",
       evidence: [
@@ -3724,6 +4131,38 @@ function bytecodeEvidenceFindings(
           id: `bytecode:${opcode.name.toLowerCase()}`,
           type: "bytecode",
           summary: `${opcode.name} at byte offsets ${opcode.locations.slice(0, 12).join(", ")}.`,
+        },
+        ...reachablePaths.slice(0, 8).map((path, index) => ({
+          id: `bytecode:${opcode.name.toLowerCase()}:path:${index + 1}`,
+          type: "bytecode" as const,
+          selector: path.selector,
+          summary: `${opcode.name} is statically reachable from selector ${path.selector}; path analysis is ${path.status}.`,
+        })),
+      ],
+    });
+  }
+  const clone = resolution.bytecode.controlFlow.clone;
+  if (clone.detected && clone.implementationAddress) {
+    findings.push({
+      id: "bytecode.proxy.eip1167",
+      category: "proxy",
+      title:
+        clone.state === "confirmed"
+          ? "Canonical EIP-1167 minimal proxy"
+          : "EIP-1167 minimal-proxy pattern clue",
+      severity: "info",
+      state: clone.state,
+      confidence: clone.state === "confirmed" ? 100 : 70,
+      summary: `${clone.pattern === "canonical-runtime" ? "The full runtime exactly matches" : "The runtime begins with"} the canonical EIP-1167 delegate-proxy pattern for implementation ${clone.implementationAddress}.`,
+      practicalEffect:
+        "The proxy runtime contains little application logic; effective behavior resides in the implementation and can also depend on proxy storage.",
+      recommendation:
+        "Analyze the implementation bytecode and source, then inspect proxy storage and initialization state before drawing behavioral conclusions.",
+      evidence: [
+        {
+          id: "bytecode:proxy:eip1167",
+          type: "bytecode",
+          summary: `${clone.note} Implementation ${clone.implementationAddress}; trailing data ${clone.trailingDataBytes} bytes.`,
         },
       ],
     });
@@ -3751,6 +4190,43 @@ function bytecodeEvidenceFindings(
     });
   }
   return findings;
+}
+
+function bytecodeTemplateFinding(
+  match: BytecodeTemplateMatchResult | null,
+): TokenContractReportResponse["findings"][number] | null {
+  if (match?.status !== "matched" || !match.template || !match.matchKind) {
+    return null;
+  }
+  const exactRuntime = match.matchKind === "exact-runtime";
+  const risky = match.template.assessment.classification === "risky";
+  const capabilities = match.template.assessment.capabilities;
+  return {
+    id: `bytecode.template.${match.template.id}`,
+    category: "bytecode",
+    title: risky
+      ? "Exact reviewed risky template match"
+      : exactRuntime
+        ? "Exact reviewed runtime template match"
+        : "Exact reviewed executable template match",
+    severity: risky ? match.template.assessment.severity : "info",
+    state: "confirmed",
+    confidence: exactRuntime ? 100 : 95,
+    summary: `${match.template.label} matched by ${exactRuntime ? "the full runtime hash" : "the metadata-stripped executable runtime hash"}. Reviewed classification: ${match.template.assessment.classification}.${capabilities.length > 0 ? ` Expected capabilities: ${capabilities.join(", ")}.` : ""}`,
+    practicalEffect:
+      risky
+        ? "The deployed executable code exactly matches a reviewed implementation classified with risky capabilities. Constructor state, current storage, ownership, liquidity, and proxy implementation state still require separate validation."
+        : "The deployed runtime bytes can be compared with the cited reviewed implementation. This identity evidence does not establish safe constructor state, current storage, ownership, liquidity, or proxy implementation state.",
+    recommendation:
+      "Review the cited source revision and continue validating live storage, controllers, liquidity, history, and simulations independently.",
+    evidence: [
+      {
+        id: `bytecode:template:${match.template.id}`,
+        type: "bytecode",
+        summary: `${match.template.source.repositoryUrl} commit ${match.template.source.commit}, ${match.template.source.sourcePath}; reviewed ${match.template.review.reviewedAt}. Classification ${match.template.assessment.classification}; capabilities ${capabilities.join(", ") || "none listed"}. Runtime hash ${match.runtimeHash}; executable hash ${match.runtimeHashWithoutMetadata}.`,
+      },
+    ],
+  };
 }
 
 async function readEip1967Storage(
@@ -4120,6 +4596,7 @@ async function runReadOnlyTransferSimulations({
   holderLimitations,
   controlFunctions,
   candidateSelectors,
+  maxAttempts = 12,
 }: {
   client: TokenContractReportReadClient;
   contractAddress: Address;
@@ -4132,6 +4609,7 @@ async function runReadOnlyTransferSimulations({
   holderLimitations: string[];
   controlFunctions: ResolveRuntimeSelectorsResult["abi"]["functions"];
   candidateSelectors: TokenContractReportResponse["selectors"];
+  maxAttempts?: number;
 }): Promise<{
   summary: TokenContractReportResponse["simulation"];
   module: TokenContractReportResponse["modules"]["simulation"];
@@ -4340,7 +4818,11 @@ async function runReadOnlyTransferSimulations({
     );
   }
 
-  const remainingAttemptBudget = Math.max(0, 12 - getterProbe.attempts.length);
+  const boundedAttemptLimit = Math.max(1, Math.min(12, maxAttempts));
+  const remainingAttemptBudget = Math.max(
+    0,
+    boundedAttemptLimit - getterProbe.attempts.length,
+  );
   const executableCases = cases.filter(
     (item): item is typeof item & { from: Address; data: Hex } =>
       item.from !== null && item.data !== null,
@@ -4409,7 +4891,10 @@ async function runReadOnlyTransferSimulations({
       ];
     }),
   );
-  const attempts = [...getterProbe.attempts, ...callAttempts].slice(0, 12);
+  const attempts = [...getterProbe.attempts, ...callAttempts].slice(
+    0,
+    boundedAttemptLimit,
+  );
 
   if (!ordinaryHolder) {
     limitations.push(
@@ -4924,11 +5409,10 @@ function pulseXPairPriority(
 function pulseXVersionForFactory(
   factoryAddress: Address | null,
 ): "v1" | "v2" | null {
-  if (!factoryAddress) return null;
-  const match = PULSEX_FACTORIES.find(
-    (factory) => factory.address.toLowerCase() === factoryAddress.toLowerCase(),
-  );
-  return match?.version ?? null;
+  return tokenContractDexDeploymentForFactory(
+    PULSECHAIN_CHAIN_ID,
+    factoryAddress,
+  )?.version ?? null;
 }
 
 function selectSimulationPair(
@@ -4958,17 +5442,23 @@ async function collectReportLiquidityEvidence({
   client,
   tokenAddress,
   deployerAddress,
+  controllerAddresses,
   capturedBlock,
   creationBlock,
   pairs,
+  liveChain,
+  fetcher,
   signal,
 }: {
   client: TokenContractReportReadClient;
   tokenAddress: Address;
   deployerAddress: Address | null;
+  controllerAddresses: readonly Address[];
   capturedBlock: number | null;
   creationBlock: number | null;
   pairs: TokenContractReportResponse["liquidity"]["pairs"];
+  liveChain: TokenContractLiveEvidenceChain;
+  fetcher: typeof fetch;
   signal?: AbortSignal;
 }): Promise<{ results: TokenLpEvidenceResult[]; limitations: string[] }> {
   if (pairs.length === 0) return { results: [], limitations: [] };
@@ -4985,11 +5475,18 @@ async function collectReportLiquidityEvidence({
       ? creationBlock
       : Math.max(0, capturedBlock - 20_000);
   const settled = await Promise.allSettled(
-    pairs.slice(0, 3).map((pair) =>
-      collectTokenLpEvidence({
+    pairs.slice(0, 3).map(async (pair) => {
+      const holderResult = await fetchTokenHolders({
+        contractAddress: pair.pairAddress,
+        chain: liveChain,
+        fetcher,
+        signal,
+      });
+      return collectTokenLpEvidence({
         tokenAddress,
         pairAddress: pair.pairAddress,
         deployerAddress,
+        controllerAddresses,
         capturedBlock,
         fromBlock,
         historyLowerBoundKnown:
@@ -5002,6 +5499,7 @@ async function collectReportLiquidityEvidence({
                 address: args.address,
                 abi: args.abi,
                 functionName: args.functionName,
+                args: args.args,
                 blockNumber: args.blockNumber,
               }),
               TOKEN_REPORT_READ_TIMEOUT_MS,
@@ -5012,9 +5510,29 @@ async function collectReportLiquidityEvidence({
               ...args,
               signal,
             }),
+          getHolderCandidates: async () => ({
+            holders: holderResult.holders.map((address) => ({
+              address,
+              source: "explorer" as const,
+            })),
+            complete: holderResult.limitations.length === 0,
+            limitation:
+              holderResult.limitations.length > 0
+                ? holderResult.limitations.join(" ")
+                : null,
+          }),
+          getBytecode: (args) =>
+            withTimeout(
+              client.getBytecode({
+                address: args.address,
+                blockNumber: args.blockNumber,
+              }),
+              TOKEN_REPORT_READ_TIMEOUT_MS,
+              "LP holder bytecode read timed out",
+            ),
         },
-      }),
-    ),
+      });
+    }),
   );
   const results: TokenLpEvidenceResult[] = [];
   const limitations: string[] = [];
@@ -5087,22 +5605,24 @@ async function fetchBoundedLiquidityLogs(
       ),
     ),
   );
-  const pages = settledPages
-    .filter(
-      (page): page is PromiseFulfilledResult<unknown> =>
-        page.status === "fulfilled",
-    )
-    .map((page) => page.value);
+  const pages = settledPages.flatMap((page) =>
+    page.status === "fulfilled" && Array.isArray(page.value)
+      ? [page.value]
+      : [],
+  );
   if (pages.length === 0) {
     const failure = settledPages.find(
       (page): page is PromiseRejectedResult => page.status === "rejected",
     );
-    throw failure?.reason ?? new Error(`${eventName} LP event lookup failed.`);
+    throw (
+      failure?.reason ??
+      new Error(`${eventName} LP event lookup returned a malformed response.`)
+    );
   }
   const partialWindowFailure = settledPages.some(
-    (page) => page.status === "rejected",
+    (page) => page.status === "rejected" || !Array.isArray(page.value),
   );
-  const rows = pages.flatMap((page) => (Array.isArray(page) ? page : []));
+  const rows = pages.flat();
   const logs = rows
     .map((value): TokenLpEvidenceLog | null => {
       if (!value || typeof value !== "object" || Array.isArray(value))
@@ -5131,6 +5651,7 @@ async function fetchBoundedLiquidityLogs(
       };
     })
     .filter((value): value is TokenLpEvidenceLog => value !== null);
+  const malformedRows = rows.length - logs.length;
   const deduped = Array.from(
     new Map(
       logs.map((log) => [
@@ -5141,14 +5662,28 @@ async function fetchBoundedLiquidityLogs(
   );
   return {
     logs: deduped.slice(0, limit),
-    truncated: skippedMiddle || partialWindowFailure || deduped.length > limit,
-    limitation: partialWindowFailure
-      ? `One bounded ${eventName} log window failed; successful window evidence was retained but the result is partial.`
-      : skippedMiddle
-        ? `The bounded RPC lookup inspected the first and latest 20,000-block windows; middle-range ${eventName} logs remain untested.`
-        : deduped.length > limit
+    truncated:
+      skippedMiddle ||
+      partialWindowFailure ||
+      malformedRows > 0 ||
+      deduped.length > limit,
+    limitation:
+      [
+        partialWindowFailure
+          ? `One bounded ${eventName} log window failed or returned a malformed response; successful window evidence was retained but the result is partial.`
+          : null,
+        skippedMiddle
+          ? `The bounded RPC lookup inspected the first and latest 20,000-block windows; middle-range ${eventName} logs remain untested.`
+          : null,
+        malformedRows > 0
+          ? `${malformedRows} malformed ${eventName} log${malformedRows === 1 ? " was" : "s were"} ignored; valid logs were retained.`
+          : null,
+        deduped.length > limit
           ? `${eventName} logs exceeded the ${limit}-record retention limit.`
           : null,
+      ]
+        .filter((value): value is string => value !== null)
+        .join(" ") || null,
   };
 }
 
@@ -5182,6 +5717,79 @@ function liquidityEvidenceFindings(
             id: `rpc:liquidity:identity:${suffix}`,
             type: "rpc",
             summary: `token0/token1/factory reads at block ${evidence.snapshot.capturedBlock}.`,
+            blockNumber: evidence.snapshot.capturedBlock,
+          },
+        ],
+      });
+    }
+    const custody = evidence.custody;
+    if (custody.controllerBps !== null && custody.controllerBps > 0) {
+      const controllers = custody.positions
+        .filter((position) => position.classification === "controller")
+        .map((position) => position.address);
+      findings.push({
+        id: `liquidity.custody.controller.${suffix}`,
+        category: "liquidity",
+        title: "Controller currently holds LP tokens",
+        severity: custody.controllerBps >= 5_000 ? "high" : "medium",
+        state: "confirmed",
+        confidence: custody.complete ? 96 : 86,
+        summary: `${controllers.join(", ")} held ${(custody.controllerBps / 100).toFixed(2)}% of sampled current LP totalSupply at captured block ${evidence.snapshot.capturedBlock}.`,
+        practicalEffect:
+          "LP tokens controlled by a deployer or effective controller can generally be used to remove the corresponding share of pooled assets unless another verified restriction applies.",
+        recommendation:
+          "Verify the current LP balances, any locker contract, and the controller's removal transactions before relying on liquidity permanence.",
+        evidence: controllers.slice(0, 8).map((address, index) => ({
+          id: `rpc:liquidity:custody:controller:${suffix}:${index + 1}`,
+          type: "rpc" as const,
+          summary: `LP balanceOf(${address}) at block ${evidence.snapshot.capturedBlock}.`,
+          blockNumber: evidence.snapshot.capturedBlock,
+        })),
+      });
+    }
+    if (custody.burnedBps !== null && custody.burnedBps > 0) {
+      findings.push({
+        id: `liquidity.custody.burned.${suffix}`,
+        category: "liquidity",
+        title: "LP tokens held at burn addresses",
+        severity: "info",
+        state: "confirmed",
+        confidence: custody.complete ? 97 : 88,
+        summary: `${(custody.burnedBps / 100).toFixed(2)}% of LP totalSupply was held at recognized zero/dead burn addresses in the current custody sample.`,
+        practicalEffect:
+          "LP tokens at the recognized burn addresses are not controlled by the deployer through an ordinary private key. This says nothing about the remaining LP supply.",
+        recommendation:
+          "Evaluate burned LP together with controller-held, locked, protocol-fee, and unsampled LP positions.",
+        evidence: [
+          {
+            id: `rpc:liquidity:custody:burned:${suffix}`,
+            type: "rpc",
+            summary: `Burn-address LP balances at block ${evidence.snapshot.capturedBlock}.`,
+            blockNumber: evidence.snapshot.capturedBlock,
+          },
+        ],
+      });
+    }
+    for (const position of custody.positions.filter(
+      (item) => item.classification === "contract",
+    )) {
+      findings.push({
+        id: `liquidity.custody.contract.${suffix}.${position.address.toLowerCase()}`,
+        category: "liquidity",
+        title: "LP held by an unidentified contract",
+        severity: "low",
+        state: "review-clue",
+        confidence: 92,
+        summary: `${position.address} held ${position.shareBps === null ? "an unresolved share of" : `${(position.shareBps / 100).toFixed(2)}% of`} LP totalSupply and had deployed bytecode at the captured block.`,
+        practicalEffect:
+          "Contract custody is not proof of a time lock. The contract may be a locker, multisig, protocol component, or another movable custody mechanism.",
+        recommendation:
+          "Identify and verify the holder contract, beneficiary, withdrawal authority, and unlock conditions before describing this LP as locked.",
+        evidence: [
+          {
+            id: `rpc:liquidity:custody:contract:${suffix}:${position.address.toLowerCase()}`,
+            type: "rpc",
+            summary: `LP balance and bytecode presence for ${position.address} at block ${evidence.snapshot.capturedBlock}.`,
             blockNumber: evidence.snapshot.capturedBlock,
           },
         ],
@@ -5304,6 +5912,41 @@ function liveEvidenceFindings(
           blockNumber: attempt.blockNumber ?? undefined,
         }),
       ),
+    });
+  }
+  for (const attempt of report.simulation.attempts.filter(
+    (item) =>
+      (item.kind === "router-buy" || item.kind === "router-sell") &&
+      (item.status === "succeeded" || item.status === "reverted"),
+  )) {
+    const succeeded = attempt.status === "succeeded";
+    const action = attempt.kind === "router-buy" ? "buy" : "sell";
+    findings.push({
+      id: `simulation.router.${action}.${attempt.routerVersion ?? "unknown"}`,
+      category: "trading",
+      title: succeeded
+        ? `Read-only router ${action} path completed`
+        : `Read-only router ${action} path reverted`,
+      severity: succeeded ? "info" : "medium",
+      state: succeeded ? "confirmed" : "review-clue",
+      confidence: succeeded ? 94 : 72,
+      summary: `${attempt.label}: ${attempt.detail}`,
+      practicalEffect: succeeded
+        ? `The ${action} call path completed for this caller, amount, route, router, and captured block. It did not create a persistent trade or prove future execution.`
+        : `The tested ${action} path could not complete under its captured-block assumptions. A revert alone does not prove a honeypot or identify whether the token, pool, amount, or router caused failure.`,
+      recommendation: succeeded
+        ? "Treat this as narrow observed execution evidence and still review fees, slippage, liquidity, and future state changes."
+        : "Inspect the revert path and repeat with a forked round trip before drawing a sellability conclusion.",
+      evidence: [
+        {
+          id: `simulation:router:${action}:${attempt.routerVersion ?? "unknown"}`,
+          type: "simulation",
+          summary: `${attempt.functionSignature} through ${attempt.routerAddress ?? attempt.to}: ${attempt.status}.`,
+          ...(attempt.blockNumber === null
+            ? {}
+            : { blockNumber: attempt.blockNumber }),
+        },
+      ],
     });
   }
   if (report.history.postOwnershipZeroActivity === true) {
@@ -5701,6 +6344,12 @@ function buildCriticalChecks(
           implementationSourceStatus === "unverified"
         ? "unverified"
         : "unknown";
+  const riskyTemplateFinding = report.findings.find(
+    (finding) =>
+      finding.id.startsWith("bytecode.template.") &&
+      finding.state === "confirmed" &&
+      finding.severity !== "info",
+  );
 
   return [
     criticalCheck(
@@ -5784,13 +6433,33 @@ function buildCriticalChecks(
     ),
     criticalCheck(
       "Can normal users sell after buying?",
-      "not_collected",
       report.simulation.attempts.some(
         (attempt) =>
-          attempt.id === "holder-to-pair" && attempt.status === "succeeded",
+          attempt.kind === "router-buy" || attempt.kind === "router-sell",
       )
-        ? "A distinct sampled holder completed a direct token transfer-to-pair eth_call. That is useful transfer-path evidence, but it did not execute a router swap or prove buy-then-sell behavior."
-        : "A conclusive router-level buy-then-sell simulation was not available.",
+        ? "needs_review"
+        : "not_collected",
+      report.simulation.attempts.some(
+        (attempt) =>
+          attempt.kind === "router-buy" && attempt.status === "succeeded",
+      ) &&
+      report.simulation.attempts.some(
+        (attempt) =>
+          attempt.kind === "router-sell" && attempt.status === "succeeded",
+      )
+        ? "Independent router buy and existing-holder sell eth_calls completed at the captured block. Because eth_call does not persist the bought balance or approval into the separate sell call, a same-wallet buy-then-sell round trip remains unresolved."
+        : report.simulation.attempts.some(
+              (attempt) =>
+                attempt.kind === "router-buy" || attempt.kind === "router-sell",
+            )
+          ? "Router-level buy/sell prerequisites and available call paths were tested, but no conclusive same-wallet buy-approve-sell round trip was completed."
+          : report.simulation.attempts.some(
+                (attempt) =>
+                  attempt.id === "holder-to-pair" &&
+                  attempt.status === "succeeded",
+              )
+            ? "A distinct sampled holder completed a direct token transfer-to-pair eth_call. That is useful transfer-path evidence, but it did not execute a router swap or prove buy-then-sell behavior."
+            : "A conclusive router-level buy-then-sell simulation was not available.",
       "unresolved",
     ),
     criticalCheck(
@@ -5905,12 +6574,23 @@ function buildCriticalChecks(
     ),
     criticalCheck(
       "Is LP locked or removable?",
-      confirmedFindingPrefix("history.liquidity.deployer-lp-removed")
-        ? "needs_review"
-        : "not_collected",
-      confirmedFindingPrefix("history.liquidity.deployer-lp-removed")
-        ? "Bounded history confirms that some LP minted to the deployer was later consumed in removal burns. Current LP custody, locks, and remaining remover access still require review."
-        : "LP ownership, locks, burns, and remover paths remain unresolved.",
+      confirmedFindingPrefix("liquidity.custody.controller") ||
+        confirmedFindingPrefix("history.liquidity.deployer-lp-removed")
+        ? "confirmed"
+        : report.liquidity.pairEvidence.some(
+              (evidence) => evidence.custody.positions.length > 0,
+            )
+          ? "needs_review"
+          : "not_collected",
+      confirmedFindingPrefix("liquidity.custody.controller")
+        ? "Captured-block LP balance reads confirm that a deployer or effective controller currently holds LP tokens and therefore retains a directly observable removable position."
+        : confirmedFindingPrefix("history.liquidity.deployer-lp-removed")
+          ? "Bounded history confirms that LP minted to the deployer was later consumed in removal burns. Current custody is reported separately."
+          : report.liquidity.pairEvidence.some(
+                (evidence) => evidence.custody.positions.length > 0,
+              )
+            ? "Current LP holders were sampled, but burned, locked, protocol, controller, and unsampled positions do not yet resolve overall removability."
+            : "LP ownership, locks, burns, and remover paths remain unresolved.",
     ),
     criticalCheck(
       "Does the contract have a removeLiquidity wrapper?",
@@ -5962,14 +6642,16 @@ function buildCriticalChecks(
           ? "not_detected"
           : "unknown",
       report.contract?.source.isProxy
-        ? `Explorer source verification is ${sourceStatus} for the proxy and ${implementationSourceStatus ?? "unknown"} for the implementation.`
-        : `Explorer source verification status is ${sourceStatus}.`,
+        ? `Verified-source status is ${sourceStatus} for the proxy and ${implementationSourceStatus ?? "unknown"} for the implementation.`
+        : `Verified-source status is ${sourceStatus}.`,
       fullSourceStatus === "verified" ? "protective" : "unresolved",
     ),
     criticalCheck(
       "Does bytecode match a known risky template?",
-      "not_collected",
-      "Known risky-template fingerprint matching was not resolved.",
+      riskyTemplateFinding ? "confirmed" : "unknown",
+      riskyTemplateFinding
+        ? `Exact reviewed bytecode-template identity matched: ${riskyTemplateFinding.title}. ${riskyTemplateFinding.summary}`
+        : "No exact reviewed risky-template match was established. The reviewed registry is bounded, so absence of a match is not evidence of safety.",
     ),
   ];
 }
@@ -6065,8 +6747,11 @@ function buildCoverageExplanation(
   const blockers: string[] = [];
   if (report.contract?.source.verified !== "verified") {
     blockers.push("verified source was unavailable");
+  } else if (report.modules.source.status !== "complete") {
+    blockers.push("verified source analysis was partial");
   }
   if (
+    !report.history.coverage.complete ||
     report.history.limitations.some((item) =>
       /event|history|explorer|timeout|timed out|unavailable/i.test(item),
     )
@@ -6079,7 +6764,11 @@ function buildCoverageExplanation(
   if (report.liquidity.pairs.length === 0) {
     blockers.push("no validated liquidity pair was available");
   }
-  if (report.simulation.attempts.length === 0) {
+  if (
+    !report.simulation.attempts.some((attempt) =>
+      ["succeeded", "returned-false", "reverted"].includes(attempt.status),
+    )
+  ) {
     blockers.push("no bounded read-only simulation case could run");
   }
   if (
@@ -6674,10 +7363,17 @@ function addSourceSignals(
   source: SourceMetadata,
   implementationSource: SourceMetadata | null,
 ) {
+  const provider = sourceVerificationProviderLabel(source);
+  const match =
+    source.verificationMatch === "exact-match"
+      ? " with an exact bytecode and metadata match"
+      : source.verificationMatch === "match"
+        ? " with a functional bytecode match rather than an exact metadata match"
+        : "";
   signals.push(
     signalItem({
       id: "source-status",
-      label: "Explorer source status",
+      label: "Verified source status",
       severity:
         source.verified === "verified"
           ? "info"
@@ -6686,10 +7382,10 @@ function addSourceSignals(
             : "low",
       evidence:
         source.verified === "verified"
-          ? `Explorer source metadata is verified${source.contractName ? ` for ${source.contractName}` : ""}.`
+          ? `${provider} source metadata is verified${source.contractName ? ` for ${source.contractName}` : ""}${match}.`
           : source.verified === "unverified"
-            ? "Explorer source metadata is not verified for this contract."
-            : "Explorer source metadata was not available from the configured source.",
+            ? "Explorer and Sourcify source metadata did not verify this contract."
+            : "Verified source metadata was not available from the configured sources.",
       status: source.verified === "unknown" ? "incomplete" : "complete",
     }),
   );
@@ -6701,8 +7397,8 @@ function addSourceSignals(
         label: "Proxy-like contract",
         severity: "medium",
         evidence: source.implementationAddress
-          ? `Explorer metadata reports a proxy with implementation ${source.implementationAddress}.`
-          : "Explorer metadata reports this contract as proxy-like.",
+          ? `Verification or storage metadata reports a proxy with implementation ${source.implementationAddress}.`
+          : "Verification metadata reports this contract as proxy-like.",
       }),
     );
   }
@@ -6716,7 +7412,7 @@ function addSourceSignals(
           implementationSource.verified === "verified" ? "info" : "medium",
         evidence:
           implementationSource.verified === "verified"
-            ? `The implementation at ${source.implementationAddress} has verified explorer metadata${implementationSource.contractName ? ` for ${implementationSource.contractName}` : ""}. Its bounded ABI control surface is included in this report.`
+            ? `The implementation at ${source.implementationAddress} has verified ${sourceVerificationProviderLabel(implementationSource).toLowerCase()} metadata${implementationSource.contractName ? ` for ${implementationSource.contractName}` : ""}. Its bounded ABI control surface is included in this report.`
             : `The implementation at ${source.implementationAddress} does not have confirmed verified source metadata.`,
         status:
           implementationSource.verified === "verified"
@@ -6725,6 +7421,14 @@ function addSourceSignals(
       }),
     );
   }
+}
+
+function sourceVerificationProviderLabel(source: SourceMetadata): string {
+  if (source.verificationProvider === "sourcify") return "Sourcify";
+  if (source.verificationProvider === "explorer+sourcify") {
+    return "Explorer and Sourcify";
+  }
+  return "Explorer";
 }
 
 function addOwnershipSignal(
@@ -7123,8 +7827,10 @@ async function fetchBoundedRpcLogs(
     topic0: `0x${string}`;
     creationBlockNumber: number | null;
   },
-): Promise<TokenContractRpcLog[]> {
-  if (!client.request || !client.getBlockNumber) return [];
+): Promise<TokenContractRpcLogResult> {
+  if (!client.request || !client.getBlockNumber) {
+    throw new Error("RPC event fallback is not available from this reader");
+  }
   const latestBigInt = await withTimeout(
     client.getBlockNumber(),
     TOKEN_REPORT_READ_TIMEOUT_MS,
@@ -7133,7 +7839,9 @@ async function fetchBoundedRpcLogs(
   const latest = Number(
     latestBigInt <= BigInt(Number.MAX_SAFE_INTEGER) ? latestBigInt : 0n,
   );
-  if (!Number.isSafeInteger(latest) || latest < 0) return [];
+  if (!Number.isSafeInteger(latest) || latest < 0) {
+    throw new Error("RPC event fallback returned an invalid latest block");
+  }
   const window = 20_000;
   const start =
     creationBlockNumber !== null && creationBlockNumber <= latest
@@ -7149,7 +7857,7 @@ async function fetchBoundedRpcLogs(
         (candidate) => candidate[0] === range[0] && candidate[1] === range[1],
       ),
   );
-  const rows = await Promise.all(
+  const results = await Promise.allSettled(
     ranges.map(([fromBlock, toBlock]) =>
       withTimeout(
         client.request!<unknown>({
@@ -7168,41 +7876,127 @@ async function fetchBoundedRpcLogs(
       ),
     ),
   );
-  const logs = rows.flatMap((value) => (Array.isArray(value) ? value : []));
-  const normalized = logs
-    .map((value): TokenContractRpcLog | null => {
-      if (!value || typeof value !== "object" || Array.isArray(value))
-        return null;
-      const row = value as Record<string, unknown>;
-      const transactionHash = normalizedTxHashFromUnknown(row.transactionHash);
-      const data =
-        typeof row.data === "string" && /^0x[0-9a-f]*$/i.test(row.data)
-          ? (row.data as `0x${string}`)
-          : null;
-      const topics = Array.isArray(row.topics)
-        ? row.topics.filter(
-            (item): item is `0x${string}` =>
-              typeof item === "string" && /^0x[0-9a-f]+$/i.test(item),
-          )
-        : [];
-      if (!transactionHash || !data || topics.length === 0) return null;
-      return {
-        transactionHash,
-        blockNumber: rpcQuantityToNumber(row.blockNumber),
-        logIndex: rpcQuantityToNumber(row.logIndex),
-        topics,
-        data,
-      };
-    })
-    .filter((value): value is TokenContractRpcLog => value !== null);
-  return Array.from(
+  const successfulRanges = results.flatMap((result, index) =>
+    result.status === "fulfilled" && Array.isArray(result.value)
+      ? [{ range: ranges[index], rows: result.value }]
+      : [],
+  );
+  if (successfulRanges.length === 0) {
+    const reasons = results
+      .filter((result): result is PromiseRejectedResult => result.status === "rejected")
+      .map((result) =>
+        redactSensitiveErrorText(
+          result.reason instanceof Error
+            ? result.reason.message
+            : String(result.reason),
+        ),
+      );
+    throw new Error(
+      reasons.length > 0
+        ? `RPC event ranges failed: ${reasons.join("; ")}`
+        : "RPC event ranges returned malformed responses",
+    );
+  }
+  const normalizedRanges = successfulRanges.map(({ range, rows }) => ({
+    range,
+    rows,
+    normalizedRows: rows
+      .map(normalizeTokenContractRpcLog)
+      .filter((value): value is TokenContractRpcLog => value !== null),
+  }));
+  const normalized = normalizedRanges.flatMap(({ normalizedRows }) =>
+    normalizedRows,
+  );
+  const malformedRows = normalizedRanges.reduce(
+    (count, range) => count + range.rows.length - range.normalizedRows.length,
+    0,
+  );
+  const deduplicated = Array.from(
     new Map(
       normalized.map((log) => [
         `${log.transactionHash}:${log.logIndex ?? -1}`,
         log,
       ]),
     ).values(),
-  ).slice(0, 50);
+  );
+  const truncated = deduplicated.length > 50;
+  const gaps: string[] = [];
+  for (let index = 0; index < results.length; index += 1) {
+    const result = results[index];
+    if (result.status === "fulfilled" && Array.isArray(result.value)) continue;
+    const [fromBlock, toBlock] = ranges[index];
+    gaps.push(`RPC event range ${fromBlock}-${toBlock} was not covered.`);
+  }
+  const ordered = successfulRanges
+    .map(({ range }) => range)
+    .sort((left, right) => left[0] - right[0]);
+  for (let index = 1; index < ordered.length; index += 1) {
+    if (ordered[index][0] > ordered[index - 1][1] + 1) {
+      gaps.push(
+        `RPC event history has a gap from block ${ordered[index - 1][1] + 1} through ${ordered[index][0] - 1}.`,
+      );
+    }
+  }
+  if (
+    creationBlockNumber === null ||
+    creationBlockNumber < 0 ||
+    creationBlockNumber > latest
+  ) {
+    gaps.push(
+      `The creation block was unavailable or invalid, so RPC event coverage begins at block ${start} rather than confirmed deployment.`,
+    );
+  }
+  if (truncated) {
+    gaps.push("RPC event results exceeded the 50-log retention boundary.");
+  }
+  if (malformedRows > 0) {
+    gaps.push(
+      `RPC event results contained ${malformedRows} malformed log${malformedRows === 1 ? "" : "s"}; valid logs were retained, and the malformed response was not counted as complete zero-event coverage.`,
+    );
+  }
+  const scope = topic0.toLowerCase() ===
+    "0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef"
+    ? "transfer-events"
+    : "ownership-events";
+  return {
+    logs: deduplicated.slice(0, 50),
+    coverage: {
+      complete: gaps.length === 0,
+      truncated,
+      coveredRanges: normalizedRanges.map(({ range, normalizedRows }) => ({
+        scope,
+        provider: "rpc" as const,
+        fromBlock: range[0],
+        toBlock: range[1],
+        resultCount: normalizedRows.length,
+      })),
+      gaps,
+    },
+  };
+}
+
+function normalizeTokenContractRpcLog(value: unknown): TokenContractRpcLog | null {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return null;
+  const row = value as Record<string, unknown>;
+  const transactionHash = normalizedTxHashFromUnknown(row.transactionHash);
+  const data =
+    typeof row.data === "string" && /^0x[0-9a-f]*$/i.test(row.data)
+      ? (row.data as `0x${string}`)
+      : null;
+  const topics = Array.isArray(row.topics)
+    ? row.topics.filter(
+        (item): item is `0x${string}` =>
+          typeof item === "string" && /^0x[0-9a-f]+$/i.test(item),
+      )
+    : [];
+  if (!transactionHash || !data || topics.length === 0) return null;
+  return {
+    transactionHash,
+    blockNumber: rpcQuantityToNumber(row.blockNumber),
+    logIndex: rpcQuantityToNumber(row.logIndex),
+    topics,
+    data,
+  };
 }
 
 function rpcQuantityToNumber(value: unknown): number | null {
@@ -7230,6 +8024,8 @@ function withTimeout<T>(
 function emptySourceMetadata(): SourceMetadata {
   return {
     verified: "unknown",
+    verificationProvider: null,
+    verificationMatch: null,
     contractName: null,
     isProxy: null,
     implementationAddress: null,
@@ -7669,6 +8465,12 @@ function emptyV2ReportFields(): Pick<
       decodedCalls: [],
       ownershipTransfers: [],
       postOwnershipZeroActivity: null,
+      coverage: {
+        complete: false,
+        truncated: false,
+        coveredRanges: [],
+        gaps: [],
+      },
       limitations: [],
     },
     simulation: {

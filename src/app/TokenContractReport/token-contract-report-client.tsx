@@ -469,6 +469,10 @@ function ReportOutput({
 
   return (
     <div className="space-y-4">
+      {status !== "loading" && report.contract ? (
+        <ReportDownloadControls report={report} />
+      ) : null}
+
       <VerdictPanel
         report={report}
         tokenHeading={tokenHeading}
@@ -539,6 +543,115 @@ function ReportOutput({
         </section>
       ) : null}
     </div>
+  );
+}
+
+function ReportDownloadControls({
+  report,
+}: {
+  report: TokenContractReportResponse;
+}) {
+  const [pdfState, setPdfState] = useState<"idle" | "preparing" | "failed">(
+    "idle",
+  );
+  const [message, setMessage] = useState("");
+  const [messageTone, setMessageTone] = useState<"status" | "error">("status");
+
+  async function downloadJson() {
+    try {
+      const { createTokenContractReportJsonExport } = await import(
+        "@/lib/token-contract-report-export"
+      );
+      const jsonExport = createTokenContractReportJsonExport(report);
+      downloadBrowserBlob(jsonExport.blob, jsonExport.filename);
+      setMessageTone("status");
+      setMessage("JSON report downloaded.");
+    } catch {
+      setMessageTone("error");
+      setMessage("The JSON report could not be prepared in this browser.");
+    }
+  }
+
+  async function downloadPdf() {
+    if (pdfState === "preparing") return;
+    setPdfState("preparing");
+    setMessageTone("status");
+    setMessage("Preparing the detailed PDF report...");
+    try {
+      const { createTokenContractReportPdfExport } = await import(
+        "@/lib/token-contract-report-export"
+      );
+      const pdfExport = await createTokenContractReportPdfExport(report);
+      downloadBrowserBlob(pdfExport.blob, pdfExport.filename);
+      setPdfState("idle");
+      setMessageTone("status");
+      setMessage(
+        pdfExport.readableViewTruncated
+          ? "PDF downloaded. Its readable view reached the safety cap; the complete JSON is embedded in the PDF."
+          : `PDF report downloaded with ${pdfExport.pageCount} page${pdfExport.pageCount === 1 ? "" : "s"}.`,
+      );
+    } catch {
+      setPdfState("failed");
+      setMessageTone("error");
+      setMessage(
+        "The PDF could not be prepared in this browser. The JSON report is still available.",
+      );
+    }
+  }
+
+  return (
+    <section
+      aria-labelledby="token-report-downloads"
+      className="flex flex-col gap-3 rounded-2xl border border-pulse-cyan/25 bg-pulse-cyan/5 p-4 sm:flex-row sm:items-center sm:justify-between"
+    >
+      <div>
+        <h2
+          id="token-report-downloads"
+          className="text-sm font-bold text-pulse-text"
+        >
+          Download this final report
+        </h2>
+        <p className="mt-1 max-w-3xl text-xs leading-5 text-pulse-muted">
+          JSON preserves the exact structured response. PDF creates a readable,
+          paginated audit report and embeds the complete JSON as an attachment.
+        </p>
+        <p
+          className={
+            message
+              ? "mt-2 text-xs font-semibold leading-5 " +
+                (messageTone === "error" ? "text-pulse-red" : "text-pulse-cyan")
+              : "sr-only"
+          }
+          role={messageTone === "error" ? "alert" : "status"}
+          aria-live="polite"
+        >
+          {message}
+        </p>
+      </div>
+      <div className="flex shrink-0 flex-wrap gap-2">
+        <button
+          type="button"
+          onClick={downloadJson}
+          className={
+            "inline-flex min-h-10 items-center justify-center rounded-xl border border-pulse-border bg-pulse-bg/70 px-4 py-2 text-xs font-semibold text-pulse-text transition hover:border-pulse-cyan/45 hover:bg-pulse-text/5 " +
+            FOCUS_RING
+          }
+        >
+          Download JSON
+        </button>
+        <button
+          type="button"
+          onClick={downloadPdf}
+          disabled={pdfState === "preparing"}
+          className={
+            "inline-flex min-h-10 items-center justify-center rounded-xl border border-pulse-cyan/40 bg-pulse-cyan/10 px-4 py-2 text-xs font-semibold text-pulse-cyan transition hover:bg-pulse-cyan/15 disabled:cursor-wait disabled:opacity-65 " +
+            FOCUS_RING
+          }
+        >
+          {pdfState === "preparing" ? "Preparing PDF..." : "Download PDF"}
+        </button>
+      </div>
+    </section>
   );
 }
 
@@ -1109,6 +1222,14 @@ function TechnicalEvidence({ report }: { report: TokenContractReportResponse }) 
           />
           <MetadataCell label="Compiler" value={source?.compilerVersion ?? "Unknown"} />
           <MetadataCell
+            label="Verification provider"
+            value={source?.verificationProvider ? humanize(source.verificationProvider) : "Unknown"}
+          />
+          <MetadataCell
+            label="Verification match"
+            value={source?.verificationMatch ? humanize(source.verificationMatch) : "Unknown"}
+          />
+          <MetadataCell
             label="ABI functions"
             value={source?.abiFunctionCount === null || source?.abiFunctionCount === undefined
               ? "Unknown"
@@ -1486,6 +1607,40 @@ function HistoryEvidence({ report }: { report: TokenContractReportResponse }) {
               : "not observed in the inspected window"}
         </span>
       </p>
+      <div className="mb-3 rounded-xl border border-pulse-border/70 bg-pulse-bg/45 p-3 text-xs leading-5 text-pulse-muted">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <p className="font-semibold text-pulse-text">History coverage</p>
+          <span className="rounded-full border border-pulse-border bg-pulse-panel/70 px-2 py-0.5 text-[11px] font-semibold uppercase tracking-[0.1em] text-pulse-muted">
+            {report.history.coverage.complete
+              ? "complete ranges"
+              : report.history.coverage.truncated
+                ? "truncated"
+                : "partial"}
+          </span>
+        </div>
+        {report.history.coverage.coveredRanges.length > 0 ? (
+          <ul className="mt-2 space-y-1">
+            {report.history.coverage.coveredRanges.map((range) => (
+              <li key={`${range.scope}-${range.provider}-${range.fromBlock}-${range.toBlock}`}>
+                <span className="font-semibold text-pulse-text">
+                  {humanize(range.scope)} via {humanize(range.provider)}:
+                </span>{" "}
+                blocks {range.fromBlock ?? "unknown"} to {range.toBlock ?? "unknown"};{" "}
+                {range.resultCount} result{range.resultCount === 1 ? "" : "s"}
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <p className="mt-2">No exact covered block range was retained.</p>
+        )}
+        {report.history.coverage.gaps.length > 0 ? (
+          <ul className="mt-2 list-disc space-y-1 pl-4 text-amber-200">
+            {report.history.coverage.gaps.map((gap) => (
+              <li key={gap}>{gap}</li>
+            ))}
+          </ul>
+        ) : null}
+      </div>
       {report.history.ownershipTransfers.length > 0 ? (
         <div className="mb-3 space-y-2">
           {report.history.ownershipTransfers.map((event) => (
@@ -1608,16 +1763,60 @@ function SimulationEvidence({ report }: { report: TokenContractReportResponse })
                 mono={Boolean(attempt.from)}
               />
               <SimulationDatum label="Call target" value={attempt.to} mono />
+              {attempt.kind ? (
+                <SimulationDatum label="Probe kind" value={humanize(attempt.kind)} />
+              ) : null}
+              {attempt.routerVersion ? (
+                <SimulationDatum
+                  label="Router version"
+                  value={attempt.routerVersion.toUpperCase()}
+                />
+              ) : null}
+              {attempt.routerAddress ? (
+                <SimulationDatum label="Validated router" value={attempt.routerAddress} mono />
+              ) : null}
+              {attempt.pairAddress ? (
+                <SimulationDatum label="Validated pair" value={attempt.pairAddress} mono />
+              ) : null}
+              {attempt.stage ? (
+                <SimulationDatum label="Result stage" value={humanize(attempt.stage)} />
+              ) : null}
               {attempt.recipient ? (
                 <SimulationDatum label="Transfer recipient" value={attempt.recipient} mono />
               ) : null}
               {attempt.amount !== undefined && attempt.amount !== null ? (
-                <SimulationDatum label="Raw token amount" value={attempt.amount} mono />
+                <SimulationDatum
+                  label={attempt.kind === "router-buy" ? "Raw native amount" : "Raw token amount"}
+                  value={attempt.amount}
+                  mono
+                />
               ) : null}
               {attempt.returnData ? (
                 <SimulationDatum label="Return data" value={attempt.returnData} mono />
               ) : null}
             </dl>
+            {attempt.prerequisites && attempt.prerequisites.length > 0 ? (
+              <div className="mt-2 rounded-lg border border-amber-400/20 bg-amber-400/5 p-2 text-[11px] leading-5 text-amber-100">
+                <p className="font-semibold uppercase tracking-[0.1em]">Prerequisites</p>
+                <ul className="mt-1 list-disc space-y-1 pl-4">
+                  {attempt.prerequisites.map((prerequisite) => (
+                    <li key={prerequisite}>{prerequisite}</li>
+                  ))}
+                </ul>
+              </div>
+            ) : null}
+            {attempt.assumptions && attempt.assumptions.length > 0 ? (
+              <div className="mt-2 rounded-lg border border-pulse-border/60 bg-pulse-bg/35 p-2 text-[11px] leading-5 text-pulse-muted">
+                <p className="font-semibold uppercase tracking-[0.1em] text-pulse-text">
+                  Test assumptions
+                </p>
+                <ul className="mt-1 list-disc space-y-1 pl-4">
+                  {attempt.assumptions.map((assumption) => (
+                    <li key={assumption}>{assumption}</li>
+                  ))}
+                </ul>
+              </div>
+            ) : null}
           </article>
         ))}
         {report.simulation.attempts.length === 0 ? (
@@ -1642,7 +1841,9 @@ function LiquidityEvidence({ report }: { report: TokenContractReportResponse }) 
         DEX name, version labels, and pair-created time are provider metadata. Every retained
         pair matched the selected chain and included the scanned token as its base or quote
         asset. Factory, reserves, and LP supply come from one captured-block RPC snapshot.
-        LP mint and removal history comes from a separate bounded event range.
+        LP mint and removal history comes from a separate bounded event range. Current LP
+        custody uses captured-block balance reads. An unidentified contract holder is never
+        described as a lock without verified withdrawal and unlock evidence.
       </p>
       <div className="grid gap-2 md:grid-cols-2 xl:grid-cols-3">
         {report.liquidity.pairs.map((pair) => {
@@ -1713,6 +1914,60 @@ function LiquidityEvidence({ report }: { report: TokenContractReportResponse }) 
                       {pairEvidence.snapshot.totalSupply ?? "Unavailable"}
                     </dd>
                   </dl>
+                  <div className="rounded-md border border-pulse-border/70 bg-pulse-panel/35 p-2">
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <p className="font-semibold text-pulse-text">Current LP custody</p>
+                      <span className="rounded-full border border-pulse-border bg-pulse-bg/70 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.1em] text-pulse-muted">
+                        {pairEvidence.custody.complete ? "95%+ reconciled" : "partial sample"}
+                      </span>
+                    </div>
+                    <dl className="mt-2 grid gap-x-3 gap-y-1 sm:grid-cols-[auto_1fr]">
+                      <dt className="font-semibold text-pulse-text">Sampled LP supply</dt>
+                      <dd>
+                        {pairEvidence.custody.sampledSupplyBps === null
+                          ? "Unavailable"
+                          : (pairEvidence.custody.sampledSupplyBps / 100).toFixed(2) + "%"}
+                      </dd>
+                      <dt className="font-semibold text-pulse-text">Burn addresses</dt>
+                      <dd>
+                        {pairEvidence.custody.burnedBps === null
+                          ? "Unavailable"
+                          : (pairEvidence.custody.burnedBps / 100).toFixed(2) + "%"}
+                      </dd>
+                      <dt className="font-semibold text-pulse-text">Controllers</dt>
+                      <dd>
+                        {pairEvidence.custody.controllerBps === null
+                          ? "Unavailable"
+                          : (pairEvidence.custody.controllerBps / 100).toFixed(2) + "%"}
+                      </dd>
+                      <dt className="font-semibold text-pulse-text">Verified locks</dt>
+                      <dd>
+                        {pairEvidence.custody.knownLockedBps === null
+                          ? "Unavailable"
+                          : (pairEvidence.custody.knownLockedBps / 100).toFixed(2) + "%"}
+                      </dd>
+                    </dl>
+                    <div className="mt-2 space-y-1">
+                      {pairEvidence.custody.positions.slice(0, 10).map((position) => (
+                        <div
+                          key={position.address}
+                          className="flex flex-wrap items-start justify-between gap-2 border-t border-pulse-border/50 pt-1"
+                        >
+                          <span className="min-w-0 break-all font-mono text-[10px] text-pulse-muted">
+                            {position.address}
+                          </span>
+                          <span className="shrink-0 font-semibold text-pulse-text">
+                            {humanize(position.classification)} | {position.shareBps === null
+                              ? "share unavailable"
+                              : (position.shareBps / 100).toFixed(2) + "%"}
+                          </span>
+                        </div>
+                      ))}
+                      {pairEvidence.custody.positions.length === 0 ? (
+                        <p>No positive current LP holder balance was confirmed.</p>
+                      ) : null}
+                    </div>
+                  </div>
                   {/^[1-9]\d*$/.test(
                     pairEvidence.deployerActivity.observedLpRemovedAfterMint,
                   ) ? (
@@ -2636,6 +2891,18 @@ function isTokenContractReportModule(
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null;
+}
+
+function downloadBrowserBlob(blob: Blob, filename: string): void {
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = filename;
+  link.rel = "noopener";
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  window.setTimeout(() => URL.revokeObjectURL(url), 1_000);
 }
 
 function safeExternalUrl(value: string): string | null {

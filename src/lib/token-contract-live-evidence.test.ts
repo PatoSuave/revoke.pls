@@ -86,6 +86,67 @@ describe("token contract live evidence", () => {
       signature: "approver(address,bool)",
       afterOwnershipZero: true,
     });
+    expect(result.coverage.complete).toBe(true);
+  });
+
+  it("does not count contract creation input as an ordinary contract call", async () => {
+    const result = await fetchTokenContractHistory({
+      contractAddress: TOKEN,
+      chain: CHAIN,
+      selectors: SELECTORS,
+      fetcher: vi.fn(async () =>
+        Response.json({
+          items: [
+            {
+              hash: TX_A,
+              block_number: 10,
+              from: { hash: DEPLOYER },
+              to: null,
+              created_contract: { hash: TOKEN },
+              raw_input: `0x48f2f812${"00".repeat(64)}`,
+              status: "ok",
+            },
+            {
+              hash: TX_B,
+              block_number: 20,
+              from: { hash: DEPLOYER },
+              to: { hash: TOKEN },
+              raw_input: "0x715018a6",
+              status: "ok",
+            },
+          ],
+        }),
+      ) as unknown as typeof fetch,
+    });
+
+    expect(result.inspectedTransactions).toBe(1);
+    expect(result.decodedCalls).toHaveLength(1);
+    expect(result.decodedCalls[0]?.transactionHash).toBe(TX_B);
+    expect(result.coverage.coveredRanges[0]).toMatchObject({
+      scope: "transactions",
+      provider: "blockscout-v2",
+      resultCount: 1,
+    });
+  });
+
+  it("treats a successful empty explorer history page as complete zero-result coverage", async () => {
+    const result = await fetchTokenContractHistory({
+      contractAddress: TOKEN,
+      chain: CHAIN,
+      selectors: SELECTORS,
+      fetcher: vi.fn(async () => Response.json({ items: [] })) as unknown as typeof fetch,
+    });
+
+    expect(result).toMatchObject({
+      inspectedTransactions: 0,
+      decodedCalls: [],
+      coverage: {
+        complete: true,
+        truncated: false,
+        gaps: [],
+      },
+    });
+    expect(result.module.status).toBe("complete");
   });
 
   it("returns at most three validated, deduplicated liquidity-ranked pairs", async () => {
@@ -261,7 +322,12 @@ describe("token contract live evidence", () => {
 
     expect(result.initialMintAmount).toBe("1000");
     expect(result.ownershipTransfers[0]?.renounced).toBe(true);
-    expect(result.limitations.join(" ")).toContain("Blockscout v2 address-log fallback");
+    expect(result.coverage.coveredRanges).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ provider: "blockscout-v2" }),
+      ]),
+    );
+    expect(result.coverage.complete).toBe(true);
   });
 
   it("falls back to bounded RPC logs when explorer event requests fail", async () => {
@@ -290,7 +356,36 @@ describe("token contract live evidence", () => {
     });
 
     expect(result.initialMintAmount).toBe("500");
-    expect(result.limitations.join(" ")).toContain("bounded RPC eth_getLogs fallback");
+    expect(result.coverage.coveredRanges).toEqual(
+      expect.arrayContaining([expect.objectContaining({ provider: "rpc" })]),
+    );
+  });
+
+  it("treats successful empty RPC fallbacks as zero-result event coverage", async () => {
+    const result = await fetchTokenContractEvents({
+      contractAddress: TOKEN,
+      chain: { ...CHAIN, apiKind: "etherscan-v2" },
+      creationBlockNumber: 100,
+      fetcher: vi.fn(async () => new Response("unavailable", { status: 500 })) as unknown as typeof fetch,
+      rpcLogFetcher: vi.fn(async () => []),
+    });
+
+    expect(result.coverage).toMatchObject({
+      complete: true,
+      truncated: false,
+      gaps: [],
+    });
+    expect(result.coverage.coveredRanges).toHaveLength(2);
+    expect(result.coverage.coveredRanges).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          provider: "rpc",
+          resultCount: 0,
+          fromBlock: 100,
+        }),
+      ]),
+    );
+    expect(result.limitations).toEqual([]);
   });
 
 function addressTopic(address: string) {

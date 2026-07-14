@@ -13,6 +13,11 @@ import {
   type Hex,
 } from "viem";
 
+import {
+  analyzeBytecodeControlFlow,
+  type BytecodeControlFlowAnalysis,
+} from "@/lib/token-contract-bytecode-analysis";
+
 /**
  * Deep-evidence helpers are deliberately transport-free. The only executable
  * simulation dependency accepted by this module is an eth_call-shaped reader.
@@ -510,6 +515,7 @@ export interface RuntimeBytecodeAnalysis {
   embeddedAddresses: readonly EmbeddedRuntimeAddress[];
   sensitiveOpcodes: readonly SensitiveOpcodeSummary[];
   functionSlices: readonly FunctionBytecodeSlice[];
+  controlFlow: BytecodeControlFlowAnalysis;
   warnings: readonly string[];
 }
 
@@ -620,6 +626,7 @@ export function analyzeRuntimeBytecode(
     maxRuntimeBytes?: number;
     maxInstructions?: number;
     maxSelectors?: number;
+    signal?: AbortSignal;
   } = {},
 ): RuntimeBytecodeAnalysis {
   const maxRuntimeBytes = clampInteger(
@@ -642,6 +649,14 @@ export function analyzeRuntimeBytecode(
   );
   const boundedHex = normalizeBoundedRuntimeHex(runtimeBytecode, maxRuntimeBytes);
   if (!boundedHex) {
+    const controlFlow = analyzeBytecodeControlFlow(
+      {
+        runtimeBytecode,
+        instructions: [],
+        selectors: [],
+      },
+      { signal: options.signal },
+    );
     return {
       status: "malformed",
       byteLength: 0,
@@ -652,6 +667,7 @@ export function analyzeRuntimeBytecode(
       embeddedAddresses: [],
       sensitiveOpcodes: [],
       functionSlices: [],
+      controlFlow,
       warnings: ["Runtime bytecode was not valid even-length hexadecimal data."],
     };
   }
@@ -720,6 +736,22 @@ export function analyzeRuntimeBytecode(
     instructions,
     analyzedByteLength,
   );
+  const controlFlow = analyzeBytecodeControlFlow(
+    {
+      runtimeBytecode: normalized,
+      instructions,
+      selectors: selectorEvidence.selectors,
+      inputPartial: status !== "complete",
+    },
+    {
+      maxInstructions,
+      signal: options.signal,
+    },
+  );
+  warnings.push(...controlFlow.warnings);
+  if (controlFlow.status !== "complete") {
+    status = "partial";
+  }
 
   return {
     status,
@@ -732,7 +764,8 @@ export function analyzeRuntimeBytecode(
     embeddedAddresses: embeddedAddressEvidence.addresses,
     sensitiveOpcodes: sensitive,
     functionSlices,
-    warnings,
+    controlFlow,
+    warnings: uniqueStrings(warnings),
   };
 }
 
@@ -1122,9 +1155,12 @@ export async function resolveRuntimeSelectors(options: {
   localWatchlist?: SelectorWatchlist;
   fourByteLookup?: FourByteLookup;
   maxFourByteLookups?: number;
+  signal?: AbortSignal;
 }): Promise<ResolveRuntimeSelectorsResult> {
   const abi = canonicalizeAbiFunctions(options.abi ?? []);
-  const bytecode = analyzeRuntimeBytecode(options.runtimeBytecode);
+  const bytecode = analyzeRuntimeBytecode(options.runtimeBytecode, {
+    signal: options.signal,
+  });
   const watchlist: SelectorWatchlist =
     options.localWatchlist ?? TOKEN_SELECTOR_WATCHLIST;
   const abiBySelector = groupBy(abi.functions, (item) => item.selector);

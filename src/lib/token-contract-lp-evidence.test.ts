@@ -113,7 +113,12 @@ describe("token LP evidence", () => {
       observedMintFullyConsumedLater: true,
       observedConsumedBps: 10_000,
     });
-    expect(dependencies.readContract).toHaveBeenCalledTimes(5);
+    expect(result.custody).toMatchObject({
+      complete: true,
+      sampledSupplyBps: 10_000,
+      controllerBps: 10_000,
+    });
+    expect(dependencies.readContract).toHaveBeenCalledTimes(8);
     expect(dependencies.getLogs).toHaveBeenCalledTimes(5);
     expect(dependencies.getLogs).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -313,6 +318,63 @@ describe("token LP evidence", () => {
     expect(result.limitations.join(" ")).toContain("factory() unavailable");
     expect(result.limitations.join(" ")).toContain("Burn logs unavailable");
     expect(result.limitations.join(" ")).toContain("deployer address was unavailable");
+  });
+
+  it("classifies current LP custody without treating an unknown contract as a lock", async () => {
+    const logs: Record<TokenLpEventName, TokenLpEvidenceLog[]> = {
+      Transfer: [transfer(TX_MINT, 100, 0, ZERO, DEPLOYER, 1_000n)],
+      Mint: [mint(TX_MINT, 100, 1, ROUTER, 1_000n, 2_000n)],
+      Burn: [],
+    };
+    const base = pairDependencies(logs);
+    base.readContract.mockImplementation(async ({ functionName, args }) => {
+      if (functionName === "token0") return TOKEN;
+      if (functionName === "token1") return QUOTE;
+      if (functionName === "factory") return FACTORY;
+      if (functionName === "getReserves") return [5_000n, 10_000n, 1234];
+      if (functionName === "totalSupply") return 1_000n;
+      const holder = String(args?.[0] ?? "").toLowerCase();
+      if (holder === ZERO.toLowerCase()) return 600n;
+      if (holder === DEPLOYER.toLowerCase()) return 200n;
+      if (holder === OTHER.toLowerCase()) return 200n;
+      return 0n;
+    });
+
+    const result = await collectTokenLpEvidence({
+      tokenAddress: TOKEN,
+      pairAddress: PAIR,
+      deployerAddress: DEPLOYER,
+      capturedBlock: 200,
+      dependencies: {
+        ...base,
+        getHolderCandidates: async () => ({
+          holders: [{ address: OTHER, source: "explorer" }],
+          complete: true,
+        }),
+        getBytecode: async ({ address }) =>
+          address.toLowerCase() === OTHER.toLowerCase() ? "0x6000" : "0x",
+      },
+    });
+
+    expect(result.custody).toMatchObject({
+      complete: true,
+      sampledSupplyBps: 10_000,
+      burnedBps: 6_000,
+      controllerBps: 2_000,
+      knownLockedBps: 0,
+    });
+    expect(result.custody.positions).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          address: OTHER,
+          classification: "contract",
+          hasBytecode: true,
+        }),
+      ]),
+    );
+    expect(result.custody.limitations.join(" ")).toContain(
+      "not as locked liquidity",
+    );
   });
 });
 
