@@ -33,6 +33,8 @@ const SELECTORS: TokenContractResolvedSelector[] = [
     resolution: "verified-abi",
     confidence: "exact",
     classification: "admin",
+    riskCategory: "admin",
+    evidenceState: "confirmed-signature",
     label: "Ownership control",
   },
   {
@@ -42,6 +44,8 @@ const SELECTORS: TokenContractResolvedSelector[] = [
     resolution: "verified-abi",
     confidence: "exact",
     classification: "unknown",
+    riskCategory: "unknown",
+    evidenceState: "confirmed-signature",
     label: "Verified ABI function",
   },
 ];
@@ -183,8 +187,83 @@ describe("token contract live evidence", () => {
         renounced: true,
       }),
     ]);
+    });
   });
-});
+
+  it("falls back to Blockscout v2 address logs when legacy event requests fail", async () => {
+    const fetcher = vi.fn(async (input: RequestInfo | URL) => {
+      const url = new URL(String(input));
+      if (url.pathname.includes("/api/v2/addresses/") && url.pathname.endsWith("/logs")) {
+        return Response.json({
+          items: [
+            {
+              transaction_hash: TX_A,
+              block_number: 100,
+              index: 0,
+              topics: [
+                "0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef",
+                addressTopic("0x0000000000000000000000000000000000000000"),
+                addressTopic(HOLDER),
+              ],
+              data: `0x${1000n.toString(16).padStart(64, "0")}`,
+            },
+            {
+              transaction_hash: TX_B,
+              block_number: 120,
+              index: 0,
+              topics: [
+                "0x8be0079c531659141344cd1fd0a4f28419497f9722a3daafe3b4186f6b6457e0",
+                addressTopic(DEPLOYER),
+                addressTopic("0x0000000000000000000000000000000000000000"),
+              ],
+              data: "0x",
+            },
+          ],
+        });
+      }
+      return new Response("legacy unavailable", { status: 500 });
+    });
+
+    const result = await fetchTokenContractEvents({
+      contractAddress: TOKEN,
+      chain: CHAIN,
+      creationBlockNumber: 100,
+      fetcher: fetcher as unknown as typeof fetch,
+    });
+
+    expect(result.initialMintAmount).toBe("1000");
+    expect(result.ownershipTransfers[0]?.renounced).toBe(true);
+    expect(result.limitations.join(" ")).toContain("Blockscout v2 address-log fallback");
+  });
+
+  it("falls back to bounded RPC logs when explorer event requests fail", async () => {
+    const result = await fetchTokenContractEvents({
+      contractAddress: TOKEN,
+      chain: { ...CHAIN, apiKind: "etherscan-v2" },
+      creationBlockNumber: 100,
+      fetcher: vi.fn(async () => new Response("unavailable", { status: 500 })) as unknown as typeof fetch,
+      rpcLogFetcher: vi.fn(async ({ topic0 }) =>
+        topic0.startsWith("0xddf252ad")
+          ? [
+              {
+                transactionHash: TX_A,
+                blockNumber: 100,
+                logIndex: 0,
+                topics: [
+                  topic0,
+                  addressTopic("0x0000000000000000000000000000000000000000"),
+                  addressTopic(HOLDER),
+                ],
+                data: `0x${500n.toString(16).padStart(64, "0")}` as `0x${string}`,
+              },
+            ]
+          : [],
+      ),
+    });
+
+    expect(result.initialMintAmount).toBe("500");
+    expect(result.limitations.join(" ")).toContain("bounded RPC eth_getLogs fallback");
+  });
 
 function addressTopic(address: string) {
   return `0x${address.slice(2).toLowerCase().padStart(64, "0")}`;

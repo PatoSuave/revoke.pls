@@ -1195,8 +1195,14 @@ export async function resolveRuntimeSelectors(options: {
       runtimeEvidence: item.runtimeEvidence,
       signatures: lookup.candidates,
       source: "4byte-directory",
-      classification: "unknown",
-      label: "4byte.directory candidate",
+      classification:
+        lookup.candidates.length === 1 && lookup.status !== "partial"
+          ? classifyFourByteSignatureClue(lookup.candidates[0])
+          : "unknown",
+      label:
+        lookup.candidates.length === 1 && lookup.status !== "partial"
+          ? "Unique unverified 4byte candidate"
+          : "Ambiguous 4byte.directory candidates",
       abiFunctions: [],
       forceAmbiguous: lookup.status === "partial",
     });
@@ -1237,6 +1243,25 @@ export async function resolveRuntimeSelectors(options: {
       warnings.length > bytecode.warnings.length,
     warnings,
   };
+}
+
+function classifyFourByteSignatureClue(
+  signature: string,
+): SelectorClassification {
+  const name = signature.slice(0, signature.indexOf("(")).toLowerCase();
+  if (/^(?:name|symbol|decimals|totalsupply|balanceof|allowance|approve|transfer|transferfrom|supportsinterface)$/.test(name)) {
+    return "standard";
+  }
+  if (/mint|issu|supply|rebase|burn/.test(name)) return "supply";
+  if (/black|block|white|freeze|pause|trading|bot|maxwallet|maxtx|cooldown|limit|exclude/.test(name)) {
+    return "transfer-control";
+  }
+  if (/fee|tax/.test(name)) return "fees";
+  if (/liquidity|pair|router|swap|marketmaker/.test(name)) return "liquidity";
+  if (/owner|admin|role|auth|operator|upgrade|implementation|proxy|govern/.test(name)) {
+    return "admin";
+  }
+  return "unknown";
 }
 
 function resolvedSelectorFromCandidates(args: {

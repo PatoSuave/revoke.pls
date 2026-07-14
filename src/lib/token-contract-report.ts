@@ -185,6 +185,15 @@ export interface TokenContractResolvedSelector {
   resolution: "verified-abi" | "local-watchlist" | "4byte" | "unknown";
   confidence: "exact" | "candidate" | "unknown";
   classification: "standard" | "admin" | "dangerous" | "unknown";
+  riskCategory:
+    | "standard"
+    | "admin"
+    | "supply"
+    | "transfer-control"
+    | "fees"
+    | "liquidity"
+    | "unknown";
+  evidenceState: "confirmed-signature" | "review-clue" | "unresolved";
   label: string;
 }
 
@@ -208,6 +217,15 @@ export interface TokenContractSimulationAttempt {
   status: "succeeded" | "reverted" | "unavailable" | "skipped";
   blockNumber: number | null;
   detail: string;
+  evidenceState?: "confirmed-signature" | "review-clue";
+}
+
+export interface TokenContractAiUsage {
+  promptTokens: number;
+  completionTokens: number;
+  reasoningTokens: number;
+  totalTokens: number;
+  attempts: number;
 }
 
 export interface TokenContractLiquidityPair {
@@ -348,10 +366,17 @@ export interface TokenContractReportResponse {
     riskScore: number;
     overallSeverity: "critical" | "high" | "medium" | "low" | "unknown";
     criticalChecks: TokenContractCriticalCheck[];
+    resolvedQuestions: number;
+    /** @deprecated Compatibility alias for resolvedQuestions. */
     completedChecks: number;
     reviewChecks: number;
     notEvaluatedChecks: number;
     totalChecks: number;
+    coverageExplanation: {
+      summary: string;
+      calculation: string;
+      blockers: string[];
+    };
   };
   verdict: {
     severity: "critical" | "high" | "medium" | "low" | "unknown";
@@ -429,6 +454,7 @@ export interface TokenContractReportResponse {
     narrative: TokenContractAiNarrative | null;
     reason: TokenContractAiFailureReason | null;
     finishReason: string | null;
+    usage: TokenContractAiUsage | null;
   };
   warnings: string[];
   reportBoundaries: string[];
@@ -467,10 +493,17 @@ export function createEmptyTokenContractReportResponse({
       riskScore: 0,
       overallSeverity: "unknown",
       criticalChecks: [],
+      resolvedQuestions: 0,
       completedChecks: 0,
       reviewChecks: 0,
       notEvaluatedChecks: 0,
       totalChecks: 0,
+      coverageExplanation: {
+        summary: "No audit questions were evaluated.",
+        calculation:
+          "Coverage gives one point to each resolved question and half a point to each review clue.",
+        blockers: ["No deterministic report is available."],
+      },
     },
     verdict: {
       severity: "unknown",
@@ -543,6 +576,7 @@ export function createEmptyTokenContractReportResponse({
       narrative: null,
       reason: null,
       finishReason: null,
+      usage: null,
     },
     warnings: [],
     reportBoundaries: [

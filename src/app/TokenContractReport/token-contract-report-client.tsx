@@ -616,7 +616,7 @@ function VerdictPanel({
           <ReportMetric
             label="Coverage"
             value={
-              report.audit.completedChecks + " of " + totalChecks + " completed"
+              report.audit.resolvedQuestions + " of " + totalChecks + " questions resolved"
             }
             tone={report.audit.coveragePercent >= 80 ? "good" : "caution"}
           />
@@ -637,7 +637,7 @@ function VerdictPanel({
         <div className="mt-4 flex flex-wrap items-center justify-between gap-2 text-xs leading-5 text-pulse-muted">
           <p>
             Severity comes from confirmed capabilities. Confidence reflects evidence quality;
-            coverage reflects completed questions.
+            coverage reflects resolved questions and bounded review clues.
           </p>
           <p>Generated {generatedAt}</p>
         </div>
@@ -820,8 +820,8 @@ function AuditCoverage({
           <p className="mt-1 text-xl font-bold text-pulse-text">{percentage}%</p>
         </div>
         <p className="text-xs leading-5 text-pulse-muted">
-          {audit.completedChecks} completed · {audit.reviewChecks} review ·{" "}
-          {audit.notEvaluatedChecks} not evaluated · {total} total
+          {audit.resolvedQuestions} questions resolved · {audit.reviewChecks} review ·{" "}
+          {audit.notEvaluatedChecks} untested · {total} total
         </p>
       </div>
       <div
@@ -836,6 +836,19 @@ function AuditCoverage({
           className="h-full rounded-full bg-gradient-to-r from-pulse-cyan to-pulse-green transition-[width]"
           style={{ width: percentage + "%" }}
         />
+      </div>
+      <div className="mt-3 rounded-lg border border-pulse-border/60 bg-pulse-panel/25 p-3 text-xs leading-5 text-pulse-muted">
+        <p className="font-semibold text-pulse-text">
+          {audit.coverageExplanation.summary}
+        </p>
+        <p className="mt-1">{audit.coverageExplanation.calculation}</p>
+        {audit.coverageExplanation.blockers.length > 0 ? (
+          <ul className="mt-2 list-disc space-y-1 pl-5">
+            {audit.coverageExplanation.blockers.map((blocker) => (
+              <li key={blocker}>{blocker}</li>
+            ))}
+          </ul>
+        ) : null}
       </div>
     </div>
   );
@@ -875,6 +888,15 @@ function AiExplanation({ ai }: { ai: TokenContractReportResponse["ai"] }) {
           AI-only observations remain review clues until deterministic evidence corroborates
           them.
         </p>
+        {ai.usage ? (
+          <p className="mt-3 font-mono text-[11px] leading-5 text-pulse-muted">
+            Provider usage: {ai.usage.promptTokens.toLocaleString()} prompt ·{" "}
+            {ai.usage.completionTokens.toLocaleString()} completion ·{" "}
+            {ai.usage.reasoningTokens.toLocaleString()} reasoning ·{" "}
+            {ai.usage.totalTokens.toLocaleString()} total across {ai.usage.attempts}{" "}
+            attempt{ai.usage.attempts === 1 ? "" : "s"}
+          </p>
+        ) : null}
         {ai.narrative ? (
           <AiNarrative narrative={ai.narrative} />
         ) : ai.markdown ? (
@@ -1390,9 +1412,9 @@ function SelectorEvidence({ report }: { report: TokenContractReportResponse }) {
       meta={report.selectors.length + " selector" + (report.selectors.length === 1 ? "" : "s")}
     >
       <p className="mb-3 rounded-xl border border-amber-400/20 bg-amber-400/5 p-3 text-xs leading-5 text-pulse-muted">
-        Resolution is structural: verified ABI signatures are exact; local-watchlist labels
-        are known candidates; 4byte.directory results can be ambiguous. A selector name by
-        itself never confirms function behavior.
+        Resolution is structural: verified ABI signatures are exact. Unique 4byte results
+        are unverified candidate signatures and remain review clues; ambiguous results do
+        not assert a name. A selector name by itself never confirms function behavior.
       </p>
       <div className="space-y-2">
         {report.selectors.map((selector) => (
@@ -1416,6 +1438,9 @@ function SelectorEvidence({ report }: { report: TokenContractReportResponse }) {
                 <SelectorClassBadge classification={selector.classification} />
                 <span className="rounded-full border border-pulse-border bg-pulse-bg/70 px-2 py-0.5 text-[11px] font-semibold uppercase tracking-[0.1em] text-pulse-muted">
                   {humanize(selector.resolution)} · {selector.confidence}
+                </span>
+                <span className="rounded-full border border-amber-400/25 bg-amber-400/5 px-2 py-0.5 text-[11px] font-semibold uppercase tracking-[0.1em] text-amber-200">
+                  {humanize(selector.evidenceState)} · {humanize(selector.riskCategory)}
                 </span>
               </div>
             </div>
@@ -1562,7 +1587,14 @@ function SimulationEvidence({ report }: { report: TokenContractReportResponse })
                   {attempt.functionSignature}
                 </p>
               </div>
-              <SimulationStatus status={attempt.status} />
+              <div className="flex flex-wrap items-center gap-2">
+                {attempt.evidenceState === "review-clue" ? (
+                  <span className="rounded-full border border-amber-400/25 bg-amber-400/5 px-2 py-0.5 text-[11px] font-semibold uppercase tracking-[0.1em] text-amber-200">
+                    unverified signature clue
+                  </span>
+                ) : null}
+                <SimulationStatus status={attempt.status} />
+              </div>
             </div>
             <p className="mt-2 text-xs leading-5 text-pulse-muted">{attempt.detail}</p>
             <p className="mt-2 break-all font-mono text-[11px] leading-5 text-pulse-muted">

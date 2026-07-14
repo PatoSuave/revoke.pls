@@ -66,6 +66,20 @@ interface ExplorerLog {
   data: `0x${string}`;
 }
 
+export interface TokenContractRpcLog {
+  transactionHash: `0x${string}`;
+  blockNumber: number | null;
+  logIndex: number | null;
+  topics: `0x${string}`[];
+  data: `0x${string}`;
+}
+
+export type TokenContractRpcLogFetcher = (args: {
+  contractAddress: Address;
+  topic0: `0x${string}`;
+  creationBlockNumber: number | null;
+}) => Promise<TokenContractRpcLog[]>;
+
 interface ExplorerTransaction {
   hash: `0x${string}`;
   blockNumber: number | null;
@@ -313,35 +327,104 @@ export async function fetchTokenContractEvents({
   fetcher,
   signal,
   creationBlockNumber,
+  rpcLogFetcher,
 }: {
   contractAddress: Address;
   chain: TokenContractLiveEvidenceChain;
   fetcher: typeof fetch;
   signal?: AbortSignal;
   creationBlockNumber?: number | null;
+  rpcLogFetcher?: TokenContractRpcLogFetcher;
 }): Promise<TokenContractEventResult> {
   const limitations: string[] = [];
+  let blockscoutLogs: Promise<ExplorerLog[]> | null = null;
+  const fetchBlockscoutLogs = () => {
+    blockscoutLogs ??= (async () => {
+      const response = await fetchWithTimeout(
+        fetcher(blockscoutV2Url(chain.apiUrl, ["addresses", contractAddress, "logs"]), {
+          method: "GET",
+          cache: "no-store",
+          headers: { accept: "application/json" },
+          signal,
+        }),
+        `${chain.name} Blockscout v2 event lookup timed out`,
+      );
+      if (!response.ok) throw new Error(`Blockscout v2 returned HTTP ${response.status}`);
+      return parseExplorerLogs((await response.json()) as unknown);
+    })();
+    return blockscoutLogs;
+  };
   const results = await Promise.allSettled(
     [TRANSFER_TOPIC, OWNERSHIP_TRANSFERRED_TOPIC].map(async (topic) => {
-      const response = await fetchWithTimeout(
-        fetcher(
-          logsUrl(
-            contractAddress,
-            chain,
-            topic,
-            creationBlockNumber ?? 0,
+      let primaryError: unknown = null;
+      try {
+        const response = await fetchWithTimeout(
+          fetcher(
+            logsUrl(contractAddress, chain, topic, creationBlockNumber ?? 0),
+            {
+              method: "GET",
+              cache: "no-store",
+              headers: { accept: "application/json" },
+              signal,
+            },
           ),
-          {
-            method: "GET",
-            cache: "no-store",
-            headers: { accept: "application/json" },
-            signal,
-          },
-        ),
-        `${chain.name} event lookup timed out`,
-      );
-      if (!response.ok) throw new Error(`explorer returned HTTP ${response.status}`);
-      return parseExplorerLogs((await response.json()) as unknown);
+          `${chain.name} event lookup timed out`,
+        );
+        if (!response.ok) throw new Error(`explorer returned HTTP ${response.status}`);
+        return parseExplorerLogs((await response.json()) as unknown);
+      } catch (error) {
+        primaryError = error;
+      }
+
+      const fallbackLogs: ExplorerLog[] = [];
+      if (chain.apiKind === "blockscout-compatible") {
+        try {
+          const fallback = (await fetchBlockscoutLogs()).filter(
+            (log) => log.topics[0]?.toLowerCase() === topic.toLowerCase(),
+          );
+          if (fallback.length > 0) {
+            limitations.push(
+              `${topic === TRANSFER_TOPIC ? "Transfer" : "Ownership"} events used the Blockscout v2 address-log fallback after the legacy explorer request failed.`,
+            );
+            fallbackLogs.push(...fallback);
+          }
+        } catch (error) {
+          primaryError = new Error(
+            `${safeError(primaryError)}; Blockscout v2 fallback: ${safeError(error)}`,
+          );
+        }
+      }
+
+      if (rpcLogFetcher) {
+        try {
+          const fallback = await rpcLogFetcher({
+            contractAddress,
+            topic0: topic as `0x${string}`,
+            creationBlockNumber: creationBlockNumber ?? null,
+          });
+          if (fallback.length > 0) {
+            limitations.push(
+              `${topic === TRANSFER_TOPIC ? "Transfer" : "Ownership"} events used a bounded RPC eth_getLogs fallback after explorer lookups were incomplete.`,
+            );
+            fallbackLogs.push(...fallback);
+          }
+        } catch (error) {
+          primaryError = new Error(
+            `${safeError(primaryError)}; RPC fallback: ${safeError(error)}`,
+          );
+        }
+      }
+      if (fallbackLogs.length > 0) {
+        return Array.from(
+          new Map(
+            fallbackLogs.map((log) => [
+              `${log.transactionHash}:${log.logIndex ?? -1}`,
+              log,
+            ]),
+          ).values(),
+        ).slice(0, EVENT_LIMIT);
+      }
+      throw primaryError ?? new Error("event lookup returned no usable result");
     }),
   );
   const transferLogs =
@@ -481,7 +564,8 @@ function logsUrl(
 
 function parseExplorerLogs(body: unknown): ExplorerLog[] {
   if (!body || typeof body !== "object" || Array.isArray(body)) return [];
-  const rows = (body as Record<string, unknown>).result;
+  const record = body as Record<string, unknown>;
+  const rows = Array.isArray(record.result) ? record.result : record.items;
   if (!Array.isArray(rows)) return [];
   return rows
     .map((value): ExplorerLog | null => {

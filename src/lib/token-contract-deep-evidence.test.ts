@@ -7,6 +7,7 @@ import {
   padHex,
   parseAbi,
   stringToHex,
+  toFunctionSelector,
   type Address,
   type Hex,
 } from "viem";
@@ -262,6 +263,26 @@ describe("token contract deep evidence", () => {
       unresolved: 1,
       fourByteLookups: 2,
     });
+  });
+
+  it("classifies one validated 4byte signature as an unverified behavior clue", async () => {
+    const selector = toFunctionSelector("blacklist(address,bool)");
+    const result = await resolveRuntimeSelectors({
+      runtimeBytecode: dispatcherBytecode([selector]),
+      abi: [],
+      localWatchlist: {},
+      fourByteLookup: vi.fn(async () => ["blacklist(address,bool)"]),
+    });
+
+    expect(result.selectors[0]).toMatchObject({
+      selector,
+      state: "resolved",
+      source: "4byte-directory",
+      resolvedSignature: "blacklist(address,bool)",
+      classification: "transfer-control",
+      label: "Unique unverified 4byte candidate",
+    });
+    expect(result.selectors[0]?.note).toContain("behavior remains unconfirmed");
   });
 
   it("bounds and validates 4byte.directory candidate responses", async () => {

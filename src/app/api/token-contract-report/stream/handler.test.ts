@@ -23,6 +23,9 @@ describe("token contract report stream", () => {
     const response = await handleTokenContractReportStreamPost(
       request("203.0.113.11"),
       async (options) => {
+        expect(options.signal).toBeInstanceOf(AbortSignal);
+        expect(options.aiSignal).toBeInstanceOf(AbortSignal);
+        expect(options.aiSignal).not.toBe(options.signal);
         await options.onProgress?.({ type: "base", report });
         await options.onProgress?.({
           type: "module",

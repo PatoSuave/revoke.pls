@@ -1,5 +1,10 @@
 import { describe, expect, it, vi } from "vitest";
-import { getAddress, type Address } from "viem";
+import {
+  encodeAbiParameters,
+  getAddress,
+  toFunctionSelector,
+  type Address,
+} from "viem";
 
 import { PULSECHAIN_CHAIN_ID } from "@/lib/chains";
 import { buildTokenContractReport } from "@/lib/token-contract-report-server";
@@ -681,6 +686,12 @@ describe("token contract report server", () => {
               },
             ],
             model: "deepseek-v4-pro",
+            usage: {
+              prompt_tokens: 1200,
+              completion_tokens: 450,
+              total_tokens: 1650,
+              completion_tokens_details: { reasoning_tokens: 0 },
+            },
           });
         }
 
@@ -714,7 +725,7 @@ describe("token contract report server", () => {
     expect(deepSeekCalls[0]?.model).toBe("deepseek-v4-pro");
     expect(deepSeekCalls[0]?.body.response_format?.type).toBe("json_object");
     expect(deepSeekCalls[0]?.body.temperature).toBe(0.1);
-    expect(deepSeekCalls[0]?.body.max_tokens).toBe(3200);
+    expect(deepSeekCalls[0]?.body.max_tokens).toBe(10000);
     expect(deepSeekCalls[0]?.body.thinking?.type).toBe("disabled");
     expect(deepSeekCalls[0]?.body.reasoning_effort).toBeUndefined();
     const userPrompt = deepSeekCalls[0]?.body.messages?.find(
@@ -724,6 +735,9 @@ describe("token contract report server", () => {
     expect(userPrompt).toContain("Can anyone mint?");
     expect(userPrompt).toContain(
       "Every detailedFindings[].evidence item must be an exact id",
+    );
+    expect(userPrompt).toContain(
+      'Call 4byte-derived names "unique unverified 4byte candidate signatures"',
     );
     expect(userPrompt).toContain("0x40c10f19");
     expect(userPrompt).not.toContain("0xa0712d68");
@@ -748,6 +762,13 @@ describe("token contract report server", () => {
     expect(report.ai.markdown).toContain(`- Creation tx: ${CREATION_TX}`);
     expect(report.ai.markdown).toContain("### What To Verify On-Chain");
     expect(report.ai.narrative?.overallVerdict).toBe("unknown risk");
+    expect(report.ai.usage).toEqual({
+      promptTokens: 1200,
+      completionTokens: 450,
+      reasoningTokens: 0,
+      totalTokens: 1650,
+      attempts: 1,
+    });
     expect(report.ai.narrative?.detailedFindings[0]?.evidence[0]).toContain(
       "Explorer source metadata",
     );
@@ -965,10 +986,167 @@ describe("token contract report server", () => {
         (check) => check.question === "Can owner sell when users cannot?",
       )?.status,
     ).toBe("confirmed");
+    expect(
+      report.audit.criticalChecks.find(
+        (check) => check.question === "Is supply highly concentrated?",
+      )?.status,
+    ).toBe("confirmed");
+    expect(report.audit.coverageExplanation.summary).toContain(
+      "questions resolved",
+    );
     expect(deepSeekPrompt).toContain('"deployerCurrentPercent":60');
     expect(deepSeekPrompt).toContain('"evidenceStatus":"bounded_eth_call"');
     expect(deepSeekPrompt).toContain(pair);
     expect(deepSeekPrompt).toContain(holder);
+  });
+
+  it("probes unique 4byte getter and control candidates without confirming their names", async () => {
+    const pair = getAddress("0x2222222222222222222222222222222222222222");
+    const quote = getAddress("0x3333333333333333333333333333333333333333");
+    const signatures = [
+      "tradingEnabled()",
+      "uniswapPair()",
+      "blacklist(address,bool)",
+    ] as const;
+    const selectorToSignature = new Map(
+      signatures.map((signature) => [toFunctionSelector(signature), signature]),
+    );
+    const runtime = `0x${Array.from(selectorToSignature.keys())
+      .map((selector) => `63${selector.slice(2)}`)
+      .join("")}00` as `0x${string}`;
+    const reader = {
+      getBytecode: vi.fn(async ({ address }: { address: Address }) =>
+        address.toLowerCase() === pair.toLowerCase()
+          ? ("0x1234" as const)
+          : runtime,
+      ),
+      getBlockNumber: vi.fn(async () => 500n),
+      getStorageAt: vi.fn(async () => `0x${"00".repeat(32)}` as const),
+      readContract: vi.fn(
+        async (call: { functionName: string; args?: readonly unknown[] }) => {
+          if (call.functionName === "name") return "Candidate Token";
+          if (call.functionName === "symbol") return "CAND";
+          if (call.functionName === "decimals") return 0;
+          if (call.functionName === "totalSupply") return 1_000n;
+          if (call.functionName === "supportsInterface") return false;
+          if (call.functionName === "balanceOf") {
+            return String(call.args?.[0]).toLowerCase() === DEPLOYER.toLowerCase()
+              ? 1_000n
+              : 0n;
+          }
+          throw new Error("unsupported read");
+        },
+      ),
+      call: vi.fn(
+        async (call: { account?: Address; to: Address; data: `0x${string}` }) => {
+          const selector = call.data.slice(0, 10).toLowerCase();
+          if (call.to.toLowerCase() === pair.toLowerCase()) {
+            if (selector === "0x0dfe1681") {
+              return { data: encodeAbiParameters([{ type: "address" }], [TOKEN]) };
+            }
+            if (selector === "0xd21220a7") {
+              return { data: encodeAbiParameters([{ type: "address" }], [quote]) };
+            }
+          }
+          if (selector === toFunctionSelector("tradingEnabled()")) {
+            return { data: encodeAbiParameters([{ type: "bool" }], [true]) };
+          }
+          if (selector === toFunctionSelector("uniswapPair()")) {
+            return { data: encodeAbiParameters([{ type: "address" }], [pair]) };
+          }
+          if (selector === toFunctionSelector("blacklist(address,bool)")) {
+            if (call.account?.toLowerCase() !== DEPLOYER.toLowerCase()) {
+              throw new Error("execution reverted");
+            }
+            return { data: "0x" };
+          }
+          return { data: "0x" };
+        },
+      ),
+    };
+    const fetcher = vi.fn(async (input: RequestInfo | URL) => {
+      const url = requestUrl(input);
+      if (url.hostname === "www.4byte.directory") {
+        const selector = url.searchParams.get("hex_signature")?.toLowerCase();
+        const signature = selector ? selectorToSignature.get(selector as `0x${string}`) : null;
+        return Response.json({
+          count: signature ? 1 : 0,
+          next: null,
+          results: signature ? [{ text_signature: signature }] : [],
+        });
+      }
+      if (url.hostname === "api.dexscreener.com") return Response.json([]);
+      if (url.pathname.includes(`/api/v2/tokens/${TOKEN}/holders`)) {
+        return Response.json({ items: [] });
+      }
+      if (url.pathname.includes(`/api/v2/addresses/${TOKEN}/transactions`)) {
+        return Response.json({ items: [] });
+      }
+      if (url.pathname.includes(`/api/v2/addresses/${TOKEN}`)) {
+        return Response.json({
+          hash: TOKEN,
+          creation_transaction_hash: CREATION_TX,
+          creator_address_hash: DEPLOYER,
+          block_number: 100,
+        });
+      }
+      if (url.searchParams.get("action") === "getLogs") {
+        return Response.json({ result: [] });
+      }
+      if (requestAction(input) === "getcontractcreation") return creationResponse();
+      return sourceResponse([]);
+    });
+
+    const report = await buildTokenContractReport({
+      chainId: PULSECHAIN_CHAIN_ID,
+      contractAddress: TOKEN,
+      includeAi: false,
+      enableDeepModules: true,
+      env: { NODE_ENV: "test" } as NodeJS.ProcessEnv,
+      fetcher: fetcher as unknown as typeof fetch,
+      reader,
+    });
+
+    expect(report.liquidity.pairs[0]?.pairAddress).toBe(pair);
+    expect(report.simulation.attempts).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          functionSignature: "tradingEnabled()",
+          evidenceState: "review-clue",
+          status: "succeeded",
+        }),
+        expect.objectContaining({
+          functionSignature: "blacklist(address,bool)",
+          evidenceState: "review-clue",
+        }),
+      ]),
+    );
+    expect(
+      report.findings.find((finding) =>
+        finding.id.startsWith("simulation.privileged-control."),
+      ),
+    ).toMatchObject({ state: "review-clue", severity: "medium" });
+    expect(
+      report.audit.criticalChecks.find(
+        (check) => check.question === "Can owner blacklist wallets?",
+      )?.status,
+    ).toBe("needs_review");
+    expect(
+      report.selectors.find(
+        (selector) => selector.signature === "blacklist(address,bool)",
+      ),
+    ).toMatchObject({
+      resolution: "4byte",
+      riskCategory: "transfer-control",
+      evidenceState: "review-clue",
+    });
+    expect(report.audit.coveragePercent).toBeGreaterThan(6);
+    expect(report.audit.resolvedQuestions).toBe(
+      report.audit.completedChecks,
+    );
+    expect(report.audit.coverageExplanation.calculation).toContain(
+      "review clues × 0.5 points",
+    );
   });
 
   it("rejects addresses without deployed bytecode", async () => {
@@ -1030,11 +1208,13 @@ describe("token contract report server", () => {
       finishReason: "length",
       content: '{"title":"Token Contract Report"',
       expectedReason: "truncated-output",
+      expectedCalls: 2,
     },
     {
       finishReason: "stop",
       content: "{}",
       expectedReason: "invalid-output",
+      expectedCalls: 2,
     },
     {
       finishReason: "stop",
@@ -1042,6 +1222,7 @@ describe("token contract report server", () => {
         bottomLine: "This is a well-known token, but risk remains unknown.",
       }),
       expectedReason: "invalid-output",
+      expectedCalls: 2,
     },
     {
       finishReason: "stop",
@@ -1057,10 +1238,17 @@ describe("token contract report server", () => {
         ],
       }),
       expectedReason: "invalid-output",
+      expectedCalls: 2,
+    },
+    {
+      finishReason: "stop",
+      content: "",
+      expectedReason: "empty-output",
+      expectedCalls: 1,
     },
   ])(
     "rejects DeepSeek $expectedReason responses",
-    async ({ finishReason, content, expectedReason }) => {
+    async ({ finishReason, content, expectedReason, expectedCalls }) => {
       const reader = {
         getBytecode: vi.fn(async () => "0x1234" as `0x${string}`),
         readContract: vi.fn(async (call: { functionName: string }) => {
@@ -1105,6 +1293,11 @@ describe("token contract report server", () => {
       expect(report.ai.reason).toBe(expectedReason);
       expect(report.ai.finishReason).toBe(finishReason);
       expect(report.ai.narrative).toBeNull();
+      expect(
+        fetcher.mock.calls.filter(([input]) =>
+          input.toString().endsWith("/chat/completions"),
+        ),
+      ).toHaveLength(expectedCalls);
     },
   );
 
@@ -1121,9 +1314,13 @@ describe("token contract report server", () => {
       }),
     };
     let chatCalls = 0;
-    const fetcher = vi.fn(async (input: RequestInfo | URL) => {
+    const maxTokens: number[] = [];
+    const fetcher = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
       if (input.toString().endsWith("/chat/completions")) {
         chatCalls += 1;
+        maxTokens.push(
+          JSON.parse(String(init?.body ?? "{}"))?.max_tokens ?? 0,
+        );
         return Response.json({
           choices: [
             {
@@ -1133,6 +1330,12 @@ describe("token contract report server", () => {
               },
             },
           ],
+          usage: {
+            prompt_tokens: chatCalls === 1 ? 100 : 80,
+            completion_tokens: chatCalls === 1 ? 20 : 30,
+            reasoning_tokens: 0,
+            total_tokens: chatCalls === 1 ? 120 : 110,
+          },
         });
       }
       return requestAction(input) === "getcontractcreation"
@@ -1153,8 +1356,16 @@ describe("token contract report server", () => {
     });
 
     expect(chatCalls).toBe(2);
+    expect(maxTokens).toEqual([10_000, 15_000]);
     expect(report.ai.status).toBe("generated");
     expect(report.ai.reason).toBeNull();
+    expect(report.ai.usage).toEqual({
+      promptTokens: 180,
+      completionTokens: 50,
+      reasoningTokens: 0,
+      totalTokens: 230,
+      attempts: 2,
+    });
   });
 
   it("rejects DeepSeek responses above the one-megabyte output boundary", async () => {

@@ -83,7 +83,11 @@ export async function handleTokenContractReportStreamPost(
   const stream = new ReadableStream<Uint8Array>({
     start(streamController) {
       const deadlineController = new AbortController();
-      const abortFromRequest = () => deadlineController.abort(request.signal.reason);
+      const aiController = new AbortController();
+      const abortFromRequest = () => {
+        deadlineController.abort(request.signal.reason);
+        aiController.abort(request.signal.reason);
+      };
       if (request.signal.aborted) abortFromRequest();
       request.signal.addEventListener("abort", abortFromRequest, { once: true });
       const deadline = setTimeout(
@@ -108,6 +112,7 @@ export async function handleTokenContractReportStreamPost(
             contractAddress,
             includeAi,
             signal: deadlineController.signal,
+            aiSignal: aiController.signal,
             onProgress: send,
           });
           send({ type: "final", report });
