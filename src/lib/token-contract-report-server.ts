@@ -65,6 +65,7 @@ import {
 } from "@/lib/optimism-approval-client";
 import {
   getChainConfig,
+  PULSECHAIN_CHAIN_ID,
   type DiscoverySourceConfig,
   type SupportedChainConfig,
 } from "@/lib/chains";
@@ -114,6 +115,13 @@ import {
   resolveRuntimeSelectors,
   type ResolveRuntimeSelectorsResult,
 } from "@/lib/token-contract-deep-evidence";
+import {
+  collectTokenLpEvidence,
+  type TokenLpEvidenceLog,
+  type TokenLpEvidenceLogPage,
+  type TokenLpEvidenceResult,
+  type TokenLpEventName,
+} from "@/lib/token-contract-lp-evidence";
 
 const TOKEN_REPORT_READ_TIMEOUT_MS = 8_000;
 const TOKEN_REPORT_SOURCE_TIMEOUT_MS = 8_000;
@@ -127,7 +135,22 @@ const TOKEN_REPORT_DEEPSEEK_MAX_RESPONSE_BYTES = 1_048_576;
 const TOKEN_REPORT_DEEPSEEK_REPAIR_TIMEOUT_MS = 60_000;
 const TOKEN_REPORT_BYTECODE_MAX_BYTES = 512 * 1_024;
 const TOKEN_REPORT_SCANNER_VERSION = "token-contract-report-v2";
-const TOKEN_REPORT_DEEP_AUDIT_PROMPT_VERSION = "source-cited-evidence-v2";
+const TOKEN_REPORT_DEEP_AUDIT_PROMPT_VERSION = "source-cited-evidence-v4";
+const PULSEX_WPLS_ADDRESS = getAddress(
+  "0xA1077a294dDE1B09bB078844df40758a5D0f9a27",
+);
+// PulseX mainnet factory constants from the official PulseX application bundle:
+// https://gitlab.com/pulsechaincom/pulsex-server
+const PULSEX_FACTORIES = [
+  {
+    version: "v1",
+    address: getAddress("0x1715a3E4A142d8b698131108995174F37aEBA10D"),
+  },
+  {
+    version: "v2",
+    address: getAddress("0x29eA7545DEf87022BAdc76323F373EA1e707C523"),
+  },
+] as const;
 
 const erc165Abi = parseAbi([
   "function supportsInterface(bytes4 interfaceId) view returns (bool)",
@@ -142,6 +165,9 @@ const pairIdentityAbi = parseAbi([
   "function token0() view returns (address)",
   "function token1() view returns (address)",
 ]);
+const uniswapV2FactoryAbi = parseAbi([
+  "function getPair(address tokenA, address tokenB) view returns (address pair)",
+]);
 const safeCandidateGetterAbis = {
   "tradingEnabled()": parseAbi([
     "function tradingEnabled() view returns (bool)",
@@ -152,13 +178,20 @@ const safeCandidateGetterAbis = {
   "maxWalletPercent()": parseAbi([
     "function maxWalletPercent() view returns (uint256)",
   ]),
-  "uniswapPair()": parseAbi([
-    "function uniswapPair() view returns (address)",
-  ]),
+  "uniswapPair()": parseAbi(["function uniswapPair() view returns (address)"]),
   "isExcludedFromFee(address)": parseAbi([
     "function isExcludedFromFee(address) view returns (bool)",
   ]),
+  "buyFeeBps()": parseAbi(["function buyFeeBps() view returns (uint256)"]),
+  "sellFeeBps()": parseAbi(["function sellFeeBps() view returns (uint256)"]),
+  "feeReceiver()": parseAbi(["function feeReceiver() view returns (address)"]),
+  "MAX_FEE_BPS()": parseAbi(["function MAX_FEE_BPS() view returns (uint256)"]),
+  "CHANGE_DELAY()": parseAbi([
+    "function CHANGE_DELAY() view returns (uint256)",
+  ]),
+  "pair()": parseAbi(["function pair() view returns (address)"]),
 } as const;
+const rawWordCandidateGetters = new Set(["pendingFees()"]);
 
 const INTERFACE_ID_ERC721 = "0x80ac58cd";
 const INTERFACE_ID_ERC1155 = "0xd9b67a26";
@@ -310,6 +343,7 @@ interface TokenContractReportReadClient {
     abi: Abi;
     functionName: string;
     args?: readonly unknown[];
+    blockNumber?: bigint;
   }): Promise<unknown>;
   getBlockNumber?(): Promise<bigint>;
   call?(args: {
@@ -323,9 +357,7 @@ interface TokenContractReportReadClient {
     slot: Hex;
     blockNumber?: bigint;
   }): Promise<Hex | undefined>;
-  getTransaction?(args: {
-    hash: Hex;
-  }): Promise<{ input?: Hex } | null>;
+  getTransaction?(args: { hash: Hex }): Promise<{ input?: Hex } | null>;
   request?<T = unknown>(args: {
     method: string;
     params?: readonly unknown[];
@@ -579,7 +611,7 @@ export async function buildTokenContractReport({
           setCount: 0,
           warning: null,
           implementationAddress: null,
-      }),
+        }),
   ]);
   const creationBytecodeResult = await resolveCreationBytecode({
     client: readClient,
@@ -819,9 +851,7 @@ export async function buildTokenContractReport({
       ),
     },
     ai: emptyAi(includeAi ? "unavailable" : "skipped"),
-    warnings: [
-      ...new Set(warnings),
-    ],
+    warnings: [...new Set(warnings)],
     errors,
     missingConfig: [],
   };
@@ -869,9 +899,7 @@ export async function buildTokenContractReport({
       : {}),
   });
   baseReport.selectors = selectorResolutionToV2(selectorResolution);
-  baseReport.findings.push(
-    ...bytecodeEvidenceFindings(selectorResolution),
-  );
+  baseReport.findings.push(...bytecodeEvidenceFindings(selectorResolution));
   if (baseReport.bytecode.creation.available) {
     baseReport.findings.push({
       id: "bytecode.creation.fingerprint",
@@ -1012,7 +1040,10 @@ export async function buildTokenContractReport({
           : {}),
       }),
     ]);
-    const historyWithOwnership = mergeOwnershipHistory(history, events.ownershipTransfers);
+    const historyWithOwnership = mergeOwnershipHistory(
+      history,
+      events.ownershipTransfers,
+    );
     baseReport.history = {
       inspectedTransactions: history.inspectedTransactions,
       decodedCalls: historyWithOwnership.decodedCalls,
@@ -1022,6 +1053,7 @@ export async function buildTokenContractReport({
     };
     baseReport.liquidity = {
       pairs: liquidity.pairs,
+      pairEvidence: [],
       limitations: liquidity.limitations,
     };
     baseReport.modules.history = {
@@ -1030,7 +1062,8 @@ export async function buildTokenContractReport({
         history.module.status === "unavailable" &&
         events.ownershipTransfers.length === 0
           ? "unavailable"
-          : events.limitations.length > 0 || history.module.status !== "complete"
+          : events.limitations.length > 0 ||
+              history.module.status !== "complete"
             ? "partial"
             : "complete",
       evidenceCount:
@@ -1039,6 +1072,35 @@ export async function buildTokenContractReport({
       warnings: [...history.module.warnings, ...events.limitations],
     };
     baseReport.modules.liquidity = liquidity.module;
+    const pulseXFactoryDiscovery = await discoverPulseXFactoryPairs({
+      client: readClient,
+      chainId: chain.chainId,
+      tokenAddress: normalizedAddress,
+    });
+    baseReport.liquidity.pairs = mergeLiquidityPairs(
+      baseReport.liquidity.pairs,
+      pulseXFactoryDiscovery.pairs,
+    );
+    baseReport.liquidity.limitations = Array.from(
+      new Set([
+        ...baseReport.liquidity.limitations,
+        ...pulseXFactoryDiscovery.limitations,
+      ]),
+    );
+    if (pulseXFactoryDiscovery.applicable) {
+      baseReport.modules.liquidity = {
+        ...baseReport.modules.liquidity,
+        status:
+          pulseXFactoryDiscovery.limitations.length > 0
+            ? "partial"
+            : baseReport.modules.liquidity.status,
+        evidenceCount:
+          baseReport.modules.liquidity.evidenceCount +
+          pulseXFactoryDiscovery.completedQueries,
+        summary: `${baseReport.modules.liquidity.summary} Queried the PulseX V1 and V2 factories for token/WPLS pairs and retained validated nonzero results.`,
+        warnings: baseReport.liquidity.limitations,
+      };
+    }
     const holderEvidence = await collectHolderSnapshots({
       client: readClient,
       contractAddress: normalizedAddress,
@@ -1069,34 +1131,66 @@ export async function buildTokenContractReport({
         .filter((address): address is Address => address !== null)
         .map((address) => address.toLowerCase()),
     );
-    const simulationHolder =
-      holderEvidence.sampled.find(
-        (holder) =>
+    const pairAddresses = new Set(
+      baseReport.liquidity.pairs.map((pair) => pair.pairAddress.toLowerCase()),
+    );
+    const simulationHolderEvidence =
+      holderEvidence.sampled.find((holder) => {
+        const address = holder.address.toLowerCase();
+        return (
           BigInt(holder.balance) > 0n &&
-          !controllerAddresses.has(holder.address.toLowerCase()),
-      )?.address ?? null;
+          !controllerAddresses.has(address) &&
+          !pairAddresses.has(address) &&
+          !isBurnLikeAddress(address)
+        );
+      }) ?? null;
+    const simulationController =
+      baseReport.controls.effectiveControllerAddresses[0] ??
+      creation.deployerAddress;
+    const controllerBalance = simulationController
+      ? (holderEvidence.sampled.find(
+          (holder) =>
+            holder.address.toLowerCase() === simulationController.toLowerCase(),
+        )?.balance ?? null)
+      : null;
+    const simulationPair =
+      selectSimulationPair(baseReport.liquidity.pairs)?.pairAddress ?? null;
+    const pairBalance = simulationPair
+      ? (holderEvidence.sampled.find(
+          (holder) =>
+            holder.address.toLowerCase() === simulationPair.toLowerCase(),
+        )?.balance ?? null)
+      : null;
     const simulation = await runReadOnlyTransferSimulations({
       client: readClient,
       contractAddress: normalizedAddress,
-      holder: simulationHolder,
-      controller:
-        baseReport.controls.effectiveControllerAddresses[0] ??
-        creation.deployerAddress,
-      pair: liquidity.pairs[0]?.pairAddress ?? null,
+      holder: simulationHolderEvidence?.address ?? null,
+      holderBalance: simulationHolderEvidence?.balance ?? null,
+      controller: simulationController,
+      controllerBalance,
+      pair: simulationPair,
+      pairBalance,
       holderLimitations: holders.limitations,
       controlFunctions: selectorResolution.abi.functions,
       candidateSelectors: baseReport.selectors,
     });
+    if (baseReport.liquidity.pairs.length > 1 && simulationPair) {
+      const limitation = `LP state/history was inspected for up to three retained pairs, but bounded transfer simulations used one selected pair (${simulationPair}) chosen by indexed liquidity and version preference.`;
+      simulation.summary.limitations.push(limitation);
+      simulation.module.warnings.push(limitation);
+    }
     baseReport.simulation = simulation.summary;
     baseReport.modules.simulation = simulation.module;
-    if (liquidity.pairs.length === 0 && simulation.validatedPair) {
+    if (baseReport.liquidity.pairs.length === 0 && simulation.validatedPair) {
       baseReport.liquidity.pairs.push({
         chainSlug: liveChain.dexScreenerSlug ?? chain.name.toLowerCase(),
         dexId: null,
+        labels: [],
         pairAddress: simulation.validatedPair,
         baseTokenAddress: normalizedAddress,
         quoteTokenAddress: null,
         liquidityUsd: null,
+        pairCreatedAt: null,
         url: explorerAddressUrl(chain.chainId, simulation.validatedPair),
       });
       baseReport.liquidity.limitations.push(
@@ -1111,6 +1205,94 @@ export async function buildTokenContractReport({
         warnings: baseReport.liquidity.limitations,
       };
     }
+    const pairEvidence = await collectReportLiquidityEvidence({
+      client: readClient,
+      tokenAddress: normalizedAddress,
+      deployerAddress: creation.deployerAddress,
+      capturedBlock: simulation.summary.blockNumber,
+      creationBlock: creation.blockNumber,
+      pairs: baseReport.liquidity.pairs,
+      signal,
+    });
+    baseReport.liquidity.pairEvidence = pairEvidence.results;
+    baseReport.liquidity.limitations = Array.from(
+      new Set([
+        ...baseReport.liquidity.limitations,
+        ...pairEvidence.limitations,
+      ]),
+    );
+    baseReport.liquidity.pairs = baseReport.liquidity.pairs.map((pair) => {
+      const evidence = pairEvidence.results.find(
+        (item) =>
+          item.snapshot.pairAddress.toLowerCase() ===
+          pair.pairAddress.toLowerCase(),
+      );
+      const onChainPulseXVersion = pulseXVersionForFactory(
+        evidence?.snapshot.factory ?? null,
+      );
+      const providerPulseXVersions = pair.labels.filter((label) =>
+        /^v[12]$/i.test(label),
+      );
+      if (
+        onChainPulseXVersion &&
+        providerPulseXVersions.some(
+          (label) => label.toLowerCase() !== onChainPulseXVersion,
+        )
+      ) {
+        baseReport.liquidity.limitations.push(
+          `${pair.pairAddress}: provider DEX version labels conflicted with the pair's on-chain factory; the on-chain ${onChainPulseXVersion.toUpperCase()} factory classification is shown.`,
+        );
+      }
+      return evidence
+        ? {
+            ...pair,
+            dexId: onChainPulseXVersion ? "pulsex" : pair.dexId,
+            labels: onChainPulseXVersion
+              ? [
+                  ...pair.labels.filter((label) => !/^v[12]$/i.test(label)),
+                  onChainPulseXVersion,
+                ]
+              : pair.labels,
+            baseTokenAddress:
+              evidence.snapshot.requestedTokenPosition === "token0"
+                ? evidence.snapshot.token0
+                : evidence.snapshot.requestedTokenPosition === "token1"
+                  ? evidence.snapshot.token1
+                  : pair.baseTokenAddress,
+            quoteTokenAddress:
+              evidence.snapshot.quoteTokenAddress ?? pair.quoteTokenAddress,
+          }
+        : pair;
+    });
+    if (baseReport.liquidity.pairs.length > 0) {
+      const pairEvidenceComplete =
+        pairEvidence.results.length === baseReport.liquidity.pairs.length &&
+        pairEvidence.results.every((item) => item.status === "complete");
+      baseReport.modules.liquidity = {
+        ...baseReport.modules.liquidity,
+        status: pairEvidenceComplete
+          ? baseReport.modules.liquidity.status === "unavailable"
+            ? "partial"
+            : baseReport.modules.liquidity.status
+          : pairEvidence.results.length > 0
+            ? "partial"
+            : baseReport.modules.liquidity.status === "unavailable"
+              ? "unavailable"
+              : "partial",
+        evidenceCount:
+          baseReport.modules.liquidity.evidenceCount +
+          pairEvidence.results.length +
+          pairEvidence.results.reduce(
+            (count, item) => count + item.removalTransactions.length,
+            0,
+          ),
+        summary: `${baseReport.modules.liquidity.summary} Inspected bounded pair state and LP mint/burn history for ${pairEvidence.results.length} of ${baseReport.liquidity.pairs.length} discovered pair${baseReport.liquidity.pairs.length === 1 ? "" : "s"}.`,
+        warnings: baseReport.liquidity.limitations,
+      };
+    }
+    baseReport.findings.push(
+      ...liquidityEvidenceFindings(baseReport, pairEvidence.results),
+    );
     baseReport.findings.push(...liveEvidenceFindings(baseReport));
     if (
       baseReport.history.postOwnershipZeroActivity === true &&
@@ -1124,7 +1306,8 @@ export async function buildTokenContractReport({
       baseReport.modules[id] = {
         ...baseReport.modules[id],
         status: "skipped",
-        summary: "Deep live-chain collection was skipped for this injected reader.",
+        summary:
+          "Deep live-chain collection was skipped for this injected reader.",
       };
     }
   }
@@ -1746,12 +1929,15 @@ function normalizeExplorerSourceFiles(
   for (const candidate of candidates) {
     try {
       const parsed = JSON.parse(candidate) as unknown;
-      if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) continue;
+      if (!parsed || typeof parsed !== "object" || Array.isArray(parsed))
+        continue;
       const sources = (parsed as { sources?: unknown }).sources;
-      if (!sources || typeof sources !== "object" || Array.isArray(sources)) continue;
+      if (!sources || typeof sources !== "object" || Array.isArray(sources))
+        continue;
       const files = Object.entries(sources).flatMap(([name, value]) => {
         if (typeof value === "string") return [{ name, content: value }];
-        if (!value || typeof value !== "object" || Array.isArray(value)) return [];
+        if (!value || typeof value !== "object" || Array.isArray(value))
+          return [];
         const content = (value as { content?: unknown }).content;
         return typeof content === "string" ? [{ name, content }] : [];
       });
@@ -2056,7 +2242,11 @@ async function fetchBlockscoutProxyMetadata({
     "implementation_address",
   );
   return {
-    isProxy: implementationAddress ? true : hasImplementationField ? false : null,
+    isProxy: implementationAddress
+      ? true
+      : hasImplementationField
+        ? false
+        : null,
     implementationAddress,
     warnings: [],
   };
@@ -2400,7 +2590,8 @@ function buildDeepSeekSourceExcerpts(
     .slice()
     .sort(
       (left, right) =>
-        Number(right.state === "confirmed") - Number(left.state === "confirmed") ||
+        Number(right.state === "confirmed") -
+          Number(left.state === "confirmed") ||
         severity[right.severity] - severity[left.severity],
     )
     .flatMap((finding) =>
@@ -2423,7 +2614,10 @@ function buildDeepSeekSourceExcerpts(
     const sourceLines = fileMap.get(file);
     if (!sourceLines) continue;
     const start = Math.max(1, evidence.startLine! - 2);
-    const requestedEnd = Math.max(evidence.endLine ?? evidence.startLine!, start);
+    const requestedEnd = Math.max(
+      evidence.endLine ?? evidence.startLine!,
+      start,
+    );
     const end = Math.min(sourceLines.length, requestedEnd + 2, start + 79);
     const key = `${file}:${start}:${end}`;
     if (seen.has(key)) {
@@ -2467,11 +2661,43 @@ function buildDeepSeekSourceExcerpts(
 
 function sanitizeSolidityForAi(source: string): string {
   return source
-    .replace(/\/\*[\s\S]*?\*\//g, (comment) =>
-      comment.replace(/[^\r\n]/g, " "),
-    )
+    .replace(/\/\*[\s\S]*?\*\//g, (comment) => comment.replace(/[^\r\n]/g, " "))
     .replace(/\/\/[^\r\n]*/g, "")
     .replace(/(["'])(?:\\.|(?!\1)[^\\\r\n]){80,}\1/g, "$1[redacted]$1");
+}
+
+function shouldUseDeepSeekThinking(
+  report: TokenContractReportResponse,
+  sourceFiles: SoliditySourceFile[],
+): boolean {
+  const confirmedHighRisk = report.findings.filter(
+    (finding) =>
+      finding.state === "confirmed" &&
+      (finding.severity === "critical" || finding.severity === "high"),
+  ).length;
+  const callerDifferential = report.findings.some(
+    (finding) =>
+      finding.id.startsWith("simulation.") &&
+      (finding.state === "confirmed" || finding.state === "review-clue"),
+  );
+  const controlConflict =
+    report.controls.ownerZeroRemovesAllControl === false ||
+    report.controls.ownershipStatus === "conflicting" ||
+    report.history.postOwnershipZeroActivity === true;
+  const complexVerifiedSource =
+    report.contract?.source.verified === "verified" &&
+    (sourceFiles.length > 1 || report.contract.source.isProxy === true);
+  const liquidityLifecycle = report.liquidity.pairEvidence.some(
+    (evidence) =>
+      BigInt(evidence.deployerActivity.observedLpRemovedAfterMint) > 0n,
+  );
+  return (
+    confirmedHighRisk >= 2 ||
+    callerDifferential ||
+    controlConflict ||
+    complexVerifiedSource ||
+    liquidityLifecycle
+  );
 }
 
 async function generateDeepSeekReport({
@@ -2494,8 +2720,6 @@ async function generateDeepSeekReport({
     TOKEN_REPORT_DEFAULT_DEEPSEEK_BASE_URL;
   const model =
     cleanEnv(env.DEEPSEEK_MODEL) ?? TOKEN_REPORT_DEFAULT_DEEPSEEK_MODEL;
-  const thinkingEnabled =
-    cleanEnv(env.DEEPSEEK_THINKING)?.toLowerCase() === "enabled";
   const apiKey = cleanEnv(env.DEEPSEEK_API_KEY);
   if (!apiKey) return emptyAi("unavailable", model, "not-configured");
 
@@ -2506,6 +2730,12 @@ async function generateDeepSeekReport({
     runtimeBytecode,
     sourceExcerpts,
   );
+  const thinkingMode =
+    cleanEnv(env.DEEPSEEK_THINKING)?.toLowerCase() || "selective";
+  const thinkingEnabled =
+    thinkingMode === "enabled" ||
+    (thinkingMode === "selective" &&
+      shouldUseDeepSeekThinking(report, sourceFiles));
   const evidence = JSON.stringify(featureReport);
   let accumulatedUsage: TokenContractReportResponse["ai"]["usage"] = null;
 
@@ -2552,6 +2782,7 @@ Rules:
 16. Every detailedFindings[].evidence item must be an exact id copied from featureReport.findings[].id. Do not write prose or invent evidence in that array. The app resolves those ids to deterministic evidence.
 17. Any source observation must include citations fully contained within featureReport.source.citedExcerpts. Each citation needs an exact file, startLine, endLine, and evidenceIds that match both the detailed finding and cited excerpt.
 18. overallVerdict, confidence, and confidenceReason are compatibility fields only. The server overwrites them with deterministic values.
+19. Treat each detailed finding as an evidence-selection request. The server replaces severity, heading, description, and practicalEffect with the selected deterministic finding's text. Never pair one finding id with prose about a different capability.
 
 Return only JSON using this schema:
 {
@@ -2584,7 +2815,7 @@ ${evidence}`,
           ],
           max_tokens: TOKEN_REPORT_DEEPSEEK_MAX_TOKENS,
           response_format: { type: "json_object" },
-          temperature: 0.1,
+          ...(thinkingEnabled ? {} : { temperature: 0.1 }),
           thinking: { type: thinkingEnabled ? "enabled" : "disabled" },
           ...(thinkingEnabled ? { reasoning_effort: "high" } : {}),
         }),
@@ -2613,7 +2844,8 @@ ${evidence}`,
     }
     if (
       first.reason !== "invalid-output" &&
-      first.reason !== "truncated-output"
+      first.reason !== "truncated-output" &&
+      first.reason !== "empty-output"
     ) {
       return emptyAi(
         "unavailable",
@@ -2651,8 +2883,7 @@ ${evidence}`,
           max_tokens: TOKEN_REPORT_DEEPSEEK_RETRY_MAX_TOKENS,
           response_format: { type: "json_object" },
           temperature: 0,
-          thinking: { type: thinkingEnabled ? "enabled" : "disabled" },
-          ...(thinkingEnabled ? { reasoning_effort: "high" } : {}),
+          thinking: { type: "disabled" },
         }),
       },
       signal,
@@ -2667,11 +2898,7 @@ ${evidence}`,
         first.usage,
       );
     }
-    const repaired = evaluateDeepSeekOutput(
-      repair.text,
-      report,
-      featureReport,
-    );
+    const repaired = evaluateDeepSeekOutput(repair.text, report, featureReport);
     const usage = combineAiUsage(first.usage, repaired.usage);
     accumulatedUsage = usage;
     return repaired.narrative
@@ -2742,11 +2969,11 @@ function evaluateDeepSeekOutput(
     return { narrative: null, reason: "empty-output", finishReason, usage };
   }
   const parsed = parseDeepSeekAuditJson(content);
-  if (!parsed || containsUnsupportedReputationClaim(parsed)) {
+  if (!parsed) {
     return { narrative: null, reason: "invalid-output", finishReason, usage };
   }
   const narrative = groundDeepSeekNarrative(parsed, report, featureReport);
-  return narrative
+  return narrative && !containsUnsupportedReputationClaim(narrative)
     ? { narrative, reason: "invalid-output", finishReason, usage }
     : { narrative: null, reason: "invalid-output", finishReason, usage };
 }
@@ -2939,8 +3166,7 @@ function deepAuditFeatureReport(
       unresolved: report.selectors.filter(
         (selector) => selector.evidenceState === "unresolved",
       ),
-      note:
-        "Unique 4byte candidates are review clues only. Their names and behavior are not confirmed by signature lookup.",
+      note: "Unique 4byte candidates are review clues only. Their names and behavior are not confirmed by signature lookup.",
     },
     revertStrings: extractPrintableStrings(runtimeBytecode),
     hardcodedAddresses: extractPush20Addresses(runtimeBytecode),
@@ -2986,9 +3212,10 @@ function deepAuditFeatureReport(
       initialMint: report.supplyHistory,
       mintFunctionsDetected:
         hasConfirmedFinding("solidity.supply.mutable") ||
-        selectors.dangerous.some((selector) =>
-          selector.signature.toLowerCase().includes("mint") &&
-          !selector.source.includes("4byte"),
+        selectors.dangerous.some(
+          (selector) =>
+            selector.signature.toLowerCase().includes("mint") &&
+            !selector.source.includes("4byte"),
         ),
       ownerMintDetected: hasConfirmedFinding(
         "solidity.supply.privileged-increase",
@@ -3017,16 +3244,16 @@ function deepAuditFeatureReport(
         hasConfirmedFinding("solidity.transfer.sender-block") ||
         hasConfirmedFinding("solidity.transfer.recipient-block"),
       whitelistDetected: null,
-      lpSellBlockSuspected:
-        hasConfirmedFinding("solidity.transfer.recipient-block") ||
-        hasConfirmedFinding("simulation.transfer.controller-sell-exemption"),
+      lpSellBlockSuspected: hasConfirmedFinding(
+        "solidity.transfer.recipient-block",
+      ),
       cooldownDetected: null,
       holdTimeDetected: null,
       maxTxDetected: null,
       maxWalletDetected: null,
-      ownerExemptionsDetected:
-        hasConfirmedFinding("solidity.transfer.privileged-exemption") ||
-        hasConfirmedFinding("simulation.transfer.controller-sell-exemption"),
+      ownerExemptionsDetected: hasConfirmedFinding(
+        "solidity.transfer.privileged-exemption",
+      ),
       evidenceStatus:
         report.modules.simulation.status === "complete" ||
         report.modules.source.status === "complete"
@@ -3034,7 +3261,9 @@ function deepAuditFeatureReport(
           : "partial",
     },
     fees: {
-      feeLogicDetected: hasConfirmedFinding("solidity.fee.mutable-transfer-value"),
+      feeLogicDetected: hasConfirmedFinding(
+        "solidity.fee.mutable-transfer-value",
+      ),
       ownerCanChangeFees: hasConfirmedFinding(
         "solidity.fee.mutable-transfer-value",
       ),
@@ -3051,9 +3280,20 @@ function deepAuditFeatureReport(
     dex: {
       pairsFound: report.liquidity.pairs,
       routersFound: [],
-      factoriesFound: [],
+      factoriesFound: Array.from(
+        new Set(
+          report.liquidity.pairEvidence
+            .map((evidence) => evidence.snapshot.factory)
+            .filter((address): address is Address => address !== null),
+        ),
+      ),
+      pairEvidence: report.liquidity.pairEvidence,
       lpLocked: null,
-      lpBurned: null,
+      lpBurnedPermanently: null,
+      deployerLpConsumedInRemoval: report.liquidity.pairEvidence.some(
+        (evidence) =>
+          BigInt(evidence.deployerActivity.observedLpMatchedToBurns) > 0n,
+      ),
       removeLiquidityFunctionDetected: selectors.dangerous.some(
         (selector) => selector.selector === "0xbaa2abde",
       ),
@@ -3063,14 +3303,17 @@ function deepAuditFeatureReport(
       evidenceStatus:
         report.modules.liquidity.status === "unavailable"
           ? "not_collected"
-          : "pair_discovery_only",
+          : report.liquidity.pairEvidence.length > 0
+            ? "pair_state_and_bounded_event_history"
+            : "pair_discovery_only",
     },
     simulation: {
       buy: null,
-      sell: simulationAttempt("holder-to-pair"),
-      controllerSell: simulationAttempt("controller-to-pair"),
+      sell: null,
+      controllerSell: null,
       walletTransfer: simulationAttempt("holder-to-wallet"),
       transferToPair: simulationAttempt("holder-to-pair"),
+      controllerTransferToPair: simulationAttempt("controller-to-pair"),
       pairToHolder: simulationAttempt("pair-to-holder"),
       approveRouter: null,
       controlFunctionAttempts: report.simulation.attempts.filter((attempt) =>
@@ -3078,11 +3321,11 @@ function deepAuditFeatureReport(
       ),
       capturedBlock: report.simulation.blockNumber,
       limitations: report.simulation.limitations,
-      honeypotSuspected: hasConfirmedFinding(
-        "simulation.transfer.controller-sell-exemption",
-      ),
+      honeypotSuspected: null,
       sellTaxBps: null,
       buyTaxBps: null,
+      sellabilityNote:
+        "Direct transfer-to-pair eth_calls test only the token transfer path. They do not execute a router swap or prove completed buy or sell behavior.",
       evidenceStatus:
         report.simulation.attempts.length > 0
           ? "bounded_eth_call"
@@ -3431,8 +3674,7 @@ function resolvedSelectorsForFeatureReport(
     admin: all.filter((item) => item.classification === "admin"),
     dangerous: all.filter(
       (item) =>
-        item.classification === "dangerous" &&
-        !item.source.includes("4byte"),
+        item.classification === "dangerous" && !item.source.includes("4byte"),
     ),
     reviewClues: all.filter((item) => item.source.includes("4byte")),
     unknown: all.filter((item) => item.classification === "unknown"),
@@ -3447,7 +3689,16 @@ function bytecodeEvidenceFindings(
 ): TokenContractReportResponse["findings"] {
   const findings: TokenContractReportResponse["findings"] = [];
   for (const opcode of resolution.bytecode.sensitiveOpcodes) {
-    if (!["ORIGIN", "DELEGATECALL", "CALLCODE", "SELFDESTRUCT", "CREATE", "CREATE2"].includes(opcode.name)) {
+    if (
+      ![
+        "ORIGIN",
+        "DELEGATECALL",
+        "CALLCODE",
+        "SELFDESTRUCT",
+        "CREATE",
+        "CREATE2",
+      ].includes(opcode.name)
+    ) {
       continue;
     }
     const severity =
@@ -3488,12 +3739,15 @@ function bytecodeEvidenceFindings(
       summary: `${resolution.bytecode.embeddedAddresses.length} PUSH20 address constant${resolution.bytecode.embeddedAddresses.length === 1 ? " was" : "s were"} found in runtime bytecode.`,
       practicalEffect:
         "Embedded addresses can be routers, recipients, controllers, or harmless constants; their role is unresolved.",
-      recommendation: "Identify each address role before drawing a risk conclusion.",
-      evidence: resolution.bytecode.embeddedAddresses.slice(0, 12).map((item, index) => ({
-        id: `bytecode:address:${index + 1}`,
-        type: "bytecode" as const,
-        summary: `${item.address} at byte offsets ${item.locations.slice(0, 8).join(", ")}.`,
-      })),
+      recommendation:
+        "Identify each address role before drawing a risk conclusion.",
+      evidence: resolution.bytecode.embeddedAddresses
+        .slice(0, 12)
+        .map((item, index) => ({
+          id: `bytecode:address:${index + 1}`,
+          type: "bytecode" as const,
+          summary: `${item.address} at byte offsets ${item.locations.slice(0, 8).join(", ")}.`,
+        })),
     });
   }
   return findings;
@@ -3512,7 +3766,8 @@ async function readEip1967Storage(
     return {
       finding: null,
       setCount: 0,
-      warning: "EIP-1967 storage reads were unavailable from the configured reader.",
+      warning:
+        "EIP-1967 storage reads were unavailable from the configured reader.",
       implementationAddress: null,
     };
   }
@@ -3543,8 +3798,14 @@ async function readEip1967Storage(
         "EIP-1967 beacon slot read timed out",
       ),
     ]);
-    const evidence = decodeEip1967StorageValues({ implementation, admin, beacon });
-    const setReadings = evidence.readings.filter((reading) => reading.state === "set");
+    const evidence = decodeEip1967StorageValues({
+      implementation,
+      admin,
+      beacon,
+    });
+    const setReadings = evidence.readings.filter(
+      (reading) => reading.state === "set",
+    );
     if (evidence.proxyEvidence !== "present") {
       return {
         finding: null,
@@ -3567,7 +3828,8 @@ async function readEip1967Storage(
         severity: "medium",
         state: "confirmed",
         confidence: 95,
-        summary: "One or more standard EIP-1967 implementation, admin, or beacon slots contain an address.",
+        summary:
+          "One or more standard EIP-1967 implementation, admin, or beacon slots contain an address.",
         practicalEffect:
           "Authorized proxy control may be able to change implementation behavior independently of the token owner getter.",
         recommendation:
@@ -3678,10 +3940,14 @@ async function collectHolderSnapshots({
   try {
     supply = totalSupply === null ? null : BigInt(totalSupply);
   } catch {
-    allLimitations.push("Current total supply could not be parsed for concentration calculations.");
+    allLimitations.push(
+      "Current total supply could not be parsed for concentration calculations.",
+    );
   }
   if (totalSupply === null) {
-    allLimitations.push("Current total supply was unavailable for concentration calculations.");
+    allLimitations.push(
+      "Current total supply was unavailable for concentration calculations.",
+    );
   }
 
   const sampled = (
@@ -3710,7 +3976,9 @@ async function collectHolderSnapshots({
             sources: Array.from(sources.get(address.toLowerCase()) ?? []),
           };
         } catch {
-          allLimitations.push(`balanceOf(${address}) returned a non-integer value.`);
+          allLimitations.push(
+            `balanceOf(${address}) returned a non-integer value.`,
+          );
           return null;
         }
       }),
@@ -3745,7 +4013,10 @@ async function collectHolderSnapshots({
   };
 }
 
-function percentageOfSupply(balance: bigint, supply: bigint | null): number | null {
+function percentageOfSupply(
+  balance: bigint,
+  supply: bigint | null,
+): number | null {
   if (supply === null || supply <= 0n || balance < 0n) return null;
   const scaled = (balance * 1_000_000n) / supply;
   if (scaled > BigInt(Number.MAX_SAFE_INTEGER)) return null;
@@ -3789,10 +4060,12 @@ function holderAndSupplyFindings(
       severity: "info",
       state: "confirmed",
       confidence: 90,
-      summary: "Current totalSupply differs from the earliest bounded zero-address mint total.",
+      summary:
+        "Current totalSupply differs from the earliest bounded zero-address mint total.",
       practicalEffect:
         "Supply changed after deployment through minting, burning, rebasing, migration, or another supply path.",
-      recommendation: "Review the intervening supply events and authorized callers.",
+      recommendation:
+        "Review the intervening supply events and authorized callers.",
       evidence: [
         {
           id: "history:supply:current-vs-initial",
@@ -3839,8 +4112,11 @@ async function runReadOnlyTransferSimulations({
   client,
   contractAddress,
   holder,
+  holderBalance,
   controller,
+  controllerBalance,
   pair,
+  pairBalance,
   holderLimitations,
   controlFunctions,
   candidateSelectors,
@@ -3848,8 +4124,11 @@ async function runReadOnlyTransferSimulations({
   client: TokenContractReportReadClient;
   contractAddress: Address;
   holder: Address | null;
+  holderBalance: string | null;
   controller: Address | null;
+  controllerBalance: string | null;
   pair: Address | null;
+  pairBalance: string | null;
   holderLimitations: string[];
   controlFunctions: ResolveRuntimeSelectorsResult["abi"]["functions"];
   candidateSelectors: TokenContractReportResponse["selectors"];
@@ -3860,9 +4139,14 @@ async function runReadOnlyTransferSimulations({
 }> {
   const limitations = [...holderLimitations];
   if (!client.call) {
-    const message = "The configured RPC reader does not expose read-only eth_call simulation.";
+    const message =
+      "The configured RPC reader does not expose read-only eth_call simulation.";
     return {
-      summary: { blockNumber: null, attempts: [], limitations: [...limitations, message] },
+      summary: {
+        blockNumber: null,
+        attempts: [],
+        limitations: [...limitations, message],
+      },
       module: {
         id: "simulation",
         label: "Read-only simulation",
@@ -3885,9 +4169,11 @@ async function runReadOnlyTransferSimulations({
       );
     }
   } catch (error) {
-    limitations.push(`A fixed simulation block could not be captured: ${redactSensitiveErrorText(
-      error instanceof Error ? error.message : String(error),
-    )}`);
+    limitations.push(
+      `A fixed simulation block could not be captured: ${redactSensitiveErrorText(
+        error instanceof Error ? error.message : String(error),
+      )}`,
+    );
   }
   const blockNumber =
     block !== undefined && block <= BigInt(Number.MAX_SAFE_INTEGER)
@@ -3905,6 +4191,19 @@ async function runReadOnlyTransferSimulations({
     blockNumber,
   });
   const simulationPair = pair ?? getterProbe.validatedPair;
+  const ordinaryHolder =
+    holder &&
+    (!simulationPair ||
+      holder.toLowerCase() !== simulationPair.toLowerCase()) &&
+    (!controller || holder.toLowerCase() !== controller.toLowerCase())
+      ? holder
+      : null;
+  const holderAmount = boundedSimulationAmount(holderBalance);
+  const controllerAmount =
+    holderAmount !== null && hasAtLeastBalance(controllerBalance, holderAmount)
+      ? holderAmount
+      : boundedSimulationAmount(controllerBalance);
+  const pairAmount = boundedSimulationAmount(pairBalance);
   const cases: Array<{
     id: string;
     label: string;
@@ -3913,47 +4212,68 @@ async function runReadOnlyTransferSimulations({
     functionSignature: string;
     evidenceState: "confirmed-signature" | "review-clue";
     kind: "transfer" | "control";
+    recipient: Address | null;
+    amount: bigint | null;
   }> = [
     {
       id: "holder-to-pair",
-      label: "Holder to DEX pair",
-      from: holder,
-      data: simulationPair ? transferCallData(simulationPair) : null,
+      label: "Ordinary holder transfer to DEX pair",
+      from: ordinaryHolder,
+      data:
+        simulationPair && holderAmount !== null
+          ? transferCallData(simulationPair, holderAmount)
+          : null,
       functionSignature: "transfer(address,uint256)",
       evidenceState: "confirmed-signature",
       kind: "transfer",
+      recipient: simulationPair,
+      amount: holderAmount,
     },
     {
       id: "controller-to-pair",
       label: "Controller/deployer to DEX pair",
       from: controller,
-      data: simulationPair ? transferCallData(simulationPair) : null,
+      data:
+        simulationPair && controllerAmount !== null
+          ? transferCallData(simulationPair, controllerAmount)
+          : null,
       functionSignature: "transfer(address,uint256)",
       evidenceState: "confirmed-signature",
       kind: "transfer",
+      recipient: simulationPair,
+      amount: controllerAmount,
     },
     {
       id: "holder-to-wallet",
       label: "Holder to ordinary wallet",
-      from: holder,
-      data: transferCallData(ordinaryRecipient),
+      from: ordinaryHolder,
+      data:
+        holderAmount === null
+          ? null
+          : transferCallData(ordinaryRecipient, holderAmount),
       functionSignature: "transfer(address,uint256)",
       evidenceState: "confirmed-signature",
       kind: "transfer",
+      recipient: ordinaryRecipient,
+      amount: holderAmount,
     },
     {
       id: "pair-to-holder",
       label: "DEX pair to holder",
-      from: simulationPair,
-      data: holder ? transferCallData(holder) : null,
+      from: pairAmount === null ? null : simulationPair,
+      data:
+        ordinaryHolder && pairAmount !== null
+          ? transferCallData(ordinaryHolder, pairAmount)
+          : null,
       functionSignature: "transfer(address,uint256)",
       evidenceState: "confirmed-signature",
       kind: "transfer",
+      recipient: ordinaryHolder,
+      amount: pairAmount,
     },
   ];
-  const candidateControlFunctions = buildFourByteControlCandidates(
-    candidateSelectors,
-  );
+  const candidateControlFunctions =
+    buildFourByteControlCandidates(candidateSelectors);
   const verifiedControlFunctions = controlFunctions
     .filter(
       (candidate) =>
@@ -3974,8 +4294,15 @@ async function runReadOnlyTransferSimulations({
       abiItem: fn.abiItem,
       evidenceState: "confirmed-signature" as const,
     }));
-  for (const fn of [...candidateControlFunctions, ...verifiedControlFunctions].slice(0, 4)) {
-    const args = simulationArgsFor(fn.inputs, holder ?? ordinaryRecipient);
+  for (const fn of [
+    ...candidateControlFunctions,
+    ...verifiedControlFunctions,
+  ].slice(0, 4)) {
+    const controlTarget =
+      /pair|router|liquidity/i.test(fn.name) && simulationPair
+        ? simulationPair
+        : (ordinaryHolder ?? ordinaryRecipient);
+    const args = simulationArgsFor(fn.inputs, controlTarget);
     if (!args) continue;
     let data: Hex;
     try {
@@ -3996,6 +4323,8 @@ async function runReadOnlyTransferSimulations({
         functionSignature: fn.signature,
         evidenceState: fn.evidenceState,
         kind: "control",
+        recipient: null,
+        amount: null,
       },
       {
         id: `control-ordinary-${fn.selector}`,
@@ -4005,20 +4334,25 @@ async function runReadOnlyTransferSimulations({
         functionSignature: fn.signature,
         evidenceState: fn.evidenceState,
         kind: "control",
+        recipient: null,
+        amount: null,
       },
     );
   }
 
   const remainingAttemptBudget = Math.max(0, 12 - getterProbe.attempts.length);
+  const executableCases = cases.filter(
+    (item): item is typeof item & { from: Address; data: Hex } =>
+      item.from !== null && item.data !== null,
+  );
   const callAttempts = await Promise.all(
-    cases.slice(0, remainingAttemptBudget).flatMap((item) => {
-      if (!item.from || !item.data) return [];
+    executableCases.slice(0, remainingAttemptBudget).flatMap((item) => {
       return [
         (async (): Promise<
           TokenContractReportResponse["simulation"]["attempts"][number]
         > => {
           try {
-            await withTimeout(
+            const result = await withTimeout(
               client.call!({
                 account: item.from!,
                 to: contractAddress,
@@ -4028,20 +4362,29 @@ async function runReadOnlyTransferSimulations({
               TOKEN_REPORT_READ_TIMEOUT_MS,
               `${item.label} simulation timed out`,
             );
+            const returnData = callResultData(result);
+            const returnedFalse =
+              item.kind === "transfer" &&
+              returnData !== null &&
+              /^0x0{64}$/i.test(returnData);
             return {
               id: item.id,
               label: item.label,
               from: item.from,
               to: contractAddress,
+              recipient: item.recipient,
+              amount: item.amount?.toString() ?? null,
               functionSignature: item.functionSignature,
-              status: "succeeded",
+              status: returnedFalse ? "returned-false" : "succeeded",
               blockNumber,
-              detail:
-                item.kind === "transfer"
-                  ? "eth_call completed for a one-base-unit transfer. This proves only this tested path at the captured block."
+              detail: returnedFalse
+                ? "The read-only transfer call did not revert but returned false, so the requested transfer did not report success."
+                : item.kind === "transfer"
+                  ? `eth_call completed for ${item.amount?.toString() ?? "an unknown number of"} raw token units. This tests only the encoded transfer path, not a router swap or completed sale.`
                   : item.evidenceState === "review-clue"
                     ? "eth_call completed for calldata derived from a unique unverified 4byte candidate signature. Caller behavior is observed, but the candidate function name and state effect remain unconfirmed."
                     : "eth_call completed for the verified ABI control function. This observes only this caller and block and does not submit a transaction.",
+              returnData,
               evidenceState: item.evidenceState,
             };
           } catch (error) {
@@ -4050,12 +4393,15 @@ async function runReadOnlyTransferSimulations({
               label: item.label,
               from: item.from,
               to: contractAddress,
+              recipient: item.recipient,
+              amount: item.amount?.toString() ?? null,
               functionSignature: item.functionSignature,
               status: "reverted",
               blockNumber,
               detail: `eth_call reverted: ${redactSensitiveErrorText(
                 error instanceof Error ? error.message : String(error),
               ).slice(0, 240)}`,
+              returnData: null,
               evidenceState: item.evidenceState,
             };
           }
@@ -4065,10 +4411,26 @@ async function runReadOnlyTransferSimulations({
   );
   const attempts = [...getterProbe.attempts, ...callAttempts].slice(0, 12);
 
-  if (!holder) limitations.push("No bounded holder candidate was available for transfer simulation.");
-  if (!simulationPair) limitations.push("No DEX pair candidate was available for pair-path simulation.");
+  if (!ordinaryHolder) {
+    limitations.push(
+      holder &&
+        simulationPair &&
+        holder.toLowerCase() === simulationPair.toLowerCase()
+        ? "The only positive non-controller holder candidate was the DEX pair itself, so ordinary-holder transfer simulation was not run."
+        : "No distinct positive-balance ordinary holder candidate was available for transfer simulation.",
+    );
+  }
+  if (!simulationPair)
+    limitations.push(
+      "No DEX pair candidate was available for pair-path simulation.",
+    );
   limitations.push(...getterProbe.limitations);
-  const status = attempts.length === 0 ? "unavailable" : limitations.length > 0 ? "partial" : "complete";
+  const status =
+    attempts.length === 0
+      ? "unavailable"
+      : limitations.length > 0
+        ? "partial"
+        : "complete";
   return {
     summary: { blockNumber, attempts, limitations },
     module: {
@@ -4105,28 +4467,37 @@ async function probeUniqueFourByteGetters({
   validatedPair: Address | null;
   limitations: string[];
 }> {
-  if (!client.call) return { attempts: [], validatedPair: null, limitations: [] };
+  if (!client.call)
+    return { attempts: [], validatedPair: null, limitations: [] };
   const candidates = selectors.filter(
     (selector) =>
-      selector.resolution === "4byte" &&
       selector.evidenceState === "review-clue" &&
       selector.signature !== null &&
-      selector.signature in safeCandidateGetterAbis,
+      (selector.signature in safeCandidateGetterAbis ||
+        rawWordCandidateGetters.has(selector.signature)),
   );
   const attempts: TokenContractReportResponse["simulation"]["attempts"] = [];
   const limitations: string[] = [];
   let validatedPair: Address | null = null;
-  for (const selector of candidates.slice(0, 5)) {
-    const signature = selector.signature as keyof typeof safeCandidateGetterAbis;
-    const abi = safeCandidateGetterAbis[signature] as Abi;
+  for (const selector of candidates.slice(0, 6)) {
+    const signature = selector.signature!;
+    const knownAbi = signature in safeCandidateGetterAbis;
+    const abi = knownAbi
+      ? (safeCandidateGetterAbis[
+          signature as keyof typeof safeCandidateGetterAbis
+        ] as Abi)
+      : null;
     const functionName = signature.slice(0, signature.indexOf("("));
-    const args = signature === "isExcludedFromFee(address)" ? [ordinaryAddress] : [];
+    const args =
+      signature === "isExcludedFromFee(address)" ? [ordinaryAddress] : [];
     try {
       const result = await withTimeout(
         client.call({
           account: ordinaryAddress,
           to: contractAddress,
-          data: encodeFunctionData({ abi, functionName, args }),
+          data: abi
+            ? encodeFunctionData({ abi, functionName, args })
+            : selector.selector,
           ...(block === undefined ? {} : { blockNumber: block }),
         }),
         TOKEN_REPORT_READ_TIMEOUT_MS,
@@ -4134,9 +4505,15 @@ async function probeUniqueFourByteGetters({
       );
       const data = callResultData(result);
       if (!data) throw new Error("eth_call returned no decodable data");
-      const decoded = decodeFunctionResult({ abi, functionName, data });
-      let detail = `Unique unverified 4byte candidate signature returned ${formatProbeValue(decoded)}. The value is observed, but the candidate name and semantics remain unconfirmed.`;
-      if (signature === "uniswapPair()" && typeof decoded === "string" && isAddress(decoded)) {
+      const decoded = abi
+        ? decodeFunctionResult({ abi, functionName, data })
+        : formatRawWords(data);
+      let detail = `Unverified selector candidate ${signature} returned ${formatProbeValue(decoded)}. The value is observed, but the candidate name, output types, and semantics remain unconfirmed.`;
+      if (
+        (signature === "uniswapPair()" || signature === "pair()") &&
+        typeof decoded === "string" &&
+        isAddress(decoded)
+      ) {
         const pair = getAddress(decoded);
         const pairValidation = await validatePairCandidate({
           client,
@@ -4147,7 +4524,8 @@ async function probeUniqueFourByteGetters({
         });
         if (pairValidation.valid) {
           validatedPair = pair;
-          detail += " The returned address has bytecode and token0/token1 identifies this token, so it is a structurally validated pair candidate.";
+          detail +=
+            " The returned address has bytecode and token0/token1 identifies this token, so it is a structurally validated pair candidate.";
         } else {
           detail += ` Pair validation was incomplete: ${pairValidation.reason}`;
         }
@@ -4157,10 +4535,13 @@ async function probeUniqueFourByteGetters({
         label: `${signature} candidate getter`,
         from: ordinaryAddress,
         to: contractAddress,
+        recipient: null,
+        amount: null,
         functionSignature: signature,
         status: "succeeded",
         blockNumber,
         detail,
+        returnData: data,
         evidenceState: "review-clue",
       });
     } catch (error) {
@@ -4169,16 +4550,19 @@ async function probeUniqueFourByteGetters({
         label: `${signature} candidate getter`,
         from: ordinaryAddress,
         to: contractAddress,
+        recipient: null,
+        amount: null,
         functionSignature: signature,
         status: "reverted",
         blockNumber,
         detail: `Read-only probe for a unique unverified 4byte candidate reverted or could not be decoded: ${redactSensitiveErrorText(error instanceof Error ? error.message : String(error)).slice(0, 220)}`,
+        returnData: null,
         evidenceState: "review-clue",
       });
     }
   }
-  if (candidates.length > 5) {
-    limitations.push("Candidate getter probes were capped at five.");
+  if (candidates.length > 6) {
+    limitations.push("Candidate getter probes were capped at six.");
   }
   return { attempts, validatedPair, limitations };
 }
@@ -4196,15 +4580,21 @@ async function validatePairCandidate({
   caller: Address;
   block: bigint | undefined;
 }): Promise<{ valid: boolean; reason: string }> {
-  if (/^0x0{40}$/i.test(pair)) return { valid: false, reason: "the getter returned the zero address" };
+  if (/^0x0{40}$/i.test(pair))
+    return { valid: false, reason: "the getter returned the zero address" };
   try {
     const bytecode = await withTimeout(
       client.getBytecode({ address: pair }),
       TOKEN_REPORT_READ_TIMEOUT_MS,
       "pair bytecode lookup timed out",
     );
-    if (!bytecode || bytecode === "0x") return { valid: false, reason: "the returned address has no bytecode" };
-    if (!client.call) return { valid: false, reason: "token0/token1 eth_call support was unavailable" };
+    if (!bytecode || bytecode === "0x")
+      return { valid: false, reason: "the returned address has no bytecode" };
+    if (!client.call)
+      return {
+        valid: false,
+        reason: "token0/token1 eth_call support was unavailable",
+      };
     const readPairToken = async (functionName: "token0" | "token1") => {
       const result = await client.call!({
         account: caller,
@@ -4223,30 +4613,55 @@ async function validatePairCandidate({
       "pair identity reads timed out",
     );
     const matches = [token0, token1].some(
-      (value) => typeof value === "string" && isAddress(value) && getAddress(value) === token,
+      (value) =>
+        typeof value === "string" &&
+        isAddress(value) &&
+        getAddress(value) === token,
     );
     return matches
       ? { valid: true, reason: "token0/token1 includes the scanned token" }
-      : { valid: false, reason: "token0/token1 did not identify the scanned token" };
+      : {
+          valid: false,
+          reason: "token0/token1 did not identify the scanned token",
+        };
   } catch (error) {
     return {
       valid: false,
-      reason: redactSensitiveErrorText(error instanceof Error ? error.message : String(error)).slice(0, 180),
+      reason: redactSensitiveErrorText(
+        error instanceof Error ? error.message : String(error),
+      ).slice(0, 180),
     };
   }
 }
 
 function callResultData(value: unknown): Hex | null {
-  if (typeof value === "string" && /^0x[0-9a-f]*$/i.test(value)) return value as Hex;
+  if (typeof value === "string" && /^0x[0-9a-f]*$/i.test(value))
+    return value as Hex;
   if (!value || typeof value !== "object" || Array.isArray(value)) return null;
   const data = (value as { data?: unknown }).data;
-  return typeof data === "string" && /^0x[0-9a-f]*$/i.test(data) ? (data as Hex) : null;
+  return typeof data === "string" && /^0x[0-9a-f]*$/i.test(data)
+    ? (data as Hex)
+    : null;
 }
 
 function formatProbeValue(value: unknown): string {
   if (typeof value === "bigint") return value.toString();
-  if (typeof value === "string" || typeof value === "boolean") return String(value);
+  if (typeof value === "string" || typeof value === "boolean")
+    return String(value);
   return JSON.stringify(value)?.slice(0, 160) ?? "an undecodable value";
+}
+
+function formatRawWords(data: Hex): string {
+  const payload = data.slice(2);
+  if (payload.length === 0 || payload.length % 64 !== 0) {
+    return `${data.slice(0, 162)}${data.length > 162 ? "…" : ""}`;
+  }
+  const words = Array.from(
+    { length: Math.min(6, payload.length / 64) },
+    (_value, index) =>
+      BigInt(`0x${payload.slice(index * 64, index * 64 + 64)}`).toString(),
+  );
+  return `${words.join(", ")} (${payload.length / 64} raw 32-byte word${payload.length === 64 ? "" : "s"})`;
 }
 
 function buildFourByteControlCandidates(
@@ -4269,11 +4684,13 @@ function buildFourByteControlCandidates(
   }> = [];
   for (const selector of selectors) {
     if (
-      selector.resolution !== "4byte" ||
       selector.evidenceState !== "review-clue" ||
       !selector.signature ||
-      !/black|block|white|freeze|pause|trading|fee|tax|mint|burn|admin|owner|operator|limit|maxWallet|maxTx/i.test(selector.signature) ||
-      selector.signature in safeCandidateGetterAbis
+      !/black|block|white|freeze|pause|trading|fee|tax|mint|burn|admin|owner|operator|limit|maxWallet|maxTx|pair|router|liquidity/i.test(
+        selector.signature,
+      ) ||
+      selector.signature in safeCandidateGetterAbis ||
+      rawWordCandidateGetters.has(selector.signature)
     ) {
       continue;
     }
@@ -4282,7 +4699,11 @@ function buildFourByteControlCandidates(
     );
     if (!match) continue;
     const inputTypes = match[2] ? match[2].split(",") : [];
-    if (inputTypes.some((type) => !/^(?:address|bool|u?int\d*|bytes32)$/.test(type))) {
+    if (
+      inputTypes.some(
+        (type) => !/^(?:address|bool|u?int\d*|bytes32)$/.test(type),
+      )
+    ) {
       continue;
     }
     const item: AbiFunction = {
@@ -4301,15 +4722,60 @@ function buildFourByteControlCandidates(
       evidenceState: "review-clue",
     });
   }
-  return results.slice(0, 4);
+  return results
+    .sort(
+      (left, right) =>
+        actionCandidatePriority(right.signature) -
+          actionCandidatePriority(left.signature) ||
+        left.signature.localeCompare(right.signature),
+    )
+    .slice(0, 4);
 }
 
-function transferCallData(recipient: Address): Hex {
+function actionCandidatePriority(signature: string): number {
+  if (
+    /^(?:configure|set|update|change|execute|enable|disable)/i.test(signature)
+  ) {
+    return 110;
+  }
+  if (/^cancel/i.test(signature)) {
+    return 80;
+  }
+  if (
+    /^(?:black|block|white|freeze|pause|unpause|mint|burn)/i.test(signature)
+  ) {
+    return 90;
+  }
+  return 50;
+}
+
+function transferCallData(recipient: Address, amount: bigint): Hex {
   return encodeFunctionData({
     abi: erc20Abi,
     functionName: "transfer",
-    args: [recipient, 1n],
+    args: [recipient, amount],
   });
+}
+
+function boundedSimulationAmount(balance: string | null): bigint | null {
+  if (!balance || !/^\d+$/.test(balance)) return null;
+  const parsed = BigInt(balance);
+  if (parsed <= 0n) return null;
+  const proportional = parsed / 1_000n;
+  return proportional > 0n ? proportional : 1n;
+}
+
+function hasAtLeastBalance(balance: string | null, amount: bigint): boolean {
+  return Boolean(balance && /^\d+$/.test(balance) && BigInt(balance) >= amount);
+}
+
+function isBurnLikeAddress(address: string): boolean {
+  const normalized = address.toLowerCase();
+  return (
+    normalized === "0x0000000000000000000000000000000000000000" ||
+    normalized === "0x000000000000000000000000000000000000dead" ||
+    normalized === "0x0000000000000000000000000000000000000369"
+  );
 }
 
 function simulationArgsFor(
@@ -4329,41 +4795,515 @@ function simulationArgsFor(
   return args;
 }
 
+async function discoverPulseXFactoryPairs({
+  client,
+  chainId,
+  tokenAddress,
+}: {
+  client: TokenContractReportReadClient;
+  chainId: number;
+  tokenAddress: Address;
+}): Promise<{
+  applicable: boolean;
+  completedQueries: number;
+  pairs: TokenContractReportResponse["liquidity"]["pairs"];
+  limitations: string[];
+}> {
+  if (
+    chainId !== PULSECHAIN_CHAIN_ID ||
+    tokenAddress.toLowerCase() === PULSEX_WPLS_ADDRESS.toLowerCase()
+  ) {
+    return {
+      applicable: false,
+      completedQueries: 0,
+      pairs: [],
+      limitations: [],
+    };
+  }
+  const settled = await Promise.allSettled(
+    PULSEX_FACTORIES.map((factory) =>
+      withTimeout(
+        client.readContract({
+          address: factory.address,
+          abi: uniswapV2FactoryAbi,
+          functionName: "getPair",
+          args: [tokenAddress, PULSEX_WPLS_ADDRESS],
+        }),
+        TOKEN_REPORT_READ_TIMEOUT_MS,
+        `PulseX ${factory.version.toUpperCase()} factory lookup timed out`,
+      ),
+    ),
+  );
+  const pairs: TokenContractReportResponse["liquidity"]["pairs"] = [];
+  const limitations: string[] = [];
+  let completedQueries = 0;
+  settled.forEach((result, index) => {
+    const factory = PULSEX_FACTORIES[index];
+    if (result.status === "rejected") {
+      limitations.push(
+        `PulseX ${factory.version.toUpperCase()} factory getPair(token, WPLS) was unavailable: ${redactSensitiveErrorText(result.reason instanceof Error ? result.reason.message : String(result.reason)).slice(0, 180)}`,
+      );
+      return;
+    }
+    const pairAddress = normalizedAddressFromUnknown(result.value);
+    if (!pairAddress) {
+      limitations.push(
+        `PulseX ${factory.version.toUpperCase()} factory returned an invalid pair address.`,
+      );
+      return;
+    }
+    completedQueries += 1;
+    if (isBurnLikeAddress(pairAddress)) return;
+    pairs.push({
+      chainSlug: "pulsechain",
+      dexId: "pulsex",
+      labels: [factory.version],
+      pairAddress,
+      baseTokenAddress: tokenAddress,
+      quoteTokenAddress: PULSEX_WPLS_ADDRESS,
+      liquidityUsd: null,
+      pairCreatedAt: null,
+      url: `https://dexscreener.com/pulsechain/${pairAddress}`,
+    });
+  });
+  return { applicable: true, completedQueries, pairs, limitations };
+}
+
+function mergeLiquidityPairs(
+  discovered: TokenContractReportResponse["liquidity"]["pairs"],
+  factoryPairs: TokenContractReportResponse["liquidity"]["pairs"],
+): TokenContractReportResponse["liquidity"]["pairs"] {
+  const merged = new Map<
+    string,
+    TokenContractReportResponse["liquidity"]["pairs"][number]
+  >();
+  for (const pair of [...discovered, ...factoryPairs]) {
+    const key = pair.pairAddress.toLowerCase();
+    const existing = merged.get(key);
+    if (!existing) {
+      merged.set(key, { ...pair, labels: [...pair.labels] });
+      continue;
+    }
+    merged.set(key, {
+      ...existing,
+      chainSlug: existing.chainSlug || pair.chainSlug,
+      dexId:
+        pair.dexId?.toLowerCase() === "pulsex"
+          ? pair.dexId
+          : (existing.dexId ?? pair.dexId),
+      labels: Array.from(new Set([...existing.labels, ...pair.labels])),
+      baseTokenAddress: existing.baseTokenAddress ?? pair.baseTokenAddress,
+      quoteTokenAddress: existing.quoteTokenAddress ?? pair.quoteTokenAddress,
+      liquidityUsd: existing.liquidityUsd ?? pair.liquidityUsd,
+      pairCreatedAt: existing.pairCreatedAt ?? pair.pairCreatedAt,
+      url: existing.url ?? pair.url,
+    });
+  }
+  return Array.from(merged.values())
+    .sort((left, right) => {
+      const leftPulseX = pulseXPairPriority(left);
+      const rightPulseX = pulseXPairPriority(right);
+      return (
+        leftPulseX - rightPulseX ||
+        (right.liquidityUsd ?? -1) - (left.liquidityUsd ?? -1)
+      );
+    })
+    .slice(0, 3);
+}
+
+function pulseXPairPriority(
+  pair: TokenContractReportResponse["liquidity"]["pairs"][number],
+): number {
+  if (pair.dexId?.toLowerCase() !== "pulsex") return 2;
+  const normalized = pair.labels.map((label) => label.toLowerCase());
+  if (normalized.includes("v1")) return 0;
+  if (normalized.includes("v2")) return 1;
+  return 2;
+}
+
+function pulseXVersionForFactory(
+  factoryAddress: Address | null,
+): "v1" | "v2" | null {
+  if (!factoryAddress) return null;
+  const match = PULSEX_FACTORIES.find(
+    (factory) => factory.address.toLowerCase() === factoryAddress.toLowerCase(),
+  );
+  return match?.version ?? null;
+}
+
+function selectSimulationPair(
+  pairs: TokenContractReportResponse["liquidity"]["pairs"],
+): TokenContractReportResponse["liquidity"]["pairs"][number] | null {
+  return (
+    pairs.slice().sort((left, right) => {
+      if (left.liquidityUsd !== null || right.liquidityUsd !== null) {
+        return (right.liquidityUsd ?? -1) - (left.liquidityUsd ?? -1);
+      }
+      const versionPriority = (pair: typeof left) => {
+        const labels = pair.labels.map((label) => label.toLowerCase());
+        if (pair.dexId?.toLowerCase() === "pulsex" && labels.includes("v2")) {
+          return 0;
+        }
+        if (pair.dexId?.toLowerCase() === "pulsex" && labels.includes("v1")) {
+          return 1;
+        }
+        return 2;
+      };
+      return versionPriority(left) - versionPriority(right);
+    })[0] ?? null
+  );
+}
+
+async function collectReportLiquidityEvidence({
+  client,
+  tokenAddress,
+  deployerAddress,
+  capturedBlock,
+  creationBlock,
+  pairs,
+  signal,
+}: {
+  client: TokenContractReportReadClient;
+  tokenAddress: Address;
+  deployerAddress: Address | null;
+  capturedBlock: number | null;
+  creationBlock: number | null;
+  pairs: TokenContractReportResponse["liquidity"]["pairs"];
+  signal?: AbortSignal;
+}): Promise<{ results: TokenLpEvidenceResult[]; limitations: string[] }> {
+  if (pairs.length === 0) return { results: [], limitations: [] };
+  if (capturedBlock === null) {
+    return {
+      results: [],
+      limitations: [
+        "Pair state and LP lifecycle evidence were not collected because a common simulation block could not be captured.",
+      ],
+    };
+  }
+  const fromBlock =
+    creationBlock !== null && creationBlock <= capturedBlock
+      ? creationBlock
+      : Math.max(0, capturedBlock - 20_000);
+  const settled = await Promise.allSettled(
+    pairs.slice(0, 3).map((pair) =>
+      collectTokenLpEvidence({
+        tokenAddress,
+        pairAddress: pair.pairAddress,
+        deployerAddress,
+        capturedBlock,
+        fromBlock,
+        historyLowerBoundKnown:
+          creationBlock !== null && creationBlock <= capturedBlock,
+        signal,
+        dependencies: {
+          readContract: (args) =>
+            withTimeout(
+              client.readContract({
+                address: args.address,
+                abi: args.abi,
+                functionName: args.functionName,
+                blockNumber: args.blockNumber,
+              }),
+              TOKEN_REPORT_READ_TIMEOUT_MS,
+              `${args.functionName}() pair read timed out`,
+            ),
+          getLogs: (args) =>
+            fetchBoundedLiquidityLogs(client, {
+              ...args,
+              signal,
+            }),
+        },
+      }),
+    ),
+  );
+  const results: TokenLpEvidenceResult[] = [];
+  const limitations: string[] = [];
+  settled.forEach((result, index) => {
+    if (result.status === "fulfilled") {
+      results.push(result.value);
+      limitations.push(
+        ...result.value.limitations.map(
+          (limitation) => `${result.value.snapshot.pairAddress}: ${limitation}`,
+        ),
+      );
+      return;
+    }
+    const pair = pairs[index];
+    limitations.push(
+      `Pair evidence for ${pair?.pairAddress ?? "an indexed pair"} failed: ${redactSensitiveErrorText(result.reason instanceof Error ? result.reason.message : String(result.reason)).slice(0, 220)}`,
+    );
+  });
+  return { results, limitations };
+}
+
+async function fetchBoundedLiquidityLogs(
+  client: TokenContractReportReadClient,
+  {
+    address,
+    eventName,
+    topic0,
+    fromBlock,
+    toBlock,
+    limit,
+    signal,
+  }: {
+    address: Address;
+    eventName: TokenLpEventName;
+    topic0: Hex;
+    fromBlock: bigint;
+    toBlock: bigint;
+    limit: number;
+    signal?: AbortSignal;
+  },
+): Promise<TokenLpEvidenceLogPage> {
+  if (!client.request) {
+    throw new Error("The selected RPC reader does not expose eth_getLogs.");
+  }
+  if (signal?.aborted) throw new Error("LP event lookup was aborted.");
+  const window = 20_000n;
+  const firstTo = fromBlock + window < toBlock ? fromBlock + window : toBlock;
+  const lastFrom = toBlock > window ? toBlock - window : 0n;
+  const ranges: Array<[bigint, bigint]> = [[fromBlock, firstTo]];
+  if (toBlock > firstTo) {
+    ranges.push([lastFrom > fromBlock ? lastFrom : fromBlock, toBlock]);
+  }
+  const skippedMiddle = ranges.length > 1 && lastFrom > firstTo + 1n;
+  const settledPages = await Promise.allSettled(
+    ranges.map(([rangeFrom, rangeTo]) =>
+      withTimeout(
+        client.request!<unknown>({
+          method: "eth_getLogs",
+          params: [
+            {
+              address,
+              fromBlock: `0x${rangeFrom.toString(16)}`,
+              toBlock: `0x${rangeTo.toString(16)}`,
+              topics: [topic0],
+            },
+          ],
+        }),
+        TOKEN_REPORT_READ_TIMEOUT_MS,
+        `${eventName} LP event lookup timed out`,
+      ),
+    ),
+  );
+  const pages = settledPages
+    .filter(
+      (page): page is PromiseFulfilledResult<unknown> =>
+        page.status === "fulfilled",
+    )
+    .map((page) => page.value);
+  if (pages.length === 0) {
+    const failure = settledPages.find(
+      (page): page is PromiseRejectedResult => page.status === "rejected",
+    );
+    throw failure?.reason ?? new Error(`${eventName} LP event lookup failed.`);
+  }
+  const partialWindowFailure = settledPages.some(
+    (page) => page.status === "rejected",
+  );
+  const rows = pages.flatMap((page) => (Array.isArray(page) ? page : []));
+  const logs = rows
+    .map((value): TokenLpEvidenceLog | null => {
+      if (!value || typeof value !== "object" || Array.isArray(value))
+        return null;
+      const row = value as Record<string, unknown>;
+      const transactionHash = normalizedTxHashFromUnknown(row.transactionHash);
+      const data =
+        typeof row.data === "string" && /^0x(?:[0-9a-f]{2})*$/i.test(row.data)
+          ? (row.data as Hex)
+          : null;
+      const topics = Array.isArray(row.topics)
+        ? row.topics.filter(
+            (item): item is Hex =>
+              typeof item === "string" && /^0x[0-9a-f]+$/i.test(item),
+          )
+        : [];
+      if (!transactionHash || !data || topics.length === 0) return null;
+      return {
+        transactionHash,
+        blockNumber: rpcQuantityToNumber(row.blockNumber),
+        transactionIndex: rpcQuantityToNumber(row.transactionIndex),
+        logIndex: rpcQuantityToNumber(row.logIndex),
+        topics,
+        data,
+        removed: row.removed === true,
+      };
+    })
+    .filter((value): value is TokenLpEvidenceLog => value !== null);
+  const deduped = Array.from(
+    new Map(
+      logs.map((log) => [
+        `${log.transactionHash}:${log.logIndex ?? `${log.topics.join(":")}:${log.data}`}`,
+        log,
+      ]),
+    ).values(),
+  );
+  return {
+    logs: deduped.slice(0, limit),
+    truncated: skippedMiddle || partialWindowFailure || deduped.length > limit,
+    limitation: partialWindowFailure
+      ? `One bounded ${eventName} log window failed; successful window evidence was retained but the result is partial.`
+      : skippedMiddle
+        ? `The bounded RPC lookup inspected the first and latest 20,000-block windows; middle-range ${eventName} logs remain untested.`
+        : deduped.length > limit
+          ? `${eventName} logs exceeded the ${limit}-record retention limit.`
+          : null,
+  };
+}
+
+function liquidityEvidenceFindings(
+  report: TokenContractReportResponse,
+  evidenceResults: TokenLpEvidenceResult[],
+): TokenContractReportResponse["findings"] {
+  const findings: TokenContractReportResponse["findings"] = [];
+  for (const evidence of evidenceResults) {
+    const pairAddress = evidence.snapshot.pairAddress;
+    const suffix = pairAddress.toLowerCase();
+    if (
+      evidence.snapshot.token0 &&
+      evidence.snapshot.token1 &&
+      evidence.snapshot.factory
+    ) {
+      findings.push({
+        id: `liquidity.pair.identity.${suffix}`,
+        category: "liquidity",
+        title: "Pair identity validated on-chain",
+        severity: "info",
+        state: "confirmed",
+        confidence: 98,
+        summary: `At captured block ${evidence.snapshot.capturedBlock}, the pair returned token0 ${evidence.snapshot.token0}, token1 ${evidence.snapshot.token1}, and factory ${evidence.snapshot.factory}.`,
+        practicalEffect:
+          "This confirms the indexed address is pair-shaped and identifies its factory and assets; it does not establish liquidity safety.",
+        recommendation:
+          "Use the factory, reserves, LP ownership, and event history together when evaluating the pool.",
+        evidence: [
+          {
+            id: `rpc:liquidity:identity:${suffix}`,
+            type: "rpc",
+            summary: `token0/token1/factory reads at block ${evidence.snapshot.capturedBlock}.`,
+            blockNumber: evidence.snapshot.capturedBlock,
+          },
+        ],
+      });
+    }
+    const removed = BigInt(
+      evidence.deployerActivity.observedLpRemovedAfterMint,
+    );
+    if (removed > 0n) {
+      const consumedBps = evidence.deployerActivity.observedConsumedBps;
+      const percent =
+        consumedBps === null
+          ? "an unresolved share of"
+          : `${(consumedBps / 100).toFixed(2)}% of`;
+      const severity =
+        consumedBps === null
+          ? "medium"
+          : consumedBps >= 5_000
+            ? "high"
+            : consumedBps >= 1_000
+              ? "medium"
+              : "info";
+      findings.push({
+        id: `history.liquidity.deployer-lp-removed.${suffix}`,
+        category: "liquidity",
+        title: "Observed deployer LP removal",
+        severity,
+        state: "confirmed",
+        confidence:
+          evidence.eventCoverage.Transfer.available &&
+          !evidence.eventCoverage.Transfer.truncated &&
+          evidence.eventCoverage.Burn.available &&
+          !evidence.eventCoverage.Burn.truncated
+            ? 95
+            : 82,
+        summary: `Bounded pair history matched ${removed.toString()} raw LP units sent by the deployer to the pair with LP burn events after an observed deployer mint. That is ${percent} the LP amount observed minted to the deployer.`,
+        practicalEffect:
+          "The deployer demonstrably exercised liquidity-removal capability for this pool. This does not by itself prove every current LP token is removable or that all liquidity was withdrawn.",
+        recommendation:
+          "Inspect each cited removal transaction, current reserves, current LP holders, and any lock or burn proof before relying on liquidity permanence.",
+        evidence: evidence.removalTransactions
+          .filter(
+            (transaction) =>
+              transaction.afterObservedDeployerMint === true &&
+              BigInt(transaction.matchedDeployerLp) > 0n,
+          )
+          .slice(0, 12)
+          .map((transaction, index) => ({
+            id: `history:liquidity:removal:${suffix}:${index + 1}`,
+            type: "history" as const,
+            summary: `${transaction.matchedDeployerLp} matched LP units; removed token amounts ${transaction.amount0} and ${transaction.amount1}.`,
+            transactionHash: transaction.transactionHash,
+            ...(transaction.blockNumber === null
+              ? {}
+              : { blockNumber: transaction.blockNumber }),
+          })),
+      });
+    }
+  }
+  for (const pair of report.liquidity.pairs) {
+    if (pair.liquidityUsd === null || pair.liquidityUsd >= 1_000) continue;
+    findings.push({
+      id: `liquidity.shallow.${pair.pairAddress.toLowerCase()}`,
+      category: "liquidity",
+      title: "Very shallow indexed liquidity",
+      severity: "high",
+      state: "confirmed",
+      confidence: 88,
+      summary: `DEX Screener reported approximately $${pair.liquidityUsd.toLocaleString("en-US", { maximumFractionDigits: 2 })} of liquidity for this pair at report time.`,
+      practicalEffect:
+        "Very small trades may cause severe price impact, and exits can become impractical even when token transfers themselves work.",
+      recommendation:
+        "Verify current reserves directly and model slippage at the intended trade size before interacting.",
+      evidence: [
+        {
+          id: `explorer:liquidity:usd:${pair.pairAddress.toLowerCase()}`,
+          type: "explorer",
+          summary: `Indexed pair liquidity: $${pair.liquidityUsd}.`,
+        },
+      ],
+    });
+  }
+  return findings;
+}
+
 function liveEvidenceFindings(
   report: TokenContractReportResponse,
 ): TokenContractReportResponse["findings"] {
   const findings: TokenContractReportResponse["findings"] = [];
-  const holderSell = report.simulation.attempts.find(
+  const holderTransferToPair = report.simulation.attempts.find(
     (attempt) => attempt.id === "holder-to-pair",
   );
-  const controllerSell = report.simulation.attempts.find(
+  const controllerTransferToPair = report.simulation.attempts.find(
     (attempt) => attempt.id === "controller-to-pair",
   );
   if (
-    holderSell?.status === "reverted" &&
-    controllerSell?.status === "succeeded" &&
-    holderSell.blockNumber !== null &&
-    holderSell.blockNumber === controllerSell.blockNumber
+    holderTransferToPair?.status === "reverted" &&
+    controllerTransferToPair?.status === "succeeded" &&
+    holderTransferToPair.blockNumber !== null &&
+    holderTransferToPair.blockNumber === controllerTransferToPair.blockNumber
   ) {
     findings.push({
-      id: "simulation.transfer.controller-sell-exemption",
+      id: "simulation.transfer.caller-differential",
       category: "transfer-control",
-      title: "Controller could sell where a sampled holder could not",
-      severity: "high",
-      state: "confirmed",
-      confidence: 90,
+      title: "Caller-specific transfer-to-pair behavior",
+      severity: "medium",
+      state: "review-clue",
+      confidence: 80,
       summary:
-        "At the same captured block, the holder-to-pair eth_call reverted while the controller/deployer-to-pair call succeeded.",
+        "At the same captured block, a sampled holder direct transfer-to-pair eth_call reverted while the controller/deployer direct transfer-to-pair call succeeded.",
       practicalEffect:
-        "The tested holder path could not sell one base unit into the discovered pair while the privileged path remained open.",
+        "This confirms caller-specific transfer-path behavior only. It was not a router swap or completed sale and does not prove either caller could sell.",
       recommendation:
-        "Inspect transfer restrictions and repeat the bounded test with additional holders and pairs before interacting.",
-      evidence: [holderSell, controllerSell].map((attempt, index) => ({
-        id: `simulation:transfer-differential:${index + 1}`,
-        type: "simulation" as const,
-        summary: `${attempt.label}: ${attempt.status}. ${attempt.detail}`,
-        blockNumber: attempt.blockNumber ?? undefined,
-      })),
+        "Inspect verified transfer restrictions and repeat role-correct router-level simulations before drawing sellability or honeypot conclusions.",
+      evidence: [holderTransferToPair, controllerTransferToPair].map(
+        (attempt, index) => ({
+          id: `simulation:transfer-differential:${index + 1}`,
+          type: "simulation" as const,
+          summary: `${attempt.label}: ${attempt.status}. ${attempt.detail}`,
+          blockNumber: attempt.blockNumber ?? undefined,
+        }),
+      ),
     });
   }
   if (report.history.postOwnershipZeroActivity === true) {
@@ -4397,10 +5337,7 @@ function liveEvidenceFindings(
   const controlAttempts = report.simulation.attempts.filter((attempt) =>
     attempt.id.startsWith("control-"),
   );
-  const bySignature = new Map<
-    string,
-    typeof controlAttempts
-  >();
+  const bySignature = new Map<string, typeof controlAttempts>();
   for (const attempt of controlAttempts) {
     const entries = bySignature.get(attempt.functionSignature) ?? [];
     entries.push(attempt);
@@ -4433,10 +5370,9 @@ function liveEvidenceFindings(
       summary: candidateOnly
         ? `Calldata derived from unique unverified 4byte candidate signature ${signature} succeeded from the controller/deployer and reverted from the ordinary test account at the same captured block. Caller-specific behavior is observed; the candidate name and state effect are not confirmed.`
         : `${signature} succeeded from the controller/deployer and reverted from the ordinary test account at the same captured block.`,
-      practicalEffect:
-        candidateOnly
-          ? "The tested selector/calldata has caller-specific behavior at that block, but its named semantics remain unresolved."
-          : "The tested function has an effective caller-specific authorization path at that block.",
+      practicalEffect: candidateOnly
+        ? "The tested selector/calldata has caller-specific behavior at that block, but its named semantics remain unresolved."
+        : "The tested function has an effective caller-specific authorization path at that block.",
       recommendation:
         "Confirm the controller address and inspect the function's state changes before interacting.",
       evidence: [privileged, ordinary].map((attempt, index) => ({
@@ -4458,15 +5394,21 @@ function deterministicVerdict(
   const confirmed = report.findings.filter(
     (finding) => finding.state === "confirmed" && finding.severity !== "info",
   );
-  const ranks = { low: 1, medium: 2, high: 3, critical: 4 } as const;
-  const highest = confirmed.reduce<"low" | "medium" | "high" | "critical" | null>(
-    (current, finding) => {
-      const severity = finding.severity === "info" ? null : finding.severity;
-      if (!severity) return current;
-      return !current || ranks[severity] > ranks[current] ? severity : current;
-    },
-    null,
-  );
+  const ranks = { info: 0, low: 1, medium: 2, high: 3, critical: 4 } as const;
+  const highest = confirmed.reduce<
+    "low" | "medium" | "high" | "critical" | null
+  >((current, finding) => {
+    const severity = finding.severity === "info" ? null : finding.severity;
+    if (!severity) return current;
+    return !current || ranks[severity] > ranks[current] ? severity : current;
+  }, null);
+  const orderedConfirmed = confirmed
+    .slice()
+    .sort(
+      (left, right) =>
+        ranks[right.severity] - ranks[left.severity] ||
+        right.confidence - left.confidence,
+    );
   const completeRequiredModules = [
     report.modules.source,
     report.modules.bytecode,
@@ -4475,13 +5417,14 @@ function deterministicVerdict(
     report.modules.liquidity,
   ].every((module) => module.status === "complete");
   const canReturnLow =
-    !highest &&
-    completeRequiredModules &&
-    report.audit.coveragePercent >= 80;
+    !highest && completeRequiredModules && report.audit.coveragePercent >= 80;
   const severity = highest ?? (canReturnLow ? "low" : "unknown");
   const confidence = highest
     ? Math.max(...confirmed.map((finding) => finding.confidence))
-    : Math.min(report.audit.classificationConfidence, report.audit.coveragePercent);
+    : Math.min(
+        report.audit.classificationConfidence,
+        report.audit.coveragePercent,
+      );
   const label =
     severity === "unknown"
       ? "risk unresolved"
@@ -4493,8 +5436,8 @@ function deterministicVerdict(
     confidenceLabel:
       confidence >= 80 ? "high" : confidence >= 55 ? "moderate" : "limited",
     summary:
-      highest && confirmed[0]
-        ? `${confirmed.length} deterministic risk finding${confirmed.length === 1 ? " is" : "s are"} confirmed. ${confirmed[0].practicalEffect}`
+      highest && orderedConfirmed[0]
+        ? `${confirmed.length} deterministic risk finding${confirmed.length === 1 ? " is" : "s are"} confirmed. Key confirmed risk${confirmed.length === 1 ? "" : "s"}: ${joinNaturalLanguage(orderedConfirmed.slice(0, 3).map((finding) => finding.title))}.`
         : canReturnLow
           ? "Required deterministic modules completed without a medium-or-higher finding. This is low observed risk, not proof of safety."
           : "No complete low-risk determination is possible because one or more required evidence modules or checks remain incomplete.",
@@ -4638,36 +5581,36 @@ function buildFeatureFindings(
   const structuredIds = new Set(findings.map((finding) => finding.id));
   findings.push(
     ...report.signals
-    .filter(
-      (signal) =>
-        !structuredIds.has(signal.id) &&
-        (signal.severity !== "info" ||
-          signal.status === "incomplete" ||
-          signal.id === "source-status"),
-    )
-    .map((signal) => ({
-      id: signal.id,
-      title: signal.label,
-      category: findingCategory(signal.id),
-      severity: signal.severity,
-      confidence: signalConfidence(signal),
-      evidence: [
-        {
-          type:
-            signal.status === "incomplete"
-              ? "missing-evidence"
-              : "report-signal",
-          value: signal.evidence,
-          meaning: signal.status,
-        },
-      ],
-      description: signal.evidence,
-      practicalEffect: practicalEffectForSignal(signal),
-      recommendation:
-        signal.status === "incomplete"
-          ? "Treat this area as unresolved until deeper bytecode or simulation checks are available."
-          : "Review the supporting evidence on-chain before trusting the contract.",
-    })),
+      .filter(
+        (signal) =>
+          !structuredIds.has(signal.id) &&
+          (signal.severity !== "info" ||
+            signal.status === "incomplete" ||
+            signal.id === "source-status"),
+      )
+      .map((signal) => ({
+        id: signal.id,
+        title: signal.label,
+        category: findingCategory(signal.id),
+        severity: signal.severity,
+        confidence: signalConfidence(signal),
+        evidence: [
+          {
+            type:
+              signal.status === "incomplete"
+                ? "missing-evidence"
+                : "report-signal",
+            value: signal.evidence,
+            meaning: signal.status,
+          },
+        ],
+        description: signal.evidence,
+        practicalEffect: practicalEffectForSignal(signal),
+        recommendation:
+          signal.status === "incomplete"
+            ? "Treat this area as unresolved until deeper bytecode or simulation checks are available."
+            : "Review the supporting evidence on-chain before trusting the contract.",
+      })),
   );
 
   for (const selector of selectors.dangerous) {
@@ -4709,21 +5652,35 @@ function buildCriticalChecks(
     report.findings.some(
       (finding) => finding.id === id && finding.state === "confirmed",
     );
-  const fourByteClue = (pattern: RegExp) =>
+  const reviewFinding = (id: string) =>
+    report.findings.some(
+      (finding) => finding.id === id && finding.state === "review-clue",
+    );
+  const confirmedFindingPrefix = (prefix: string) =>
+    report.findings.some(
+      (finding) =>
+        finding.id.startsWith(prefix) && finding.state === "confirmed",
+    );
+  const selectorClue = (pattern: RegExp) =>
     report.selectors.find(
       (selector) =>
-        selector.resolution === "4byte" &&
         selector.evidenceState === "review-clue" &&
         selector.signature !== null &&
         pattern.test(selector.signature),
     );
-  const mintCandidate = fourByteClue(/^(?:mint|issue|increaseSupply|rebase)\(/i);
-  const burnCandidate = fourByteClue(/burn/i);
-  const transferControlCandidate = fourByteClue(
+  const mintCandidate = selectorClue(
+    /^(?:mint|issue|increaseSupply|rebase)\(/i,
+  );
+  const burnCandidate = selectorClue(/burn/i);
+  const transferControlCandidate = selectorClue(
     /black|block|white|freeze|pause|trading|bot|maxWallet|maxTx|cooldown|limit|exclude/i,
   );
-  const feeCandidate = fourByteClue(/fee|tax/i);
-  const liquidityCandidate = fourByteClue(/liquidity|pair|router|swap|marketMaker/i);
+  const feeActionCandidate = selectorClue(
+    /^(?:configure|set|update|change|schedule|execute|enable|disable|cancel)[A-Za-z0-9_$]*(?:fee|tax)|^(?:setFee|setTax)/i,
+  );
+  const liquidityActionCandidate = selectorClue(
+    /^(?:removeLiquidity|configurePair|setPair|setRouter|setMarketMaker|addMarketMaker)\(/i,
+  );
   const mintSelector = selectors.dangerous.find((selector) =>
     selector.signature.toLowerCase().includes("mint"),
   );
@@ -4751,19 +5708,19 @@ function buildCriticalChecks(
       confirmedFinding("solidity.supply.public-increase")
         ? "confirmed"
         : confirmedFinding("solidity.supply.mutable")
-        ? "needs_review"
-        : mintSelector || mintSurface || mintCandidate
           ? "needs_review"
-          : "not_collected",
+          : mintSelector || mintSurface || mintCandidate
+            ? "needs_review"
+            : "not_collected",
       confirmedFinding("solidity.supply.public-increase")
         ? "Verified source confirms a public or external supply-increasing path without a detected authorization gate."
         : mintSelector || mintSurface || mintCandidate
-        ? mintSelector
-          ? `Mint-like selector ${mintSelector.selector} was found, but permissions or behavior are not confirmed.`
-          : mintCandidate
-            ? `Unique unverified 4byte candidate signature ${mintCandidate.signature} was found at ${mintCandidate.selector}; its name and behavior remain unconfirmed.`
-          : "The verified ABI contains mint or supply-control names, but permissions and behavior are not confirmed."
-        : "Public mint permissions were not resolved by the collected evidence.",
+          ? mintSelector
+            ? `Mint-like selector ${mintSelector.selector} was found, but permissions or behavior are not confirmed.`
+            : mintCandidate
+              ? `Unique unverified 4byte candidate signature ${mintCandidate.signature} was found at ${mintCandidate.selector}; its name and behavior remain unconfirmed.`
+              : "The verified ABI contains mint or supply-control names, but permissions and behavior are not confirmed."
+          : "Public mint permissions were not resolved by the collected evidence.",
     ),
     criticalCheck(
       "Can owner mint?",
@@ -4776,15 +5733,17 @@ function buildCriticalChecks(
         ? "Verified source confirms a privileged path that increases token supply outside construction."
         : mintSelector || mintSurface || mintCandidate
           ? `A mint-like ABI or unverified selector candidate was found, but owner gating and behavior were not confirmed.`
-        : "Privileged mint behavior was not resolved by the collected evidence.",
+          : "Privileged mint behavior was not resolved by the collected evidence.",
     ),
     criticalCheck(
       "Can a fake burn mint?",
       confirmedFinding("solidity.supply.misleading-burn")
         ? "confirmed"
-        : hasSelector("0x42966c68") || hasSelector("0x79cc6790") || burnCandidate
-        ? "needs_review"
-        : "not_collected",
+        : hasSelector("0x42966c68") ||
+            hasSelector("0x79cc6790") ||
+            burnCandidate
+          ? "needs_review"
+          : "not_collected",
       confirmedFinding("solidity.supply.misleading-burn")
         ? "Verified source confirms a burn-named path that can increase supply or balances."
         : "Burn selector clues do not prove supply decreases or fake-burn behavior.",
@@ -4802,88 +5761,83 @@ function buildCriticalChecks(
         ? "Verified source confirms a privileged mapping that can restrict sender transfer paths."
         : transferControlCandidate
           ? `Unique unverified 4byte candidate signature ${transferControlCandidate.signature} suggests transfer controls; no blacklist behavior is confirmed.`
-        : transferControlSurface
-        ? "The verified ABI contains transfer-restriction function names, but blacklist permissions and mapping state are not confirmed."
-        : "Blacklist mapping and transfer-path behavior were not resolved.",
+          : transferControlSurface
+            ? "The verified ABI contains transfer-restriction function names, but blacklist permissions and mapping state are not confirmed."
+            : "Blacklist mapping and transfer-path behavior were not resolved.",
     ),
     criticalCheck(
       "Can owner block the LP pair?",
-      confirmedFinding("simulation.transfer.controller-sell-exemption") ||
-        confirmedFinding("solidity.transfer.recipient-block")
+      confirmedFinding("solidity.transfer.recipient-block")
         ? "confirmed"
-        : transferControlSurface || liquiditySurface || transferControlCandidate || liquidityCandidate
-        ? "needs_review"
-        : "not_collected",
-      confirmedFinding("simulation.transfer.controller-sell-exemption")
-        ? "At one captured block, the sampled holder-to-pair call reverted while the controller/deployer-to-pair path succeeded."
-        : confirmedFinding("solidity.transfer.recipient-block")
+        : reviewFinding("simulation.transfer.caller-differential") ||
+            transferControlSurface ||
+            transferControlCandidate
+          ? "needs_review"
+          : "not_collected",
+      confirmedFinding("solidity.transfer.recipient-block")
         ? "Verified source confirms a privileged recipient block that can be applied to an arbitrary destination, including a pair address."
-        : transferControlSurface || liquiditySurface || transferControlCandidate || liquidityCandidate
-        ? "The ABI exposes transfer-control or liquidity names, but LP-pair blocking behavior is not confirmed."
-        : "LP-pair blocking requires both transfer-path evidence and a DEX-pair candidate.",
+        : reviewFinding("simulation.transfer.caller-differential")
+          ? "At one captured block, a sampled holder direct transfer-to-pair call reverted while the controller/deployer direct transfer-to-pair call succeeded. This is a caller-specific transfer-path clue, not proof of who can configure restrictions."
+          : transferControlSurface || transferControlCandidate
+            ? "The ABI or an unverified selector candidate exposes transfer controls, but LP-pair blocking behavior is not confirmed."
+            : "LP-pair blocking requires both transfer-path evidence and a DEX-pair candidate.",
     ),
     criticalCheck(
       "Can normal users sell after buying?",
+      "not_collected",
       report.simulation.attempts.some(
         (attempt) =>
           attempt.id === "holder-to-pair" && attempt.status === "succeeded",
       )
-        ? "confirmed"
-        : report.simulation.attempts.some(
-              (attempt) => attempt.id === "holder-to-pair",
-            )
-          ? "needs_review"
-          : "not_collected",
-      report.simulation.attempts.some(
-        (attempt) =>
-          attempt.id === "holder-to-pair" && attempt.status === "succeeded",
-      )
-        ? "A sampled positive-balance holder completed a one-base-unit transfer-to-pair eth_call at the captured block; this is not a buy-then-sell guarantee."
-        : "A conclusive buy-then-sell simulation was not available.",
-      report.simulation.attempts.some(
-        (attempt) =>
-          attempt.id === "holder-to-pair" && attempt.status === "succeeded",
-      )
-        ? "protective"
-        : "unresolved",
+        ? "A distinct sampled holder completed a direct token transfer-to-pair eth_call. That is useful transfer-path evidence, but it did not execute a router swap or prove buy-then-sell behavior."
+        : "A conclusive router-level buy-then-sell simulation was not available.",
+      "unresolved",
     ),
     criticalCheck(
       "Can owner sell when users cannot?",
       confirmedFinding("solidity.transfer.privileged-exemption") ||
-        confirmedFinding("simulation.transfer.controller-sell-exemption")
-        ? "confirmed"
+        reviewFinding("simulation.transfer.caller-differential")
+        ? confirmedFinding("solidity.transfer.privileged-exemption")
+          ? "confirmed"
+          : "needs_review"
         : "not_collected",
-      confirmedFinding("simulation.transfer.controller-sell-exemption")
-        ? "A bounded same-block simulation succeeded from the controller/deployer and reverted from the sampled holder on the same pair path."
-        : confirmedFinding("solidity.transfer.privileged-exemption")
+      confirmedFinding("solidity.transfer.privileged-exemption")
         ? "Verified source confirms a privileged controller exemption in the transfer restriction path."
-        : "Owner-vs-user sell simulation is not collected.",
+        : reviewFinding("simulation.transfer.caller-differential")
+          ? "A sampled holder direct transfer-to-pair eth_call reverted while the controller/deployer direct transfer-to-pair call succeeded at the same block. These were not router swaps or completed sales and do not prove either caller could sell."
+          : "Owner-vs-user sell simulation is not collected.",
     ),
     criticalCheck(
       "Can owner set fees very high?",
-      confirmedFinding("solidity.fee.mutable-transfer-value") || feeSurface || feeCandidate
+      confirmedFinding("solidity.fee.mutable-transfer-value") ||
+        feeSurface ||
+        feeActionCandidate
         ? "needs_review"
         : "not_collected",
-      feeCandidate
-        ? `Unique unverified 4byte candidate signature ${feeCandidate.signature} suggests fee control; setter authority and fee math remain unconfirmed.`
+      feeActionCandidate
+        ? `Unverified selector candidate ${feeActionCandidate.signature} suggests a fee-changing action; caller authority and maximum fee math remain unconfirmed.`
         : feeSurface
-        ? "The verified ABI exposes fee/tax function names, but setter permissions, denominators, and maximum values are not confirmed."
-        : "Fee setter permissions and maximum fee math were not resolved.",
+          ? "The verified ABI exposes fee/tax function names, but setter permissions, denominators, and maximum values are not confirmed."
+          : "Fee setter permissions and maximum fee math were not resolved.",
     ),
     criticalCheck(
       "Can owner pause or freeze transfers?",
       confirmedFinding("solidity.trading.mutable-gate") ||
         confirmedFinding("solidity.transfer.sender-block")
         ? "confirmed"
-        : hasSelector("0x5c975abb") || transferControlSurface || transferControlCandidate
-        ? "needs_review"
-        : "not_collected",
+        : hasSelector("0x5c975abb") ||
+            transferControlSurface ||
+            transferControlCandidate
+          ? "needs_review"
+          : "not_collected",
       confirmedFinding("solidity.trading.mutable-gate") ||
         confirmedFinding("solidity.transfer.sender-block")
         ? "Verified source confirms a privileged pause, gate, or sender-freeze path affecting transfers."
-        : hasSelector("0x5c975abb") || transferControlSurface || transferControlCandidate
-        ? "Pause or transfer-control clues were found, but control permissions and transfer effects are not confirmed."
-        : "Pause or freeze behavior was not resolved by the collected evidence.",
+        : hasSelector("0x5c975abb") ||
+            transferControlSurface ||
+            transferControlCandidate
+          ? "Pause or transfer-control clues were found, but control permissions and transfer effects are not confirmed."
+          : "Pause or freeze behavior was not resolved by the collected evidence.",
     ),
     criticalCheck(
       "Does renounce actually remove dangerous control?",
@@ -4895,7 +5849,7 @@ function buildCriticalChecks(
         : report.controls.ownershipStatus === "zero_address" ||
             report.controls.ownershipStatus === "renounced"
           ? "needs_review"
-        : "not_collected",
+          : "not_collected",
       (report.controls.ownershipStatus === "zero_address" ||
         report.controls.ownershipStatus === "renounced") &&
         (confirmedFinding("solidity.controller.independent") ||
@@ -4904,7 +5858,7 @@ function buildCriticalChecks(
         : report.controls.ownershipStatus === "zero_address" ||
             report.controls.ownershipStatus === "renounced"
           ? "The owner getter returned the zero address, but alternate roles and proxy-admin controls have not been ruled out."
-        : "Hidden-admin or post-owner-zero control was not resolved.",
+          : "Hidden-admin or post-owner-zero control was not resolved.",
     ),
     criticalCheck(
       "Is the contract upgradeable?",
@@ -4919,8 +5873,8 @@ function buildCriticalChecks(
       confirmedFinding("storage.eip1967.proxy")
         ? "Standard EIP-1967 implementation, admin, or beacon storage contains an address."
         : report.contract?.source.isProxy === true
-        ? "Explorer metadata reports a proxy-like contract."
-        : "Upgradeable proxy status is based on explorer metadata and selector clues only.",
+          ? "Explorer metadata reports a proxy-like contract."
+          : "Upgradeable proxy status is based on explorer metadata and selector clues only.",
     ),
     criticalCheck(
       "Is there hidden admin outside owner()?",
@@ -4945,23 +5899,26 @@ function buildCriticalChecks(
                   finding.state === "confirmed",
               )
             ? "Same-block read-only simulation confirms a caller-specific control path."
-        : adminSurface
-        ? "The verified ABI exposes admin, role, or upgrade names; current role holders and hidden mappings are not confirmed."
-        : "Independent controller storage or hidden admin behavior was not resolved.",
+            : adminSurface
+              ? "The verified ABI exposes admin, role, or upgrade names; current role holders and hidden mappings are not confirmed."
+              : "Independent controller storage or hidden admin behavior was not resolved.",
     ),
     criticalCheck(
       "Is LP locked or removable?",
-      hasSelector("0xbaa2abde") || liquiditySurface || liquidityCandidate
+      confirmedFindingPrefix("history.liquidity.deployer-lp-removed")
         ? "needs_review"
         : "not_collected",
-      hasSelector("0xbaa2abde") || liquiditySurface || liquidityCandidate
-        ? "Liquidity ABI or selector clues were found; LP ownership and call paths are not confirmed."
+      confirmedFindingPrefix("history.liquidity.deployer-lp-removed")
+        ? "Bounded history confirms that some LP minted to the deployer was later consumed in removal burns. Current LP custody, locks, and remaining remover access still require review."
         : "LP ownership, locks, burns, and remover paths remain unresolved.",
     ),
     criticalCheck(
       "Does the contract have a removeLiquidity wrapper?",
       confirmedFinding("solidity.liquidity.embedded-control") ||
-        hasSelector("0xbaa2abde") || liquiditySurface || liquidityCandidate
+        hasSelector("0xbaa2abde") ||
+        liquiditySurface ||
+        (liquidityActionCandidate?.signature?.startsWith("removeLiquidity") ??
+          false)
         ? "needs_review"
         : "not_collected",
       "Selector evidence is a clue only; wrapper behavior is not confirmed.",
@@ -5125,7 +6082,11 @@ function buildCoverageExplanation(
   if (report.simulation.attempts.length === 0) {
     blockers.push("no bounded read-only simulation case could run");
   }
-  if (report.selectors.some((selector) => selector.evidenceState !== "confirmed-signature")) {
+  if (
+    report.selectors.some(
+      (selector) => selector.evidenceState !== "confirmed-signature",
+    )
+  ) {
     blockers.push("some runtime selectors remain candidate-only or unresolved");
   }
   const createdAt = report.contract?.creation.blockNumber;
@@ -5137,7 +6098,9 @@ function buildCoverageExplanation(
     observedAt - createdAt >= 0 &&
     observedAt - createdAt <= 100
   ) {
-    blockers.push(`the contract had only ${observedAt - createdAt} observed block${observedAt - createdAt === 1 ? "" : "s"} of history`);
+    blockers.push(
+      `the contract had only ${observedAt - createdAt} observed block${observedAt - createdAt === 1 ? "" : "s"} of history`,
+    );
   }
   const uniqueBlockers = Array.from(new Set(blockers)).slice(0, 6);
   const unresolvedReason =
@@ -5146,11 +6109,11 @@ function buildCoverageExplanation(
       : " because the required evidence was not collected";
   const reviewSentence =
     risk.criticalChecksNeedsReview > 0
-      ? ` ${risk.criticalChecksNeedsReview} require review.`
+      ? ` ${risk.criticalChecksNeedsReview} ${risk.criticalChecksNeedsReview === 1 ? "requires" : "require"} review.`
       : "";
   return {
     summary: `${risk.criticalChecksResolved} of ${risk.criticalChecksTotal} questions resolved.${reviewSentence} ${untested} remain untested${untested > 0 ? unresolvedReason : ""}.`,
-    calculation: `${risk.criticalChecksResolved} resolved × 1 point + ${risk.criticalChecksNeedsReview} review clue${risk.criticalChecksNeedsReview === 1 ? "" : "s"} × 0.5 points, divided by ${risk.criticalChecksTotal} questions = ${risk.analysisCoveragePercent}%.`,
+    calculation: `${risk.criticalChecksResolved} resolved x 1 point + ${risk.criticalChecksNeedsReview} review clue${risk.criticalChecksNeedsReview === 1 ? "" : "s"} x 0.5 points, divided by ${risk.criticalChecksTotal} questions = ${risk.analysisCoveragePercent}%.`,
     blockers: uniqueBlockers,
   };
 }
@@ -5294,54 +6257,59 @@ function groundDeepSeekNarrative(
   report: TokenContractReportResponse,
   featureReport: ReturnType<typeof deepAuditFeatureReport>,
 ): TokenContractAiNarrative | null {
-  const evidenceById = new Map(
-    featureReport.findings.map((finding) => [
-      finding.id,
-      finding.evidence.map(
-        (item) => `${item.value}${item.meaning ? ` (${item.meaning})` : ""}`,
-      ),
-    ]),
-  );
-  const sourceFindingIds = new Set(
-    report.findings
-      .filter((finding) =>
-        finding.evidence.some((evidence) => evidence.type === "source"),
-      )
-      .map((finding) => finding.id),
+  const featureFindingById = new Map(
+    featureReport.findings.map((finding) => [finding.id, finding]),
   );
   const excerpts = featureReport.source.citedExcerpts;
   const detailedFindings: TokenContractAiNarrative["detailedFindings"] = [];
+  const selectedFindingIds = new Set<string>();
   for (const finding of narrative.detailedFindings) {
     if (finding.evidence.length === 0) return null;
-    const groundedEvidence: string[] = [];
     for (const evidenceId of finding.evidence) {
-      const evidence = evidenceById.get(evidenceId);
-      if (!evidence) return null;
-      groundedEvidence.push(...evidence);
-    }
-    const validCitations = (finding.citations ?? []).filter((citation) => {
-      if (!citation.evidenceIds.every((id) => finding.evidence.includes(id))) {
-        return false;
+      const deterministicFinding = featureFindingById.get(evidenceId);
+      if (!deterministicFinding) return null;
+      if (selectedFindingIds.has(evidenceId) || detailedFindings.length >= 8) {
+        continue;
       }
-      return excerpts.some(
-        (excerpt) =>
-          excerpt.file === citation.file &&
-          citation.startLine >= excerpt.startLine &&
-          citation.endLine <= excerpt.endLine &&
-          citation.evidenceIds.every((id) => excerpt.evidenceIds.includes(id)),
+
+      const requiresCitation = deterministicFinding.evidence.some(
+        (item) => item.type === "source",
       );
-    });
-    if (
-      finding.evidence.some((id) => sourceFindingIds.has(id)) &&
-      validCitations.length === 0
-    ) {
-      continue;
+      const validCitations = requiresCitation
+        ? (finding.citations ?? []).flatMap((citation) => {
+            if (!citation.evidenceIds.includes(evidenceId)) return [];
+            const excerpt = excerpts.find(
+              (candidate) =>
+                candidate.file === citation.file &&
+                citation.startLine >= candidate.startLine &&
+                citation.endLine <= candidate.endLine &&
+                candidate.evidenceIds.includes(evidenceId),
+            );
+            return excerpt ? [{ ...citation, evidenceIds: [evidenceId] }] : [];
+          })
+        : [];
+      if (requiresCitation && validCitations.length === 0) {
+        continue;
+      }
+
+      selectedFindingIds.add(evidenceId);
+      detailedFindings.push({
+        severity: isAiFindingSeverity(deterministicFinding.severity)
+          ? deterministicFinding.severity
+          : "info",
+        heading: deterministicFinding.title,
+        evidence: Array.from(
+          new Set(
+            deterministicFinding.evidence.map((item) =>
+              formatFeatureEvidence(item.value, item.meaning),
+            ),
+          ),
+        ),
+        description: deterministicFinding.description,
+        practicalEffect: deterministicFinding.practicalEffect,
+        ...(validCitations.length > 0 ? { citations: validCitations } : {}),
+      });
     }
-    detailedFindings.push({
-      ...finding,
-      evidence: [...new Set(groundedEvidence)],
-      ...(validCitations.length > 0 ? { citations: validCitations } : {}),
-    });
   }
 
   const deterministicVerdict =
@@ -5351,32 +6319,99 @@ function groundDeepSeekNarrative(
         ? "low observed risk"
         : (`${report.verdict.severity} risk` as TokenContractAiNarrative["overallVerdict"]);
 
-  const narrativeText = JSON.stringify(narrative).toLowerCase();
-  if (
-    report.controls.ownershipStatus !== "renounced" &&
-    /\b(?:owner|ownership)\s+(?:is\s+|was\s+|has\s+been\s+)?renounced\b/.test(
-      narrativeText,
+  const severityRank = { info: 0, low: 1, medium: 2, high: 3, critical: 4 };
+  const prioritizedFindings = report.findings
+    .filter(
+      (finding) =>
+        (finding.state === "confirmed" || finding.state === "review-clue") &&
+        severityRank[finding.severity] >= severityRank.medium,
     )
-  ) {
-    return null;
-  }
-  if (
-    report.contract?.source.verified !== "verified" &&
-    /\bsource(?:\s+code)?\s+(?:is\s+|was\s+|has\s+been\s+)?verified\b/.test(
-      narrativeText,
+    .sort(
+      (left, right) =>
+        Number(right.state === "confirmed") -
+          Number(left.state === "confirmed") ||
+        severityRank[right.severity] - severityRank[left.severity] ||
+        right.confidence - left.confidence,
+    );
+  const mainRisks = prioritizedFindings
+    .slice(0, 8)
+    .map(
+      (finding) =>
+        `${finding.state === "review-clue" ? "Review clue - " : ""}${finding.title}: ${finding.summary}`,
+    );
+  const whatNotSeen = report.audit.criticalChecks
+    .filter(
+      (check) => check.status === "not_collected" || check.status === "unknown",
     )
-  ) {
-    return null;
-  }
+    .slice(0, 8)
+    .map((check) => `${check.question} ${check.evidence}`);
+  const selectorWatchlist = report.selectors
+    .filter((selector) => selector.evidenceState === "review-clue")
+    .slice(0, 12)
+    .map((selector) => {
+      const signature =
+        selector.signature ?? selector.candidates[0] ?? "unresolved signature";
+      const source =
+        selector.resolution === "4byte"
+          ? "unique unverified 4byte candidate signature"
+          : "local selector watchlist clue";
+      return `${selector.selector} - ${signature}; ${source}, not confirmed semantics.`;
+    });
+  const whatToCheckOnChain = Array.from(
+    new Set([
+      ...prioritizedFindings.map((finding) => finding.recommendation),
+      ...report.audit.criticalChecks
+        .filter(
+          (check) =>
+            check.status === "not_collected" || check.status === "needs_review",
+        )
+        .map(
+          (check) =>
+            `Resolve "${check.question}" with verified source, decoded history, or a bounded role-correct simulation. ${check.evidence}`,
+        ),
+    ]),
+  ).slice(0, 8);
 
   return {
     ...narrative,
+    title: "Token Contract Report",
     overallVerdict: deterministicVerdict,
     confidence: report.verdict.confidence,
     confidenceReason:
       "Verdict and confidence are owned by the deterministic scanner; AI only explains collected evidence.",
+    mainRisks,
     detailedFindings,
+    whatNotSeen,
+    selectorWatchlist,
+    whatToCheckOnChain,
+    bottomLine: `${report.verdict.summary} ${report.audit.coverageExplanation.summary}`,
   };
+}
+
+function formatFeatureEvidence(value: string, meaning: string): string {
+  const normalizedValue = value.trim();
+  const normalizedMeaning = meaning.trim();
+  if (
+    normalizedMeaning.length === 0 ||
+    normalizedMeaning.localeCompare(normalizedValue, undefined, {
+      sensitivity: "accent",
+    }) === 0
+  ) {
+    return normalizedValue;
+  }
+  return `${normalizedValue} (${normalizedMeaning})`;
+}
+
+function isAiFindingSeverity(
+  value: unknown,
+): value is TokenContractAiNarrative["detailedFindings"][number]["severity"] {
+  return (
+    value === "info" ||
+    value === "low" ||
+    value === "medium" ||
+    value === "high" ||
+    value === "critical"
+  );
 }
 
 function renderDeepSeekAuditMarkdown(
@@ -5505,7 +6540,9 @@ function strictAiFindings(
 
 function strictAiCitations(
   value: unknown,
-): NonNullable<TokenContractAiNarrative["detailedFindings"][number]["citations"]> | null {
+): NonNullable<
+  TokenContractAiNarrative["detailedFindings"][number]["citations"]
+> | null {
   if (value === undefined) return [];
   if (!Array.isArray(value) || value.length > 12) return null;
   const citations: NonNullable<
@@ -5618,7 +6655,7 @@ function containsUnsupportedReputationClaim(
   narrative: TokenContractAiNarrative,
 ): boolean {
   const text = JSON.stringify(narrative);
-  return /well[- ]known|widely (?:used|recognized|trusted)|recognized (?:token|stablecoin)|reputable (?:token|project)|official (?:token|project)|legitimate (?:token|project)/i.test(
+  return /well[- ]known|widely (?:used|recognized|trusted)|recognized as (?:a |an )?(?:token|stablecoin)|reputable (?:token|project)|official (?:token|project)|legitimate (?:token|project)/i.test(
     text,
   );
 }
@@ -6093,7 +7130,9 @@ async function fetchBoundedRpcLogs(
     TOKEN_REPORT_READ_TIMEOUT_MS,
     "RPC event fallback block lookup timed out",
   );
-  const latest = Number(latestBigInt <= BigInt(Number.MAX_SAFE_INTEGER) ? latestBigInt : 0n);
+  const latest = Number(
+    latestBigInt <= BigInt(Number.MAX_SAFE_INTEGER) ? latestBigInt : 0n,
+  );
   if (!Number.isSafeInteger(latest) || latest < 0) return [];
   const window = 20_000;
   const start =
@@ -6105,7 +7144,10 @@ async function fetchBoundedRpcLogs(
     [Math.max(start, latest - window), latest],
   ].filter(
     (range, index, all) =>
-      index === all.findIndex((candidate) => candidate[0] === range[0] && candidate[1] === range[1]),
+      index ===
+      all.findIndex(
+        (candidate) => candidate[0] === range[0] && candidate[1] === range[1],
+      ),
   );
   const rows = await Promise.all(
     ranges.map(([fromBlock, toBlock]) =>
@@ -6129,12 +7171,14 @@ async function fetchBoundedRpcLogs(
   const logs = rows.flatMap((value) => (Array.isArray(value) ? value : []));
   const normalized = logs
     .map((value): TokenContractRpcLog | null => {
-      if (!value || typeof value !== "object" || Array.isArray(value)) return null;
+      if (!value || typeof value !== "object" || Array.isArray(value))
+        return null;
       const row = value as Record<string, unknown>;
       const transactionHash = normalizedTxHashFromUnknown(row.transactionHash);
-      const data = typeof row.data === "string" && /^0x[0-9a-f]*$/i.test(row.data)
-        ? (row.data as `0x${string}`)
-        : null;
+      const data =
+        typeof row.data === "string" && /^0x[0-9a-f]*$/i.test(row.data)
+          ? (row.data as `0x${string}`)
+          : null;
       const topics = Array.isArray(row.topics)
         ? row.topics.filter(
             (item): item is `0x${string}` =>
@@ -6345,7 +7389,9 @@ function normalizedAddressFromUnknown(value: unknown): Address | null {
   return getAddress(trimmed);
 }
 
-function normalizedBlockscoutAddressFromUnknown(value: unknown): Address | null {
+function normalizedBlockscoutAddressFromUnknown(
+  value: unknown,
+): Address | null {
   const direct = normalizedAddressFromUnknown(value);
   if (direct) return direct;
   if (!value || typeof value !== "object" || Array.isArray(value)) return null;
@@ -6501,7 +7547,9 @@ async function readOwnership(
     { method: "owner" as const, address: ownerAddress },
     { method: "getOwner" as const, address: getOwnerAddress },
   ].filter(
-    (candidate): candidate is {
+    (
+      candidate,
+    ): candidate is {
       method: "owner" | "getOwner";
       address: Address;
     } => candidate.address !== null,
@@ -6590,7 +7638,8 @@ function emptyV2ReportFields(): Pick<
       label: "risk unresolved",
       confidence: 0,
       confidenceLabel: "limited",
-      summary: "Deterministic evidence is incomplete, so risk remains unresolved.",
+      summary:
+        "Deterministic evidence is incomplete, so risk remains unresolved.",
       basis: "deterministic",
     },
     findings: [],
@@ -6629,6 +7678,7 @@ function emptyV2ReportFields(): Pick<
     },
     liquidity: {
       pairs: [],
+      pairEvidence: [],
       limitations: [],
     },
     reportBoundaries: [

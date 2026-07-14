@@ -170,6 +170,11 @@ export const TOKEN_SELECTOR_WATCHLIST = Object.freeze({
     classification: "transfer-control",
     label: "Pause-state getter",
   },
+  "0x65b1342c": {
+    signature: "CHANGE_DELAY()",
+    classification: "fees",
+    label: "Fee-change delay getter clue",
+  },
   "0x70a08231": {
     signature: "balanceOf(address)",
     classification: "standard",
@@ -180,10 +185,20 @@ export const TOKEN_SELECTOR_WATCHLIST = Object.freeze({
     classification: "admin",
     label: "Ownership control",
   },
+  "0x77d2300e": {
+    signature: "buyFeeBps()",
+    classification: "fees",
+    label: "Buy-fee getter clue",
+  },
   "0x79cc6790": {
     signature: "burnFrom(address,uint256)",
     classification: "supply",
     label: "Third-party burn clue",
+  },
+  "0x802d85a8": {
+    signature: "cancelFeeChange()",
+    classification: "fees",
+    label: "Fee-change cancellation clue",
   },
   "0x8da5cb5b": {
     signature: "owner()",
@@ -220,6 +235,11 @@ export const TOKEN_SELECTOR_WATCHLIST = Object.freeze({
       "removeLiquidity(address,address,uint256,uint256,uint256,address,uint256)",
     classification: "liquidity",
     label: "Liquidity removal clue",
+  },
+  "0xc1016928": {
+    signature: "configurePair(address)",
+    classification: "liquidity",
+    label: "Pair-configuration clue",
   },
   "0xdd62ed3e": {
     signature: "allowance(address,address)",

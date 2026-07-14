@@ -107,7 +107,7 @@ export function TokenContractReportClient() {
     setStatus("loading");
     setError(null);
     setReport(null);
-    setProgressMessage("Starting the bounded evidence scan…");
+    setProgressMessage("Starting the bounded evidence scan...");
 
     const payload: ReportRequest = {
       chainId,
@@ -183,7 +183,7 @@ export function TokenContractReportClient() {
       }
 
       setProgressMessage(
-        "Progressive results were unavailable. Requesting the JSON report…",
+        "Progressive results were unavailable. Requesting the JSON report...",
       );
       const response = await fetch("/api/token-contract-report", {
         method: "POST",
@@ -236,7 +236,7 @@ export function TokenContractReportClient() {
 
   const liveMessage =
     status === "loading"
-      ? progressMessage || "Reading contract evidence…"
+      ? progressMessage || "Reading contract evidence..."
       : status === "complete"
         ? report
           ? "Token contract report ready. Server verdict: " + report.verdict.label + "."
@@ -315,7 +315,7 @@ export function TokenContractReportClient() {
                 id="token-report-address"
                 value={contractAddress}
                 onChange={(event) => setContractAddress(event.target.value)}
-                placeholder="0x…"
+                placeholder="0x..."
                 autoComplete="off"
                 spellCheck={false}
                 aria-invalid={Boolean(trimmedAddress && !normalizedAddress)}
@@ -354,7 +354,7 @@ export function TokenContractReportClient() {
                   FOCUS_RING
                 }
               >
-                {status === "loading" ? "Scanning…" : "Generate report"}
+                {status === "loading" ? "Scanning..." : "Generate report"}
               </button>
               <button
                 type="button"
@@ -381,7 +381,7 @@ export function TokenContractReportClient() {
             >
               {trimmedAddress && !normalizedAddress
                 ? "That address is incomplete or has an invalid mixed-case checksum."
-                : "Use the deployed token or collection contract—not a wallet address."}
+                : "Use the deployed token or collection contract - not a wallet address."}
             </p>
             {explorerUrl ? (
               <a
@@ -404,7 +404,7 @@ export function TokenContractReportClient() {
           {status === "loading" ? (
             <div className="mt-3 rounded-xl border border-pulse-cyan/25 bg-pulse-cyan/5 px-3 py-2">
               <p className="text-xs font-semibold text-pulse-cyan">
-                {progressMessage || "Reading contract evidence…"}
+                {progressMessage || "Reading contract evidence..."}
               </p>
               <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-pulse-panel/90">
                 <div className="h-full w-1/3 animate-pulse rounded-full bg-pulse-cyan" />
@@ -485,8 +485,8 @@ function ReportOutput({
       {report.warnings.length > 0 ? (
         <section className="rounded-2xl border border-amber-400/30 bg-amber-400/10 p-4 sm:p-5">
           <SectionHeading
-            eyebrow="Actionable warnings"
-            title="Items to review before interacting"
+            eyebrow="Provider and runtime warnings"
+            title="Collection conditions to keep in mind"
             meta={report.warnings.length + " warning" + (report.warnings.length === 1 ? "" : "s")}
             tone="amber"
           />
@@ -567,7 +567,7 @@ function VerdictPanel({
         <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
           <div className="min-w-0">
             <p className="text-xs font-semibold uppercase tracking-[0.18em] text-pulse-cyan">
-              Server-owned conclusion · deterministic evidence
+              Server-owned conclusion | deterministic evidence
             </p>
             <div className="mt-3 flex flex-wrap items-center gap-2">
               <VerdictBadge severity={report.verdict.severity} label={report.verdict.label} />
@@ -580,7 +580,7 @@ function VerdictPanel({
               {tokenHeading}
             </h2>
             <p className="mt-1 text-sm font-semibold text-pulse-muted">
-              {tokenSubheading} · {report.chain?.name ?? "Selected chain"}
+              {tokenSubheading} | {report.chain?.name ?? "Selected chain"}
             </p>
             <p className="mt-4 max-w-4xl text-base leading-7 text-pulse-text">
               {report.verdict.summary}
@@ -609,19 +609,19 @@ function VerdictPanel({
             tone={severityMetricTone(report.verdict.severity)}
           />
           <ReportMetric
-            label="Evidence confidence"
-            value={report.verdict.confidence + "% · " + report.verdict.confidenceLabel}
+            label="Finding confidence"
+            value={report.verdict.confidence + "% | " + report.verdict.confidenceLabel}
             tone={report.verdict.confidence >= 70 ? "good" : "caution"}
           />
           <ReportMetric
-            label="Coverage"
+            label="Question coverage"
             value={
               report.audit.resolvedQuestions + " of " + totalChecks + " questions resolved"
             }
             tone={report.audit.coveragePercent >= 80 ? "good" : "caution"}
           />
           <ReportMetric
-            label="Open warnings"
+            label="Provider/runtime warnings"
             value={String(report.warnings.length)}
             tone={report.warnings.length > 0 ? "caution" : "good"}
           />
@@ -636,8 +636,9 @@ function VerdictPanel({
 
         <div className="mt-4 flex flex-wrap items-center justify-between gap-2 text-xs leading-5 text-pulse-muted">
           <p>
-            Severity comes from confirmed capabilities. Confidence reflects evidence quality;
-            coverage reflects resolved questions and bounded review clues.
+            Severity comes from confirmed capabilities. Finding confidence reflects the
+            quality of supporting evidence; question coverage reflects what the scanner
+            actually evaluated.
           </p>
           <p>Generated {generatedAt}</p>
         </div>
@@ -745,7 +746,7 @@ function FindingCard({
       <div className="flex flex-wrap items-start justify-between gap-2">
         <div className="min-w-0">
           <p className="text-[11px] font-semibold uppercase tracking-[0.13em] text-pulse-muted">
-            {humanize(finding.category)} · {finding.id}
+            {humanize(finding.category)} | {finding.id}
           </p>
           <h4 className="mt-1 text-sm font-bold leading-5 text-pulse-text">
             {finding.title}
@@ -815,13 +816,13 @@ function AuditCoverage({
       <div className="flex flex-wrap items-end justify-between gap-2">
         <div>
           <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-pulse-muted">
-            Evidence coverage
+            Deterministic question coverage
           </p>
           <p className="mt-1 text-xl font-bold text-pulse-text">{percentage}%</p>
         </div>
         <p className="text-xs leading-5 text-pulse-muted">
-          {audit.resolvedQuestions} questions resolved · {audit.reviewChecks} review ·{" "}
-          {audit.notEvaluatedChecks} untested · {total} total
+          {audit.resolvedQuestions} questions resolved | {audit.reviewChecks} review |{" "}
+          {audit.notEvaluatedChecks} untested | {total} total
         </p>
       </div>
       <div
@@ -890,9 +891,9 @@ function AiExplanation({ ai }: { ai: TokenContractReportResponse["ai"] }) {
         </p>
         {ai.usage ? (
           <p className="mt-3 font-mono text-[11px] leading-5 text-pulse-muted">
-            Provider usage: {ai.usage.promptTokens.toLocaleString()} prompt ·{" "}
-            {ai.usage.completionTokens.toLocaleString()} completion ·{" "}
-            {ai.usage.reasoningTokens.toLocaleString()} reasoning ·{" "}
+            Provider usage: {ai.usage.promptTokens.toLocaleString()} prompt |{" "}
+            {ai.usage.completionTokens.toLocaleString()} completion |{" "}
+            {ai.usage.reasoningTokens.toLocaleString()} reasoning |{" "}
             {ai.usage.totalTokens.toLocaleString()} total across {ai.usage.attempts}{" "}
             attempt{ai.usage.attempts === 1 ? "" : "s"}
           </p>
@@ -949,7 +950,7 @@ function AiNarrative({ narrative }: { narrative: TokenContractAiNarrative }) {
                     {finding.heading}
                   </h5>
                   <span className="rounded-full border border-amber-400/30 bg-amber-400/10 px-2 py-0.5 text-[11px] font-semibold uppercase tracking-[0.1em] text-amber-200">
-                    review clue · {finding.severity}
+                    review clue | {finding.severity}
                   </span>
                 </div>
                 <p className="mt-2 text-sm leading-6 text-pulse-muted">
@@ -1024,7 +1025,7 @@ function TechnicalEvidence({ report }: { report: TokenContractReportResponse }) 
           creation.timestamp ? formatTimestamp(creation.timestamp) : null,
         ]
           .filter(Boolean)
-          .join(" · ")
+          .join(" | ")
       : "Explorer creation metadata unavailable";
 
   return (
@@ -1067,7 +1068,7 @@ function TechnicalEvidence({ report }: { report: TokenContractReportResponse }) 
               detail={
                 implementation
                   ? (implementation.contractName ?? "Implementation") +
-                    " · source " +
+                    " | source " +
                     implementation.verified
                   : "Implementation address reported; source metadata unavailable"
               }
@@ -1408,7 +1409,7 @@ function BytecodeAndSupplyEvidence({
 function SelectorEvidence({ report }: { report: TokenContractReportResponse }) {
   return (
     <TechnicalDetails
-      title="Resolved runtime selectors"
+      title="Runtime selector resolution"
       meta={report.selectors.length + " selector" + (report.selectors.length === 1 ? "" : "s")}
     >
       <p className="mb-3 rounded-xl border border-amber-400/20 bg-amber-400/5 p-3 text-xs leading-5 text-pulse-muted">
@@ -1435,12 +1436,15 @@ function SelectorEvidence({ report }: { report: TokenContractReportResponse }) {
                 </p>
               </div>
               <div className="flex flex-wrap gap-2">
-                <SelectorClassBadge classification={selector.classification} />
+                <SelectorClassBadge
+                  classification={selector.classification}
+                  evidenceState={selector.evidenceState}
+                />
                 <span className="rounded-full border border-pulse-border bg-pulse-bg/70 px-2 py-0.5 text-[11px] font-semibold uppercase tracking-[0.1em] text-pulse-muted">
-                  {humanize(selector.resolution)} · {selector.confidence}
+                  {humanize(selector.resolution)} | {selector.confidence}
                 </span>
                 <span className="rounded-full border border-amber-400/25 bg-amber-400/5 px-2 py-0.5 text-[11px] font-semibold uppercase tracking-[0.1em] text-amber-200">
-                  {humanize(selector.evidenceState)} · {humanize(selector.riskCategory)}
+                  {humanize(selector.evidenceState)} | {humanize(selector.riskCategory)}
                 </span>
               </div>
             </div>
@@ -1532,7 +1536,7 @@ function HistoryEvidence({ report }: { report: TokenContractReportResponse }) {
                 </p>
                 <p className="mt-1 text-xs leading-5 text-pulse-muted">
                   {call.timestamp ? formatTimestamp(call.timestamp) : "Time unavailable"}
-                  {call.blockNumber ? " · block " + call.blockNumber : ""}
+                  {call.blockNumber ? " | block " + call.blockNumber : ""}
                 </p>
               </div>
               <CallStatus success={call.success} afterOwnershipZero={call.afterOwnershipZero} />
@@ -1571,8 +1575,8 @@ function SimulationEvidence({ report }: { report: TokenContractReportResponse })
       <p className="mb-3 rounded-xl border border-pulse-border/70 bg-pulse-bg/45 p-3 text-xs leading-5 text-pulse-muted">
         Calls were read-only at captured block{" "}
         {report.simulation.blockNumber ?? "unknown"}. A successful simulation proves only
-        that the tested call path succeeded at that block. No transaction was submitted,
-        signed, funded, or relayed.
+        that the RPC call completed at that block. A returned false value is treated as a
+        failed transfer path. No transaction was submitted, signed, funded, or relayed.
       </p>
       <div className="space-y-2">
         {report.simulation.attempts.map((attempt) => (
@@ -1597,9 +1601,23 @@ function SimulationEvidence({ report }: { report: TokenContractReportResponse })
               </div>
             </div>
             <p className="mt-2 text-xs leading-5 text-pulse-muted">{attempt.detail}</p>
-            <p className="mt-2 break-all font-mono text-[11px] leading-5 text-pulse-muted">
-              from {attempt.from ?? "ordinary account unavailable"} · to {attempt.to}
-            </p>
+            <dl className="mt-3 grid gap-2 rounded-lg border border-pulse-border/60 bg-pulse-bg/35 p-3 text-[11px] leading-5 sm:grid-cols-2">
+              <SimulationDatum
+                label="Caller"
+                value={attempt.from ?? "Ordinary account unavailable"}
+                mono={Boolean(attempt.from)}
+              />
+              <SimulationDatum label="Call target" value={attempt.to} mono />
+              {attempt.recipient ? (
+                <SimulationDatum label="Transfer recipient" value={attempt.recipient} mono />
+              ) : null}
+              {attempt.amount !== undefined && attempt.amount !== null ? (
+                <SimulationDatum label="Raw token amount" value={attempt.amount} mono />
+              ) : null}
+              {attempt.returnData ? (
+                <SimulationDatum label="Return data" value={attempt.returnData} mono />
+              ) : null}
+            </dl>
           </article>
         ))}
         {report.simulation.attempts.length === 0 ? (
@@ -1616,37 +1634,141 @@ function LiquidityEvidence({ report }: { report: TokenContractReportResponse }) 
     <TechnicalDetails
       title="Discovered DEX liquidity"
       meta={report.liquidity.pairs.length + " pair" +
-        (report.liquidity.pairs.length === 1 ? "" : "s")}
+        (report.liquidity.pairs.length === 1 ? "" : "s") + " | " +
+        (report.liquidity.pairEvidence?.length ?? 0) + " on-chain snapshot" +
+        ((report.liquidity.pairEvidence?.length ?? 0) === 1 ? "" : "s")}
     >
+      <p className="mb-3 rounded-xl border border-pulse-border/70 bg-pulse-bg/45 p-3 text-xs leading-5 text-pulse-muted">
+        DEX name, version labels, and pair-created time are provider metadata. Every retained
+        pair matched the selected chain and included the scanned token as its base or quote
+        asset. Factory, reserves, and LP supply come from one captured-block RPC snapshot.
+        LP mint and removal history comes from a separate bounded event range.
+      </p>
       <div className="grid gap-2 md:grid-cols-2 xl:grid-cols-3">
-        {report.liquidity.pairs.map((pair) => (
-          <article
-            key={pair.pairAddress}
-            className="rounded-xl border border-pulse-border/70 bg-pulse-panel/30 p-3"
-          >
-            <div className="flex flex-wrap items-start justify-between gap-2">
-              <div>
-                <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-pulse-muted">
-                  {pair.dexId ?? "Unknown DEX"} · {pair.chainSlug}
-                </p>
-                <p className="mt-1 break-all font-mono text-xs font-bold text-pulse-text">
-                  {pair.pairAddress}
+        {report.liquidity.pairs.map((pair) => {
+          const pairEvidence = (report.liquidity.pairEvidence ?? []).find(
+            (item) =>
+              item.snapshot.pairAddress.toLocaleLowerCase() ===
+              pair.pairAddress.toLocaleLowerCase(),
+          );
+          const createdAt = pairCreationTime(pair.pairCreatedAt);
+          const liquidityUsd =
+            typeof pair.liquidityUsd === "number" &&
+            Number.isFinite(pair.liquidityUsd)
+              ? pair.liquidityUsd
+              : null;
+          return (
+            <article
+              key={pair.pairAddress}
+              className="rounded-xl border border-pulse-border/70 bg-pulse-panel/30 p-3"
+            >
+              <div className="flex flex-wrap items-start justify-between gap-2">
+                <div>
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-pulse-muted">
+                    {dexDisplayName(pair.dexId, pair.labels)} | {pair.chainSlug}
+                  </p>
+                  <p className="mt-1 break-all font-mono text-xs font-bold text-pulse-text">
+                    {pair.pairAddress}
+                  </p>
+                </div>
+                <p className="text-sm font-bold text-pulse-text">
+                  {liquidityUsd === null ? "Liquidity unknown" : formatUsd(liquidityUsd)}
                 </p>
               </div>
-              <p className="text-sm font-bold text-pulse-text">
-                {pair.liquidityUsd === null
-                  ? "Liquidity unknown"
-                  : formatUsd(pair.liquidityUsd)}
+              <p className="mt-2 text-xs leading-5 text-pulse-muted">
+                {createdAt ? (
+                  <time dateTime={createdAt.iso}>Pair created {createdAt.display}</time>
+                ) : (
+                  "Pair creation time unavailable"
+                )}
               </p>
-            </div>
-            <div className="mt-2 flex flex-wrap gap-2">
-              <CopyButton value={pair.pairAddress} label="Copy pair" compact />
-              {pair.url ? <ExternalLink href={pair.url} label="Open pair" compact /> : null}
-            </div>
-          </article>
-        ))}
+              {pairEvidence ? (
+                <div className="mt-3 space-y-2 rounded-lg border border-pulse-border/60 bg-pulse-bg/35 p-3 text-[11px] leading-5 text-pulse-muted">
+                  <p>
+                    On-chain pair evidence: {humanize(pairEvidence.status)} at block{" "}
+                    {pairEvidence.snapshot.capturedBlock}.
+                  </p>
+                  <dl className="grid gap-x-3 gap-y-1 sm:grid-cols-[auto_1fr]">
+                    <dt className="font-semibold text-pulse-text">Factory</dt>
+                    <dd className="break-all font-mono">
+                      {pairEvidence.snapshot.factory ?? "Unavailable"}
+                    </dd>
+                    <dt className="font-semibold text-pulse-text">Token 0</dt>
+                    <dd className="break-all font-mono">
+                      {pairEvidence.snapshot.token0 ?? "Unavailable"}
+                    </dd>
+                    <dt className="font-semibold text-pulse-text">Token 1</dt>
+                    <dd className="break-all font-mono">
+                      {pairEvidence.snapshot.token1 ?? "Unavailable"}
+                    </dd>
+                    <dt className="font-semibold text-pulse-text">Raw reserves</dt>
+                    <dd className="break-all font-mono">
+                      {pairEvidence.snapshot.reserves
+                        ? pairEvidence.snapshot.reserves.reserve0 + " / " +
+                          pairEvidence.snapshot.reserves.reserve1
+                        : "Unavailable"}
+                    </dd>
+                    <dt className="font-semibold text-pulse-text">Raw LP supply</dt>
+                    <dd className="break-all font-mono">
+                      {pairEvidence.snapshot.totalSupply ?? "Unavailable"}
+                    </dd>
+                  </dl>
+                  {/^[1-9]\d*$/.test(
+                    pairEvidence.deployerActivity.observedLpRemovedAfterMint,
+                  ) ? (
+                    <div className="rounded-md border border-red-400/25 bg-red-400/5 p-2 text-red-100">
+                      <p className="font-semibold">Observed deployer LP removal</p>
+                      <p>
+                        {pairEvidence.deployerActivity.observedLpRemovedAfterMint} raw LP units
+                        matched to removal burns after an observed deployer mint
+                        {pairEvidence.deployerActivity.observedConsumedBps === null
+                          ? "."
+                          : " (" +
+                            (pairEvidence.deployerActivity.observedConsumedBps / 100).toFixed(2) +
+                            "% of the observed deployer mint)."}
+                      </p>
+                      <div className="mt-2 flex flex-wrap gap-2">
+                        {pairEvidence.removalTransactions
+                          .filter(
+                            (transaction) =>
+                              transaction.afterObservedDeployerMint === true &&
+                              /^[1-9]\d*$/.test(transaction.matchedDeployerLp),
+                          )
+                          .slice(0, 4)
+                          .map((transaction) => report.chain ? (
+                            <ExternalLink
+                              key={transaction.transactionHash}
+                              href={explorerTxUrl(
+                                report.chain.chainId,
+                                transaction.transactionHash,
+                              )}
+                              label="Removal tx"
+                              compact
+                            />
+                          ) : null)}
+                      </div>
+                    </div>
+                  ) : null}
+                  {pairEvidence.snapshot.factory ? (
+                    <CopyButton
+                      value={pairEvidence.snapshot.factory}
+                      label="Copy factory"
+                      compact
+                    />
+                  ) : null}
+                </div>
+              ) : null}
+              <div className="mt-2 flex flex-wrap gap-2">
+                <CopyButton value={pair.pairAddress} label="Copy pair" compact />
+                {pair.url ? <ExternalLink href={pair.url} label="Open pair" compact /> : null}
+              </div>
+            </article>
+          );
+        })}
         {report.liquidity.pairs.length === 0 ? (
-          <p className="text-sm text-pulse-muted">No supported DEX pair was returned.</p>
+          <p className="text-sm text-pulse-muted">
+            No indexed, validated DEX pair was returned by the provider.
+          </p>
         ) : null}
       </div>
       <Limitations items={report.liquidity.limitations} />
@@ -1729,7 +1851,7 @@ function EmptyReportState({ status }: { status: SubmitStatus }) {
       </div>
       {status === "loading" ? (
         <p className="border-t border-pulse-border/60 px-4 py-3 font-semibold text-pulse-cyan sm:px-5">
-          Reading bounded contract evidence…
+          Reading bounded contract evidence...
         </p>
       ) : null}
     </div>
@@ -2070,12 +2192,17 @@ function VerdictBadge({
 
 function SelectorClassBadge({
   classification,
+  evidenceState,
 }: {
   classification: TokenContractReportResponse["selectors"][number]["classification"];
+  evidenceState: TokenContractReportResponse["selectors"][number]["evidenceState"];
 }) {
+  const isUnverifiedCandidate = evidenceState !== "confirmed-signature";
   const className =
     classification === "dangerous"
-      ? "border-pulse-red/35 bg-pulse-red/10 text-pulse-red"
+      ? isUnverifiedCandidate
+        ? "border-amber-400/35 bg-amber-400/10 text-amber-200"
+        : "border-pulse-red/35 bg-pulse-red/10 text-pulse-red"
       : classification === "admin"
         ? "border-amber-400/35 bg-amber-400/10 text-amber-200"
         : classification === "standard"
@@ -2088,8 +2215,37 @@ function SelectorClassBadge({
         className
       }
     >
-      {classification}
+      {classification === "dangerous"
+        ? isUnverifiedCandidate
+          ? "sensitive candidate"
+          : "sensitive signature"
+        : classification}
     </span>
+  );
+}
+
+function SimulationDatum({
+  label,
+  value,
+  mono = false,
+}: {
+  label: string;
+  value: string;
+  mono?: boolean;
+}) {
+  return (
+    <div className="min-w-0">
+      <dt className="font-semibold uppercase tracking-[0.1em] text-pulse-muted">
+        {label}
+      </dt>
+      <dd
+        className={
+          "mt-0.5 break-all text-pulse-text " + (mono ? "font-mono" : "")
+        }
+      >
+        {value}
+      </dd>
+    </div>
   );
 }
 
@@ -2101,7 +2257,9 @@ function SimulationStatus({
   const className =
     status === "succeeded"
       ? "border-pulse-green/35 bg-pulse-green/10 text-pulse-green"
-      : status === "reverted"
+      : status === "returned-false"
+        ? "border-pulse-red/35 bg-pulse-red/10 text-pulse-red"
+        : status === "reverted"
         ? "border-amber-400/35 bg-amber-400/10 text-amber-200"
         : "border-pulse-border bg-pulse-bg/70 text-pulse-muted";
   return (
@@ -2111,7 +2269,7 @@ function SimulationStatus({
         className
       }
     >
-      {status}
+      {humanize(status)}
     </span>
   );
 }
@@ -2560,6 +2718,46 @@ function appendSymbol(value: string, symbol: string): string {
   return value + " " + symbol;
 }
 
+function dexDisplayName(dexId: string | null | undefined, labels: unknown): string {
+  const baseName =
+    dexId?.toLocaleLowerCase() === "pulsex"
+      ? "PulseX"
+      : dexId?.trim() || "Unknown DEX";
+  const normalizedBase = baseName.toLocaleLowerCase().replace(/[^a-z0-9]/g, "");
+  const providerLabels = Array.isArray(labels)
+    ? Array.from(
+        new Set(
+          labels
+            .filter((label): label is string => typeof label === "string")
+            .map((label) => label.trim())
+            .filter(Boolean),
+        ),
+      ).slice(0, 8)
+    : [];
+  const additionalLabels = providerLabels.filter(
+    (label) =>
+      !normalizedBase.includes(label.toLocaleLowerCase().replace(/[^a-z0-9]/g, "")),
+  );
+  if (additionalLabels.length === 0) return baseName;
+  return baseName + " " + additionalLabels.map(formatDexLabel).join(" / ");
+}
+
+function formatDexLabel(label: string): string {
+  return /^v\d+$/i.test(label) ? label.toLocaleUpperCase() : humanize(label);
+}
+
+function pairCreationTime(
+  value: number | null | undefined,
+): { iso: string; display: string } | null {
+  if (typeof value !== "number" || !Number.isFinite(value) || value < 0) return null;
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return null;
+  return {
+    iso: date.toISOString(),
+    display: formatTimestamp(String(value)),
+  };
+}
+
 function formatTimestamp(value: string): string {
   const numeric = /^\d+$/.test(value) ? Number(value) : Number.NaN;
   const date = Number.isFinite(numeric)
@@ -2596,7 +2794,7 @@ function sourceLocation(
 ): string {
   if (startLine === undefined) return file;
   if (endLine === undefined || endLine === startLine) return file + ":" + startLine;
-  return file + ":" + startLine + "–" + endLine;
+  return file + ":" + startLine + "-" + endLine;
 }
 
 function errorMessage(value: unknown): string {

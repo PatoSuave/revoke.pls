@@ -232,7 +232,7 @@ export async function fetchTokenLiquidity({
   try {
     const response = await fetchWithTimeout(
       fetcher(
-        `https://api.dexscreener.com/tokens/v1/${encodeURIComponent(
+        `https://api.dexscreener.com/token-pairs/v1/${encodeURIComponent(
           chain.dexScreenerSlug,
         )}/${contractAddress}`,
         {
@@ -246,7 +246,11 @@ export async function fetchTokenLiquidity({
     );
     if (!response.ok) throw new Error(`DEX Screener returned HTTP ${response.status}`);
     const body = (await response.json()) as unknown;
-    const pairs = parseDexPairs(body, chain.dexScreenerSlug).slice(0, PAIR_LIMIT);
+    const pairs = parseDexPairs(
+      body,
+      chain.dexScreenerSlug,
+      contractAddress,
+    ).slice(0, PAIR_LIMIT);
     const limitations = [
       "DEX pair discovery does not prove LP ownership, lock duration, or removable liquidity.",
     ];
@@ -664,31 +668,55 @@ function successValue(row: Record<string, unknown>): boolean | null {
   return null;
 }
 
-function parseDexPairs(body: unknown, chainSlug: string): TokenContractLiquidityPair[] {
+function parseDexPairs(
+  body: unknown,
+  chainSlug: string,
+  contractAddress: Address,
+): TokenContractLiquidityPair[] {
   if (!Array.isArray(body)) return [];
+  const normalizedChainSlug = chainSlug.toLowerCase();
+  const normalizedContractAddress = contractAddress.toLowerCase();
+  const seenPairAddresses = new Set<string>();
   return body
     .map((value): TokenContractLiquidityPair | null => {
       if (!value || typeof value !== "object" || Array.isArray(value)) return null;
       const pair = value as Record<string, unknown>;
+      if (textValue(pair.chainId)?.toLowerCase() !== normalizedChainSlug) return null;
       const pairAddress = normalizedAddress(pair.pairAddress);
       if (!pairAddress) return null;
       const baseToken = objectValue(pair.baseToken);
       const quoteToken = objectValue(pair.quoteToken);
+      const baseTokenAddress = normalizedAddress(baseToken?.address);
+      const quoteTokenAddress = normalizedAddress(quoteToken?.address);
+      if (
+        baseTokenAddress?.toLowerCase() !== normalizedContractAddress &&
+        quoteTokenAddress?.toLowerCase() !== normalizedContractAddress
+      ) {
+        return null;
+      }
       const liquidity = objectValue(pair.liquidity);
       const liquidityUsd = numberValue(liquidity?.usd);
       const url = textValue(pair.url);
       return {
         chainSlug,
         dexId: textValue(pair.dexId),
+        labels: stringList(pair.labels),
         pairAddress,
-        baseTokenAddress: normalizedAddress(baseToken?.address),
-        quoteTokenAddress: normalizedAddress(quoteToken?.address),
+        baseTokenAddress,
+        quoteTokenAddress,
         liquidityUsd,
+        pairCreatedAt: integer(pair.pairCreatedAt),
         url: url?.startsWith("https://dexscreener.com/") ? url : null,
       };
     })
     .filter((pair): pair is TokenContractLiquidityPair => pair !== null)
-    .sort((a, b) => (b.liquidityUsd ?? -1) - (a.liquidityUsd ?? -1));
+    .sort((a, b) => (b.liquidityUsd ?? -1) - (a.liquidityUsd ?? -1))
+    .filter((pair) => {
+      const address = pair.pairAddress.toLowerCase();
+      if (seenPairAddresses.has(address)) return false;
+      seenPairAddresses.add(address);
+      return true;
+    });
 }
 
 function unavailableLiquidity(limitation: string): TokenContractLiquidityResult {
@@ -749,7 +777,9 @@ function hexInput(value: unknown): `0x${string}` | null {
 }
 
 function integer(value: unknown): number | null {
-  const number = typeof value === "number" ? value : Number(textValue(value));
+  const text = textValue(value);
+  if (text === null) return null;
+  const number = Number(text);
   return Number.isSafeInteger(number) && number >= 0 ? number : null;
 }
 
@@ -765,7 +795,9 @@ function timestamp(value: unknown): string | null {
 }
 
 function numberValue(value: unknown): number | null {
-  const number = typeof value === "number" ? value : Number(textValue(value));
+  const text = textValue(value);
+  if (text === null) return null;
+  const number = Number(text);
   return Number.isFinite(number) ? number : null;
 }
 
@@ -779,6 +811,17 @@ function textValue(value: unknown): string | null {
   if (typeof value !== "string" && typeof value !== "number") return null;
   const text = String(value).trim();
   return text || null;
+}
+
+function stringList(value: unknown): string[] {
+  if (!Array.isArray(value)) return [];
+  return Array.from(
+    new Set(
+      value
+        .map((item) => (typeof item === "string" ? item.trim() : ""))
+        .filter((item) => item.length > 0 && item.length <= 64),
+    ),
+  ).slice(0, 8);
 }
 
 async function fetchWithTimeout<T>(promise: Promise<T>, message: string): Promise<T> {

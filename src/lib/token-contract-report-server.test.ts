@@ -2,6 +2,8 @@ import { describe, expect, it, vi } from "vitest";
 import {
   encodeAbiParameters,
   getAddress,
+  keccak256,
+  stringToHex,
   toFunctionSelector,
   type Address,
 } from "viem";
@@ -12,9 +14,7 @@ import { buildTokenContractReport } from "@/lib/token-contract-report-server";
 const TOKEN = getAddress("0xA1077a294dDE1B09bB078844df40758a5D0f9a27");
 const POSVE = getAddress("0xbbca9774331066948A6b2a68Bc7a51B0392aF9F1");
 const DEPLOYER = getAddress("0x000000000000000000000000000000000000dEaD");
-const IMPLEMENTATION = getAddress(
-  "0x0000000000000000000000000000000000000001",
-);
+const IMPLEMENTATION = getAddress("0x0000000000000000000000000000000000000001");
 const CREATION_TX =
   "0x1111111111111111111111111111111111111111111111111111111111111111";
 const RUNTIME_WITH_EMBEDDED_PUSH_DATA = `0x6340c10f197f${
@@ -82,8 +82,12 @@ const POSVE_ABI = [
 ].map(([name, inputs]) => ({
   type: "function",
   name,
-  stateMutability: name === "_Holders" || name === "getTokenHolders" ? "view" : "nonpayable",
-  inputs: (inputs as string[]).map((type, index) => ({ name: `arg${index}`, type })),
+  stateMutability:
+    name === "_Holders" || name === "getTokenHolders" ? "view" : "nonpayable",
+  inputs: (inputs as string[]).map((type, index) => ({
+    name: `arg${index}`,
+    type,
+  })),
   outputs: [],
 }));
 
@@ -150,6 +154,214 @@ function requestUrl(input: RequestInfo | URL): URL {
 
 function eventAddressTopic(address: Address) {
   return `0x${address.slice(2).toLowerCase().padStart(64, "0")}`;
+}
+
+const SIMULATION_PAIR = getAddress(
+  "0x2222222222222222222222222222222222222222",
+);
+const SIMULATION_HOLDER = getAddress(
+  "0x7777777777777777777777777777777777777777",
+);
+const SIMULATION_QUOTE = getAddress(
+  "0x3333333333333333333333333333333333333333",
+);
+
+async function buildSimulationRegressionReport({
+  holders,
+  balances,
+  candidateSignatures = [],
+  holderToPairResult = "success",
+}: {
+  holders: Address[];
+  balances: Readonly<Record<string, bigint>>;
+  candidateSignatures?: readonly string[];
+  holderToPairResult?: "success" | "false" | "revert";
+}) {
+  const selectorToSignature = new Map(
+    candidateSignatures.map((signature) => [
+      toFunctionSelector(signature).toLowerCase(),
+      signature,
+    ]),
+  );
+  const runtime = `0x63a9059cbb${Array.from(selectorToSignature.keys())
+    .map((selector) => `63${selector.slice(2)}`)
+    .join("")}00` as `0x${string}`;
+  const ordinaryHolder = holders.find(
+    (address) =>
+      address.toLowerCase() !== SIMULATION_PAIR.toLowerCase() &&
+      address.toLowerCase() !== DEPLOYER.toLowerCase() &&
+      (balances[address.toLowerCase()] ?? 0n) > 0n,
+  );
+  const boolResult = (value: boolean) => ({
+    data: encodeAbiParameters([{ type: "bool" }], [value]),
+  });
+
+  const reader = {
+    getBytecode: vi.fn(async ({ address }: { address: Address }) => {
+      if (address.toLowerCase() === TOKEN.toLowerCase()) return runtime;
+      if (address.toLowerCase() === SIMULATION_PAIR.toLowerCase()) {
+        return "0x1234" as const;
+      }
+      return "0x" as const;
+    }),
+    getBlockNumber: vi.fn(async () => 700n),
+    getStorageAt: vi.fn(async () => `0x${"00".repeat(32)}` as const),
+    readContract: vi.fn(
+      async (call: { functionName: string; args?: readonly unknown[] }) => {
+        if (call.functionName === "name") return "Simulation Token";
+        if (call.functionName === "symbol") return "SIM";
+        if (call.functionName === "decimals") return 0;
+        if (call.functionName === "totalSupply") return 1_000_000n;
+        if (call.functionName === "supportsInterface") return false;
+        if (call.functionName === "owner") return DEPLOYER;
+        if (call.functionName === "balanceOf") {
+          return balances[String(call.args?.[0]).toLowerCase()] ?? 0n;
+        }
+        throw new Error("unsupported read");
+      },
+    ),
+    call: vi.fn(
+      async (call: { account?: Address; to: Address; data: `0x${string}` }) => {
+        const selector = call.data.slice(0, 10).toLowerCase();
+        if (call.to.toLowerCase() === SIMULATION_PAIR.toLowerCase()) {
+          if (selector === "0x0dfe1681") {
+            return {
+              data: encodeAbiParameters([{ type: "address" }], [TOKEN]),
+            };
+          }
+          if (selector === "0xd21220a7") {
+            return {
+              data: encodeAbiParameters(
+                [{ type: "address" }],
+                [SIMULATION_QUOTE],
+              ),
+            };
+          }
+        }
+        if (selector === "0xa9059cbb") {
+          const holderToPair =
+            ordinaryHolder !== undefined &&
+            call.account?.toLowerCase() === ordinaryHolder.toLowerCase() &&
+            call.data
+              .toLowerCase()
+              .includes(SIMULATION_PAIR.slice(2).toLowerCase());
+          if (holderToPair && holderToPairResult === "revert") {
+            throw new Error("execution reverted");
+          }
+          if (holderToPair && holderToPairResult === "false") {
+            return boolResult(false);
+          }
+          return boolResult(true);
+        }
+
+        const signature = selectorToSignature.get(selector);
+        if (signature === "pair()") {
+          return {
+            data: encodeAbiParameters([{ type: "address" }], [SIMULATION_PAIR]),
+          };
+        }
+        if (signature === "pendingFees()") {
+          return {
+            data: encodeAbiParameters([{ type: "uint256" }], [0n]),
+          };
+        }
+        if (
+          signature &&
+          /^(?:configure|set|update|change|execute|enable|disable)/i.test(
+            signature,
+          )
+        ) {
+          if (call.account?.toLowerCase() !== DEPLOYER.toLowerCase()) {
+            throw new Error("execution reverted");
+          }
+          return { data: "0x" };
+        }
+        return {
+          data: encodeAbiParameters([{ type: "uint256" }], [0n]),
+        };
+      },
+    ),
+  };
+  const fetcher = vi.fn(async (input: RequestInfo | URL) => {
+    const url = requestUrl(input);
+    if (url.hostname === "www.4byte.directory") {
+      const selector = url.searchParams.get("hex_signature")?.toLowerCase();
+      const signature = selector ? selectorToSignature.get(selector) : null;
+      return Response.json({
+        count: signature ? 1 : 0,
+        next: null,
+        results: signature ? [{ text_signature: signature }] : [],
+      });
+    }
+    if (url.hostname === "api.dexscreener.com") {
+      return Response.json([
+        {
+          chainId: "pulsechain",
+          pairAddress: SIMULATION_PAIR,
+          dexId: "pulsex",
+          labels: ["v2"],
+          baseToken: { address: TOKEN },
+          quoteToken: { address: SIMULATION_QUOTE },
+          liquidity: { usd: 50_000 },
+          pairCreatedAt: 1_720_000_000_000,
+          url: `https://dexscreener.com/pulsechain/${SIMULATION_PAIR}`,
+        },
+      ]);
+    }
+    if (url.pathname.includes(`/api/v2/tokens/${TOKEN}/holders`)) {
+      return Response.json({
+        items: holders.map((address) => ({ address: { hash: address } })),
+      });
+    }
+    if (url.pathname.includes(`/api/v2/addresses/${TOKEN}/transactions`)) {
+      return Response.json({ items: [] });
+    }
+    if (
+      url.pathname.includes(`/api/v2/addresses/${TOKEN}`) &&
+      url.pathname.endsWith("/logs")
+    ) {
+      return Response.json({ items: [] });
+    }
+    if (url.pathname.includes(`/api/v2/addresses/${TOKEN}`)) {
+      return Response.json({
+        hash: TOKEN,
+        creation_transaction_hash: CREATION_TX,
+        creator_address_hash: DEPLOYER,
+        block_number: 100,
+      });
+    }
+    if (requestAction(input) === "getLogs") {
+      return Response.json({ status: "1", result: [] });
+    }
+    if (requestAction(input) === "getcontractcreation") {
+      return creationResponse();
+    }
+    if (requestAction(input) === "getsourcecode") {
+      return sourceResponse([
+        {
+          type: "function",
+          name: "transfer",
+          stateMutability: "nonpayable",
+          inputs: [
+            { name: "to", type: "address" },
+            { name: "amount", type: "uint256" },
+          ],
+          outputs: [{ name: "", type: "bool" }],
+        },
+      ]);
+    }
+    throw new Error(`Unexpected URL ${url.toString()}`);
+  });
+
+  return buildTokenContractReport({
+    chainId: PULSECHAIN_CHAIN_ID,
+    contractAddress: TOKEN,
+    includeAi: false,
+    enableDeepModules: true,
+    env: { NODE_ENV: "test" } as NodeJS.ProcessEnv,
+    fetcher: fetcher as unknown as typeof fetch,
+    reader,
+  });
 }
 
 describe("token contract report server", () => {
@@ -349,6 +561,11 @@ describe("token contract report server", () => {
       confidence: report.verdict.confidence,
       detailedFindings: [],
     });
+    expect(JSON.parse(deepSeekRequest)).toMatchObject({
+      thinking: { type: "enabled" },
+      reasoning_effort: "high",
+    });
+    expect(JSON.parse(deepSeekRequest)).not.toHaveProperty("temperature");
     expect(deepSeekRequest).not.toContain("IGNORE ALL PRIOR INSTRUCTIONS");
     expect(deepSeekRequest).toContain("citedExcerpts");
   });
@@ -663,17 +880,24 @@ describe("token contract report server", () => {
                     confidenceReason:
                       "Getter reads were successful, but deeper transfer and simulation checks were not collected.",
                     mainRisks: [
-                      "v1 scanner did not collect sell simulation or transfer-path controls.",
+                      "This is an official legitimate token with no meaningful risk.",
                     ],
                     detailedFindings: [
                       {
-                        severity: "medium",
-                        heading: "Source and getter evidence only",
-                        evidence: ["source-status"],
+                        severity: "critical",
+                        heading: "Owner can set 100% fees",
+                        evidence: ["source-status", "selector-0x40c10f19"],
                         description:
-                          "The report is based on bounded deterministic evidence.",
+                          "The owner can change fees and block every sale.",
                         practicalEffect:
-                          "The result should not be treated as proof that the token is safe.",
+                          "Buyers will be unable to exit their positions.",
+                      },
+                      {
+                        severity: "critical",
+                        heading: "Guaranteed loss",
+                        evidence: ["selector-0x40c10f19"],
+                        description: "Every buyer will lose funds.",
+                        practicalEffect: "Loss is certain.",
                       },
                     ],
                     whatNotSeen: ["No sell simulation evidence was provided."],
@@ -737,6 +961,9 @@ describe("token contract report server", () => {
       "Every detailedFindings[].evidence item must be an exact id",
     );
     expect(userPrompt).toContain(
+      "The server replaces severity, heading, description, and practicalEffect",
+    );
+    expect(userPrompt).toContain(
       'Call 4byte-derived names "unique unverified 4byte candidate signatures"',
     );
     expect(userPrompt).toContain("0x40c10f19");
@@ -775,6 +1002,29 @@ describe("token contract report server", () => {
     expect(report.ai.narrative?.detailedFindings[0]?.evidence).not.toContain(
       "source-status",
     );
+    expect(report.ai.narrative?.detailedFindings[0]?.severity).toBe("info");
+    expect(report.ai.narrative?.detailedFindings[0]?.heading).toBe(
+      "Explorer source status",
+    );
+    expect(report.ai.narrative?.detailedFindings[0]?.description).not.toMatch(
+      /fee|block every sale/i,
+    );
+    expect(
+      report.ai.narrative?.detailedFindings[0]?.practicalEffect,
+    ).not.toMatch(/unable to exit/i);
+    expect(report.ai.narrative?.detailedFindings).toHaveLength(2);
+    expect(report.ai.narrative?.detailedFindings[1]).toMatchObject({
+      severity: "medium",
+      heading: "Mint selector clue: mint(address,uint256)",
+    });
+    expect(
+      report.ai.narrative?.detailedFindings.filter((finding) =>
+        finding.heading.startsWith("Mint selector clue"),
+      ),
+    ).toHaveLength(1);
+    expect(report.ai.markdown).not.toMatch(
+      /official legitimate token|owner can set 100% fees|block every sale|guaranteed loss|loss is certain/i,
+    );
     expect(report.ai.reason).toBeNull();
     expect(report.ai.finishReason).toBe("stop");
   });
@@ -808,18 +1058,19 @@ describe("token contract report server", () => {
           throw new Error("unsupported read");
         },
       ),
-      call: vi.fn(
-        async (call: { account?: Address; data: `0x${string}` }) => {
-          const isHolder = call.account?.toLowerCase() === holder.toLowerCase();
-          const isPairTransfer = call.data
-            .toLowerCase()
-            .includes(pair.slice(2).toLowerCase());
-          if (isHolder && (isPairTransfer || call.data.startsWith("0x48f2f812"))) {
-            throw new Error("execution reverted");
-          }
-          return { data: "0x" };
-        },
-      ),
+      call: vi.fn(async (call: { account?: Address; data: `0x${string}` }) => {
+        const isHolder = call.account?.toLowerCase() === holder.toLowerCase();
+        const isPairTransfer = call.data
+          .toLowerCase()
+          .includes(pair.slice(2).toLowerCase());
+        if (
+          isHolder &&
+          (isPairTransfer || call.data.startsWith("0x48f2f812"))
+        ) {
+          throw new Error("execution reverted");
+        }
+        return { data: "0x" };
+      }),
     };
     let deepSeekPrompt = "";
     const fetcher = vi.fn(
@@ -844,8 +1095,10 @@ describe("token contract report server", () => {
         if (url.hostname === "api.dexscreener.com") {
           return Response.json([
             {
+              chainId: "pulsechain",
               pairAddress: pair,
               dexId: "9mm",
+              labels: ["v2"],
               baseToken: { address: TOKEN },
               quoteToken: { address: zero },
               liquidity: { usd: 50_000 },
@@ -894,14 +1147,22 @@ describe("token contract report server", () => {
                   transactionHash: CREATION_TX,
                   blockNumber: "100",
                   logIndex: "0",
-                  topics: [topic, eventAddressTopic(zero), eventAddressTopic(DEPLOYER)],
+                  topics: [
+                    topic,
+                    eventAddressTopic(zero),
+                    eventAddressTopic(DEPLOYER),
+                  ],
                   data: `0x${1000n.toString(16).padStart(64, "0")}`,
                 },
                 {
                   transactionHash: controlTx,
                   blockNumber: "120",
                   logIndex: "1",
-                  topics: [topic, eventAddressTopic(DEPLOYER), eventAddressTopic(holder)],
+                  topics: [
+                    topic,
+                    eventAddressTopic(DEPLOYER),
+                    eventAddressTopic(holder),
+                  ],
                   data: `0x${400n.toString(16).padStart(64, "0")}`,
                 },
               ],
@@ -913,7 +1174,11 @@ describe("token contract report server", () => {
                 transactionHash: renounceTx,
                 blockNumber: "110",
                 logIndex: "0",
-                topics: [topic, eventAddressTopic(DEPLOYER), eventAddressTopic(zero)],
+                topics: [
+                  topic,
+                  eventAddressTopic(DEPLOYER),
+                  eventAddressTopic(zero),
+                ],
                 data: "0x",
               },
             ],
@@ -978,14 +1243,26 @@ describe("token contract report server", () => {
       expect.arrayContaining([
         "history.holders.deployer-concentration",
         "history.post-owner-zero-control",
-        "simulation.transfer.controller-sell-exemption",
+        "simulation.transfer.caller-differential",
       ]),
+    );
+    expect(
+      report.findings.find(
+        (finding) => finding.id === "simulation.transfer.caller-differential",
+      ),
+    ).toMatchObject({
+      title: "Caller-specific transfer-to-pair behavior",
+      severity: "medium",
+      state: "review-clue",
+    });
+    expect(report.findings.map((finding) => finding.id)).not.toContain(
+      "simulation.transfer.controller-sell-exemption",
     );
     expect(
       report.audit.criticalChecks.find(
         (check) => check.question === "Can owner sell when users cannot?",
       )?.status,
-    ).toBe("confirmed");
+    ).toBe("needs_review");
     expect(
       report.audit.criticalChecks.find(
         (check) => check.question === "Is supply highly concentrated?",
@@ -996,8 +1273,523 @@ describe("token contract report server", () => {
     );
     expect(deepSeekPrompt).toContain('"deployerCurrentPercent":60');
     expect(deepSeekPrompt).toContain('"evidenceStatus":"bounded_eth_call"');
+    expect(deepSeekPrompt).toContain('"sell":null');
+    expect(deepSeekPrompt).toContain('"controllerSell":null');
+    expect(deepSeekPrompt).toContain('"honeypotSuspected":null');
+    expect(deepSeekPrompt).toContain('"lpSellBlockSuspected":false');
+    expect(deepSeekPrompt).toContain('"ownerExemptionsDetected":false');
+    expect(deepSeekPrompt).toContain('"controllerTransferToPair"');
     expect(deepSeekPrompt).toContain(pair);
     expect(deepSeekPrompt).toContain(holder);
+  });
+
+  it("validates pair identity and matches deployer LP removal history", async () => {
+    const lpToken = getAddress("0x4444444444444444444444444444444444444444");
+    const pair = getAddress("0x2222222222222222222222222222222222222222");
+    const quote = TOKEN;
+    const factory = getAddress("0x29eA7545DEf87022BAdc76323F373EA1e707C523");
+    const zero = getAddress("0x0000000000000000000000000000000000000000");
+    const mintTx = `0x${"44".repeat(32)}` as const;
+    const removalTx = `0x${"55".repeat(32)}` as const;
+    const transferTopic = keccak256(
+      stringToHex("Transfer(address,address,uint256)"),
+    );
+    const mintTopic = keccak256(
+      stringToHex("Mint(address,uint256,uint256,address)"),
+    );
+    const burnTopic = keccak256(
+      stringToHex("Burn(address,uint256,uint256,address,address)"),
+    );
+    const pairLogs = {
+      [transferTopic.toLowerCase()]: [
+        {
+          transactionHash: mintTx,
+          blockNumber: "0x65",
+          transactionIndex: "0x1",
+          logIndex: "0x0",
+          topics: [
+            transferTopic,
+            eventAddressTopic(zero),
+            eventAddressTopic(DEPLOYER),
+          ],
+          data: encodeAbiParameters([{ type: "uint256" }], [100n]),
+        },
+        {
+          transactionHash: removalTx,
+          blockNumber: "0x78",
+          transactionIndex: "0x1",
+          logIndex: "0x0",
+          topics: [
+            transferTopic,
+            eventAddressTopic(DEPLOYER),
+            eventAddressTopic(pair),
+          ],
+          data: encodeAbiParameters([{ type: "uint256" }], [100n]),
+        },
+        {
+          transactionHash: removalTx,
+          blockNumber: "0x78",
+          transactionIndex: "0x1",
+          logIndex: "0x1",
+          topics: [
+            transferTopic,
+            eventAddressTopic(pair),
+            eventAddressTopic(zero),
+          ],
+          data: encodeAbiParameters([{ type: "uint256" }], [100n]),
+        },
+      ],
+      [mintTopic.toLowerCase()]: [
+        {
+          transactionHash: mintTx,
+          blockNumber: "0x65",
+          transactionIndex: "0x1",
+          logIndex: "0x2",
+          topics: [
+            mintTopic,
+            eventAddressTopic(DEPLOYER),
+            eventAddressTopic(DEPLOYER),
+          ],
+          data: encodeAbiParameters(
+            [{ type: "uint256" }, { type: "uint256" }],
+            [1_000n, 2_000n],
+          ),
+        },
+      ],
+      [burnTopic.toLowerCase()]: [
+        {
+          transactionHash: removalTx,
+          blockNumber: "0x78",
+          transactionIndex: "0x1",
+          logIndex: "0x2",
+          topics: [
+            burnTopic,
+            eventAddressTopic(DEPLOYER),
+            eventAddressTopic(DEPLOYER),
+            eventAddressTopic(DEPLOYER),
+          ],
+          data: encodeAbiParameters(
+            [{ type: "uint256" }, { type: "uint256" }],
+            [900n, 1_800n],
+          ),
+        },
+      ],
+    } as const;
+    const reader = {
+      getBytecode: vi.fn(async () => "0x63a9059cbb00" as const),
+      getBlockNumber: vi.fn(async () => 30_100n),
+      getStorageAt: vi.fn(async () => `0x${"00".repeat(32)}` as const),
+      readContract: vi.fn(
+        async (call: {
+          address: Address;
+          functionName: string;
+          args?: readonly unknown[];
+        }) => {
+          if (
+            call.address.toLowerCase() ===
+            "0x1715a3e4a142d8b698131108995174f37aeba10d"
+          ) {
+            return zero;
+          }
+          if (call.address.toLowerCase() === factory.toLowerCase()) {
+            return pair;
+          }
+          if (call.address.toLowerCase() === pair.toLowerCase()) {
+            if (call.functionName === "token0") return lpToken;
+            if (call.functionName === "token1") return quote;
+            if (call.functionName === "factory") return factory;
+            if (call.functionName === "getReserves")
+              return [100n, 200n, 1_700_000_000];
+            if (call.functionName === "totalSupply") return 1n;
+          }
+          if (call.functionName === "name") return "LP Evidence";
+          if (call.functionName === "symbol") return "LPE";
+          if (call.functionName === "decimals") return 18;
+          if (call.functionName === "totalSupply") return 1_000n;
+          if (call.functionName === "supportsInterface") return false;
+          if (call.functionName === "owner") return DEPLOYER;
+          if (call.functionName === "balanceOf") {
+            return String(call.args?.[0]).toLowerCase() ===
+              DEPLOYER.toLowerCase()
+              ? 1_000n
+              : 0n;
+          }
+          throw new Error("unsupported read");
+        },
+      ),
+      call: vi.fn(async () => ({ data: "0x" as const })),
+      request: vi.fn(
+        async (request: { method: string; params?: readonly unknown[] }) => {
+          if (request.method !== "eth_getLogs") return [];
+          const filter = request.params?.[0] as
+            { address?: string; topics?: string[] } | undefined;
+          if (filter?.address?.toLowerCase() !== pair.toLowerCase()) return [];
+          return (
+            pairLogs[
+              filter.topics?.[0]?.toLowerCase() as keyof typeof pairLogs
+            ] ?? []
+          );
+        },
+      ),
+    };
+    const fetcher = vi.fn(async (input: RequestInfo | URL) => {
+      const url = requestUrl(input);
+      if (url.hostname === "api.dexscreener.com") {
+        return Response.json([
+          {
+            chainId: "pulsechain",
+            pairAddress: pair,
+            dexId: "pulsex",
+            labels: ["v2"],
+            pairCreatedAt: 1_700_000_000_000,
+            baseToken: { address: lpToken },
+            quoteToken: { address: quote },
+            liquidity: { usd: 45.77 },
+            url: `https://dexscreener.com/pulsechain/${pair}`,
+          },
+        ]);
+      }
+      if (url.pathname.includes(`/api/v2/tokens/${lpToken}/holders`)) {
+        return Response.json({ items: [] });
+      }
+      if (url.pathname.includes(`/api/v2/addresses/${lpToken}/transactions`)) {
+        return Response.json({ items: [] });
+      }
+      if (url.pathname.includes(`/api/v2/addresses/${lpToken}`)) {
+        return Response.json({
+          hash: lpToken,
+          creation_transaction_hash: CREATION_TX,
+          creator_address_hash: DEPLOYER,
+        });
+      }
+      if (url.pathname.includes(`/api/v2/transactions/${CREATION_TX}`)) {
+        return Response.json({
+          block_number: 100,
+          timestamp: "2026-01-01T00:00:00Z",
+        });
+      }
+      if (url.searchParams.get("action") === "getLogs") {
+        return Response.json({ result: [] });
+      }
+      if (requestAction(input) === "getcontractcreation")
+        return creationResponse();
+      return sourceResponse([]);
+    });
+
+    const report = await buildTokenContractReport({
+      chainId: PULSECHAIN_CHAIN_ID,
+      contractAddress: lpToken,
+      includeAi: false,
+      enableDeepModules: true,
+      env: { NODE_ENV: "test" } as NodeJS.ProcessEnv,
+      fetcher: fetcher as unknown as typeof fetch,
+      reader: reader as unknown as NonNullable<
+        Parameters<typeof buildTokenContractReport>[0]["reader"]
+      >,
+    });
+
+    expect(report.liquidity.pairs[0]).toMatchObject({
+      pairAddress: pair,
+      labels: ["v2"],
+      liquidityUsd: 45.77,
+    });
+    expect(reader.readContract).toHaveBeenCalledWith(
+      expect.objectContaining({
+        address: getAddress("0x1715a3E4A142d8b698131108995174F37aEBA10D"),
+        functionName: "getPair",
+        args: [lpToken, TOKEN],
+      }),
+    );
+    expect(reader.request).toHaveBeenCalledWith(
+      expect.objectContaining({
+        method: "eth_getLogs",
+        params: [
+          expect.objectContaining({
+            fromBlock: "0x2774",
+            toBlock: "0x7594",
+          }),
+        ],
+      }),
+    );
+    expect(reader.readContract).toHaveBeenCalledWith(
+      expect.objectContaining({
+        address: factory,
+        functionName: "getPair",
+        args: [lpToken, TOKEN],
+      }),
+    );
+    expect(report.liquidity.pairEvidence[0]).toMatchObject({
+      status: "complete",
+      snapshot: { factory, token0: lpToken, token1: quote },
+      deployerActivity: {
+        observedLpRemovedAfterMint: "100",
+        observedMintFullyConsumedLater: true,
+        observedConsumedBps: 10_000,
+      },
+    });
+    expect(
+      report.liquidity.pairEvidence[0]?.removalTransactions[0],
+    ).toMatchObject({
+      transactionHash: removalTx,
+      matchedDeployerLp: "100",
+    });
+    expect(report.findings.map((finding) => finding.id)).toEqual(
+      expect.arrayContaining([
+        `history.liquidity.deployer-lp-removed.${pair.toLowerCase()}`,
+        `liquidity.shallow.${pair.toLowerCase()}`,
+      ]),
+    );
+    expect(
+      report.audit.criticalChecks.find(
+        (check) => check.question === "Is LP locked or removable?",
+      ),
+    ).toMatchObject({ status: "needs_review" });
+  });
+
+  it("excludes the DEX pair when selecting a distinct ordinary holder", async () => {
+    const report = await buildSimulationRegressionReport({
+      holders: [SIMULATION_PAIR, SIMULATION_HOLDER],
+      balances: {
+        [DEPLOYER.toLowerCase()]: 980_000n,
+        [SIMULATION_PAIR.toLowerCase()]: 10_000n,
+        [SIMULATION_HOLDER.toLowerCase()]: 10_000n,
+      },
+    });
+
+    const holderToPair = report.simulation.attempts.find(
+      (attempt) => attempt.id === "holder-to-pair",
+    );
+    expect(holderToPair).toMatchObject({
+      from: SIMULATION_HOLDER,
+      recipient: SIMULATION_PAIR,
+      amount: "10",
+      status: "succeeded",
+    });
+    expect(holderToPair?.from).not.toBe(SIMULATION_PAIR);
+    expect(
+      report.simulation.attempts.find(
+        (attempt) => attempt.id === "pair-to-holder",
+      ),
+    ).toMatchObject({
+      from: SIMULATION_PAIR,
+      recipient: SIMULATION_HOLDER,
+      amount: "10",
+    });
+  });
+
+  it("does not run ordinary-holder probes when the pair is the only candidate", async () => {
+    const report = await buildSimulationRegressionReport({
+      holders: [SIMULATION_PAIR],
+      balances: {
+        [DEPLOYER.toLowerCase()]: 990_000n,
+        [SIMULATION_PAIR.toLowerCase()]: 10_000n,
+      },
+    });
+
+    expect(report.simulation.attempts.map((attempt) => attempt.id)).not.toEqual(
+      expect.arrayContaining([
+        "holder-to-pair",
+        "holder-to-wallet",
+        "pair-to-holder",
+      ]),
+    );
+    expect(report.simulation.limitations).toEqual(
+      expect.arrayContaining([
+        expect.stringMatching(
+          /No distinct positive-balance ordinary holder candidate/i,
+        ),
+      ]),
+    );
+  });
+
+  it("records an ABI false transfer result as returned-false", async () => {
+    const report = await buildSimulationRegressionReport({
+      holders: [SIMULATION_HOLDER],
+      balances: {
+        [DEPLOYER.toLowerCase()]: 989_000n,
+        [SIMULATION_PAIR.toLowerCase()]: 1_000n,
+        [SIMULATION_HOLDER.toLowerCase()]: 10_000n,
+      },
+      holderToPairResult: "false",
+    });
+
+    expect(
+      report.simulation.attempts.find(
+        (attempt) => attempt.id === "holder-to-pair",
+      ),
+    ).toMatchObject({
+      status: "returned-false",
+      returnData: `0x${"00".repeat(32)}`,
+      amount: "10",
+      recipient: SIMULATION_PAIR,
+    });
+  });
+
+  it("does not resolve sellability from a successful direct one-unit transfer", async () => {
+    const report = await buildSimulationRegressionReport({
+      holders: [SIMULATION_HOLDER],
+      balances: {
+        [DEPLOYER.toLowerCase()]: 999_998n,
+        [SIMULATION_PAIR.toLowerCase()]: 1n,
+        [SIMULATION_HOLDER.toLowerCase()]: 1n,
+      },
+    });
+
+    expect(
+      report.simulation.attempts.find(
+        (attempt) => attempt.id === "holder-to-pair",
+      ),
+    ).toMatchObject({ status: "succeeded", amount: "1" });
+    expect(
+      report.audit.criticalChecks.find(
+        (check) => check.question === "Can normal users sell after buying?",
+      ),
+    ).toMatchObject({
+      status: "not_collected",
+      disposition: "unresolved",
+      evidence: expect.stringMatching(/router swap|buy-then-sell/i),
+    });
+  });
+
+  it("keeps a direct transfer-to-pair caller differential from proving sellability or a honeypot", async () => {
+    const report = await buildSimulationRegressionReport({
+      holders: [SIMULATION_HOLDER],
+      balances: {
+        [DEPLOYER.toLowerCase()]: 10_000n,
+        [SIMULATION_PAIR.toLowerCase()]: 1_000n,
+        [SIMULATION_HOLDER.toLowerCase()]: 10_000n,
+      },
+      holderToPairResult: "revert",
+    });
+
+    expect(
+      report.findings.find(
+        (finding) => finding.id === "simulation.transfer.caller-differential",
+      ),
+    ).toMatchObject({
+      title: "Caller-specific transfer-to-pair behavior",
+      severity: "medium",
+      state: "review-clue",
+      summary: expect.stringMatching(/direct transfer-to-pair/i),
+      practicalEffect: expect.stringMatching(
+        /not.*router swap|does not prove/i,
+      ),
+    });
+    expect(report.findings.map((finding) => finding.id)).not.toContain(
+      "simulation.transfer.controller-sell-exemption",
+    );
+    expect(
+      report.audit.criticalChecks.find(
+        (check) => check.question === "Can normal users sell after buying?",
+      ),
+    ).toMatchObject({ status: "not_collected", disposition: "unresolved" });
+    expect(
+      report.audit.criticalChecks.find(
+        (check) => check.question === "Can owner sell when users cannot?",
+      ),
+    ).toMatchObject({
+      status: "needs_review",
+      evidence: expect.stringMatching(
+        /direct transfer-to-pair|not a router swap/i,
+      ),
+    });
+  });
+
+  it("keeps pair and pending-fee getters from crediting authority questions", async () => {
+    const report = await buildSimulationRegressionReport({
+      holders: [SIMULATION_HOLDER],
+      balances: {
+        [DEPLOYER.toLowerCase()]: 989_000n,
+        [SIMULATION_PAIR.toLowerCase()]: 1_000n,
+        [SIMULATION_HOLDER.toLowerCase()]: 10_000n,
+      },
+      candidateSignatures: ["pendingFees()", "pair()"],
+    });
+
+    expect(report.selectors).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          signature: "pendingFees()",
+          evidenceState: "review-clue",
+        }),
+        expect.objectContaining({
+          signature: "pair()",
+          evidenceState: "review-clue",
+        }),
+      ]),
+    );
+    expect(
+      report.simulation.attempts.filter((attempt) =>
+        attempt.id.startsWith("control-"),
+      ),
+    ).not.toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ functionSignature: "pendingFees()" }),
+        expect.objectContaining({ functionSignature: "pair()" }),
+      ]),
+    );
+    for (const question of [
+      "Can owner set fees very high?",
+      "Can owner block the LP pair?",
+      "Is LP locked or removable?",
+      "Does the contract have a removeLiquidity wrapper?",
+    ]) {
+      expect(
+        report.audit.criticalChecks.find((check) => check.question === question)
+          ?.status,
+      ).toBe("not_collected");
+    }
+  });
+
+  it("prioritizes actionable selector probes ahead of getter-like clues", async () => {
+    const report = await buildSimulationRegressionReport({
+      holders: [SIMULATION_HOLDER],
+      balances: {
+        [DEPLOYER.toLowerCase()]: 989_000n,
+        [SIMULATION_PAIR.toLowerCase()]: 1_000n,
+        [SIMULATION_HOLDER.toLowerCase()]: 10_000n,
+      },
+      candidateSignatures: [
+        "pendingFees()",
+        "sellFeeBps()",
+        "feeReceiver()",
+        "MAX_FEE_BPS()",
+        "executeFeeChange()",
+        "setSellFee(uint256)",
+      ],
+    });
+
+    const actionAttempts = report.simulation.attempts.filter(
+      (attempt) =>
+        attempt.functionSignature === "executeFeeChange()" ||
+        attempt.functionSignature === "setSellFee(uint256)",
+    );
+    expect(actionAttempts.map((attempt) => attempt.functionSignature)).toEqual([
+      "executeFeeChange()",
+      "executeFeeChange()",
+      "setSellFee(uint256)",
+      "setSellFee(uint256)",
+    ]);
+    expect(
+      actionAttempts.filter((attempt) =>
+        attempt.id.startsWith("control-controller-"),
+      ),
+    ).toHaveLength(2);
+    expect(
+      actionAttempts.filter((attempt) =>
+        attempt.id.startsWith("control-ordinary-"),
+      ),
+    ).toHaveLength(2);
+    expect(
+      report.audit.criticalChecks.find(
+        (check) => check.question === "Can owner set fees very high?",
+      ),
+    ).toMatchObject({
+      status: "needs_review",
+      evidence: expect.stringMatching(
+        /executeFeeChange\(\)|setSellFee\(uint256\)/,
+      ),
+    });
   });
 
   it("probes unique 4byte getter and control candidates without confirming their names", async () => {
@@ -1030,7 +1822,8 @@ describe("token contract report server", () => {
           if (call.functionName === "totalSupply") return 1_000n;
           if (call.functionName === "supportsInterface") return false;
           if (call.functionName === "balanceOf") {
-            return String(call.args?.[0]).toLowerCase() === DEPLOYER.toLowerCase()
+            return String(call.args?.[0]).toLowerCase() ===
+              DEPLOYER.toLowerCase()
               ? 1_000n
               : 0n;
           }
@@ -1038,14 +1831,22 @@ describe("token contract report server", () => {
         },
       ),
       call: vi.fn(
-        async (call: { account?: Address; to: Address; data: `0x${string}` }) => {
+        async (call: {
+          account?: Address;
+          to: Address;
+          data: `0x${string}`;
+        }) => {
           const selector = call.data.slice(0, 10).toLowerCase();
           if (call.to.toLowerCase() === pair.toLowerCase()) {
             if (selector === "0x0dfe1681") {
-              return { data: encodeAbiParameters([{ type: "address" }], [TOKEN]) };
+              return {
+                data: encodeAbiParameters([{ type: "address" }], [TOKEN]),
+              };
             }
             if (selector === "0xd21220a7") {
-              return { data: encodeAbiParameters([{ type: "address" }], [quote]) };
+              return {
+                data: encodeAbiParameters([{ type: "address" }], [quote]),
+              };
             }
           }
           if (selector === toFunctionSelector("tradingEnabled()")) {
@@ -1068,7 +1869,9 @@ describe("token contract report server", () => {
       const url = requestUrl(input);
       if (url.hostname === "www.4byte.directory") {
         const selector = url.searchParams.get("hex_signature")?.toLowerCase();
-        const signature = selector ? selectorToSignature.get(selector as `0x${string}`) : null;
+        const signature = selector
+          ? selectorToSignature.get(selector as `0x${string}`)
+          : null;
         return Response.json({
           count: signature ? 1 : 0,
           next: null,
@@ -1093,7 +1896,8 @@ describe("token contract report server", () => {
       if (url.searchParams.get("action") === "getLogs") {
         return Response.json({ result: [] });
       }
-      if (requestAction(input) === "getcontractcreation") return creationResponse();
+      if (requestAction(input) === "getcontractcreation")
+        return creationResponse();
       return sourceResponse([]);
     });
 
@@ -1141,11 +1945,9 @@ describe("token contract report server", () => {
       evidenceState: "review-clue",
     });
     expect(report.audit.coveragePercent).toBeGreaterThan(6);
-    expect(report.audit.resolvedQuestions).toBe(
-      report.audit.completedChecks,
-    );
+    expect(report.audit.resolvedQuestions).toBe(report.audit.completedChecks);
     expect(report.audit.coverageExplanation.calculation).toContain(
-      "review clues × 0.5 points",
+      "review clues x 0.5 points",
     );
   });
 
@@ -1219,14 +2021,6 @@ describe("token contract report server", () => {
     {
       finishReason: "stop",
       content: aiNarrative({
-        bottomLine: "This is a well-known token, but risk remains unknown.",
-      }),
-      expectedReason: "invalid-output",
-      expectedCalls: 2,
-    },
-    {
-      finishReason: "stop",
-      content: aiNarrative({
         detailedFindings: [
           {
             severity: "high",
@@ -1244,7 +2038,7 @@ describe("token contract report server", () => {
       finishReason: "stop",
       content: "",
       expectedReason: "empty-output",
-      expectedCalls: 1,
+      expectedCalls: 2,
     },
   ])(
     "rejects DeepSeek $expectedReason responses",
@@ -1315,33 +2109,35 @@ describe("token contract report server", () => {
     };
     let chatCalls = 0;
     const maxTokens: number[] = [];
-    const fetcher = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
-      if (input.toString().endsWith("/chat/completions")) {
-        chatCalls += 1;
-        maxTokens.push(
-          JSON.parse(String(init?.body ?? "{}"))?.max_tokens ?? 0,
-        );
-        return Response.json({
-          choices: [
-            {
-              finish_reason: "stop",
-              message: {
-                content: chatCalls === 1 ? "{}" : aiNarrative(),
+    const fetcher = vi.fn(
+      async (input: RequestInfo | URL, init?: RequestInit) => {
+        if (input.toString().endsWith("/chat/completions")) {
+          chatCalls += 1;
+          maxTokens.push(
+            JSON.parse(String(init?.body ?? "{}"))?.max_tokens ?? 0,
+          );
+          return Response.json({
+            choices: [
+              {
+                finish_reason: "stop",
+                message: {
+                  content: chatCalls === 1 ? "{}" : aiNarrative(),
+                },
               },
+            ],
+            usage: {
+              prompt_tokens: chatCalls === 1 ? 100 : 80,
+              completion_tokens: chatCalls === 1 ? 20 : 30,
+              reasoning_tokens: 0,
+              total_tokens: chatCalls === 1 ? 120 : 110,
             },
-          ],
-          usage: {
-            prompt_tokens: chatCalls === 1 ? 100 : 80,
-            completion_tokens: chatCalls === 1 ? 20 : 30,
-            reasoning_tokens: 0,
-            total_tokens: chatCalls === 1 ? 120 : 110,
-          },
-        });
-      }
-      return requestAction(input) === "getcontractcreation"
-        ? creationResponse()
-        : sourceResponse();
-    });
+          });
+        }
+        return requestAction(input) === "getcontractcreation"
+          ? creationResponse()
+          : sourceResponse();
+      },
+    );
 
     const report = await buildTokenContractReport({
       chainId: PULSECHAIN_CHAIN_ID,

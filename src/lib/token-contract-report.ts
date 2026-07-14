@@ -4,6 +4,7 @@ import {
   LIVE_SUPPORTED_CHAIN_COUNT,
   LIVE_SUPPORTED_CHAIN_ROWS,
 } from "@/lib/supported-chain-copy";
+import type { TokenLpEvidenceResult } from "@/lib/token-contract-lp-evidence";
 
 export const TOKEN_CONTRACT_REPORT_PATH = "/TokenContractReport";
 
@@ -212,11 +213,22 @@ export interface TokenContractSimulationAttempt {
   id: string;
   label: string;
   from: Address | null;
+  /** The contract receiving the eth_call. For ERC-20 transfer probes this is the token contract. */
   to: Address;
+  /** The semantic transfer recipient encoded in calldata, when this is a transfer probe. */
+  recipient?: Address | null;
+  /** Raw token units used by a transfer probe. */
+  amount?: string | null;
   functionSignature: string;
-  status: "succeeded" | "reverted" | "unavailable" | "skipped";
+  status:
+    | "succeeded"
+    | "returned-false"
+    | "reverted"
+    | "unavailable"
+    | "skipped";
   blockNumber: number | null;
   detail: string;
+  returnData?: `0x${string}` | null;
   evidenceState?: "confirmed-signature" | "review-clue";
 }
 
@@ -231,10 +243,12 @@ export interface TokenContractAiUsage {
 export interface TokenContractLiquidityPair {
   chainSlug: string;
   dexId: string | null;
+  labels: string[];
   pairAddress: Address;
   baseTokenAddress: Address | null;
   quoteTokenAddress: Address | null;
   liquidityUsd: number | null;
+  pairCreatedAt: number | null;
   url: string | null;
 }
 
@@ -445,6 +459,7 @@ export interface TokenContractReportResponse {
   };
   liquidity: {
     pairs: TokenContractLiquidityPair[];
+    pairEvidence: TokenLpEvidenceResult[];
     limitations: string[];
   };
   ai: {
@@ -567,6 +582,7 @@ export function createEmptyTokenContractReportResponse({
     },
     liquidity: {
       pairs: [],
+      pairEvidence: [],
       limitations: [],
     },
     ai: {

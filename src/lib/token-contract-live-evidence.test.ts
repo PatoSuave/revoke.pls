@@ -88,22 +88,50 @@ describe("token contract live evidence", () => {
     });
   });
 
-  it("returns at most three liquidity-ranked pairs", async () => {
+  it("returns at most three validated, deduplicated liquidity-ranked pairs", async () => {
+    const fetcher = vi.fn(async (input: RequestInfo | URL) => {
+      void input;
+      return Response.json([
+        pair("0x3333333333333333333333333333333333333333", 100),
+        pair(PAIR, 500, { labels: ["v2"], pairCreatedAt: 1_720_000_000_000 }),
+        pair("0x4444444444444444444444444444444444444444", 300),
+        pair("0x5555555555555555555555555555555555555555", 200),
+        pair(PAIR, 50, { labels: ["duplicate"] }),
+        pair("0x6666666666666666666666666666666666666666", 900, {
+          chainId: "ethereum",
+        }),
+        pair("0x7777777777777777777777777777777777777777", 800, {
+          baseToken: { address: HOLDER },
+        }),
+        pair("0x8888888888888888888888888888888888888888", 400, {
+          baseToken: { address: HOLDER },
+          quoteToken: { address: TOKEN },
+          labels: ["v1"],
+        }),
+      ]);
+    });
     const result = await fetchTokenLiquidity({
       contractAddress: TOKEN,
       chain: CHAIN,
-      fetcher: vi.fn(async () =>
-        Response.json([
-          pair("0x3333333333333333333333333333333333333333", 100),
-          pair(PAIR, 500),
-          pair("0x4444444444444444444444444444444444444444", 300),
-          pair("0x5555555555555555555555555555555555555555", 200),
-        ]),
-      ) as unknown as typeof fetch,
+      fetcher: fetcher as unknown as typeof fetch,
     });
 
+    expect(fetcher).toHaveBeenCalledOnce();
+    expect(String(fetcher.mock.calls[0]?.[0])).toBe(
+      `https://api.dexscreener.com/token-pairs/v1/pulsechain/${TOKEN}`,
+    );
     expect(result.pairs).toHaveLength(3);
-    expect(result.pairs[0].pairAddress).toBe(PAIR);
+    expect(result.pairs[0]).toMatchObject({
+      pairAddress: PAIR,
+      labels: ["v2"],
+      pairCreatedAt: 1_720_000_000_000,
+    });
+    expect(result.pairs.map((pair) => pair.pairAddress)).toEqual([
+      PAIR,
+      getAddress("0x8888888888888888888888888888888888888888"),
+      getAddress("0x4444444444444444444444444444444444444444"),
+    ]);
+    expect(result.pairs[1]).toMatchObject({ labels: ["v1"], pairCreatedAt: null });
     expect(result.module.status).toBe("partial");
   });
 
@@ -269,13 +297,19 @@ function addressTopic(address: string) {
   return `0x${address.slice(2).toLowerCase().padStart(64, "0")}`;
 }
 
-function pair(address: string, liquidityUsd: number) {
+function pair(
+  address: string,
+  liquidityUsd: number,
+  overrides: Record<string, unknown> = {},
+) {
   return {
+    chainId: "pulsechain",
     pairAddress: address,
     dexId: "9mm",
     baseToken: { address: TOKEN },
     quoteToken: { address: "0x1111111111111111111111111111111111111111" },
     liquidity: { usd: liquidityUsd },
     url: `https://dexscreener.com/pulsechain/${address}`,
+    ...overrides,
   };
 }
