@@ -3,8 +3,8 @@ import { NextResponse } from "next/server";
 import { approvalApiNoStoreHeaders } from "@/lib/approval-api-cache";
 import { rateLimitKeyFromRequest } from "@/lib/request-rate-limit";
 import {
-  TOKEN_CONTRACT_REPORT_API_RATE_LIMIT,
-  checkTokenContractReportApiRateLimit,
+  acquireTokenContractReportDeepScan,
+  TOKEN_CONTRACT_REPORT_DEEP_RATE_LIMIT,
   type TokenContractReportRateLimitResult,
 } from "@/lib/token-contract-report-api-controls";
 import {
@@ -43,24 +43,27 @@ export async function handleTokenContractReportPost(
   const includeAi =
     typeof body.value.includeAi === "boolean" ? body.value.includeAi : true;
 
-  const rateLimit = checkTokenContractReportApiRateLimit(
+  const lease = acquireTokenContractReportDeepScan(
     rateLimitKeyFromRequest(request),
   );
-  if (!rateLimit.allowed) {
+  if (!lease.allowed) {
     return NextResponse.json(
       {
         ...createEmptyTokenContractReportResponse({
           status: "upstream-failure",
           errors: [
-          "Token contract report rate limit exceeded. Try again shortly.",
+            lease.reason === "in-flight"
+              ? "A token contract audit is already running for this client."
+              : "Token contract report rate limit exceeded. Try again later.",
           ],
         }),
-        rateLimited: true,
+        rateLimited: lease.reason === "rate-limited",
+        inFlight: lease.reason === "in-flight",
       },
       {
         status: 429,
         headers: approvalApiNoStoreHeaders(
-          rateLimitHeaders(rateLimit, { includeRetryAfter: true }),
+          rateLimitHeaders(lease.rateLimit, { includeRetryAfter: true }),
         ),
       },
     );
@@ -77,7 +80,7 @@ export async function handleTokenContractReportPost(
     return NextResponse.json(report, {
       status: statusCodeFor(report.status),
       headers: approvalApiNoStoreHeaders({
-        ...rateLimitHeaders(rateLimit),
+        ...rateLimitHeaders(lease.rateLimit),
         "X-Token-Contract-Report": "server",
       }),
     });
@@ -100,6 +103,8 @@ export async function handleTokenContractReportPost(
         }),
       },
     );
+  } finally {
+    lease.release();
   }
 }
 
@@ -154,7 +159,7 @@ function rateLimitHeaders(
     "X-RateLimit-Remaining": rateLimit.remaining.toString(),
     "X-RateLimit-Reset": Math.ceil(rateLimit.resetAt / 1000).toString(),
     "X-RateLimit-Window-Ms":
-      TOKEN_CONTRACT_REPORT_API_RATE_LIMIT.windowMs.toString(),
+      TOKEN_CONTRACT_REPORT_DEEP_RATE_LIMIT.windowMs.toString(),
   };
 }
 

@@ -16,6 +16,7 @@ export type TokenContractReportStatus =
   | "upstream-failure";
 
 export type TokenContractReportSignalSeverity =
+  | "critical"
   | "info"
   | "low"
   | "medium"
@@ -37,6 +38,7 @@ export type TokenContractAiFailureReason =
   | "rate-limited"
   | "provider-error"
   | "empty-output"
+  | "oversized-output"
   | "truncated-output"
   | "invalid-output";
 
@@ -46,6 +48,12 @@ export interface TokenContractAiFinding {
   evidence: string[];
   description: string;
   practicalEffect: string;
+  citations?: Array<{
+    file: string;
+    startLine: number;
+    endLine: number;
+    evidenceIds: string[];
+  }>;
 }
 
 export interface TokenContractAiNarrative {
@@ -85,7 +93,177 @@ export interface TokenContractCriticalCheck {
   question: string;
   status: TokenContractCriticalCheckStatus;
   evidence: string;
+  disposition?: "concern" | "protective" | "unresolved";
 }
+
+export type TokenContractFindingSeverity =
+  | "critical"
+  | "high"
+  | "medium"
+  | "low"
+  | "info";
+
+export type TokenContractFindingState =
+  | "confirmed"
+  | "review-clue"
+  | "unresolved"
+  | "not-detected";
+
+export type TokenContractEvidenceType =
+  | "source"
+  | "abi"
+  | "bytecode"
+  | "storage"
+  | "history"
+  | "simulation"
+  | "explorer"
+  | "rpc";
+
+export interface TokenContractEvidenceReference {
+  id: string;
+  type: TokenContractEvidenceType;
+  summary: string;
+  file?: string;
+  startLine?: number;
+  endLine?: number;
+  selector?: `0x${string}`;
+  transactionHash?: `0x${string}`;
+  blockNumber?: number;
+}
+
+export interface TokenContractFinding {
+  id: string;
+  category:
+    | "access-control"
+    | "transfer-control"
+    | "supply"
+    | "fees"
+    | "trading"
+    | "proxy"
+    | "external-call"
+    | "liquidity"
+    | "bytecode"
+    | "verification"
+    | "classification";
+  title: string;
+  severity: TokenContractFindingSeverity;
+  state: TokenContractFindingState;
+  confidence: number;
+  summary: string;
+  practicalEffect: string;
+  recommendation: string;
+  evidence: TokenContractEvidenceReference[];
+}
+
+export type TokenContractReportModuleId =
+  | "source"
+  | "bytecode"
+  | "history"
+  | "simulation"
+  | "liquidity"
+  | "ai";
+
+export type TokenContractReportModuleStatus =
+  | "complete"
+  | "partial"
+  | "unavailable"
+  | "skipped";
+
+export interface TokenContractReportModule {
+  id: TokenContractReportModuleId;
+  label: string;
+  status: TokenContractReportModuleStatus;
+  evidenceCount: number;
+  summary: string;
+  warnings: string[];
+}
+
+export interface TokenContractResolvedSelector {
+  selector: `0x${string}`;
+  signature: string | null;
+  candidates: string[];
+  resolution: "verified-abi" | "local-watchlist" | "4byte" | "unknown";
+  confidence: "exact" | "candidate" | "unknown";
+  classification: "standard" | "admin" | "dangerous" | "unknown";
+  label: string;
+}
+
+export interface TokenContractHistoryCall {
+  transactionHash: `0x${string}`;
+  blockNumber: number | null;
+  timestamp: string | null;
+  from: Address | null;
+  selector: `0x${string}` | null;
+  signature: string | null;
+  success: boolean | null;
+  afterOwnershipZero: boolean | null;
+}
+
+export interface TokenContractSimulationAttempt {
+  id: string;
+  label: string;
+  from: Address | null;
+  to: Address;
+  functionSignature: string;
+  status: "succeeded" | "reverted" | "unavailable" | "skipped";
+  blockNumber: number | null;
+  detail: string;
+}
+
+export interface TokenContractLiquidityPair {
+  chainSlug: string;
+  dexId: string | null;
+  pairAddress: Address;
+  baseTokenAddress: Address | null;
+  quoteTokenAddress: Address | null;
+  liquidityUsd: number | null;
+  url: string | null;
+}
+
+export interface TokenContractOwnershipTransfer {
+  transactionHash: `0x${string}`;
+  blockNumber: number | null;
+  previousOwner: Address | null;
+  newOwner: Address | null;
+  renounced: boolean;
+}
+
+export interface TokenContractHolderSnapshot {
+  address: Address;
+  balance: string;
+  percentageOfSupply: number | null;
+  sources: Array<"deployer" | "explorer" | "transfer-event">;
+}
+
+export interface TokenContractBytecodeArtifact {
+  available: boolean;
+  byteLength: number;
+  hash: `0x${string}` | null;
+  hashWithoutMetadata: `0x${string}` | null;
+  metadataDetected: boolean;
+  source: "rpc" | "explorer" | null;
+  embeddedAddresses: Address[];
+  limitations: string[];
+}
+
+export type TokenContractReportStreamEvent =
+  | {
+      type: "base";
+      report: TokenContractReportResponse;
+    }
+  | {
+      type: "module";
+      module: TokenContractReportModule;
+      report?: TokenContractReportResponse;
+    }
+  | {
+      type: "final";
+      report: TokenContractReportResponse;
+    }
+  | {
+      type: "error";
+      error: string;
+    };
 
 export type Erc6909DetectionStatus =
   | "detected"
@@ -108,6 +286,8 @@ export interface TokenContractReportSignal {
 }
 
 export interface TokenContractReportResponse {
+  schemaVersion: 2;
+  generatedAt: string;
   ok: boolean;
   status: TokenContractReportStatus;
   chain: {
@@ -148,12 +328,19 @@ export interface TokenContractReportResponse {
   } | null;
   controls: {
     ownerAddress: Address | null;
-    ownershipStatus: "found" | "renounced" | "conflicting" | "unavailable";
+    ownershipStatus:
+      | "found"
+      | "zero_address"
+      | "renounced"
+      | "conflicting"
+      | "unavailable";
     ownerMethod: "owner" | "getOwner" | null;
     ownerCandidates: {
       owner: Address | null;
       getOwner: Address | null;
     };
+    effectiveControllerAddresses: Address[];
+    ownerZeroRemovesAllControl: boolean | null;
   };
   audit: {
     coveragePercent: number;
@@ -161,6 +348,23 @@ export interface TokenContractReportResponse {
     riskScore: number;
     overallSeverity: "critical" | "high" | "medium" | "low" | "unknown";
     criticalChecks: TokenContractCriticalCheck[];
+    completedChecks: number;
+    reviewChecks: number;
+    notEvaluatedChecks: number;
+    totalChecks: number;
+  };
+  verdict: {
+    severity: "critical" | "high" | "medium" | "low" | "unknown";
+    label:
+      | "critical observed risk"
+      | "high observed risk"
+      | "medium observed risk"
+      | "low observed risk"
+      | "risk unresolved";
+    confidence: number;
+    confidenceLabel: "high" | "moderate" | "limited";
+    summary: string;
+    basis: "deterministic";
   };
   standards: {
     erc20Like: boolean;
@@ -175,10 +379,49 @@ export interface TokenContractReportResponse {
     symbol: string | null;
     decimals: number | null;
     totalSupply: string | null;
+    formattedTotalSupply: string | null;
     vaultAssetAddress: Address | null;
     totalAssets: string | null;
   };
   signals: TokenContractReportSignal[];
+  findings: TokenContractFinding[];
+  modules: Record<TokenContractReportModuleId, TokenContractReportModule>;
+  selectors: TokenContractResolvedSelector[];
+  bytecode: {
+    runtime: TokenContractBytecodeArtifact;
+    creation: TokenContractBytecodeArtifact;
+  };
+  holders: {
+    sampled: TokenContractHolderSnapshot[];
+    deployerBalance: string | null;
+    deployerPercent: number | null;
+    sampledSupplyPercent: number | null;
+    limitations: string[];
+  };
+  supplyHistory: {
+    initialMintAmount: string | null;
+    initialMintRecipients: Address[];
+    initialMintTransactionHash: `0x${string}` | null;
+    initialMintBlockNumber: number | null;
+    currentSupplyDiffersFromInitialMint: boolean | null;
+    limitations: string[];
+  };
+  history: {
+    inspectedTransactions: number;
+    decodedCalls: TokenContractHistoryCall[];
+    ownershipTransfers: TokenContractOwnershipTransfer[];
+    postOwnershipZeroActivity: boolean | null;
+    limitations: string[];
+  };
+  simulation: {
+    blockNumber: number | null;
+    attempts: TokenContractSimulationAttempt[];
+    limitations: string[];
+  };
+  liquidity: {
+    pairs: TokenContractLiquidityPair[];
+    limitations: string[];
+  };
   ai: {
     status: TokenContractAiStatus;
     model: string | null;
@@ -188,6 +431,7 @@ export interface TokenContractReportResponse {
     finishReason: string | null;
   };
   warnings: string[];
+  reportBoundaries: string[];
   errors: string[];
   missingConfig: string[];
 }
@@ -200,6 +444,8 @@ export function createEmptyTokenContractReportResponse({
   errors: string[];
 }): TokenContractReportResponse {
   return {
+    schemaVersion: 2,
+    generatedAt: new Date().toISOString(),
     ok: false,
     status,
     chain: null,
@@ -212,6 +458,8 @@ export function createEmptyTokenContractReportResponse({
         owner: null,
         getOwner: null,
       },
+      effectiveControllerAddresses: [],
+      ownerZeroRemovesAllControl: null,
     },
     audit: {
       coveragePercent: 0,
@@ -219,6 +467,18 @@ export function createEmptyTokenContractReportResponse({
       riskScore: 0,
       overallSeverity: "unknown",
       criticalChecks: [],
+      completedChecks: 0,
+      reviewChecks: 0,
+      notEvaluatedChecks: 0,
+      totalChecks: 0,
+    },
+    verdict: {
+      severity: "unknown",
+      label: "risk unresolved",
+      confidence: 0,
+      confidenceLabel: "limited",
+      summary: "No deterministic contract verdict is available.",
+      basis: "deterministic",
     },
     standards: {
       erc20Like: false,
@@ -233,10 +493,49 @@ export function createEmptyTokenContractReportResponse({
       symbol: null,
       decimals: null,
       totalSupply: null,
+      formattedTotalSupply: null,
       vaultAssetAddress: null,
       totalAssets: null,
     },
     signals: [],
+    findings: [],
+    modules: createEmptyTokenContractReportModules(),
+    selectors: [],
+    bytecode: {
+      runtime: emptyBytecodeArtifact(),
+      creation: emptyBytecodeArtifact(),
+    },
+    holders: {
+      sampled: [],
+      deployerBalance: null,
+      deployerPercent: null,
+      sampledSupplyPercent: null,
+      limitations: [],
+    },
+    supplyHistory: {
+      initialMintAmount: null,
+      initialMintRecipients: [],
+      initialMintTransactionHash: null,
+      initialMintBlockNumber: null,
+      currentSupplyDiffersFromInitialMint: null,
+      limitations: [],
+    },
+    history: {
+      inspectedTransactions: 0,
+      decodedCalls: [],
+      ownershipTransfers: [],
+      postOwnershipZeroActivity: null,
+      limitations: [],
+    },
+    simulation: {
+      blockNumber: null,
+      attempts: [],
+      limitations: [],
+    },
+    liquidity: {
+      pairs: [],
+      limitations: [],
+    },
     ai: {
       status: "skipped",
       model: null,
@@ -246,8 +545,46 @@ export function createEmptyTokenContractReportResponse({
       finishReason: null,
     },
     warnings: [],
+    reportBoundaries: [
+      "This report is read-only contract context. It is not a formal audit, financial advice, legal advice, or proof that a token is safe.",
+    ],
     errors,
     missingConfig: [],
+  };
+}
+
+function emptyBytecodeArtifact(): TokenContractBytecodeArtifact {
+  return {
+    available: false,
+    byteLength: 0,
+    hash: null,
+    hashWithoutMetadata: null,
+    metadataDetected: false,
+    source: null,
+    embeddedAddresses: [],
+    limitations: [],
+  };
+}
+
+export function createEmptyTokenContractReportModules(): TokenContractReportResponse["modules"] {
+  const createModule = (
+    id: TokenContractReportModuleId,
+    label: string,
+  ): TokenContractReportModule => ({
+    id,
+    label,
+    status: "unavailable",
+    evidenceCount: 0,
+    summary: "This evidence module did not run.",
+    warnings: [],
+  });
+  return {
+    source: createModule("source", "Verified source"),
+    bytecode: createModule("bytecode", "Runtime bytecode"),
+    history: createModule("history", "Contract history"),
+    simulation: createModule("simulation", "Read-only simulation"),
+    liquidity: createModule("liquidity", "DEX liquidity"),
+    ai: createModule("ai", "AI explanation"),
   };
 }
 

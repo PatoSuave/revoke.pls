@@ -3,7 +3,10 @@ import { getAddress } from "viem";
 
 import { PULSECHAIN_CHAIN_ID } from "@/lib/chains";
 import { resetTokenContractReportApiRateLimitForTests } from "@/lib/token-contract-report-api-controls";
-import type { TokenContractReportResponse } from "@/lib/token-contract-report";
+import {
+  createEmptyTokenContractReportResponse,
+  type TokenContractReportResponse,
+} from "@/lib/token-contract-report";
 import { handleTokenContractReportPost } from "./handler";
 
 const TOKEN = getAddress("0xA1077a294dDE1B09bB078844df40758a5D0f9a27");
@@ -39,6 +42,10 @@ describe("token contract report API route", () => {
 
   it("returns a successful no-store report from the builder", async () => {
     const report: TokenContractReportResponse = {
+      ...createEmptyTokenContractReportResponse({
+        status: "complete",
+        errors: [],
+      }),
       ok: true,
       status: "complete",
       chain: {
@@ -89,6 +96,7 @@ describe("token contract report API route", () => {
         symbol: "TKN",
         decimals: 18,
         totalSupply: "1000",
+        formattedTotalSupply: "0.000000000000001 TKN",
         vaultAssetAddress: null,
         totalAssets: null,
       },
@@ -106,6 +114,8 @@ describe("token contract report API route", () => {
         ownershipStatus: "unavailable",
         ownerMethod: null,
         ownerCandidates: { owner: null, getOwner: null },
+        effectiveControllerAddresses: [],
+        ownerZeroRemovesAllControl: null,
       },
       audit: {
         coveragePercent: 25,
@@ -113,6 +123,10 @@ describe("token contract report API route", () => {
         riskScore: 10,
         overallSeverity: "unknown",
         criticalChecks: [],
+        completedChecks: 0,
+        reviewChecks: 0,
+        notEvaluatedChecks: 0,
+        totalChecks: 0,
       },
       warnings: [],
       errors: [],
@@ -146,6 +160,10 @@ describe("token contract report API route", () => {
     async function builder(): Promise<TokenContractReportResponse> {
       calls += 1;
       return {
+        ...createEmptyTokenContractReportResponse({
+          status: "complete",
+          errors: [],
+        }),
         ok: true,
         status: "complete",
         chain: null,
@@ -155,6 +173,8 @@ describe("token contract report API route", () => {
           ownershipStatus: "unavailable",
           ownerMethod: null,
           ownerCandidates: { owner: null, getOwner: null },
+          effectiveControllerAddresses: [],
+          ownerZeroRemovesAllControl: null,
         },
         audit: {
           coveragePercent: 0,
@@ -162,6 +182,10 @@ describe("token contract report API route", () => {
           riskScore: 0,
           overallSeverity: "unknown",
           criticalChecks: [],
+          completedChecks: 0,
+          reviewChecks: 0,
+          notEvaluatedChecks: 0,
+          totalChecks: 0,
         },
         standards: {
           erc20Like: false,
@@ -176,6 +200,7 @@ describe("token contract report API route", () => {
           symbol: null,
           decimals: null,
           totalSupply: null,
+          formattedTotalSupply: null,
           vaultAssetAddress: null,
           totalAssets: null,
         },
@@ -195,7 +220,7 @@ describe("token contract report API route", () => {
     }
 
     let lastResponse: Response | null = null;
-    for (let index = 0; index < 11; index += 1) {
+    for (let index = 0; index < 4; index += 1) {
       lastResponse = await handleTokenContractReportPost(
         new Request("https://pulserevoke.test/api/token-contract-report", {
           method: "POST",
@@ -209,7 +234,7 @@ describe("token contract report API route", () => {
       );
     }
 
-    expect(calls).toBe(10);
+    expect(calls).toBe(3);
     expect(lastResponse?.status).toBe(429);
     expect(lastResponse?.headers.get("Retry-After")).toBeTruthy();
     const body = await lastResponse?.json();

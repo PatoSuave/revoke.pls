@@ -24,6 +24,9 @@ const securityHeaders = [
 const nextConfig: NextConfig = {
   reactStrictMode: true,
   poweredByHeader: false,
+  // The Solidity parser reads its generated ANTLR token table at runtime.
+  // Keep the package external so Next preserves the package-relative asset.
+  serverExternalPackages: ["@solidity-parser/parser"],
   ...(isDesktopBuild && {
     // Desktop export only needs TSX app pages. Omitting `.ts` route files keeps
     // hosted-only server APIs out of the static Tauri bundle.
