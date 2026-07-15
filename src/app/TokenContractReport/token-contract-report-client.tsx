@@ -25,6 +25,12 @@ import {
   type TokenContractReportResponse,
   type TokenContractReportStreamEvent,
 } from "@/lib/token-contract-report";
+import {
+  buildReportDigest,
+  criticalCheckAnswer,
+  type TokenContractAnswerTone,
+  type TokenContractReportDigest,
+} from "@/lib/token-contract-report-presentation";
 
 type SubmitStatus = "idle" | "loading" | "complete" | "error";
 
@@ -342,7 +348,7 @@ export function TokenContractReportClient() {
                   FOCUS_RING
                 }
               />
-              <span>Include the secondary DeepSeek explanation</span>
+              <span>Include an optional plain-language AI explanation</span>
             </label>
 
             <div className="flex gap-2 lg:justify-end">
@@ -447,20 +453,7 @@ function ReportOutput({
     return <ReportFailureState report={report} />;
   }
 
-  const observedConcerns = report.findings.filter(
-    (finding) =>
-      finding.state === "confirmed" && finding.severity !== "info",
-  );
-  const reviewClues = report.findings.filter(
-    (finding) =>
-      finding.state === "review-clue" || finding.state === "unresolved",
-  );
-  const untestedChecks = report.audit.criticalChecks.filter((check) =>
-    ["needs_review", "not_collected", "unknown"].includes(check.status),
-  );
-  const incompleteModules = Object.values(report.modules).filter(
-    (module) => module.id !== "ai" && module.status !== "complete",
-  );
+  const digest = buildReportDigest(report);
   const tokenHeading = report.token.symbol || report.token.name || "Contract report";
   const tokenSubheading =
     report.token.symbol && report.token.name
@@ -469,79 +462,26 @@ function ReportOutput({
 
   return (
     <div className="space-y-4">
-      {status !== "loading" && report.contract ? (
-        <ReportDownloadControls report={report} />
-      ) : null}
-
       <VerdictPanel
         report={report}
+        digest={digest}
         tokenHeading={tokenHeading}
         tokenSubheading={tokenSubheading}
       />
 
-      <RiskOverview
-        observedConcerns={observedConcerns}
-        reviewClues={reviewClues}
-        untestedChecks={untestedChecks}
-        incompleteModules={incompleteModules}
-      />
+      <DecisionSummary digest={digest} />
 
-      {report.warnings.length > 0 ? (
-        <section className="rounded-2xl border border-amber-400/30 bg-amber-400/10 p-4 sm:p-5">
-          <SectionHeading
-            eyebrow="Provider and runtime warnings"
-            title="Collection conditions to keep in mind"
-            meta={report.warnings.length + " warning" + (report.warnings.length === 1 ? "" : "s")}
-            tone="amber"
-          />
-          <ul className="mt-3 divide-y divide-amber-200/15 text-sm leading-6 text-amber-100">
-            {report.warnings.map((warning) => (
-              <li key={warning} className="py-2 first:pt-0 last:pb-0">
-                {warning}
-              </li>
-            ))}
-          </ul>
-        </section>
+      <KeyQuestions report={report} digest={digest} />
+
+      <CoverageAndLimits report={report} digest={digest} />
+
+      {status !== "loading" && report.contract ? (
+        <ReportDownloadControls report={report} />
       ) : null}
 
       <AiExplanation ai={report.ai} />
 
       <TechnicalEvidence report={report} />
-
-      {report.errors.length > 0 ? (
-        <section
-          role="alert"
-          className="rounded-2xl border border-pulse-red/35 bg-pulse-red/10 p-4 sm:p-5"
-        >
-          <SectionHeading
-            eyebrow="Provider failures"
-            title="Some report work could not finish"
-            meta={report.errors.length + " error" + (report.errors.length === 1 ? "" : "s")}
-          />
-          <ul className="mt-3 space-y-2 text-sm leading-6 text-pulse-red">
-            {report.errors.map((message) => (
-              <li key={message}>{message}</li>
-            ))}
-          </ul>
-        </section>
-      ) : null}
-
-      {report.reportBoundaries.length > 0 ? (
-        <section className="rounded-2xl border border-pulse-border/75 bg-pulse-bg/40 p-4 sm:p-5">
-          <SectionHeading
-            eyebrow="Report boundaries"
-            title="What this report does not prove"
-            meta="not counted as warnings"
-          />
-          <ul className="mt-3 space-y-2 text-sm leading-6 text-pulse-muted">
-            {report.reportBoundaries.map((boundary) => (
-              <li key={boundary} className="border-l border-pulse-border pl-3">
-                {boundary}
-              </li>
-            ))}
-          </ul>
-        </section>
-      ) : null}
     </div>
   );
 }
@@ -657,10 +597,12 @@ function ReportDownloadControls({
 
 function VerdictPanel({
   report,
+  digest,
   tokenHeading,
   tokenSubheading,
 }: {
   report: TokenContractReportResponse;
+  digest: TokenContractReportDigest;
   tokenHeading: string;
   tokenSubheading: string;
 }) {
@@ -680,22 +622,22 @@ function VerdictPanel({
         <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
           <div className="min-w-0">
             <p className="text-xs font-semibold uppercase tracking-[0.18em] text-pulse-cyan">
-              Server-owned conclusion | deterministic evidence
+              Deterministic contract assessment
             </p>
             <div className="mt-3 flex flex-wrap items-center gap-2">
               <VerdictBadge severity={report.verdict.severity} label={report.verdict.label} />
               <StatusBadge status={report.status} ok={report.ok} />
             </div>
+            <p className="mt-4 text-sm font-semibold text-pulse-muted">
+              {tokenHeading} | {tokenSubheading} | {report.chain?.name ?? "Selected chain"}
+            </p>
             <h2
               id="token-report-conclusion"
               className="mt-4 break-words text-2xl font-bold tracking-tight text-pulse-text sm:text-3xl"
             >
-              {tokenHeading}
+              {digest.directOutcome}
             </h2>
-            <p className="mt-1 text-sm font-semibold text-pulse-muted">
-              {tokenSubheading} | {report.chain?.name ?? "Selected chain"}
-            </p>
-            <p className="mt-4 max-w-4xl text-base leading-7 text-pulse-text">
+            <p className="mt-3 max-w-4xl text-base leading-7 text-pulse-text">
               {report.verdict.summary}
             </p>
           </div>
@@ -715,135 +657,443 @@ function VerdictPanel({
           </div>
         </div>
 
-        <div className="mt-5 grid gap-2 sm:grid-cols-2 xl:grid-cols-5">
+        <div className="mt-5 grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
           <ReportMetric
             label="Severity"
             value={humanize(report.verdict.severity)}
             tone={severityMetricTone(report.verdict.severity)}
           />
           <ReportMetric
-            label="Finding confidence"
-            value={report.verdict.confidence + "% | " + report.verdict.confidenceLabel}
-            tone={report.verdict.confidence >= 70 ? "good" : "caution"}
-          />
-          <ReportMetric
-            label="Question coverage"
+            label="Evidence coverage"
             value={
-              report.audit.resolvedQuestions + " of " + totalChecks + " questions resolved"
+              report.audit.coveragePercent + "% | " +
+              report.audit.resolvedQuestions + " of " + totalChecks + " resolved"
             }
             tone={report.audit.coveragePercent >= 80 ? "good" : "caution"}
           />
           <ReportMetric
-            label="Provider/runtime warnings"
-            value={String(report.warnings.length)}
-            tone={report.warnings.length > 0 ? "caution" : "good"}
+            label="Confirmed concerns"
+            value={String(digest.confirmedConcernCount)}
+            tone={digest.confirmedConcernCount > 0 ? "danger" : "neutral"}
           />
           <ReportMetric
-            label="Total supply"
-            value={formattedSupply ?? "Unknown"}
-            tone="neutral"
+            label="Open evidence areas"
+            value={String(digest.openEvidenceItemCount)}
+            tone={digest.openEvidenceItemCount > 0 ? "caution" : "neutral"}
           />
         </div>
 
-        <AuditCoverage audit={report.audit} />
+        <p
+          className={
+            "mt-4 rounded-xl border px-3 py-2 text-sm font-semibold leading-6 " +
+            (digest.evidenceIncomplete
+              ? "border-amber-400/30 bg-amber-400/10 text-amber-100"
+              : "border-pulse-cyan/25 bg-pulse-cyan/5 text-pulse-muted")
+          }
+        >
+          {digest.completenessNote}
+        </p>
 
-        <div className="mt-4 flex flex-wrap items-center justify-between gap-2 text-xs leading-5 text-pulse-muted">
-          <p>
-            Severity comes from confirmed capabilities. Finding confidence reflects the
-            quality of supporting evidence; question coverage reflects what the scanner
-            actually evaluated.
+        <details className="mt-4 rounded-xl border border-pulse-border/65 bg-pulse-bg/35">
+          <summary className={"cursor-pointer rounded-xl px-3 py-3 text-sm font-semibold text-pulse-cyan " + FOCUS_RING}>
+            Report facts and scoring details
+          </summary>
+          <div className="grid gap-2 border-t border-pulse-border/60 p-3 sm:grid-cols-2 xl:grid-cols-5">
+            <ReportMetric
+              label="Finding confidence"
+              value={report.verdict.confidence + "% | " + report.verdict.confidenceLabel}
+              tone={report.verdict.confidence >= 70 ? "good" : "caution"}
+            />
+            <ReportMetric label="Risk score" value={report.audit.riskScore + " / 100"} />
+            <ReportMetric label="Total supply" value={formattedSupply ?? "Unknown"} />
+            <ReportMetric label="Generated" value={generatedAt} />
+            <ReportMetric
+              label="Report format"
+              value={"Schema v" + report.schemaVersion + " | " + humanize(report.status)}
+            />
+          </div>
+          <p className="px-3 pb-3 text-xs leading-5 text-pulse-muted">
+            Severity comes from confirmed capabilities. Confidence describes evidence
+            quality. Coverage describes completeness, not safety.
           </p>
-          <p>Generated {generatedAt}</p>
+        </details>
+      </div>
+    </section>
+  );
+}
+
+function DecisionSummary({
+  digest,
+}: {
+  digest: TokenContractReportDigest;
+}) {
+  const reviewFindings = digest.reviewFindings.slice(0, 3);
+  const remainingUnresolvedSlots = Math.max(0, 3 - reviewFindings.length);
+  const unresolvedChecks = digest.unresolvedChecks.slice(0, remainingUnresolvedSlots);
+
+  return (
+    <section
+      aria-labelledby="token-report-decision-summary"
+      className="rounded-2xl border border-pulse-border/75 bg-pulse-panel/35 p-4 sm:p-5"
+    >
+      <SectionHeading
+        id="token-report-decision-summary"
+        eyebrow="What this means"
+        title="The important points, in plain language"
+        meta="evidence-led summary"
+      />
+      <div className="mt-4 grid gap-4 xl:grid-cols-3">
+        <div>
+          <h4 className="text-sm font-bold text-pulse-text">
+            What was confirmed
+          </h4>
+          <div className="mt-2 space-y-2">
+            {digest.priorityFindings.length > 0 ? (
+              digest.priorityFindings.map((finding) => (
+                <DecisionFinding key={finding.id} finding={finding} />
+              ))
+            ) : (
+              <p className="rounded-xl border border-dashed border-pulse-border/70 bg-pulse-bg/35 p-3 text-sm leading-6 text-pulse-muted">
+                No confirmed non-informational concern was returned in the collected
+                evidence. This does not prove the contract is safe.
+              </p>
+            )}
+            {digest.confirmedConcerns.length > digest.priorityFindings.length ? (
+              <p className="text-xs leading-5 text-pulse-muted">
+                Showing the top {digest.priorityFindings.length} of{" "}
+                {digest.confirmedConcerns.length} confirmed concerns.
+              </p>
+            ) : null}
+          </div>
+        </div>
+
+        <div>
+          <h4 className="text-sm font-bold text-pulse-text">What remains uncertain</h4>
+          <div className="mt-2 space-y-2">
+            {reviewFindings.map((finding) => (
+              <article
+                key={finding.id}
+                className="rounded-xl border border-amber-400/20 bg-amber-400/5 p-3"
+              >
+                <div className="flex flex-wrap items-start justify-between gap-2">
+                  <h5 className="text-sm font-bold leading-5 text-pulse-text">
+                    {finding.title}
+                  </h5>
+                  <FindingStateBadge state={finding.state} />
+                </div>
+                <p className="mt-2 text-xs leading-5 text-pulse-muted">
+                  {finding.summary}
+                </p>
+              </article>
+            ))}
+            {unresolvedChecks.map((check) => (
+              <CriticalCheckCard key={check.question} check={check} compact />
+            ))}
+            {reviewFindings.length === 0 && unresolvedChecks.length === 0
+              ? digest.incompleteModules.slice(0, 3).map((module) => (
+                  <article
+                    key={module.id}
+                    className="rounded-xl border border-amber-400/20 bg-amber-400/5 p-3"
+                  >
+                    <div className="flex flex-wrap items-start justify-between gap-2">
+                      <h5 className="text-sm font-bold text-pulse-text">{module.label}</h5>
+                      <ModuleStatus status={module.status} />
+                    </div>
+                    <p className="mt-2 text-xs leading-5 text-pulse-muted">
+                      {module.summary}
+                    </p>
+                  </article>
+                ))
+              : null}
+            {reviewFindings.length === 0 &&
+            unresolvedChecks.length === 0 &&
+            digest.incompleteModules.length === 0 ? (
+              <p className="rounded-xl border border-pulse-cyan/20 bg-pulse-cyan/5 p-3 text-sm leading-6 text-pulse-muted">
+                No open evidence items were returned. This remains a point-in-time
+                assessment and is not proof of safety or future behavior.
+              </p>
+            ) : null}
+          </div>
+        </div>
+
+        <div>
+          <h4 className="text-sm font-bold text-pulse-text">What to check next</h4>
+          {digest.nextChecks.length > 0 ? (
+            <ol className="mt-2 space-y-2">
+              {digest.nextChecks.map((recommendation, index) => (
+                <li
+                  key={recommendation}
+                  className="grid grid-cols-[1.5rem_minmax(0,1fr)] gap-2 rounded-xl border border-pulse-cyan/20 bg-pulse-cyan/5 p-3 text-xs leading-5 text-pulse-muted"
+                >
+                  <span className="flex h-5 w-5 items-center justify-center rounded-full bg-pulse-cyan/10 font-bold text-pulse-cyan">
+                    {index + 1}
+                  </span>
+                  <span>{recommendation}</span>
+                </li>
+              ))}
+            </ol>
+          ) : (
+            <p className="mt-2 rounded-xl border border-pulse-border/70 bg-pulse-bg/35 p-3 text-sm leading-6 text-pulse-muted">
+              No finding-specific follow-up was returned. Review the coverage and
+              technical evidence before relying on this report.
+            </p>
+          )}
+          <a
+            href="#token-report-technical-evidence"
+            className={
+              "mt-3 inline-flex min-h-10 items-center rounded-xl border border-pulse-border bg-pulse-bg/60 px-3 py-2 text-xs font-semibold text-pulse-cyan transition hover:border-pulse-cyan/40 " +
+              FOCUS_RING
+            }
+          >
+            View all findings and evidence
+          </a>
         </div>
       </div>
     </section>
   );
 }
 
-function RiskOverview({
-  observedConcerns,
-  reviewClues,
-  untestedChecks,
-  incompleteModules,
+function DecisionFinding({ finding }: { finding: TokenContractFinding }) {
+  return (
+    <article className="rounded-xl border border-pulse-red/25 bg-pulse-red/5 p-3">
+      <div className="flex flex-wrap items-start justify-between gap-2">
+        <h5 className="text-sm font-bold leading-5 text-pulse-text">{finding.title}</h5>
+        <SeverityBadge severity={finding.severity} />
+      </div>
+      <p className="mt-2 text-xs leading-5 text-pulse-muted">{finding.summary}</p>
+      <p className="mt-2 text-xs leading-5 text-pulse-text">
+        <span className="font-bold">Why it matters:</span> {finding.practicalEffect}
+      </p>
+    </article>
+  );
+}
+
+function KeyQuestions({
+  report,
+  digest,
 }: {
-  observedConcerns: TokenContractFinding[];
-  reviewClues: TokenContractFinding[];
-  untestedChecks: TokenContractCriticalCheck[];
-  incompleteModules: TokenContractReportModule[];
+  report: TokenContractReportResponse;
+  digest: TokenContractReportDigest;
 }) {
   return (
-    <section className="grid gap-4 lg:grid-cols-2">
-      <div className="rounded-2xl border border-pulse-red/25 bg-pulse-bg/40 p-4 sm:p-5">
-        <SectionHeading
-          eyebrow="Observed concerns"
-          title="Confirmed by deterministic evidence"
-          meta={observedConcerns.length + " confirmed"}
-        />
-        <div className="mt-3 space-y-3">
-          {observedConcerns.length > 0 ? (
-            observedConcerns.map((finding) => (
-              <FindingCard key={finding.id} finding={finding} />
-            ))
-          ) : (
-            <p className="rounded-xl border border-dashed border-pulse-border/70 bg-pulse-bg/35 p-3 text-sm leading-6 text-pulse-muted">
-              No confirmed non-informational concern was returned in the collected evidence.
-              This is not an all-clear result; review the untested areas beside it.
-            </p>
-          )}
-        </div>
+    <section
+      aria-labelledby="token-report-key-questions"
+      className="rounded-2xl border border-pulse-border/75 bg-pulse-bg/35 p-4 sm:p-5"
+    >
+      <SectionHeading
+        id="token-report-key-questions"
+        eyebrow="Direct answers"
+        title="Key contract questions"
+        meta={
+          digest.priorityChecks.length +
+          " shown of " +
+          report.audit.criticalChecks.length
+        }
+      />
+      <p className="mt-2 max-w-4xl text-sm leading-6 text-pulse-muted">
+        These are the highest-priority answers from the deterministic audit rubric.
+        “Not detected” means the collected evidence did not show it; it does not prove
+        the behavior is impossible.
+      </p>
+      <div className="mt-4 grid gap-2 md:grid-cols-2">
+        {digest.priorityChecks.map((check) => (
+          <CriticalCheckCard key={check.question} check={check} />
+        ))}
+        {digest.priorityChecks.length === 0 ? (
+          <p className="rounded-xl border border-dashed border-pulse-border/70 p-3 text-sm text-pulse-muted md:col-span-2">
+            No critical audit questions were returned.
+          </p>
+        ) : null}
       </div>
-
-      <div className="rounded-2xl border border-amber-400/25 bg-pulse-bg/40 p-4 sm:p-5">
-        <SectionHeading
-          eyebrow="Untested and unresolved"
-          title="Areas that cannot support a safety claim"
-          meta={
-            reviewClues.length + untestedChecks.length + incompleteModules.length +
-            " open"
-          }
-          tone="amber"
-        />
-        <div className="mt-3 space-y-3">
-          {reviewClues.map((finding) => (
-            <FindingCard key={finding.id} finding={finding} compact />
-          ))}
-          {untestedChecks.map((check) => (
-            <article
-              key={check.question}
-              className="rounded-xl border border-amber-400/20 bg-amber-400/5 p-3"
-            >
-              <div className="flex flex-wrap items-start justify-between gap-2">
-                <h4 className="text-sm font-bold leading-5 text-pulse-text">
-                  {check.question}
-                </h4>
-                <CheckStatus check={check} />
-              </div>
-              <p className="mt-2 text-xs leading-5 text-pulse-muted">{check.evidence}</p>
-            </article>
-          ))}
-          {incompleteModules.map((module) => (
-            <article
-              key={module.id}
-              className="rounded-xl border border-pulse-border/70 bg-pulse-panel/30 p-3"
-            >
-              <div className="flex flex-wrap items-start justify-between gap-2">
-                <h4 className="text-sm font-bold text-pulse-text">{module.label}</h4>
-                <ModuleStatus status={module.status} />
-              </div>
-              <p className="mt-2 text-xs leading-5 text-pulse-muted">{module.summary}</p>
-            </article>
-          ))}
-          {reviewClues.length === 0 &&
-          untestedChecks.length === 0 &&
-          incompleteModules.length === 0 ? (
-            <p className="rounded-xl border border-pulse-green/25 bg-pulse-green/5 p-3 text-sm leading-6 text-pulse-muted">
-              All required deterministic modules and critical questions report complete.
-              This still does not prove future behavior or token safety.
-            </p>
-          ) : null}
-        </div>
-      </div>
+      {report.audit.criticalChecks.length > digest.priorityChecks.length ? (
+        <a
+          href="#token-report-technical-evidence"
+          className={"mt-3 inline-flex text-xs font-semibold text-pulse-cyan hover:text-pulse-text " + FOCUS_RING}
+        >
+          See all {report.audit.criticalChecks.length} answers in technical evidence
+        </a>
+      ) : null}
     </section>
+  );
+}
+
+function CriticalCheckCard({
+  check,
+  compact = false,
+}: {
+  check: TokenContractCriticalCheck;
+  compact?: boolean;
+}) {
+  return (
+    <article className="rounded-xl border border-pulse-border/70 bg-pulse-panel/30 p-3">
+      <div className="flex flex-wrap items-start justify-between gap-2">
+        <h4 className="min-w-0 flex-1 text-sm font-bold leading-5 text-pulse-text">
+          {check.question}
+        </h4>
+        <CheckStatus check={check} />
+      </div>
+      <p className={(compact ? "mt-2 text-xs" : "mt-3 text-sm") + " leading-5 text-pulse-muted"}>
+        {check.evidence}
+      </p>
+    </article>
+  );
+}
+
+function CoverageAndLimits({
+  report,
+  digest,
+}: {
+  report: TokenContractReportResponse;
+  digest: TokenContractReportDigest;
+}) {
+  const percentage = clampPercentage(report.audit.coveragePercent);
+  const detailCount =
+    report.audit.coverageExplanation.blockers.length +
+    digest.incompleteModules.length +
+    report.warnings.length +
+    report.errors.length +
+    report.missingConfig.length +
+    report.reportBoundaries.length;
+
+  return (
+    <section
+      aria-labelledby="token-report-coverage"
+      className="rounded-2xl border border-amber-400/25 bg-pulse-bg/40 p-4 sm:p-5"
+    >
+      <SectionHeading
+        id="token-report-coverage"
+        eyebrow="Coverage and limits"
+        title="What the scanner could and could not establish"
+        meta={percentage + "% evidence coverage"}
+        tone="amber"
+      />
+      <div className="mt-4 grid gap-2 sm:grid-cols-3">
+        <ReportMetric
+          label="Questions resolved"
+          value={
+            report.audit.resolvedQuestions +
+            " of " +
+            (report.audit.totalChecks || report.audit.criticalChecks.length)
+          }
+          tone={percentage >= 80 ? "good" : "caution"}
+        />
+        <ReportMetric
+          label="Evidence modules complete"
+          value={
+            digest.completedDeterministicModuleCount +
+            " of " +
+            digest.deterministicModuleCount
+          }
+          tone={digest.incompleteModules.length > 0 ? "caution" : "good"}
+        />
+        <ReportMetric
+          label="Collection issues"
+          value={String(digest.collectionIssueCount)}
+          tone={digest.collectionIssueCount > 0 ? "caution" : "good"}
+        />
+      </div>
+      <div
+        className="mt-3 h-2.5 overflow-hidden rounded-full bg-pulse-panel/90"
+        role="progressbar"
+        aria-label="Deterministic evidence coverage"
+        aria-valuemin={0}
+        aria-valuemax={100}
+        aria-valuenow={percentage}
+      >
+        <div
+          className="h-full rounded-full bg-gradient-to-r from-pulse-cyan to-pulse-green transition-[width]"
+          style={{ width: percentage + "%" }}
+        />
+      </div>
+      <p
+        className={
+          "mt-3 rounded-xl border px-3 py-3 text-sm font-semibold leading-6 " +
+          (digest.evidenceIncomplete
+            ? "border-amber-400/30 bg-amber-400/10 text-amber-100"
+            : "border-pulse-cyan/25 bg-pulse-cyan/5 text-pulse-muted")
+        }
+      >
+        {digest.completenessNote}
+      </p>
+
+      <details className="mt-3 rounded-xl border border-pulse-border/70 bg-pulse-panel/25">
+        <summary className={"cursor-pointer rounded-xl px-3 py-3 text-sm font-semibold text-pulse-cyan " + FOCUS_RING}>
+          Coverage calculation, missing evidence, and report boundaries ({detailCount})
+        </summary>
+        <div className="space-y-4 border-t border-pulse-border/60 p-3 sm:p-4">
+          <div>
+            <h4 className="text-sm font-bold text-pulse-text">Coverage calculation</h4>
+            <p className="mt-2 text-sm leading-6 text-pulse-muted">
+              {report.audit.coverageExplanation.summary}
+            </p>
+            <p className="mt-1 text-xs leading-5 text-pulse-muted">
+              {report.audit.coverageExplanation.calculation}
+            </p>
+          </div>
+          <ReportDetailList
+            title="Coverage blockers"
+            items={report.audit.coverageExplanation.blockers}
+          />
+          {digest.incompleteModules.length > 0 ? (
+            <div>
+              <h4 className="text-sm font-bold text-pulse-text">Incomplete modules</h4>
+              <div className="mt-2 grid gap-2 md:grid-cols-2">
+                {digest.incompleteModules.map((module) => (
+                  <article
+                    key={module.id}
+                    className="rounded-xl border border-pulse-border/70 bg-pulse-bg/35 p-3"
+                  >
+                    <div className="flex flex-wrap items-start justify-between gap-2">
+                      <h5 className="text-sm font-bold text-pulse-text">{module.label}</h5>
+                      <ModuleStatus status={module.status} />
+                    </div>
+                    <p className="mt-2 text-xs leading-5 text-pulse-muted">
+                      {module.summary}
+                    </p>
+                  </article>
+                ))}
+              </div>
+            </div>
+          ) : null}
+          <ReportDetailList title="Provider and runtime warnings" items={report.warnings} tone="amber" />
+          <div role={report.errors.length > 0 ? "alert" : undefined}>
+            <ReportDetailList title="Provider failures" items={report.errors} tone="danger" />
+          </div>
+          <ReportDetailList title="Missing server configuration" items={report.missingConfig} />
+          <ReportDetailList title="What this report does not prove" items={report.reportBoundaries} />
+        </div>
+      </details>
+    </section>
+  );
+}
+
+function ReportDetailList({
+  title,
+  items,
+  tone = "muted",
+}: {
+  title: string;
+  items: string[];
+  tone?: "amber" | "danger" | "muted";
+}) {
+  if (items.length === 0) return null;
+  const itemClass =
+    tone === "danger"
+      ? "text-pulse-red"
+      : tone === "amber"
+        ? "text-amber-100"
+        : "text-pulse-muted";
+  return (
+    <div>
+      <h4 className="text-sm font-bold text-pulse-text">{title}</h4>
+      <ul className={"mt-2 space-y-2 text-sm leading-6 " + itemClass}>
+        {items.map((item) => (
+          <li key={item} className="border-l border-pulse-border pl-3">
+            {item}
+          </li>
+        ))}
+      </ul>
+    </div>
   );
 }
 
@@ -916,58 +1166,6 @@ function FindingCard({
   );
 }
 
-function AuditCoverage({
-  audit,
-}: {
-  audit: TokenContractReportResponse["audit"];
-}) {
-  const percentage = clampPercentage(audit.coveragePercent);
-  const total = audit.totalChecks || audit.criticalChecks.length;
-
-  return (
-    <div className="mt-5 rounded-xl border border-pulse-border/70 bg-pulse-bg/45 p-3 sm:p-4">
-      <div className="flex flex-wrap items-end justify-between gap-2">
-        <div>
-          <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-pulse-muted">
-            Deterministic question coverage
-          </p>
-          <p className="mt-1 text-xl font-bold text-pulse-text">{percentage}%</p>
-        </div>
-        <p className="text-xs leading-5 text-pulse-muted">
-          {audit.resolvedQuestions} questions resolved | {audit.reviewChecks} review |{" "}
-          {audit.notEvaluatedChecks} untested | {total} total
-        </p>
-      </div>
-      <div
-        className="mt-3 h-2.5 overflow-hidden rounded-full bg-pulse-panel/90"
-        role="progressbar"
-        aria-label="Deterministic evidence coverage"
-        aria-valuemin={0}
-        aria-valuemax={100}
-        aria-valuenow={percentage}
-      >
-        <div
-          className="h-full rounded-full bg-gradient-to-r from-pulse-cyan to-pulse-green transition-[width]"
-          style={{ width: percentage + "%" }}
-        />
-      </div>
-      <div className="mt-3 rounded-lg border border-pulse-border/60 bg-pulse-panel/25 p-3 text-xs leading-5 text-pulse-muted">
-        <p className="font-semibold text-pulse-text">
-          {audit.coverageExplanation.summary}
-        </p>
-        <p className="mt-1">{audit.coverageExplanation.calculation}</p>
-        {audit.coverageExplanation.blockers.length > 0 ? (
-          <ul className="mt-2 list-disc space-y-1 pl-5">
-            {audit.coverageExplanation.blockers.map((blocker) => (
-              <li key={blocker}>{blocker}</li>
-            ))}
-          </ul>
-        ) : null}
-      </div>
-    </div>
-  );
-}
-
 function AiExplanation({ ai }: { ai: TokenContractReportResponse["ai"] }) {
   const aiValue =
     ai.status === "generated" && ai.model
@@ -984,11 +1182,11 @@ function AiExplanation({ ai }: { ai: TokenContractReportResponse["ai"] }) {
         }
       >
         <span className="block text-xs font-semibold uppercase tracking-[0.16em] text-pulse-cyan">
-          Secondary AI reviewer
+          Optional plain-language AI explanation
         </span>
         <span className="mt-1 flex flex-wrap items-end justify-between gap-2">
           <span className="text-base font-bold text-pulse-text">
-            Explanation of scanner evidence.
+            A secondary review of the cited scanner evidence
           </span>
           <span className="text-xs font-semibold uppercase tracking-[0.12em] text-pulse-muted">
             {aiValue}
@@ -997,20 +1195,10 @@ function AiExplanation({ ai }: { ai: TokenContractReportResponse["ai"] }) {
       </summary>
       <div className="border-t border-pulse-cyan/20 p-4 sm:p-5">
         <p className="rounded-xl border border-pulse-border/70 bg-pulse-bg/45 p-3 text-xs leading-5 text-pulse-muted">
-          DeepSeek explains cited scanner evidence and suggests follow-up checks. It cannot
-          set or change the server verdict, severity, confidence, score, or evidence state.
-          AI-only observations remain review clues until deterministic evidence corroborates
-          them.
+          DeepSeek selects grounded evidence for a secondary review and suggests follow-up
+          checks. Displayed conclusions remain deterministic. The model cannot set or
+          change the verdict, severity, confidence, score, coverage, or evidence state.
         </p>
-        {ai.usage ? (
-          <p className="mt-3 font-mono text-[11px] leading-5 text-pulse-muted">
-            Provider usage: {ai.usage.promptTokens.toLocaleString()} prompt |{" "}
-            {ai.usage.completionTokens.toLocaleString()} completion |{" "}
-            {ai.usage.reasoningTokens.toLocaleString()} reasoning |{" "}
-            {ai.usage.totalTokens.toLocaleString()} total across {ai.usage.attempts}{" "}
-            attempt{ai.usage.attempts === 1 ? "" : "s"}
-          </p>
-        ) : null}
         {ai.narrative ? (
           <AiNarrative narrative={ai.narrative} />
         ) : ai.markdown ? (
@@ -1026,6 +1214,20 @@ function AiExplanation({ ai }: { ai: TokenContractReportResponse["ai"] }) {
             .
           </p>
         )}
+        {ai.usage ? (
+          <details className="mt-4 rounded-xl border border-pulse-border/70 bg-pulse-bg/35">
+            <summary className={"cursor-pointer rounded-xl px-3 py-2 text-xs font-semibold text-pulse-cyan " + FOCUS_RING}>
+              Provider details
+            </summary>
+            <p className="border-t border-pulse-border/60 px-3 py-3 font-mono text-[11px] leading-5 text-pulse-muted">
+              {ai.model ?? "Unknown model"} | {ai.usage.promptTokens.toLocaleString()} prompt |{" "}
+              {ai.usage.completionTokens.toLocaleString()} completion |{" "}
+              {ai.usage.reasoningTokens.toLocaleString()} reasoning |{" "}
+              {ai.usage.totalTokens.toLocaleString()} total across {ai.usage.attempts}{" "}
+              attempt{ai.usage.attempts === 1 ? "" : "s"}
+            </p>
+          </details>
+        ) : null}
       </div>
     </details>
   );
@@ -1044,8 +1246,13 @@ function AiNarrative({ narrative }: { narrative: TokenContractAiNarrative }) {
       </div>
 
       {narrative.mainRisks.length > 0 ? (
-        <NarrativeList title="Evidence the reviewer highlighted" items={narrative.mainRisks} />
+        <NarrativeList title="Key concerns highlighted" items={narrative.mainRisks} />
       ) : null}
+
+      <div className="grid gap-3 sm:grid-cols-2">
+        <NarrativeList title="Checks still unresolved" items={narrative.whatNotSeen} />
+        <NarrativeList title="Recommended next checks" items={narrative.whatToCheckOnChain} />
+      </div>
 
       {narrative.detailedFindings.length > 0 ? (
         <div>
@@ -1085,11 +1292,6 @@ function AiNarrative({ narrative }: { narrative: TokenContractAiNarrative }) {
           </div>
         </div>
       ) : null}
-
-      <div className="grid gap-3 sm:grid-cols-2">
-        <NarrativeList title="Not confirmed" items={narrative.whatNotSeen} />
-        <NarrativeList title="Recommended on-chain checks" items={narrative.whatToCheckOnChain} />
-      </div>
 
       {narrative.selectorWatchlist.length > 0 ? (
         <NarrativeList
@@ -1142,7 +1344,11 @@ function TechnicalEvidence({ report }: { report: TokenContractReportResponse }) 
       : "Explorer creation metadata unavailable";
 
   return (
-    <section aria-label="Technical evidence" className="space-y-2">
+    <section
+      id="token-report-technical-evidence"
+      aria-label="Technical evidence"
+      className="scroll-mt-4 space-y-2"
+    >
       <div className="px-1">
         <SectionHeading
           eyebrow="Technical evidence"
@@ -1374,7 +1580,7 @@ function TechnicalEvidence({ report }: { report: TokenContractReportResponse }) 
       >
         <div className="space-y-2">
           {report.findings.map((finding) => (
-            <FindingCard key={finding.id} finding={finding} compact />
+            <FindingCard key={finding.id} finding={finding} />
           ))}
           {report.findings.length === 0 ? (
             <p className="text-sm text-pulse-muted">
@@ -2094,9 +2300,9 @@ function EmptyReportState({ status }: { status: SubmitStatus }) {
           Evidence will appear here
         </h2>
         <p className="mt-2 max-w-3xl">
-          The server-owned conclusion arrives first, followed by observed concerns,
-          untested areas, evidence coverage, and collapsed technical records. Incomplete
-          analysis never means a contract is safe.
+          The deterministic conclusion arrives first, followed by plain-language
+          answers, priority findings, coverage limits, and collapsed technical records.
+          Incomplete analysis never means a contract is safe.
         </p>
       </div>
       <div className="grid border-t border-pulse-border/60 sm:grid-cols-3">
@@ -2114,11 +2320,13 @@ function EmptyReportState({ status }: { status: SubmitStatus }) {
 }
 
 function SectionHeading({
+  id,
   eyebrow,
   title,
   meta,
   tone = "muted",
 }: {
+  id?: string;
   eyebrow: string;
   title: string;
   meta?: string;
@@ -2141,7 +2349,10 @@ function SectionHeading({
         >
           {eyebrow}
         </p>
-        <h3 className="mt-1 text-base font-bold tracking-tight text-pulse-text">
+        <h3
+          id={id}
+          className="mt-1 text-base font-bold tracking-tight text-pulse-text"
+        >
           {title}
         </h3>
       </div>
@@ -2331,19 +2542,15 @@ function FindingStateBadge({ state }: { state: TokenContractFinding["state"] }) 
 }
 
 function CheckStatus({ check }: { check: TokenContractCriticalCheck }) {
-  const className = checkStatusClass(check);
-  const label =
-    check.status === "confirmed" && check.disposition
-      ? humanize(check.disposition) + " confirmed"
-      : humanize(check.status);
+  const answer = criticalCheckAnswer(check);
   return (
     <span
       className={
         "w-fit shrink-0 rounded-full border px-2 py-0.5 text-[11px] font-semibold uppercase tracking-[0.1em] " +
-        className
+        answerToneClass(answer.tone)
       }
     >
-      {label}
+      {answer.label}
     </span>
   );
 }
@@ -2921,22 +3128,14 @@ function moduleStatusLabel(status: TokenContractReportModule["status"]): string 
   return "unavailable";
 }
 
-function checkStatusClass(check: TokenContractCriticalCheck): string {
-  if (check.status === "confirmed") {
-    if (check.disposition === "concern") {
-      return "border-pulse-red/35 bg-pulse-red/10 text-pulse-red";
-    }
-    if (check.disposition === "protective") {
-      return "border-pulse-green/35 bg-pulse-green/10 text-pulse-green";
-    }
-    return "border-pulse-cyan/35 bg-pulse-cyan/10 text-pulse-cyan";
+function answerToneClass(tone: TokenContractAnswerTone): string {
+  if (tone === "danger") {
+    return "border-pulse-red/35 bg-pulse-red/10 text-pulse-red";
   }
-  if (check.status === "not_detected") {
-    return check.disposition === "concern"
-      ? "border-pulse-green/35 bg-pulse-green/10 text-pulse-green"
-      : "border-pulse-border bg-pulse-bg/70 text-pulse-muted";
+  if (tone === "good") {
+    return "border-pulse-green/35 bg-pulse-green/10 text-pulse-green";
   }
-  if (check.status === "needs_review" || check.status === "unknown") {
+  if (tone === "caution") {
     return "border-amber-400/35 bg-amber-400/10 text-amber-200";
   }
   return "border-pulse-border bg-pulse-bg/70 text-pulse-muted";

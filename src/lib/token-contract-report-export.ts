@@ -9,22 +9,30 @@ import type {
   TokenContractControlSurface,
   TokenContractReportResponse,
 } from "@/lib/token-contract-report";
+import {
+  buildReportDigest,
+  criticalCheckAnswer,
+  rankCriticalChecks,
+  rankFindings,
+  type TokenContractReportDigest,
+} from "@/lib/token-contract-report-presentation";
 
 export const TOKEN_CONTRACT_REPORT_PDF_MAX_PAGES = 120;
 export const TOKEN_CONTRACT_REPORT_PDF_MAX_VISIBLE_CHARACTERS = 350_000;
 
 export const TOKEN_CONTRACT_REPORT_EXPORT_SECTION_TITLES = [
-  "How to read this report",
-  "Evidence coverage",
-  "Observed findings",
+  "Direct answers",
+  "Priority findings and next checks",
+  "Coverage, limits, and collection issues",
+  "Optional AI-assisted explanation",
+  "How to read the technical evidence",
+  "All findings and typed evidence",
   "Contract and token profile",
   "Evidence modules and signals",
   "Selectors and bytecode",
   "Holders and supply history",
   "Contract history and simulations",
   "Liquidity evidence",
-  "AI explanation",
-  "Warnings, errors, and report boundaries",
   "Complete structured report",
 ] as const;
 
@@ -164,10 +172,15 @@ export async function createTokenContractReportPdfExport(
     palette,
     report,
   });
+  const digest = buildReportDigest(report);
 
-  renderCover(writer, report);
+  renderCover(writer, report, digest);
+  writer.addPage();
+  renderDirectAnswers(writer, report, digest);
+  renderPriorityFindings(writer, digest);
+  renderCoverageAndLimits(writer, report, digest);
+  renderAi(writer, report);
   renderHowToRead(writer);
-  renderCoverage(writer, report);
   renderFindings(writer, report);
   renderContractProfile(writer, report);
   renderModulesAndSignals(writer, report);
@@ -175,8 +188,6 @@ export async function createTokenContractReportPdfExport(
   renderHoldersAndSupply(writer, report);
   renderHistoryAndSimulations(writer, report);
   renderLiquidity(writer, report);
-  renderAi(writer, report);
-  renderWarningsAndBoundaries(writer, report);
   renderCompletePayload(writer, json, fileStem + ".json");
   writer.finish();
 
@@ -536,7 +547,11 @@ class PdfReportWriter {
   }
 }
 
-function renderCover(writer: PdfReportWriter, report: TokenContractReportResponse): void {
+function renderCover(
+  writer: PdfReportWriter,
+  report: TokenContractReportResponse,
+  digest: TokenContractReportDigest,
+): void {
   const { page, fonts, palette } = writer;
   page.drawRectangle({
     x: 0,
@@ -594,7 +609,7 @@ function renderCover(writer: PdfReportWriter, report: TokenContractReportRespons
 
   writer.y = PAGE_HEIGHT - 276;
   writer.callout(
-    report.verdict.label.toUpperCase(),
+    digest.directOutcome.toUpperCase(),
     report.verdict.summary,
     ["critical", "high"].includes(report.verdict.severity)
       ? "risk"
@@ -611,21 +626,106 @@ function renderCover(writer: PdfReportWriter, report: TokenContractReportRespons
     "Evidence coverage",
     `${report.audit.coveragePercent}% - ${report.audit.resolvedQuestions} resolved, ${report.audit.reviewChecks} review clues, ${report.audit.notEvaluatedChecks} not evaluated`,
   );
-  writer.keyValue("Risk score", `${report.audit.riskScore} / 100`);
-  writer.keyValue("Verdict basis", report.verdict.basis);
+  writer.keyValue("Confirmed concerns", digest.confirmedConcernCount);
+  writer.keyValue("Open evidence areas", digest.openEvidenceItemCount);
   writer.keyValue("Generated", formatTimestamp(report.generatedAt));
-  writer.keyValue("Schema and report status", `v${report.schemaVersion} - ${report.status}`);
   writer.callout(
     "Important boundary",
-    "This is a read-only evidence report, not a formal audit or proof of safety. Missing evidence lowers coverage and must never be read as an all-clear.",
+    digest.completenessNote,
     "warning",
   );
 }
 
+function renderDirectAnswers(
+  writer: PdfReportWriter,
+  report: TokenContractReportResponse,
+  digest: TokenContractReportDigest,
+): void {
+  writer.section(
+    "Direct answers",
+    "Plain-language answers to the critical contract questions. Not detected means the collected evidence did not show the behavior; it does not prove the behavior is impossible.",
+  );
+  writer.callout(
+    digest.directOutcome,
+    report.verdict.summary,
+    digest.confirmedConcernCount > 0
+      ? "risk"
+      : digest.evidenceIncomplete
+        ? "warning"
+        : "info",
+  );
+  const checks = rankCriticalChecks(report.audit.criticalChecks);
+  checks.forEach((check, index) => {
+    const answer = criticalCheckAnswer(check);
+    writer.keyValue(
+      `${index + 1}. ${check.question}`,
+      `${answer.label}. ${check.evidence}`,
+    );
+  });
+  if (checks.length === 0) {
+    writer.paragraph(
+      "No critical audit questions were returned. This does not imply safety.",
+      { color: writer.palette.muted },
+    );
+  }
+}
+
+function renderPriorityFindings(
+  writer: PdfReportWriter,
+  digest: TokenContractReportDigest,
+): void {
+  writer.section(
+    "Priority findings and next checks",
+    "The highest-impact confirmed findings appear first. The complete finding set and every typed reference remain in the advanced evidence sections and embedded JSON.",
+  );
+  const priorityFindings = digest.confirmedConcerns.slice(0, 5);
+  writer.subheading("What was confirmed");
+  if (priorityFindings.length === 0) {
+    writer.paragraph(
+      "No confirmed non-informational concern was returned in the collected evidence. This is not proof that the contract is safe.",
+      { color: writer.palette.muted },
+    );
+  }
+  priorityFindings.forEach((finding, index) => {
+    writer.subheading(`${index + 1}. ${finding.title}`);
+    writer.keyValue("What was found", finding.summary);
+    writer.keyValue("Why it matters", finding.practicalEffect);
+    writer.keyValue(
+      "Evidence strength",
+      `${finding.severity} severity; ${finding.state}; ${finding.confidence}% confidence; ${finding.evidence.length} typed reference(s); evidence ID ${finding.id}`,
+    );
+    writer.keyValue(
+      "Recommended check",
+      finding.recommendation || "No finding-specific recommendation returned.",
+    );
+    writer.divider();
+  });
+  if (digest.confirmedConcerns.length > priorityFindings.length) {
+    writer.paragraph(
+      `Showing the top ${priorityFindings.length} of ${digest.confirmedConcerns.length} confirmed concerns here. See All findings and typed evidence for the complete list.`,
+      { color: writer.palette.muted },
+    );
+  }
+
+  writer.subheading("Recommended next checks");
+  writer.list(digest.nextChecks, { ordered: true });
+
+  const unresolvedItems = [
+    ...digest.reviewFindings.slice(0, 3).map(
+      (finding) => `${finding.title}: ${finding.summary}`,
+    ),
+    ...digest.unresolvedChecks
+      .slice(0, Math.max(0, 3 - Math.min(3, digest.reviewFindings.length)))
+      .map((check) => `${check.question}: ${criticalCheckAnswer(check).label}. ${check.evidence}`),
+  ];
+  writer.subheading("Highest-priority unresolved areas");
+  writer.list(unresolvedItems);
+}
+
 function renderHowToRead(writer: PdfReportWriter): void {
   writer.section(
-    "How to read this report",
-    "The scanner separates what was observed, how strongly it was supported, and which questions could actually be evaluated.",
+    "How to read the technical evidence",
+    "The remaining sections are the advanced evidence record. They separate what was observed, how strongly it was supported, and which questions could actually be evaluated.",
   );
   writer.keyValue(
     "Verdict",
@@ -657,44 +757,70 @@ function renderHowToRead(writer: PdfReportWriter): void {
   );
 }
 
-function renderCoverage(writer: PdfReportWriter, report: TokenContractReportResponse): void {
+function renderCoverageAndLimits(
+  writer: PdfReportWriter,
+  report: TokenContractReportResponse,
+  digest: TokenContractReportDigest,
+): void {
   writer.section(
-    "Evidence coverage",
-    "Coverage explains how much of the audit rubric was answered and why unresolved areas remain. It is independent of DeepSeek token limits.",
+    "Coverage, limits, and collection issues",
+    "Coverage measures completeness, not safety. Missing evidence, provider failures, and permanent report boundaries are grouped here before the advanced record.",
   );
   writer.callout(
     `${report.audit.coveragePercent}% evidence coverage`,
-    report.audit.coverageExplanation.summary,
-    report.audit.coveragePercent < 50 ? "warning" : "info",
+    digest.completenessNote,
+    digest.evidenceIncomplete ? "warning" : "info",
   );
-  writer.keyValue("Calculation", report.audit.coverageExplanation.calculation);
   writer.keyValue(
     "Question counts",
     `${report.audit.resolvedQuestions} resolved; ${report.audit.reviewChecks} review clues; ${report.audit.notEvaluatedChecks} not evaluated; ${report.audit.totalChecks} total`,
   );
+  writer.keyValue(
+    "Evidence modules",
+    `${digest.completedDeterministicModuleCount} of ${digest.deterministicModuleCount} deterministic modules complete`,
+  );
+  writer.keyValue("Collection issues", digest.collectionIssueCount);
   writer.keyValue(
     "Classification confidence",
     `${report.audit.classificationConfidence}%`,
   );
   writer.subheading("Coverage blockers");
   writer.list(report.audit.coverageExplanation.blockers);
-  writer.subheading("Critical audit questions");
-  report.audit.criticalChecks.forEach((check, index) => {
-    writer.keyValue(
-      `${index + 1}. ${check.question}`,
-      `${check.status}${check.disposition ? ` (${check.disposition})` : ""}: ${check.evidence}`,
-    );
-  });
-  if (report.audit.criticalChecks.length === 0) {
-    writer.paragraph("No critical audit questions were returned.", {
-      color: writer.palette.muted,
-    });
+  if (digest.incompleteModules.length > 0) {
+    writer.subheading("Incomplete evidence modules");
   }
+  digest.incompleteModules.forEach((module) => {
+    writer.keyValue(
+      `${module.label} - ${module.status}`,
+      `${module.summary} Evidence references: ${module.evidenceCount}.`,
+    );
+    if (module.warnings.length > 0) writer.list(module.warnings);
+  });
+
+  writer.subheading("What this report does not prove");
+  writer.list(report.reportBoundaries);
+  if (report.warnings.length > 0) {
+    writer.subheading("Provider and runtime warnings");
+    writer.list(report.warnings);
+  }
+  if (report.errors.length > 0) {
+    writer.subheading("Provider failures");
+    writer.list(report.errors);
+  }
+  if (report.missingConfig.length > 0) {
+    writer.subheading("Missing server configuration");
+    writer.list(report.missingConfig);
+  }
+  writer.subheading("Coverage calculation");
+  writer.paragraph(report.audit.coverageExplanation.summary);
+  writer.paragraph(report.audit.coverageExplanation.calculation, {
+    color: writer.palette.muted,
+  });
 }
 
 function renderFindings(writer: PdfReportWriter, report: TokenContractReportResponse): void {
   writer.section(
-    "Observed findings",
+    "All findings and typed evidence",
     "Every finding keeps severity, evidence state, confidence, practical effect, recommendation, and typed references separate.",
   );
   if (report.findings.length === 0) {
@@ -704,15 +830,15 @@ function renderFindings(writer: PdfReportWriter, report: TokenContractReportResp
     );
     return;
   }
-  report.findings.forEach((finding, index) => {
+  rankFindings(report.findings).forEach((finding, index) => {
     writer.subheading(`${index + 1}. ${finding.title}`);
+    writer.keyValue("What was found", finding.summary);
+    writer.keyValue("Why it matters", finding.practicalEffect);
+    writer.keyValue("Recommended check", finding.recommendation || "No recommendation returned.");
     writer.keyValue(
-      "Classification",
+      "Evidence strength",
       `${finding.category}; ${finding.severity}; ${finding.state}; ${finding.confidence}% confidence; evidence ID ${finding.id}`,
     );
-    writer.keyValue("Finding summary", finding.summary);
-    writer.keyValue("Practical effect", finding.practicalEffect);
-    writer.keyValue("Recommended check", finding.recommendation || "No recommendation returned.");
     writer.subheading("Typed evidence references");
     if (finding.evidence.length === 0) {
       writer.paragraph("No typed evidence references were attached.", {
@@ -973,13 +1099,20 @@ function renderHistoryAndSimulations(
   if (report.history.decodedCalls.length === 0) {
     writer.paragraph("No privileged calls were decoded.", { color: writer.palette.muted });
   }
-  report.history.decodedCalls.forEach((call) => {
+  const readableDecodedCalls = report.history.decodedCalls.slice(0, 12);
+  readableDecodedCalls.forEach((call) => {
     writer.keyValue(
       call.signature ?? call.selector ?? "Unresolved call",
       `Tx ${call.transactionHash}; block ${call.blockNumber ?? "unknown"}; time ${call.timestamp ? formatTimestamp(call.timestamp) : "unknown"}; from ${call.from ?? "unknown"}; success ${nullableBoolean(call.success)}; after owner zero ${nullableBoolean(call.afterOwnershipZero)}`,
       { mono: true },
     );
   });
+  if (report.history.decodedCalls.length > readableDecodedCalls.length) {
+    writer.paragraph(
+      `${report.history.decodedCalls.length - readableDecodedCalls.length} additional decoded calls are retained in the embedded JSON attachment.`,
+      { color: writer.palette.muted },
+    );
+  }
   renderLimitations(writer, "History limitations", report.history.limitations);
 
   writer.subheading("Bounded read-only simulations");
@@ -1117,38 +1250,34 @@ function renderLiquidity(writer: PdfReportWriter, report: TokenContractReportRes
         { mono: true },
       );
     });
-    writer.subheading("Raw LP evidence record");
-    writer.json(evidence);
+    writer.paragraph(
+      "The complete normalized LP evidence record is retained in the embedded JSON attachment. The readable view above contains the custody, lifecycle, transaction, and limitation fields needed to evaluate this pair.",
+      { color: writer.palette.muted },
+    );
   });
   renderLimitations(writer, "Liquidity limitations", report.liquidity.limitations);
 }
 
 function renderAi(writer: PdfReportWriter, report: TokenContractReportResponse): void {
   writer.section(
-    "AI explanation",
-    "The model explains scanner evidence and recommends follow-up checks. It cannot set or lower the deterministic verdict, score, confidence, coverage, or evidence state.",
+    "Optional AI-assisted explanation",
+    "DeepSeek selects grounded evidence for a secondary review and recommends follow-up checks. Displayed conclusions remain deterministic; the model cannot set or lower the verdict, score, confidence, coverage, or evidence state.",
   );
-  writer.keyValue("AI status", report.ai.status);
-  writer.keyValue("Model", report.ai.model ?? null);
-  writer.keyValue("Failure reason", report.ai.reason ?? null);
-  writer.keyValue("Finish reason", report.ai.finishReason ?? null);
-  if (report.ai.usage) {
-    writer.keyValue(
-      "Token usage",
-      `${report.ai.usage.promptTokens} prompt; ${report.ai.usage.completionTokens} completion; ${report.ai.usage.reasoningTokens} reasoning; ${report.ai.usage.totalTokens} total; ${report.ai.usage.attempts} attempt(s)`,
-    );
-  }
   const narrative = report.ai.narrative;
   if (narrative) {
     writer.subheading(narrative.title);
+    writer.keyValue("Bottom line", narrative.bottomLine);
     writer.keyValue(
-      "AI review conclusion",
+      "Secondary review context",
       `${narrative.overallVerdict}; ${narrative.confidence}% confidence. ${narrative.confidenceReason}`,
     );
-    writer.keyValue("Bottom line", narrative.bottomLine);
-    writer.subheading("Main risks described by AI");
+    writer.subheading("Key concerns highlighted");
     writer.list(narrative.mainRisks);
-    writer.subheading("AI detailed observations");
+    writer.subheading("Checks still unresolved");
+    writer.list(narrative.whatNotSeen);
+    writer.subheading("Recommended next checks");
+    writer.list(narrative.whatToCheckOnChain);
+    writer.subheading("Source-cited secondary observations");
     narrative.detailedFindings.forEach((finding, index) => {
       writer.keyValue(
         `${index + 1}. ${finding.heading} - ${finding.severity}`,
@@ -1165,16 +1294,15 @@ function renderAi(writer: PdfReportWriter, report: TokenContractReportResponse):
         );
       }
     });
-    writer.subheading("What the AI did not see");
-    writer.list(narrative.whatNotSeen);
     writer.subheading("Selector review clues");
     writer.list(narrative.selectorWatchlist, { mono: true });
-    writer.subheading("Recommended on-chain checks");
-    writer.list(narrative.whatToCheckOnChain);
   } else {
-    writer.paragraph("No structured AI narrative was returned.", {
+    writer.paragraph(
+      "No structured AI narrative was returned. The deterministic report above remains available and authoritative.",
+      {
       color: writer.palette.muted,
-    });
+      },
+    );
   }
   if (report.ai.markdown) {
     writer.subheading("Provider narrative text");
@@ -1183,24 +1311,17 @@ function renderAi(writer: PdfReportWriter, report: TokenContractReportResponse):
       color: writer.palette.text,
     });
   }
-}
-
-function renderWarningsAndBoundaries(
-  writer: PdfReportWriter,
-  report: TokenContractReportResponse,
-): void {
-  writer.section(
-    "Warnings, errors, and report boundaries",
-    "Provider/runtime warnings and failures are separated from permanent report boundaries so incomplete collection is not confused with an actionable contract risk.",
-  );
-  writer.subheading("Provider and runtime warnings");
-  writer.list(report.warnings);
-  writer.subheading("Provider failures");
-  writer.list(report.errors);
-  writer.subheading("Missing server configuration");
-  writer.list(report.missingConfig);
-  writer.subheading("Report boundaries");
-  writer.list(report.reportBoundaries);
+  writer.subheading("Provider details");
+  writer.keyValue("AI status", report.ai.status);
+  writer.keyValue("Model", report.ai.model ?? null);
+  writer.keyValue("Failure reason", report.ai.reason ?? null);
+  writer.keyValue("Finish reason", report.ai.finishReason ?? null);
+  if (report.ai.usage) {
+    writer.keyValue(
+      "Token usage",
+      `${report.ai.usage.promptTokens} prompt; ${report.ai.usage.completionTokens} completion; ${report.ai.usage.reasoningTokens} reasoning; ${report.ai.usage.totalTokens} total; ${report.ai.usage.attempts} attempt(s)`,
+    );
+  }
 }
 
 function renderCompletePayload(writer: PdfReportWriter, json: string, attachmentName: string): void {

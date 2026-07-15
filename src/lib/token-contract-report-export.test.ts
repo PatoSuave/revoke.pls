@@ -37,17 +37,18 @@ describe("token contract report exports", () => {
 
   it("keeps a stable outline covering every report evidence family", () => {
     expect(TOKEN_CONTRACT_REPORT_EXPORT_SECTION_TITLES).toEqual([
-      "How to read this report",
-      "Evidence coverage",
-      "Observed findings",
+      "Direct answers",
+      "Priority findings and next checks",
+      "Coverage, limits, and collection issues",
+      "Optional AI-assisted explanation",
+      "How to read the technical evidence",
+      "All findings and typed evidence",
       "Contract and token profile",
       "Evidence modules and signals",
       "Selectors and bytecode",
       "Holders and supply history",
       "Contract history and simulations",
       "Liquidity evidence",
-      "AI explanation",
-      "Warnings, errors, and report boundaries",
       "Complete structured report",
     ]);
   });
