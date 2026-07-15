@@ -4,7 +4,6 @@ import {
   encodeFunctionData,
   erc20Abi,
   getAddress,
-  http,
   isAddress,
   keccak256,
   parseAbi,
@@ -90,6 +89,10 @@ import {
   type TokenContractReportSignal,
 } from "@/lib/token-contract-report";
 import { buildTokenContractReportPresentation } from "@/lib/token-contract-report-presentation";
+import {
+  createTokenContractReportTransport,
+  tokenContractReportRpcUrls,
+} from "@/lib/token-contract-report-rpc";
 import {
   fetchTokenContractEvents,
   fetchTokenContractHistory,
@@ -584,7 +587,12 @@ export async function buildTokenContractReport({
     reader ??
     (createPublicClient({
       chain: chain.chain,
-      transport: http(chain.rpcUrl),
+      transport: createTokenContractReportTransport(
+        tokenContractReportRpcUrls({
+          chainId: chain.chainId,
+          primaryRpcUrl: chain.rpcUrl,
+        }),
+      ),
     }) as unknown as TokenContractReportReadClient);
   const deepModulesEnabled = enableDeepModules ?? reader === undefined;
 
