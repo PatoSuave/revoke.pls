@@ -22,12 +22,14 @@ import {
   type TokenContractCriticalCheck,
   type TokenContractFinding,
   type TokenContractReportModule,
+  type TokenContractReportPresentation,
   type TokenContractReportResponse,
   type TokenContractReportStreamEvent,
 } from "@/lib/token-contract-report";
 import {
   buildReportDigest,
   criticalCheckAnswer,
+  getTokenContractReportPresentation,
   type TokenContractAnswerTone,
   type TokenContractReportDigest,
 } from "@/lib/token-contract-report-presentation";
@@ -245,7 +247,9 @@ export function TokenContractReportClient() {
       ? progressMessage || "Reading contract evidence..."
       : status === "complete"
         ? report
-          ? "Token contract report ready. Server verdict: " + report.verdict.label + "."
+          ? "Token contract report ready. " +
+            getTokenContractReportPresentation(report).decision.headline +
+            "."
           : "Token contract report ready."
         : status === "error"
           ? error ?? "The token contract report failed."
@@ -454,6 +458,7 @@ function ReportOutput({
   }
 
   const digest = buildReportDigest(report);
+  const presentation = getTokenContractReportPresentation(report);
   const tokenHeading = report.token.symbol || report.token.name || "Contract report";
   const tokenSubheading =
     report.token.symbol && report.token.name
@@ -465,15 +470,24 @@ function ReportOutput({
       <VerdictPanel
         report={report}
         digest={digest}
+        presentation={presentation}
         tokenHeading={tokenHeading}
         tokenSubheading={tokenSubheading}
       />
 
       <DecisionSummary digest={digest} />
 
-      <KeyQuestions report={report} digest={digest} />
+      <MeaningGroupedFindings presentation={presentation} />
 
-      <CoverageAndLimits report={report} digest={digest} />
+      <ControlAndSupply presentation={presentation} />
+
+      <KeyQuestions presentation={presentation} />
+
+      <CoverageAndLimits
+        report={report}
+        digest={digest}
+        presentation={presentation}
+      />
 
       {status !== "loading" && report.contract ? (
         <ReportDownloadControls report={report} />
@@ -598,16 +612,17 @@ function ReportDownloadControls({
 function VerdictPanel({
   report,
   digest,
+  presentation,
   tokenHeading,
   tokenSubheading,
 }: {
   report: TokenContractReportResponse;
   digest: TokenContractReportDigest;
+  presentation: TokenContractReportPresentation;
   tokenHeading: string;
   tokenSubheading: string;
 }) {
   const generatedAt = formatTimestamp(report.generatedAt);
-  const totalChecks = report.audit.totalChecks || report.audit.criticalChecks.length;
   const formattedSupply = formattedTokenSupply(report);
 
   return (
@@ -625,7 +640,10 @@ function VerdictPanel({
               Deterministic contract assessment
             </p>
             <div className="mt-3 flex flex-wrap items-center gap-2">
-              <VerdictBadge severity={report.verdict.severity} label={report.verdict.label} />
+              <VerdictBadge
+                severity={report.verdict.severity}
+                label={presentation.decision.headline}
+              />
               <StatusBadge status={report.status} ok={report.ok} />
             </div>
             <p className="mt-4 text-sm font-semibold text-pulse-muted">
@@ -635,10 +653,10 @@ function VerdictPanel({
               id="token-report-conclusion"
               className="mt-4 break-words text-2xl font-bold tracking-tight text-pulse-text sm:text-3xl"
             >
-              {digest.directOutcome}
+              {presentation.decision.headline}
             </h2>
             <p className="mt-3 max-w-4xl text-base leading-7 text-pulse-text">
-              {report.verdict.summary}
+              {presentation.decision.summary}
             </p>
           </div>
           <div className="min-w-0 rounded-xl border border-pulse-border/70 bg-pulse-bg/45 p-3 lg:w-80">
@@ -664,22 +682,26 @@ function VerdictPanel({
             tone={severityMetricTone(report.verdict.severity)}
           />
           <ReportMetric
+            label="Confidence"
+            value={
+              presentation.decision.confidence + "% | " +
+              presentation.decision.confidenceLabel
+            }
+            tone={presentation.decision.confidence >= 70 ? "good" : "caution"}
+          />
+          <ReportMetric
             label="Evidence coverage"
             value={
-              report.audit.coveragePercent + "% | " +
-              report.audit.resolvedQuestions + " of " + totalChecks + " resolved"
+              presentation.coverage.weightedPercent + "% | " +
+              presentation.coverage.resolved + " of " +
+              presentation.coverage.applicableTotal + " resolved"
             }
-            tone={report.audit.coveragePercent >= 80 ? "good" : "caution"}
+            tone={presentation.coverage.weightedPercent >= 80 ? "good" : "caution"}
           />
           <ReportMetric
-            label="Confirmed concerns"
-            value={String(digest.confirmedConcernCount)}
-            tone={digest.confirmedConcernCount > 0 ? "danger" : "neutral"}
-          />
-          <ReportMetric
-            label="Open evidence areas"
-            value={String(digest.openEvidenceItemCount)}
-            tone={digest.openEvidenceItemCount > 0 ? "caution" : "neutral"}
+            label="Observed use"
+            value={humanize(presentation.decision.observedUse)}
+            tone={presentation.decision.observedUse === "observed" ? "danger" : "neutral"}
           />
         </div>
 
@@ -704,7 +726,10 @@ function VerdictPanel({
               value={report.verdict.confidence + "% | " + report.verdict.confidenceLabel}
               tone={report.verdict.confidence >= 70 ? "good" : "caution"}
             />
-            <ReportMetric label="Risk score" value={report.audit.riskScore + " / 100"} />
+            <ReportMetric
+              label="Provisional heuristic score"
+              value={presentation.decision.provisionalRiskScore + " / 100"}
+            />
             <ReportMetric label="Total supply" value={formattedSupply ?? "Unknown"} />
             <ReportMetric label="Generated" value={generatedAt} />
             <ReportMetric
@@ -714,7 +739,8 @@ function VerdictPanel({
           </div>
           <p className="px-3 pb-3 text-xs leading-5 text-pulse-muted">
             Severity comes from confirmed capabilities. Confidence describes evidence
-            quality. Coverage describes completeness, not safety.
+            quality. Coverage describes completeness, not safety. The provisional
+            score is a prioritization heuristic, not a probability.
           </p>
         </details>
       </div>
@@ -839,7 +865,7 @@ function DecisionSummary({
             </p>
           )}
           <a
-            href="#token-report-technical-evidence"
+            href="#token-report-findings-by-meaning"
             className={
               "mt-3 inline-flex min-h-10 items-center rounded-xl border border-pulse-border bg-pulse-bg/60 px-3 py-2 text-xs font-semibold text-pulse-cyan transition hover:border-pulse-cyan/40 " +
               FOCUS_RING
@@ -868,12 +894,196 @@ function DecisionFinding({ finding }: { finding: TokenContractFinding }) {
   );
 }
 
-function KeyQuestions({
-  report,
-  digest,
+function MeaningGroupedFindings({
+  presentation,
 }: {
-  report: TokenContractReportResponse;
-  digest: TokenContractReportDigest;
+  presentation: TokenContractReportPresentation;
+}) {
+  const [activeFilter, setActiveFilter] = useState<
+    "all" | "capabilities" | "protective" | "open" | "context"
+  >("all");
+  const groups = [
+    ["Confirmed capabilities", ["confirmed-capability"]],
+    ["Observed behavior", ["observed-behavior"]],
+    ["Protective evidence", ["protective-evidence"]],
+    ["Unresolved and untested", ["unresolved", "not-tested", "invalid-test"]],
+    ["Informational context", ["informational"]],
+  ] as const;
+  const filters = [
+    ["all", "All findings", []],
+    ["capabilities", "Capabilities", ["confirmed-capability"]],
+    ["protective", "Protective evidence", ["protective-evidence"]],
+    ["open", "Open questions", ["unresolved", "not-tested", "invalid-test"]],
+    ["context", "Observed and informational", ["observed-behavior", "informational"]],
+  ] as const;
+  const activeStatuses = filters.find(([id]) => id === activeFilter)?.[2] ?? [];
+  const visibleFindingCount = presentation.findings.filter(
+    (finding) =>
+      activeFilter === "all" ||
+      (activeStatuses as readonly string[]).includes(finding.status),
+  ).length;
+  return (
+    <section
+      id="token-report-findings-by-meaning"
+      aria-labelledby="token-report-findings-heading"
+      className="scroll-mt-4 rounded-2xl border border-pulse-border/75 bg-pulse-panel/30 p-4 sm:p-5"
+    >
+      <SectionHeading
+        id="token-report-findings-heading"
+        eyebrow="Findings by meaning"
+        title="What is possible, what happened, and what remains unknown"
+        meta={presentation.findings.length + " normalized findings"}
+      />
+      <div
+        className="mt-3 flex flex-wrap gap-2"
+        role="group"
+        aria-label="Finding filters"
+      >
+        {filters.map(([id, label]) => (
+          <button
+            key={id}
+            type="button"
+            aria-pressed={activeFilter === id}
+            onClick={() => setActiveFilter(id)}
+            className={
+              "min-h-9 rounded-lg border px-3 py-1.5 text-xs font-semibold transition " +
+              (activeFilter === id
+                ? "border-pulse-cyan/45 bg-pulse-cyan/10 text-pulse-cyan"
+                : "border-pulse-border/70 bg-pulse-bg/40 text-pulse-muted hover:text-pulse-text") +
+              " " +
+              FOCUS_RING
+            }
+          >
+            {label}
+          </button>
+        ))}
+      </div>
+      <div className="mt-4 grid gap-3 xl:grid-cols-2">
+        {groups.map(([title, statuses]) => {
+          const findings = presentation.findings.filter((finding) =>
+            (statuses as readonly string[]).includes(finding.status) &&
+            (activeFilter === "all" ||
+              (activeStatuses as readonly string[]).includes(finding.status)),
+          );
+          if (findings.length === 0) return null;
+          return (
+            <div key={title} className="rounded-xl border border-pulse-border/65 bg-pulse-bg/35 p-3">
+              <h3 className="text-sm font-bold text-pulse-text">{title}</h3>
+              <div className="mt-2 space-y-2">
+                {findings.map((finding) => (
+                  <article key={finding.id} id={finding.id} className="scroll-mt-4 rounded-lg border border-pulse-border/55 bg-pulse-panel/25 p-3">
+                    <div className="flex flex-wrap items-start justify-between gap-2">
+                      <h4 className="min-w-0 flex-1 text-sm font-bold text-pulse-text">{finding.title}</h4>
+                      <span className={"rounded-full border px-2 py-1 text-[10px] font-bold uppercase tracking-wide " + presentationStatusClass(finding.status)}>
+                        {humanize(finding.status)}
+                      </span>
+                    </div>
+                    <p className="mt-2 text-sm leading-6 text-pulse-muted">{finding.plainSummary}</p>
+                    <details className="mt-2 rounded-lg border border-pulse-border/50 bg-pulse-bg/30">
+                      <summary className={"cursor-pointer px-3 py-2 text-xs font-semibold text-pulse-cyan " + FOCUS_RING}>
+                        Advanced evidence ({finding.evidence.length})
+                      </summary>
+                      <div className="space-y-2 border-t border-pulse-border/50 p-3">
+                        <p className="text-xs leading-5 text-pulse-muted">{finding.advancedSummary}</p>
+                        {finding.evidence.map((evidence) => (
+                          <div key={evidence.id} className="rounded-lg border border-pulse-border/45 p-2">
+                            <div className="flex flex-wrap items-start justify-between gap-2">
+                              <p className="text-[10px] font-bold uppercase tracking-wide text-pulse-muted">
+                                {evidence.role} · {humanize(evidence.type)}
+                                {evidence.file ? ` · ${evidence.file}${evidence.startLine ? `:${evidence.startLine}` : ""}` : ""}
+                              </p>
+                              <CopyButton value={evidence.claim} label="Copy evidence" compact />
+                            </div>
+                            <p className="mt-1 text-xs leading-5 text-pulse-text">{evidence.claim}</p>
+                            {evidence.codePath && evidence.codePath.length > 1 ? (
+                              <p className="mt-2 font-mono text-[10px] leading-4 text-pulse-muted">
+                                Code path: {evidence.codePath.map((node) => node.kind.replace(/-/g, " ")).join(" → ")}
+                              </p>
+                            ) : null}
+                          </div>
+                        ))}
+                      </div>
+                    </details>
+                  </article>
+                ))}
+              </div>
+            </div>
+          );
+        })}
+        {visibleFindingCount === 0 ? (
+          <p className="rounded-xl border border-dashed border-pulse-border/70 p-3 text-sm text-pulse-muted xl:col-span-2">
+            No findings match this filter.
+          </p>
+        ) : null}
+      </div>
+    </section>
+  );
+}
+
+function ControlAndSupply({
+  presentation,
+}: {
+  presentation: TokenContractReportPresentation;
+}) {
+  const tradingRows = [
+    ["Pair discovery", presentation.trading.pairDiscovery],
+    ["Liquidity inspection", presentation.trading.liquidityInspection],
+    ["Router buy simulation", presentation.trading.buySimulation],
+    ["Router sell simulation", presentation.trading.sellSimulation],
+  ] as const;
+  return (
+    <section aria-labelledby="token-report-controls" className="rounded-2xl border border-pulse-border/75 bg-pulse-bg/35 p-4 sm:p-5">
+      <SectionHeading
+        id="token-report-controls"
+        eyebrow="Control, supply, and trading"
+        title="Who can act and what was actually tested"
+        meta={presentation.authorization.label}
+      />
+      <div className="mt-4 grid gap-3 xl:grid-cols-3">
+        <article className="rounded-xl border border-pulse-border/65 bg-pulse-panel/30 p-3">
+          <h3 className="text-sm font-bold text-pulse-text">Control map</h3>
+          <p className="mt-2 text-sm leading-6 text-pulse-muted">{presentation.authorization.explanation}</p>
+          <div className="mt-3 space-y-2">
+            {presentation.authorization.roles.map((role) => (
+              <div key={role.name} className="rounded-lg border border-pulse-border/50 bg-pulse-bg/30 p-2">
+                <p className="font-mono text-xs font-bold text-pulse-cyan">{role.name}</p>
+                <p className="mt-1 text-xs text-pulse-muted">Admin: {role.admin ?? "unresolved"} · Current holders: {humanize(role.holderResolution)}</p>
+              </div>
+            ))}
+          </div>
+        </article>
+        <article className="rounded-xl border border-pulse-border/65 bg-pulse-panel/30 p-3">
+          <h3 className="text-sm font-bold text-pulse-text">Supply and holders</h3>
+          <p className="mt-2 text-sm leading-6 text-pulse-muted">{presentation.supply.summary}</p>
+          <div className="mt-3 grid gap-2">
+            <MetadataCell label="Current supply" value={presentation.supply.current ?? "Unknown"} mono />
+            <MetadataCell label="Captured initial mint" value={presentation.supply.initial ?? "Unknown"} mono />
+            <MetadataCell label="Maximum supply" value={presentation.supply.cap ?? "Numeric read unresolved"} />
+            <MetadataCell label="Remaining mintable" value={presentation.supply.remainingMintable ?? "Unresolved"} />
+          </div>
+        </article>
+        <article className="rounded-xl border border-pulse-border/65 bg-pulse-panel/30 p-3">
+          <h3 className="text-sm font-bold text-pulse-text">Trading evidence</h3>
+          <p className="mt-2 text-sm leading-6 text-pulse-muted">{presentation.trading.summary}</p>
+          <div className="mt-3 space-y-2">
+            {tradingRows.map(([label, value]) => (
+              <div key={label} className="flex items-center justify-between gap-3 rounded-lg border border-pulse-border/50 bg-pulse-bg/30 p-2">
+                <span className="text-xs font-semibold text-pulse-text">{label}</span>
+                <span className={"rounded-full border px-2 py-1 text-[10px] font-bold uppercase " + presentationStatusClass(value)}>{humanize(value)}</span>
+              </div>
+            ))}
+          </div>
+        </article>
+      </div>
+      <p className="mt-3 rounded-xl border border-pulse-border/60 bg-pulse-panel/20 p-3 text-xs leading-5 text-pulse-muted">{presentation.historySummary}</p>
+    </section>
+  );
+}
+
+function KeyQuestions({
+  presentation,
+}: {
+  presentation: TokenContractReportPresentation;
 }) {
   return (
     <section
@@ -884,35 +1094,28 @@ function KeyQuestions({
         id="token-report-key-questions"
         eyebrow="Direct answers"
         title="Key contract questions"
-        meta={
-          digest.priorityChecks.length +
-          " shown of " +
-          report.audit.criticalChecks.length
-        }
+        meta={presentation.questions.length + " architecture-aware answers"}
       />
       <p className="mt-2 max-w-4xl text-sm leading-6 text-pulse-muted">
-        These are the highest-priority answers from the deterministic audit rubric.
-        “Not detected” means the collected evidence did not show it; it does not prove
-        the behavior is impossible.
+        Questions are selected after the authorization architecture is classified.
+        Not tested and unresolved answers are never treated as protective evidence.
       </p>
       <div className="mt-4 grid gap-2 md:grid-cols-2">
-        {digest.priorityChecks.map((check) => (
-          <CriticalCheckCard key={check.question} check={check} />
+        {presentation.questions.map((item) => (
+          <article key={item.id} className="rounded-xl border border-pulse-border/70 bg-pulse-panel/30 p-3">
+            <div className="flex flex-wrap items-start justify-between gap-2">
+              <h4 className="min-w-0 flex-1 text-sm font-bold leading-5 text-pulse-text">{item.question}</h4>
+              <span className={"rounded-full border px-2 py-1 text-[10px] font-bold uppercase tracking-wide " + presentationStatusClass(item.status)}>{humanize(item.status)}</span>
+            </div>
+            <p className="mt-3 text-sm leading-5 text-pulse-muted">{item.answer}</p>
+          </article>
         ))}
-        {digest.priorityChecks.length === 0 ? (
+        {presentation.questions.length === 0 ? (
           <p className="rounded-xl border border-dashed border-pulse-border/70 p-3 text-sm text-pulse-muted md:col-span-2">
             No critical audit questions were returned.
           </p>
         ) : null}
       </div>
-      {report.audit.criticalChecks.length > digest.priorityChecks.length ? (
-        <a
-          href="#token-report-technical-evidence"
-          className={"mt-3 inline-flex text-xs font-semibold text-pulse-cyan hover:text-pulse-text " + FOCUS_RING}
-        >
-          See all {report.audit.criticalChecks.length} answers in technical evidence
-        </a>
-      ) : null}
     </section>
   );
 }
@@ -942,11 +1145,13 @@ function CriticalCheckCard({
 function CoverageAndLimits({
   report,
   digest,
+  presentation,
 }: {
   report: TokenContractReportResponse;
   digest: TokenContractReportDigest;
+  presentation: TokenContractReportPresentation;
 }) {
-  const percentage = clampPercentage(report.audit.coveragePercent);
+  const percentage = clampPercentage(presentation.coverage.weightedPercent);
   const detailCount =
     report.audit.coverageExplanation.blockers.length +
     digest.incompleteModules.length +
@@ -969,11 +1174,11 @@ function CoverageAndLimits({
       />
       <div className="mt-4 grid gap-2 sm:grid-cols-3">
         <ReportMetric
-          label="Questions resolved"
+          label="Question coverage"
           value={
-            report.audit.resolvedQuestions +
-            " of " +
-            (report.audit.totalChecks || report.audit.criticalChecks.length)
+            presentation.coverage.resolved + " resolved · " +
+            presentation.coverage.partial + " partial · " +
+            presentation.coverage.notTested + " not tested"
           }
           tone={percentage >= 80 ? "good" : "caution"}
         />
@@ -992,6 +1197,9 @@ function CoverageAndLimits({
           tone={digest.collectionIssueCount > 0 ? "caution" : "good"}
         />
       </div>
+      <p className="mt-3 text-xs leading-5 text-pulse-muted">
+        {presentation.coverage.explanation}
+      </p>
       <div
         className="mt-3 h-2.5 overflow-hidden rounded-full bg-pulse-panel/90"
         role="progressbar"
@@ -2630,7 +2838,7 @@ function VerdictBadge({
   label,
 }: {
   severity: TokenContractReportResponse["verdict"]["severity"];
-  label: TokenContractReportResponse["verdict"]["label"];
+  label: string;
 }) {
   const className =
     severity === "critical" || severity === "high"
@@ -3136,6 +3344,21 @@ function answerToneClass(tone: TokenContractAnswerTone): string {
     return "border-pulse-green/35 bg-pulse-green/10 text-pulse-green";
   }
   if (tone === "caution") {
+    return "border-amber-400/35 bg-amber-400/10 text-amber-200";
+  }
+  return "border-pulse-border bg-pulse-bg/70 text-pulse-muted";
+}
+
+function presentationStatusClass(
+  status: string,
+): string {
+  if (status === "confirmed-capability" || status === "invalid-test") {
+    return "border-pulse-red/35 bg-pulse-red/10 text-pulse-red";
+  }
+  if (status === "protective-evidence") {
+    return "border-pulse-green/35 bg-pulse-green/10 text-pulse-green";
+  }
+  if (status === "unresolved" || status === "not-tested") {
     return "border-amber-400/35 bg-amber-400/10 text-amber-200";
   }
   return "border-pulse-border bg-pulse-bg/70 text-pulse-muted";

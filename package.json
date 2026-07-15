@@ -16,6 +16,7 @@
     "security:env": "node scripts/check-hosted-public-env.mjs",
     "security:live": "node scripts/security-live.mjs",
     "test": "vitest run",
+    "test:report:e2e": "node node_modules/@playwright/test/cli.js test tests/token-contract-report.spec.ts",
     "typecheck": "tsc --noEmit",
     "tauri": "tauri"
   },
@@ -48,6 +49,7 @@
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3.3.5",
+    "@playwright/test": "^1.61.1",
     "@tauri-apps/cli": "^2.11.2",
     "@types/node": "^22.0.0",
     "@types/react": "^19.2.15",

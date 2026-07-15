@@ -7,12 +7,13 @@ import type {
 
 import type {
   TokenContractControlSurface,
+  TokenContractReportPresentation,
   TokenContractReportResponse,
 } from "@/lib/token-contract-report";
 import {
   buildReportDigest,
   criticalCheckAnswer,
-  rankCriticalChecks,
+  getTokenContractReportPresentation,
   rankFindings,
   type TokenContractReportDigest,
 } from "@/lib/token-contract-report-presentation";
@@ -21,8 +22,9 @@ export const TOKEN_CONTRACT_REPORT_PDF_MAX_PAGES = 120;
 export const TOKEN_CONTRACT_REPORT_PDF_MAX_VISIBLE_CHARACTERS = 350_000;
 
 export const TOKEN_CONTRACT_REPORT_EXPORT_SECTION_TITLES = [
-  "Direct answers",
-  "Priority findings and next checks",
+  "Decision summary and architecture-aware answers",
+  "Key findings by meaning",
+  "Control map, supply, and trading",
   "Coverage, limits, and collection issues",
   "Optional AI-assisted explanation",
   "How to read the technical evidence",
@@ -90,12 +92,20 @@ export interface TokenContractReportPdfExport {
   blob: Blob;
   pageCount: number;
   readableViewTruncated: boolean;
+  jsonSha256: string;
 }
 
 export function serializeTokenContractReport(
   report: TokenContractReportResponse,
 ): string {
-  return JSON.stringify(report, null, 2) + "\n";
+  return JSON.stringify(
+    {
+      ...report,
+      presentation: getTokenContractReportPresentation(report),
+    },
+    null,
+    2,
+  ) + "\n";
 }
 
 export function tokenContractReportExportStem(
@@ -136,6 +146,7 @@ export async function createTokenContractReportPdfExport(
   };
   const palette = createPalette(pdfLib);
   const json = serializeTokenContractReport(report);
+  const jsonSha256 = await sha256Hex(json);
   const fileStem = tokenContractReportExportStem(report);
   const reportDate = validDate(report.generatedAt)
     ? new Date(report.generatedAt)
@@ -161,7 +172,7 @@ export async function createTokenContractReportPdfExport(
 
   await pdfDoc.attach(new TextEncoder().encode(json), fileStem + ".json", {
     mimeType: "application/json",
-    description: "Complete machine-readable Token Contract Report response",
+    description: `Complete machine-readable Token Contract Report response (SHA-256 ${jsonSha256})`,
     creationDate: reportDate,
     modificationDate: reportDate,
   });
@@ -173,10 +184,12 @@ export async function createTokenContractReportPdfExport(
     report,
   });
   const digest = buildReportDigest(report);
+  const presentation = getTokenContractReportPresentation(report);
 
-  renderCover(writer, report, digest);
+  renderCover(writer, report, digest, presentation);
   writer.addPage();
-  renderDirectAnswers(writer, report, digest);
+  renderDirectAnswers(writer, presentation, digest);
+  renderPresentationOverview(writer, presentation);
   renderPriorityFindings(writer, digest);
   renderCoverageAndLimits(writer, report, digest);
   renderAi(writer, report);
@@ -188,7 +201,9 @@ export async function createTokenContractReportPdfExport(
   renderHoldersAndSupply(writer, report);
   renderHistoryAndSimulations(writer, report);
   renderLiquidity(writer, report);
-  renderCompletePayload(writer, json, fileStem + ".json");
+  renderCompletePayload(writer, json, fileStem + ".json", jsonSha256);
+  renderTableOfContents(pdfDoc, fonts, palette, writer.outlineEntries);
+  addPdfOutline(pdfDoc, pdfLib, writer.outlineEntries);
   writer.finish();
 
   const savedBytes = await pdfDoc.save({
@@ -203,6 +218,7 @@ export async function createTokenContractReportPdfExport(
     blob: new Blob([bytes.buffer], { type: "application/pdf" }),
     pageCount: pdfDoc.getPageCount(),
     readableViewTruncated: writer.truncated || writer.shortened,
+    jsonSha256,
   };
 }
 
@@ -215,6 +231,7 @@ class PdfReportWriter {
   y = PAGE_HEIGHT - PAGE_TOP;
   truncated = false;
   shortened = false;
+  readonly outlineEntries: Array<{ title: string; page: PDFPage }> = [];
   private visibleCharacters = 0;
 
   constructor({
@@ -286,6 +303,9 @@ class PdfReportWriter {
 
   section(title: string, description?: string): void {
     if (!this.ensureSpace(description ? 80 : 54)) return;
+    if (!this.outlineEntries.some((entry) => entry.title === title)) {
+      this.outlineEntries.push({ title, page: this.page });
+    }
     this.y -= 6;
     this.page.drawRectangle({
       x: PAGE_MARGIN_X,
@@ -551,6 +571,7 @@ function renderCover(
   writer: PdfReportWriter,
   report: TokenContractReportResponse,
   digest: TokenContractReportDigest,
+  presentation: TokenContractReportPresentation,
 ): void {
   const { page, fonts, palette } = writer;
   page.drawRectangle({
@@ -609,8 +630,8 @@ function renderCover(
 
   writer.y = PAGE_HEIGHT - 276;
   writer.callout(
-    digest.directOutcome.toUpperCase(),
-    report.verdict.summary,
+    presentation.decision.headline.toUpperCase(),
+    presentation.decision.summary,
     ["critical", "high"].includes(report.verdict.severity)
       ? "risk"
       : report.verdict.severity === "unknown"
@@ -620,14 +641,17 @@ function renderCover(
   writer.keyValue("Deterministic severity", report.verdict.severity);
   writer.keyValue(
     "Verdict confidence",
-    `${report.verdict.confidence}% (${report.verdict.confidenceLabel})`,
+    `${presentation.decision.confidence}% (${presentation.decision.confidenceLabel})`,
   );
   writer.keyValue(
     "Evidence coverage",
-    `${report.audit.coveragePercent}% - ${report.audit.resolvedQuestions} resolved, ${report.audit.reviewChecks} review clues, ${report.audit.notEvaluatedChecks} not evaluated`,
+    `${presentation.coverage.weightedPercent}% - ${presentation.coverage.resolved} resolved, ${presentation.coverage.partial} partial, ${presentation.coverage.notTested} not tested, ${presentation.coverage.invalid} invalid`,
   );
-  writer.keyValue("Confirmed concerns", digest.confirmedConcernCount);
-  writer.keyValue("Open evidence areas", digest.openEvidenceItemCount);
+  writer.keyValue("Observed use", presentation.decision.observedUse);
+  writer.keyValue(
+    "Provisional heuristic score",
+    `${presentation.decision.provisionalRiskScore}/100 - not a probability`,
+  );
   writer.keyValue("Generated", formatTimestamp(report.generatedAt));
   writer.callout(
     "Important boundary",
@@ -638,28 +662,27 @@ function renderCover(
 
 function renderDirectAnswers(
   writer: PdfReportWriter,
-  report: TokenContractReportResponse,
+  presentation: TokenContractReportPresentation,
   digest: TokenContractReportDigest,
 ): void {
   writer.section(
-    "Direct answers",
-    "Plain-language answers to the critical contract questions. Not detected means the collected evidence did not show the behavior; it does not prove the behavior is impossible.",
+    "Decision summary and architecture-aware answers",
+    "Plain-language answers selected after classifying the contract's authorization architecture. Unresolved, not-tested, and invalid evidence never count as protective evidence.",
   );
   writer.callout(
-    digest.directOutcome,
-    report.verdict.summary,
+    presentation.decision.headline,
+    presentation.decision.summary,
     digest.confirmedConcernCount > 0
       ? "risk"
       : digest.evidenceIncomplete
         ? "warning"
         : "info",
   );
-  const checks = rankCriticalChecks(report.audit.criticalChecks);
+  const checks = presentation.questions;
   checks.forEach((check, index) => {
-    const answer = criticalCheckAnswer(check);
     writer.keyValue(
       `${index + 1}. ${check.question}`,
-      `${answer.label}. ${check.evidence}`,
+      `${check.status}. ${check.answer}`,
     );
   });
   if (checks.length === 0) {
@@ -720,6 +743,77 @@ function renderPriorityFindings(
   ];
   writer.subheading("Highest-priority unresolved areas");
   writer.list(unresolvedItems);
+}
+
+function renderPresentationOverview(
+  writer: PdfReportWriter,
+  presentation: TokenContractReportPresentation,
+): void {
+  writer.section(
+    "Key findings by meaning",
+    "Capability, observed behavior, protective evidence, and unresolved areas are separated so one kind of evidence is not mistaken for another.",
+  );
+  for (const status of [
+    "confirmed-capability",
+    "observed-behavior",
+    "protective-evidence",
+    "unresolved",
+    "not-tested",
+    "invalid-test",
+    "informational",
+  ] as const) {
+    const findings = presentation.findings.filter(
+      (finding) => finding.status === status,
+    );
+    if (findings.length === 0) continue;
+    writer.subheading(status.replace(/-/g, " "));
+    findings.slice(0, 8).forEach((finding) => {
+      writer.keyValue(finding.title, finding.plainSummary);
+      const locations = finding.evidence
+        .filter((evidence) => evidence.file)
+        .map(
+          (evidence) =>
+            `${evidence.role}: ${evidence.file}:${evidence.startLine ?? "?"}`,
+        );
+      if (locations.length > 0) {
+        writer.paragraph(locations.join("; "), {
+          font: writer.fonts.mono,
+          size: 7.5,
+          color: writer.palette.muted,
+        });
+      }
+    });
+  }
+
+  writer.section(
+    "Control map, supply, and trading",
+    "Authorization, supply history, pair discovery, liquidity inspection, and router simulations are reported as separate evidence stages.",
+  );
+  writer.keyValue("Authorization model", presentation.authorization.label);
+  writer.keyValue("Control explanation", presentation.authorization.explanation);
+  presentation.authorization.roles.forEach((role) => {
+    writer.keyValue(
+      role.name,
+      `Admin: ${role.admin ?? "unresolved"}; current holders: ${role.holderResolution}`,
+      { mono: true },
+    );
+  });
+  writer.subheading("Supply and holder analysis");
+  writer.keyValue("Current raw supply", presentation.supply.current ?? "Unknown", {
+    mono: true,
+  });
+  writer.keyValue("Captured initial mint", presentation.supply.initial ?? "Unknown", {
+    mono: true,
+  });
+  writer.keyValue("Maximum supply", presentation.supply.cap ?? "Numeric read unresolved");
+  writer.keyValue("History conclusion", presentation.supply.summary);
+  writer.subheading("Transfer and trading analysis");
+  writer.keyValue("Pair discovery", presentation.trading.pairDiscovery);
+  writer.keyValue("Liquidity inspection", presentation.trading.liquidityInspection);
+  writer.keyValue("Router buy simulation", presentation.trading.buySimulation);
+  writer.keyValue("Router sell simulation", presentation.trading.sellSimulation);
+  writer.paragraph(presentation.trading.summary, { color: writer.palette.muted });
+  writer.paragraph(presentation.historySummary, { color: writer.palette.muted });
 }
 
 function renderHowToRead(writer: PdfReportWriter): void {
@@ -1324,22 +1418,126 @@ function renderAi(writer: PdfReportWriter, report: TokenContractReportResponse):
   }
 }
 
-function renderCompletePayload(writer: PdfReportWriter, json: string, attachmentName: string): void {
+function renderCompletePayload(
+  writer: PdfReportWriter,
+  json: string,
+  attachmentName: string,
+  jsonSha256: string,
+): void {
   writer.section(
     "Complete structured report",
-    "The PDF contains the exact final in-memory report as an embedded JSON attachment. The separate Download JSON button provides the same payload directly.",
+    "The PDF contains the exact exported JSON payload as an embedded attachment. The separate Download JSON button provides the same payload directly.",
   );
   writer.keyValue("Embedded attachment", attachmentName, { mono: true });
   writer.keyValue("JSON character count", json.length.toLocaleString("en-US"));
+  writer.keyValue("JSON SHA-256", jsonSha256, { mono: true });
   writer.keyValue(
     "Integrity note",
-    "The attachment is serialized directly from the final API response. No report fields are added, removed, or rewritten for the JSON export.",
+    "The attachment and separate JSON download are byte-for-byte equivalent. Raw engine fields are preserved; legacy reports receive only the derived presentation namespace.",
   );
   writer.callout(
     "Readable-view safeguard",
     `The human-readable PDF is limited to ${TOKEN_CONTRACT_REPORT_PDF_MAX_PAGES} pages and ${TOKEN_CONTRACT_REPORT_PDF_MAX_VISIBLE_CHARACTERS.toLocaleString("en-US")} visible characters. If that cap is reached, the embedded JSON remains complete.`,
     "info",
   );
+}
+
+function renderTableOfContents(
+  pdfDoc: PDFDocument,
+  fonts: PdfFonts,
+  palette: PdfPalette,
+  entries: Array<{ title: string; page: PDFPage }>,
+): void {
+  const page = pdfDoc.insertPage(1, [PAGE_WIDTH, PAGE_HEIGHT]);
+  page.drawRectangle({
+    x: 0,
+    y: 0,
+    width: PAGE_WIDTH,
+    height: PAGE_HEIGHT,
+    color: palette.white,
+  });
+  page.drawText("PULSE REVOKE", {
+    x: PAGE_MARGIN_X,
+    y: PAGE_HEIGHT - 42,
+    font: fonts.bold,
+    size: 9,
+    color: palette.cyan,
+  });
+  page.drawText("TABLE OF CONTENTS", {
+    x: PAGE_MARGIN_X,
+    y: PAGE_HEIGHT - 82,
+    font: fonts.bold,
+    size: 21,
+    color: palette.navy,
+  });
+  let y = PAGE_HEIGHT - 118;
+  const pages = pdfDoc.getPages();
+  entries.slice(0, 24).forEach((entry, index) => {
+    const pageNumber = pages.indexOf(entry.page) + 1;
+    const number = String(pageNumber);
+    const title = sanitizePdfText(`${index + 1}. ${entry.title}`);
+    page.drawText(title, {
+      x: PAGE_MARGIN_X,
+      y,
+      font: fonts.regular,
+      size: 9.5,
+      color: palette.text,
+      maxWidth: CONTENT_WIDTH - 38,
+    });
+    page.drawText(number, {
+      x: PAGE_WIDTH - PAGE_MARGIN_X - fonts.bold.widthOfTextAtSize(number, 9.5),
+      y,
+      font: fonts.bold,
+      size: 9.5,
+      color: palette.blue,
+    });
+    y -= 24;
+  });
+}
+
+function addPdfOutline(
+  pdfDoc: PDFDocument,
+  pdfLib: PdfLibModule,
+  entries: Array<{ title: string; page: PDFPage }>,
+): void {
+  if (entries.length === 0) return;
+  const context = pdfDoc.context;
+  const outlineRef = context.nextRef();
+  const itemRefs = entries.map(() => context.nextRef());
+  context.assign(
+    outlineRef,
+    context.obj({
+      Type: pdfLib.PDFName.of("Outlines"),
+      First: itemRefs[0],
+      Last: itemRefs[itemRefs.length - 1],
+      Count: entries.length,
+    }),
+  );
+  entries.forEach((entry, index) => {
+    context.assign(
+      itemRefs[index],
+      context.obj({
+        Title: pdfLib.PDFHexString.fromText(entry.title),
+        Parent: outlineRef,
+        ...(index > 0 ? { Prev: itemRefs[index - 1] } : {}),
+        ...(index < itemRefs.length - 1 ? { Next: itemRefs[index + 1] } : {}),
+        Dest: context.obj([entry.page.ref, pdfLib.PDFName.of("Fit")]),
+      }),
+    );
+  });
+  pdfDoc.catalog.set(pdfLib.PDFName.of("Outlines"), outlineRef);
+  pdfDoc.catalog.set(
+    pdfLib.PDFName.of("PageMode"),
+    pdfLib.PDFName.of("UseOutlines"),
+  );
+}
+
+async function sha256Hex(value: string): Promise<string> {
+  const bytes = new TextEncoder().encode(value);
+  const digest = await globalThis.crypto.subtle.digest("SHA-256", bytes);
+  return Array.from(new Uint8Array(digest))
+    .map((byte) => byte.toString(16).padStart(2, "0"))
+    .join("");
 }
 
 function renderControlSurface(

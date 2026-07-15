@@ -1,7 +1,7 @@
 import { mkdir, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 
-import { PDFDocument } from "pdf-lib";
+import { PDFDocument, PDFName } from "pdf-lib";
 import { getAddress } from "viem";
 import { describe, expect, it } from "vitest";
 
@@ -17,6 +17,7 @@ import {
   createEmptyTokenContractReportResponse,
   type TokenContractReportResponse,
 } from "@/lib/token-contract-report";
+import { createCtmTokenContractReportFixture } from "@/lib/token-contract-report-ctm-fixture";
 
 const CONTRACT = getAddress("0xbbca9774331066948A6b2a68Bc7a51B0392aF9F1");
 const DEPLOYER = getAddress("0x0000000000000000000000000000000000000011");
@@ -26,7 +27,14 @@ describe("token contract report exports", () => {
     const report = sampleReport();
     const jsonExport = createTokenContractReportJsonExport(report);
 
-    expect(JSON.parse(jsonExport.text)).toEqual(report);
+    const serialized = JSON.parse(jsonExport.text) as Record<string, unknown>;
+    Object.entries(report).forEach(([key, value]) => {
+      expect(serialized[key]).toEqual(value);
+    });
+    expect(serialized.presentation).toMatchObject({
+      schemaVersion: 1,
+      derivedFromEngineSchemaVersion: 2,
+    });
     expect(jsonExport.text).toBe(serializeTokenContractReport(report));
     expect(await jsonExport.blob.text()).toBe(jsonExport.text);
     expect(jsonExport.filename).toBe(
@@ -37,8 +45,9 @@ describe("token contract report exports", () => {
 
   it("keeps a stable outline covering every report evidence family", () => {
     expect(TOKEN_CONTRACT_REPORT_EXPORT_SECTION_TITLES).toEqual([
-      "Direct answers",
-      "Priority findings and next checks",
+      "Decision summary and architecture-aware answers",
+      "Key findings by meaning",
+      "Control map, supply, and trading",
       "Coverage, limits, and collection issues",
       "Optional AI-assisted explanation",
       "How to read the technical evidence",
@@ -68,12 +77,43 @@ describe("token contract report exports", () => {
     expect(loaded.getPageCount()).toBe(pdfExport.pageCount);
     expect(loaded.getTitle()).toContain("POSVE");
     expect(pdfExport.readableViewTruncated).toBe(false);
+    expect(pdfExport.jsonSha256).toMatch(/^[a-f0-9]{64}$/);
+    expect(loaded.catalog.get(PDFName.of("Outlines"))).toBeDefined();
 
     if (process.env.WRITE_TOKEN_REPORT_PDF_FIXTURE === "1") {
       const outputDirectory = join(process.cwd(), "tmp", "pdfs");
       await mkdir(outputDirectory, { recursive: true });
       await writeFile(
         join(outputDirectory, "token-contract-report-export-sample.pdf"),
+        pdfExport.bytes,
+      );
+    }
+  }, 20_000);
+
+  it("creates the CTM regression PDF with a versioned presentation and bookmarks", async () => {
+    const report = createCtmTokenContractReportFixture();
+    const pdfExport = await createTokenContractReportPdfExport(report);
+    const loaded = await PDFDocument.load(pdfExport.bytes);
+
+    expect(report.presentation).toMatchObject({
+      schemaVersion: 1,
+      derivedFromEngineSchemaVersion: 2,
+    });
+    expect(report.presentation?.decision.headline).toBe(
+      "High-severity mint capability confirmed",
+    );
+    expect(pdfExport.pageCount).toBeGreaterThan(4);
+    expect(pdfExport.pageCount).toBeLessThanOrEqual(
+      TOKEN_CONTRACT_REPORT_PDF_MAX_PAGES,
+    );
+    expect(loaded.catalog.get(PDFName.of("Outlines"))).toBeDefined();
+    expect(pdfExport.jsonSha256).toMatch(/^[a-f0-9]{64}$/);
+
+    if (process.env.WRITE_TOKEN_REPORT_PDF_FIXTURE === "1") {
+      const outputDirectory = join(process.cwd(), "tmp", "pdfs");
+      await mkdir(outputDirectory, { recursive: true });
+      await writeFile(
+        join(outputDirectory, "ctm-token-contract-report-after.pdf"),
         pdfExport.bytes,
       );
     }
