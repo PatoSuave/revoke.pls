@@ -633,6 +633,109 @@ describe("token contract report server", () => {
     expect(report.reportBoundaries.join(" ")).toContain("not a formal audit");
   });
 
+  it("reads AccessControl role IDs, role admins, and a verified supply cap", async () => {
+    const minterRole = `0x${"11".repeat(32)}` as `0x${string}`;
+    const defaultAdminRole = `0x${"00".repeat(32)}` as `0x${string}`;
+    const abi = [
+      {
+        type: "function",
+        name: "MINTER_ROLE",
+        stateMutability: "view",
+        inputs: [],
+        outputs: [{ name: "", type: "bytes32" }],
+      },
+      {
+        type: "function",
+        name: "DEFAULT_ADMIN_ROLE",
+        stateMutability: "view",
+        inputs: [],
+        outputs: [{ name: "", type: "bytes32" }],
+      },
+      {
+        type: "function",
+        name: "getRoleAdmin",
+        stateMutability: "view",
+        inputs: [{ name: "role", type: "bytes32" }],
+        outputs: [{ name: "", type: "bytes32" }],
+      },
+      {
+        type: "function",
+        name: "MAX_SUPPLY",
+        stateMutability: "view",
+        inputs: [],
+        outputs: [{ name: "", type: "uint256" }],
+      },
+    ];
+    const reader = {
+      getBytecode: vi.fn(async () => "0x1234" as `0x${string}`),
+      getBlockNumber: vi.fn(async () => 700n),
+      readContract: vi.fn(async (call: { functionName: string }) => {
+        if (call.functionName === "name") return "Capped Role Token";
+        if (call.functionName === "symbol") return "CRT";
+        if (call.functionName === "decimals") return 0;
+        if (call.functionName === "totalSupply") return 300n;
+        if (call.functionName === "supportsInterface") return false;
+        if (call.functionName === "MINTER_ROLE") return minterRole;
+        if (call.functionName === "DEFAULT_ADMIN_ROLE") {
+          return defaultAdminRole;
+        }
+        if (call.functionName === "getRoleAdmin") return defaultAdminRole;
+        if (call.functionName === "MAX_SUPPLY") return 1_000n;
+        throw new Error("unsupported read");
+      }),
+    };
+    const fetcher = vi.fn(async (input: RequestInfo | URL) =>
+      requestAction(input) === "getcontractcreation"
+        ? creationResponse()
+        : sourceResponse(abi),
+    );
+
+    const report = await buildTokenContractReport({
+      chainId: PULSECHAIN_CHAIN_ID,
+      contractAddress: TOKEN,
+      includeAi: false,
+      enableDeepModules: false,
+      env: { NODE_ENV: "test" } as NodeJS.ProcessEnv,
+      fetcher: fetcher as unknown as typeof fetch,
+      reader,
+    });
+
+    expect(report.controls.authorization).toMatchObject({
+      model: "access-control",
+      capturedBlockNumber: 700,
+      roles: expect.arrayContaining([
+        {
+          name: "MINTER_ROLE",
+          id: minterRole,
+          adminRoleId: defaultAdminRole,
+          currentHolders: [],
+          holderResolution: "unresolved",
+        },
+      ]),
+    });
+    expect(report.controls.authorization?.limitations.join(" ")).toContain(
+      "complete role-event history",
+    );
+    expect(report.token.maxSupply).toBe("1000");
+    expect(report.token.remainingMintableSupply).toBe("700");
+    expect(report.presentation?.authorization).toMatchObject({
+      model: "access-control",
+      roles: expect.arrayContaining([
+        {
+          name: "MINTER_ROLE",
+          admin: defaultAdminRole,
+          currentHolders: [],
+          holderResolution: "unresolved",
+        },
+      ]),
+    });
+    expect(report.presentation?.supply).toMatchObject({
+      current: "300",
+      cap: "1000",
+      remainingMintable: "700",
+    });
+  });
+
   it("falls back to Blockscout v2 source and creation metadata when legacy PulseScan endpoints fail", async () => {
     let tokenAddressLookupCalls = 0;
     const reader = {

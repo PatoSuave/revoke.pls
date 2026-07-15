@@ -89,6 +89,7 @@ import {
   type TokenContractReportStreamEvent,
   type TokenContractReportSignal,
 } from "@/lib/token-contract-report";
+import { buildTokenContractReportPresentation } from "@/lib/token-contract-report-presentation";
 import {
   fetchTokenContractEvents,
   fetchTokenContractHistory,
@@ -891,6 +892,19 @@ export async function buildTokenContractReport({
     missingConfig: [],
   };
 
+  const structuredControls = await readStructuredContractControls({
+    client: readClient,
+    address: normalizedAddress,
+    abi: analysisSource.verified === "verified" ? analysisSource.abi : [],
+    currentSupply: erc20.totalSupply,
+  });
+  if (structuredControls.authorization) {
+    baseReport.controls.authorization = structuredControls.authorization;
+  }
+  baseReport.token.maxSupply = structuredControls.maxSupply;
+  baseReport.token.remainingMintableSupply =
+    structuredControls.remainingMintableSupply;
+
   baseReport.findings = sourceAnalysis
     ? sourceAnalysisFindings(sourceAnalysis)
     : [];
@@ -1480,6 +1494,10 @@ export async function buildTokenContractReport({
     coverageExplanation: buildCoverageExplanation(baseReport, completedRisk),
   };
   baseReport.verdict = deterministicVerdict(baseReport);
+  baseReport.presentation = buildTokenContractReportPresentation(
+    baseReport,
+    "partial",
+  );
 
   await onProgress?.({ type: "base", report: structuredClone(baseReport) });
   for (const id of [
@@ -1526,6 +1544,11 @@ export async function buildTokenContractReport({
       warnings: [],
     };
   }
+
+  baseReport.presentation = buildTokenContractReportPresentation(
+    baseReport,
+    "final",
+  );
 
   return baseReport;
 }
@@ -1808,6 +1831,166 @@ async function readErc20Like(
         ? totalSupply.value.toString()
         : null,
     warnings: detected ? [] : warnings.slice(0, 2),
+  };
+}
+
+async function readStructuredContractControls({
+  client,
+  address,
+  abi,
+  currentSupply,
+}: {
+  client: TokenContractReportReadClient;
+  address: Address;
+  abi: unknown[];
+  currentSupply: string | null;
+}): Promise<{
+  authorization: TokenContractReportResponse["controls"]["authorization"] | null;
+  maxSupply: string | null;
+  remainingMintableSupply: string | null;
+}> {
+  const functions = abi.filter(
+    (item): item is AbiFunction =>
+      typeof item === "object" &&
+      item !== null &&
+      (item as { type?: unknown }).type === "function" &&
+      typeof (item as { name?: unknown }).name === "string",
+  );
+  const roleGetters = functions
+    .filter(
+      (fn) =>
+        (fn.inputs?.length ?? 0) === 0 &&
+        fn.outputs?.[0]?.type === "bytes32" &&
+        /(?:^DEFAULT_ADMIN_ROLE$|_ROLE$)/.test(fn.name),
+    )
+    .slice(0, 8);
+  const getRoleAdmin = functions.find(
+    (fn) =>
+      fn.name === "getRoleAdmin" &&
+      fn.inputs?.[0]?.type === "bytes32" &&
+      fn.outputs?.[0]?.type === "bytes32",
+  );
+  const capGetter = functions.find(
+    (fn) =>
+      (fn.inputs?.length ?? 0) === 0 &&
+      /^uint(?:[0-9]+)?$/.test(fn.outputs?.[0]?.type ?? "") &&
+      /^(?:MAX_SUPPLY|cap|maxSupply)$/i.test(fn.name),
+  );
+  let capturedBlock: bigint | undefined;
+  if (client.getBlockNumber) {
+    try {
+      capturedBlock = await withTimeout(
+        client.getBlockNumber(),
+        TOKEN_REPORT_READ_TIMEOUT_MS,
+        "Structured control captured-block read timed out",
+      );
+    } catch {
+      capturedBlock = undefined;
+    }
+  }
+  const limitations: string[] = [];
+  const roles: NonNullable<
+    TokenContractReportResponse["controls"]["authorization"]
+  >["roles"] = [];
+  for (const getter of roleGetters) {
+    const roleRead = await readProbe(
+      () =>
+        client.readContract({
+          address,
+          abi: [getter] as Abi,
+          functionName: getter.name,
+          ...(capturedBlock === undefined
+            ? {}
+            : { blockNumber: capturedBlock }),
+        }),
+      `${getter.name}()`,
+    );
+    if (
+      typeof roleRead.value !== "string" ||
+      !/^0x[0-9a-fA-F]{64}$/.test(roleRead.value)
+    ) {
+      limitations.push(`${getter.name} role ID could not be read.`);
+      continue;
+    }
+    const roleId = roleRead.value as `0x${string}`;
+    let adminRoleId: `0x${string}` | null = null;
+    if (getRoleAdmin) {
+      const adminRead = await readProbe(
+        () =>
+          client.readContract({
+            address,
+            abi: [getRoleAdmin] as Abi,
+            functionName: "getRoleAdmin",
+            args: [roleId],
+            ...(capturedBlock === undefined
+              ? {}
+              : { blockNumber: capturedBlock }),
+          }),
+        `getRoleAdmin(${getter.name})`,
+      );
+      if (
+        typeof adminRead.value === "string" &&
+        /^0x[0-9a-fA-F]{64}$/.test(adminRead.value)
+      ) {
+        adminRoleId = adminRead.value as `0x${string}`;
+      } else {
+        limitations.push(`${getter.name} admin role could not be read.`);
+      }
+    }
+    roles.push({
+      name: getter.name,
+      id: roleId,
+      adminRoleId,
+      currentHolders: [],
+      holderResolution: "unresolved",
+    });
+  }
+  if (roles.length > 0) {
+    limitations.push(
+      "Current role holders require complete role-event history and captured-block hasRole confirmation.",
+    );
+  }
+
+  let maxSupply: string | null = null;
+  if (capGetter) {
+    const capRead = await readProbe(
+      () =>
+        client.readContract({
+          address,
+          abi: [capGetter] as Abi,
+          functionName: capGetter.name,
+          ...(capturedBlock === undefined
+            ? {}
+            : { blockNumber: capturedBlock }),
+        }),
+      `${capGetter.name}()`,
+    );
+    if (typeof capRead.value === "bigint") {
+      maxSupply = capRead.value.toString();
+    }
+  }
+  let remainingMintableSupply: string | null = null;
+  if (maxSupply !== null && currentSupply !== null) {
+    try {
+      const remaining = BigInt(maxSupply) - BigInt(currentSupply);
+      remainingMintableSupply = (remaining > 0n ? remaining : 0n).toString();
+    } catch {
+      remainingMintableSupply = null;
+    }
+  }
+  return {
+    authorization:
+      roles.length > 0
+        ? {
+            model: "access-control",
+            capturedBlockNumber:
+              capturedBlock === undefined ? null : Number(capturedBlock),
+            roles,
+            limitations,
+          }
+        : null,
+    maxSupply,
+    remainingMintableSupply,
   };
 }
 
@@ -4867,6 +5050,17 @@ async function runReadOnlyTransferSimulations({
                     ? "eth_call completed for calldata derived from a unique unverified 4byte candidate signature. Caller behavior is observed, but the candidate function name and state effect remain unconfirmed."
                     : "eth_call completed for the verified ABI control function. This observes only this caller and block and does not submit a transaction.",
               returnData,
+              rawCalldata: item.data,
+              calldataValidity: "valid",
+              calldataValidationDetail:
+                "Calldata was generated from the retained ABI or a bounded typed candidate ABI.",
+              decodedArguments:
+                item.kind === "transfer"
+                  ? [
+                      item.recipient ?? "unknown recipient",
+                      item.amount?.toString() ?? "unknown amount",
+                    ]
+                  : [],
               evidenceState: item.evidenceState,
             };
           } catch (error) {
@@ -4884,6 +5078,17 @@ async function runReadOnlyTransferSimulations({
                 error instanceof Error ? error.message : String(error),
               ).slice(0, 240)}`,
               returnData: null,
+              rawCalldata: item.data,
+              calldataValidity: "valid",
+              calldataValidationDetail:
+                "Calldata was generated from the retained ABI or a bounded typed candidate ABI.",
+              decodedArguments:
+                item.kind === "transfer"
+                  ? [
+                      item.recipient ?? "unknown recipient",
+                      item.amount?.toString() ?? "unknown amount",
+                    ]
+                  : [],
               evidenceState: item.evidenceState,
             };
           }
@@ -4975,14 +5180,16 @@ async function probeUniqueFourByteGetters({
     const functionName = signature.slice(0, signature.indexOf("("));
     const args =
       signature === "isExcludedFromFee(address)" ? [ordinaryAddress] : [];
+    let callData: Hex | null = null;
     try {
+      callData = abi
+        ? encodeFunctionData({ abi, functionName, args })
+        : selector.selector;
       const result = await withTimeout(
         client.call({
           account: ordinaryAddress,
           to: contractAddress,
-          data: abi
-            ? encodeFunctionData({ abi, functionName, args })
-            : selector.selector,
+          data: callData,
           ...(block === undefined ? {} : { blockNumber: block }),
         }),
         TOKEN_REPORT_READ_TIMEOUT_MS,
@@ -5027,6 +5234,11 @@ async function probeUniqueFourByteGetters({
         blockNumber,
         detail,
         returnData: data,
+        rawCalldata: callData,
+        calldataValidity: "valid",
+        calldataValidationDetail:
+          "Calldata was generated from a bounded typed getter ABI or retained selector.",
+        decodedArguments: args.map(String),
         evidenceState: "review-clue",
       });
     } catch (error) {
@@ -5042,6 +5254,12 @@ async function probeUniqueFourByteGetters({
         blockNumber,
         detail: `Read-only probe for a unique unverified 4byte candidate reverted or could not be decoded: ${redactSensitiveErrorText(error instanceof Error ? error.message : String(error)).slice(0, 220)}`,
         returnData: null,
+        rawCalldata: callData,
+        calldataValidity: callData ? "valid" : "unverifiable",
+        calldataValidationDetail: callData
+          ? "Calldata was generated from a bounded typed getter ABI or retained selector."
+          : "Calldata generation did not complete.",
+        decodedArguments: args.map(String),
         evidenceState: "review-clue",
       });
     }

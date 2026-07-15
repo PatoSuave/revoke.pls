@@ -156,6 +156,149 @@ export interface TokenContractFinding {
   evidence: TokenContractEvidenceReference[];
 }
 
+export type TokenContractPresentationStatus =
+  | "confirmed-capability"
+  | "observed-behavior"
+  | "protective-evidence"
+  | "unresolved"
+  | "not-tested"
+  | "invalid-test"
+  | "informational"
+  | "not-applicable";
+
+export type TokenContractObservationState =
+  | "observed"
+  | "not-observed"
+  | "unresolved"
+  | "not-collected";
+
+export interface TokenContractCodePathNode {
+  kind: "entry-point" | "guard" | "internal-call" | "state-write";
+  label: string;
+  file?: string;
+  startLine?: number;
+  endLine?: number;
+  snippet?: string;
+}
+
+export interface TokenContractEvidenceFact {
+  id: string;
+  claim: string;
+  role: "primary" | "supporting";
+  type: TokenContractEvidenceType;
+  file?: string;
+  startLine?: number;
+  endLine?: number;
+  codePath?: TokenContractCodePathNode[];
+}
+
+export interface TokenContractSimulationPresentation {
+  id: string;
+  label: string;
+  status: TokenContractPresentationStatus;
+  validity: "valid" | "invalid" | "unverifiable";
+  outcome: TokenContractSimulationAttempt["status"];
+  conclusion: string;
+  rawCalldata: `0x${string}` | null;
+  calldataByteLength: number | null;
+  decodedArguments: string[];
+  returnData: `0x${string}` | null;
+}
+
+export interface TokenContractFindingPresentation {
+  id: string;
+  engineFindingIds: string[];
+  status: TokenContractPresentationStatus;
+  severity: TokenContractFindingSeverity;
+  confidence: number;
+  title: string;
+  plainSummary: string;
+  advancedSummary: string;
+  observedUse: TokenContractObservationState;
+  evidence: TokenContractEvidenceFact[];
+}
+
+export interface TokenContractCoveragePresentation {
+  resolved: number;
+  partial: number;
+  unresolved: number;
+  notTested: number;
+  invalid: number;
+  notApplicable: number;
+  applicableTotal: number;
+  weightedPercent: number;
+  explanation: string;
+}
+
+export type TokenContractAuthorizationModel =
+  | "access-control"
+  | "ownable"
+  | "proxy-admin"
+  | "custom-controller"
+  | "unresolved";
+
+export interface TokenContractPresentationQuestion {
+  id: string;
+  question: string;
+  answer: string;
+  status: TokenContractPresentationStatus;
+  coverageState:
+    | "resolved"
+    | "partial"
+    | "unresolved"
+    | "not-tested"
+    | "invalid"
+    | "not-applicable";
+}
+
+export interface TokenContractReportPresentation {
+  schemaVersion: 1;
+  derivedFromEngineSchemaVersion: 2;
+  completeness: "partial" | "final";
+  decision: {
+    headline: string;
+    summary: string;
+    severity: TokenContractReportResponse["verdict"]["severity"];
+    confidence: number;
+    confidenceLabel: TokenContractReportResponse["verdict"]["confidenceLabel"];
+    observedUse: TokenContractObservationState;
+    provisionalRiskScore: number;
+    riskScoreExplanation: string;
+  };
+  findings: TokenContractFindingPresentation[];
+  authorization: {
+    model: TokenContractAuthorizationModel;
+    label: string;
+    roles: Array<{
+      name: string;
+      admin: string | null;
+      currentHolders: Address[];
+      holderResolution: "resolved" | "partial" | "unresolved";
+    }>;
+    explanation: string;
+  };
+  supply: {
+    current: string | null;
+    initial: string | null;
+    cap: string | null;
+    remainingMintable: string | null;
+    historyState: TokenContractPresentationStatus;
+    summary: string;
+  };
+  trading: {
+    pairDiscovery: TokenContractPresentationStatus;
+    liquidityInspection: TokenContractPresentationStatus;
+    buySimulation: TokenContractPresentationStatus;
+    sellSimulation: TokenContractPresentationStatus;
+    summary: string;
+  };
+  questions: TokenContractPresentationQuestion[];
+  coverage: TokenContractCoveragePresentation;
+  simulations: TokenContractSimulationPresentation[];
+  historySummary: string;
+  methodology: string[];
+}
+
 export type TokenContractReportModuleId =
   | "source"
   | "bytecode"
@@ -244,6 +387,12 @@ export interface TokenContractSimulationAttempt {
   blockNumber: number | null;
   detail: string;
   returnData?: `0x${string}` | null;
+  /** Exact eth_call calldata. Older reports may not contain this field. */
+  rawCalldata?: `0x${string}` | null;
+  /** ABI validation result recorded before interpreting the call outcome. */
+  calldataValidity?: "valid" | "invalid" | "unverifiable";
+  calldataValidationDetail?: string;
+  decodedArguments?: string[];
   evidenceState?: "confirmed-signature" | "review-clue";
   kind?: "direct-transfer" | "control" | "getter" | "router-buy" | "router-sell";
   routerVersion?: "v1" | "v2" | null;
@@ -412,6 +561,18 @@ export interface TokenContractReportResponse {
     };
     effectiveControllerAddresses: Address[];
     ownerZeroRemovesAllControl: boolean | null;
+    authorization?: {
+      model: TokenContractAuthorizationModel;
+      capturedBlockNumber: number | null;
+      roles: Array<{
+        name: string;
+        id: `0x${string}`;
+        adminRoleId: `0x${string}` | null;
+        currentHolders: Address[];
+        holderResolution: "resolved" | "partial" | "unresolved";
+      }>;
+      limitations: string[];
+    };
   };
   audit: {
     coveragePercent: number;
@@ -460,6 +621,8 @@ export interface TokenContractReportResponse {
     formattedTotalSupply: string | null;
     vaultAssetAddress: Address | null;
     totalAssets: string | null;
+    maxSupply?: string | null;
+    remainingMintableSupply?: string | null;
   };
   signals: TokenContractReportSignal[];
   findings: TokenContractFinding[];
@@ -515,6 +678,8 @@ export interface TokenContractReportResponse {
   reportBoundaries: string[];
   errors: string[];
   missingConfig: string[];
+  /** Additive, versioned display model. Legacy schema-v2 reports may omit it. */
+  presentation?: TokenContractReportPresentation;
 }
 
 export function createEmptyTokenContractReportResponse({
